@@ -1,4 +1,2 @@
-import('./server.ts').catch(err => {
-  console.error('Failed to load server.ts:', err);
-  process.exit(1);
-});
+// This file can be deleted - using tsx to run server.ts instead
+
