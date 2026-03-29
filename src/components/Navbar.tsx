@@ -32,10 +32,14 @@ const Navbar: React.FC = () => {
       className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${isScrolled || !isHome ? 'bg-black/90 backdrop-blur-md py-4' : 'bg-transparent py-8'}`}
     >
       <div className="max-w-[1800px] mx-auto px-6 md:px-12 flex justify-between items-center">
-        {/* Left: Menu Toggle (Mobile) */}
-        <button className="md:hidden" onClick={() => setIsMenuOpen(true)}>
+        <motion.button 
+          whileHover={{ scale: 1.1, y: -2 }}
+          whileTap={{ scale: 0.9 }}
+          className="md:hidden text-accent" 
+          onClick={() => setIsMenuOpen(true)}
+        >
           <Menu size={24} />
-        </button>
+        </motion.button>
 
         {/* Left: Desktop Links */}
         <div className="hidden md:flex gap-8 items-center">
@@ -48,35 +52,47 @@ const Navbar: React.FC = () => {
 
         {/* Center: Logo */}
         <Link to="/" className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 group">
-          <motion.img 
+          <motion.div
             initial={{ opacity: 0, scale: 0.8, filter: 'blur(10px)', rotate: 0 }}
             animate={{ 
               opacity: 1, 
               scale: 1, 
-              filter: 'blur(0px)',
-              rotate: 360
+              filter: 'blur(0px)'
             }}
+            whileHover={{ rotate: 360 }}
             transition={{ 
               opacity: { duration: 1.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] },
               scale: { duration: 1.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] },
               filter: { duration: 1.5, delay: 0.2, ease: [0.22, 1, 0.36, 1] },
-              rotate: { duration: 20, repeat: Infinity, ease: "linear" }
+              rotate: { duration: 10, ease: "linear" }
             }}
-            src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1774670973/Untitled_design_bofz3h.jpg" 
-            alt="CHILS & CO." 
-            className="h-8 w-auto drop-shadow-[0_0_8px_rgba(255,255,255,0.4)] rounded-full"
-            referrerPolicy="no-referrer"
-          />
+          >
+            <img 
+              src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png" 
+              alt="CHILS & CO." 
+              className="h-8 w-auto gold-icon"
+              referrerPolicy="no-referrer"
+            />
+          </motion.div>
           <h1 className="text-lg md:text-xl font-display font-bold tracking-[0.25em] leading-none">CHILS & CO.</h1>
         </Link>
 
         {/* Right: Icons */}
         <div className="flex items-center gap-6">
-          <button className="hidden md:block hover:opacity-50 transition-opacity">
+          <motion.button 
+            whileHover={{ scale: 1.1, rotate: 5, y: -2 }}
+            whileTap={{ scale: 0.9 }}
+            className="hidden md:block hover:opacity-50 transition-opacity text-accent"
+          >
             <Search size={20} strokeWidth={1.5} />
-          </button>
-          <Link to="/checkout" className="relative hover:opacity-50 transition-opacity">
-            <ShoppingBag size={20} strokeWidth={1.5} />
+          </motion.button>
+          <Link to="/checkout" className="relative hover:opacity-50 transition-opacity text-accent">
+            <motion.div
+              whileHover={{ scale: 1.1, rotate: -5, y: -2 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <ShoppingBag size={20} strokeWidth={1.5} />
+            </motion.div>
             {totalItems > 0 && (
               <span className="absolute -top-1 -right-1 bg-white text-black text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                 {totalItems}
@@ -98,7 +114,12 @@ const Navbar: React.FC = () => {
           >
             <div className="flex justify-end">
               <button onClick={() => setIsMenuOpen(false)}>
-                <X size={32} />
+                <motion.div
+                  whileHover={{ scale: 1.2, rotate: 90 }}
+                  whileTap={{ scale: 0.8 }}
+                >
+                  <X size={32} />
+                </motion.div>
               </button>
             </div>
             <div className="flex flex-col gap-8 mt-12">

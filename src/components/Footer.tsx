@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'motion/react';
 
 const Footer: React.FC = () => {
   return (
@@ -7,15 +8,17 @@ const Footer: React.FC = () => {
       <div className="max-w-[1800px] mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-20">
           <div className="col-span-1 md:col-span-2">
-            <Link to="/" className="flex items-center gap-4 mb-6 group">
-              <img 
+            <div className="flex items-center gap-4 mb-6">
+              <motion.img 
+                whileHover={{ rotate: 360 }}
+                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
                 src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png" 
                 alt="CHILS & CO." 
-                className="h-10 w-auto invert group-hover:rotate-180 transition-transform duration-1000"
+                className="h-10 w-auto gold-icon"
                 referrerPolicy="no-referrer"
               />
               <h2 className="text-2xl font-display font-bold tracking-widest">CHILS & CO.</h2>
-            </Link>
+            </div>
             <p className="text-neutral-500 text-sm max-w-md leading-relaxed">
               Essential by Design. Elevated by Intent. Engineered apparel for the modern builder.
               Born at the intersection of hardware and software.

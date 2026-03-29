@@ -8,13 +8,15 @@ import Collection from './pages/Collection';
 import ProductDetail from './pages/ProductDetail';
 import Checkout from './pages/Checkout';
 import SmoothScroll from './components/SmoothScroll';
+import ScrollProgress from './components/ScrollProgress';
 
 export default function App() {
   return (
     <CartProvider>
-      <SmoothScroll>
-        <Router>
-          <div className="min-h-screen flex flex-col">
+      <Router>
+        <SmoothScroll>
+          <div className="min-h-screen flex flex-col bg-black text-white selection:bg-white selection:text-black">
+            <ScrollProgress />
             <Navbar />
             <main className="flex-grow">
               <Routes>
@@ -26,8 +28,8 @@ export default function App() {
             </main>
             <Footer />
           </div>
-        </Router>
-      </SmoothScroll>
+        </SmoothScroll>
+      </Router>
     </CartProvider>
   );
 }

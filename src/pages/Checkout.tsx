@@ -3,6 +3,7 @@ import { useCart } from '../CartContext';
 import { useCheckout } from '../hooks/useCheckout';
 import { Trash2, Plus, Minus, CreditCard } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
 
 const Checkout: React.FC = () => {
   const { cart, updateQuantity, removeFromCart, totalPrice } = useCart();
@@ -45,19 +46,28 @@ const Checkout: React.FC = () => {
                     <h3 className="text-[11px] tracking-[0.1em] font-bold uppercase mb-1">{item.name}</h3>
                     <p className="text-[10px] text-neutral-500 uppercase">{item.category}</p>
                   </div>
-                  <button onClick={() => removeFromCart(item.id)} className="text-neutral-600 hover:text-white transition-colors">
-                    <Trash2 size={16} />
+                  <button onClick={() => removeFromCart(item.id)} className="text-accent hover:text-white transition-colors">
+                    <motion.div
+                      whileHover={{ scale: 1.2, rotate: 10 }}
+                      whileTap={{ scale: 0.8 }}
+                    >
+                      <Trash2 size={16} />
+                    </motion.div>
                   </button>
                 </div>
 
                 <div className="flex justify-between items-end">
                   <div className="flex items-center border border-neutral-800">
-                    <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-2 hover:bg-neutral-900 transition-colors">
-                      <Minus size={12} />
+                    <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-2 hover:bg-neutral-900 transition-colors text-accent">
+                      <motion.div whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.8 }}>
+                        <Minus size={12} />
+                      </motion.div>
                     </button>
                     <span className="w-10 text-center text-xs font-mono">{item.quantity}</span>
-                    <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-2 hover:bg-neutral-900 transition-colors">
-                      <Plus size={12} />
+                    <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-2 hover:bg-neutral-900 transition-colors text-accent">
+                      <motion.div whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.8 }}>
+                        <Plus size={12} />
+                      </motion.div>
                     </button>
                   </div>
                   <p className="text-sm font-medium">₹{(item.price * item.quantity).toLocaleString()}</p>
@@ -94,7 +104,13 @@ const Checkout: React.FC = () => {
             >
               {isProcessing ? 'Processing...' : (
                 <>
-                  <CreditCard size={16} />
+                  <motion.div
+                    whileHover={{ scale: 1.1 }}
+                    transition={{ duration: 0.3, ease: "easeOut" }}
+                    className="text-accent"
+                  >
+                    <CreditCard size={16} />
+                  </motion.div>
                   Proceed to Payment
                 </>
               )}

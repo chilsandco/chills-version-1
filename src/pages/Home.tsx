@@ -2,309 +2,271 @@ import React, { useEffect, useState, useRef } from 'react';
 import Hero from '../components/Hero';
 import ProductCard from '../components/ProductCard';
 import { Product } from '../types';
-import { motion, useScroll, useTransform, useVelocity, useSpring } from 'motion/react';
+import { motion, useScroll, useTransform } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Home: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
-  const storyRef = useRef(null);
-  const philosophyRef = useRef(null);
-  const craftRef = useRef(null);
-  
-  const { scrollYProgress } = useScroll();
-  const { scrollYProgress: storyScroll } = useScroll({
-    target: storyRef,
-    offset: ["start end", "end start"]
-  });
-  
-  const { scrollYProgress: philosophyScroll } = useScroll({
-    target: philosophyRef,
-    offset: ["start end", "end start"]
-  });
-
-  const { scrollYProgress: craftScroll } = useScroll({
-    target: craftRef,
-    offset: ["start end", "end start"]
-  });
-
-  // Scroll Velocity for micro-interactions
-  const scrollVelocity = useVelocity(scrollYProgress);
-  const smoothVelocity = useSpring(scrollVelocity, {
-    damping: 50,
-    stiffness: 400
-  });
-  
-  // Velocity-based effects (skew and blur) - Refined for subtlety
-  const skew = useTransform(smoothVelocity, [-0.1, 0.1], [-0.5, 0.5]);
-  const blur = useTransform(smoothVelocity, [-0.1, 0, 0.1], [1, 0, 1]);
-  const progressOpacity = useTransform(smoothVelocity, [-0.1, 0, 0.1], [1, 0.3, 1]);
-
-  // Ambient background shifts - More subtle
-  const bgColor = useTransform(
-    scrollYProgress,
-    [0, 0.3, 0.6, 0.9, 1],
-    ["#000000", "#030303", "#080808", "#030303", "#000000"]
-  );
-
-  // Section "Weight" / Resistance - Pronounced for "Philosophy" and "Chils Loop™"
-  const philosophyY = useTransform(philosophyScroll, [0, 0.5, 1], [60, 0, -60]);
-  const craftY = useTransform(craftScroll, [0, 0.5, 1], [80, 0, -80]);
-
-  const storyOpacity = useTransform(storyScroll, [0, 0.3, 0.7, 1], [0, 1, 1, 0]);
-  const storyScale = useTransform(storyScroll, [0, 0.5], [0.95, 1]);
-  const storyTextY = useTransform(storyScroll, [0, 0.5], [30, 0]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch('/api/products')
       .then(res => res.json())
-      .then(data => setProducts(data.slice(0, 4)));
+      .then(data => {
+        setProducts(data);
+        setLoading(false);
+      });
   }, []);
 
   return (
-    <motion.div 
-      style={{ backgroundColor: bgColor }}
-      className="text-white selection:bg-accent selection:text-black transition-colors duration-1000"
-    >
-      {/* Minimal Progress Indicator with Velocity Glow */}
-      <motion.div 
-        className="fixed top-0 left-0 right-0 h-[1px] bg-accent z-[100] origin-left shadow-[0_0_10px_rgba(255,255,255,0.3)]"
-        style={{ 
-          scaleX: scrollYProgress,
-          opacity: progressOpacity,
-          backgroundColor: useTransform(smoothVelocity, [-0.1, 0, 0.1], ["#FFFFFF", "#F27D26", "#FFFFFF"])
-        }}
-      />
-      
-      <motion.div style={{ skewY: skew, filter: `blur(${blur}px)` }} className="will-change-transform">
-        <Hero />
+    <div className="bg-black">
+      <Hero />
 
-        {/* Collection Preview */}
-        <section className="py-48 px-6 md:px-12 max-w-[1800px] mx-auto overflow-hidden">
-          <div className="flex flex-col md:flex-row justify-between items-baseline mb-24 gap-8">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-100px" }}
-              transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+      {/* Collection Preview - Cinematic Reveal */}
+      <section className="py-60 px-6 md:px-12 max-w-[1800px] mx-auto overflow-hidden">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-32 gap-12">
+          <motion.div
+            initial={{ opacity: 0, x: -60, filter: 'blur(10px)' }}
+            whileInView={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 2, ease: [0.22, 1, 0.36, 1] }}
+            className="max-w-3xl"
+          >
+            <span className="text-accent text-[10px] uppercase tracking-[0.6em] mb-8 block font-bold">The 001 Collection</span>
+            <h2 className="text-5xl md:text-[8vw] font-display font-bold tracking-tighter leading-[0.85] mb-12">
+              ENGINEERED <br /> FOR SILENCE
+            </h2>
+            <p className="text-gray-400 text-lg md:text-2xl font-light leading-relaxed max-w-xl">
+              A precise exploration of form and function. Designed for those who value stillness over noise.
+            </p>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.5, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <Link 
+              to="/collection" 
+              className="group flex items-center gap-6 text-[10px] uppercase tracking-[0.4em] font-bold border-b border-white/10 pb-4 hover:border-white transition-all duration-1000"
             >
-              <h2 className="text-[11px] tracking-[0.4em] font-bold uppercase mb-6 text-accent/80">Current Iteration</h2>
-              <h3 className="text-5xl md:text-8xl font-display font-bold tracking-tighter leading-[0.85]">
-                THE<br/>SILICON<br/>SERIES
-              </h3>
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.5, delay: 0.5 }}
-              className="max-w-md"
-            >
-              <p className="text-neutral-500 text-lg mb-10 leading-relaxed">
-                A study in monochromatic precision. Engineered for those who build, debug, and deploy.
-              </p>
-              <Link to="/collection" className="group flex items-center gap-4 text-[11px] tracking-[0.3em] font-bold uppercase">
-                <span className="group-hover:mr-2 transition-all duration-500">View Collection</span>
-                <div className="w-12 h-[1px] bg-white/20 group-hover:w-20 group-hover:bg-accent transition-all duration-500" />
-              </Link>
-            </motion.div>
-          </div>
+              Explore All 
+              <motion.div
+                whileHover={{ x: 5 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+              >
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-3 transition-transform duration-1000" />
+              </motion.div>
+            </Link>
+          </motion.div>
+        </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {products.map((product, i) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {loading ? (
+            Array(4).fill(0).map((_, i) => (
+              <div key={i} className="aspect-[3/4] bg-white/5 animate-pulse" />
+            ))
+          ) : (
+            products.slice(0, 4).map((product, i) => (
               <motion.div
                 key={product.id}
-                initial={{ opacity: 0, scale: 0.95, y: 40 }}
-                whileInView={{ opacity: 1, scale: 1, y: 0 }}
+                initial={{ opacity: 0, y: 80, scale: 0.98, filter: 'blur(5px)' }}
+                whileInView={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
                 viewport={{ once: true, margin: "-50px" }}
                 transition={{ 
-                  duration: 1.5, 
-                  delay: i * 0.15, 
+                  duration: 2, 
+                  delay: i * 0.2, 
                   ease: [0.22, 1, 0.36, 1] 
                 }}
               >
                 <ProductCard product={product} />
               </motion.div>
-            ))}
-          </div>
-        </section>
+            ))
+          )}
+        </div>
+      </section>
 
-        {/* Brand Story - Immersive Parallax */}
-        <section id="story" ref={storyRef} className="h-[200vh] relative">
-          <div className="sticky top-0 h-screen flex items-center justify-center overflow-hidden">
-            <motion.div 
-              style={{ opacity: storyOpacity, scale: storyScale, y: storyTextY }}
-              className="max-w-5xl mx-auto px-6 text-center z-10"
-            >
-              <h2 className="text-[11px] tracking-[0.5em] font-bold uppercase mb-20 opacity-40">The Narrative</h2>
-              <div className="space-y-16 text-4xl md:text-7xl font-display font-medium leading-[1.1] tracking-tight">
-                <p className="reveal-text">We don't make clothes.</p>
-                <p className="opacity-30 italic font-light">We manufacture equipment.</p>
-                <p className="text-accent/90">For the architects of the digital age.</p>
-              </div>
-            </motion.div>
-            
-            {/* Background Parallax Elements */}
-            <motion.div 
-              style={{ 
-                y: useTransform(storyScroll, [0, 1], [0, -200]),
-                opacity: useTransform(storyScroll, [0, 0.5, 1], [0.1, 0.2, 0.1])
-              }}
-              className="absolute top-1/4 -left-20 text-[20vw] font-display font-bold text-white pointer-events-none select-none opacity-5"
-            >
-              BUILD
-            </motion.div>
-            <motion.div 
-              style={{ 
-                y: useTransform(storyScroll, [0, 1], [0, 200]),
-                opacity: useTransform(storyScroll, [0, 0.5, 1], [0.1, 0.2, 0.1])
-              }}
-              className="absolute bottom-1/4 -right-20 text-[20vw] font-display font-bold text-white pointer-events-none select-none opacity-5"
-            >
-              DEPLOY
-            </motion.div>
-          </div>
-        </section>
-
-        {/* Philosophy - Bento Grid Style with Resistance */}
-        <motion.section 
-          id="philosophy" 
-          ref={philosophyRef}
-          style={{ y: philosophyY }}
-          className="py-64 px-6 md:px-12 max-w-[1800px] mx-auto"
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-1">
-            {[
-              { title: "ZERO NOISE", desc: "Every seam is a decision. Every pocket is a function." },
-              { title: "HARDWARE FIRST", desc: "Materials tested against the friction of real-world building." },
-              { title: "SYSTEMIC FIT", desc: "An interface between your body and your workspace." },
-              { title: "OPEN SOURCE", desc: "Transparency in sourcing, manufacturing, and intent." }
-            ].map((item, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 60 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-100px" }}
-                transition={{ duration: 1.5, delay: i * 0.2, ease: [0.22, 1, 0.36, 1] }}
-                className="bg-neutral-950 p-16 flex flex-col justify-between aspect-square border border-white/5 group hover:bg-neutral-900 transition-colors duration-1000"
-              >
-                <span className="text-[10px] font-mono opacity-20 group-hover:opacity-100 transition-opacity">0{i + 1}</span>
-                <div>
-                  <h4 className="text-3xl font-display font-bold mb-8 tracking-tighter group-hover:text-accent transition-colors duration-700">{item.title}</h4>
-                  <p className="text-neutral-500 text-sm leading-relaxed max-w-[200px] group-hover:text-neutral-300 transition-colors duration-700">{item.desc}</p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-        </motion.section>
-
-        {/* Quality & Craft - Cinematic Split with Resistance */}
-        <motion.section 
-          ref={craftRef}
-          style={{ y: craftY }}
-          className="py-64 px-6 md:px-12 bg-white text-black"
-        >
-          <div className="max-w-[1800px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-48 items-center">
-            <div className="order-2 lg:order-1">
-              <motion.div 
-                initial={{ opacity: 0, scale: 1.1 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 2.5, ease: [0.22, 1, 0.36, 1] }}
-                className="aspect-[3/4] bg-neutral-100 overflow-hidden relative group"
-              >
-                <img
-                  src="https://picsum.photos/seed/precision/1200/1600"
-                  alt="Precision Engineering"
-                  className="w-full h-full object-cover grayscale transition-all duration-[2000ms] group-hover:scale-105"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="absolute inset-0 bg-black/10 group-hover:bg-transparent transition-colors duration-1000" />
-              </motion.div>
-            </div>
-            <div className="order-1 lg:order-2">
-              <motion.h2 
-                initial={{ opacity: 0, x: 20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.5 }}
-                className="text-[11px] tracking-[0.5em] font-bold uppercase mb-16 opacity-40"
-              >
-                Chils Loop™
-              </motion.h2>
-              <motion.h3 
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.5, delay: 0.2 }}
-                className="text-6xl md:text-9xl font-display font-bold tracking-tighter mb-20 leading-[0.85]"
-              >
-                BUILT<br/>TO<br/>LAST.
-              </motion.h3>
-              <div className="space-y-16">
-                {[
-                  { title: "SENSORY TESTING", desc: "Fabric hand-feel optimized for focus and comfort." },
-                  { title: "STRESS ANALYSIS", desc: "Reinforced stress points for durability in high-motion areas." }
-                ].map((item, i) => (
-                  <motion.div 
-                    key={i}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 1, delay: 0.5 + (i * 0.2) }}
-                    className="max-w-md"
-                  >
-                    <h5 className="font-bold uppercase tracking-[0.3em] text-[10px] mb-4 text-neutral-400">{item.title}</h5>
-                    <p className="text-neutral-600 text-lg leading-relaxed">{item.desc}</p>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </motion.section>
-
-        {/* Final CTA - Immersive */}
-        <section className="py-96 px-6 text-center bg-black relative overflow-hidden">
-          <motion.div
-            style={{
-              y: useTransform(useScroll().scrollYProgress, [0.8, 1], [100, -100]),
-              opacity: useTransform(useScroll().scrollYProgress, [0.8, 0.9, 1], [0, 1, 0])
-            }}
-            className="absolute inset-0 flex items-center justify-center pointer-events-none"
+      {/* Brand Story - Parallax Depth */}
+      <motion.section 
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true, margin: "-100px" }}
+        transition={{ duration: 2.5, ease: [0.22, 1, 0.36, 1] }}
+        className="py-80 px-6 md:px-12 bg-[#050505] relative overflow-hidden"
+      >
+        <div className="max-w-5xl mx-auto text-center relative z-10">
+          <motion.span 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.5, delay: 0.2 }}
+            className="text-accent text-[10px] uppercase tracking-[0.8em] mb-16 block font-bold"
           >
-            <span className="text-[30vw] font-display font-bold text-white/5 tracking-tighter uppercase">CHILS</span>
+            Our Philosophy
+          </motion.span>
+          <motion.h2 
+            initial={{ opacity: 0, y: 60, filter: 'blur(10px)' }}
+            whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            viewport={{ once: true }}
+            transition={{ duration: 2, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="text-4xl md:text-7xl font-display font-medium leading-[1] mb-20 tracking-tighter"
+          >
+            We don't just make clothes. <br />
+            We engineer <span className="italic text-gray-600 font-light">artifacts</span> for the digital age.
+          </motion.h2>
+          <motion.p 
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 2, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="text-gray-500 text-xl md:text-3xl font-light leading-relaxed max-w-3xl mx-auto"
+          >
+            Chils & Co. was born from a desire to strip away the unnecessary. Every stitch is a decision. Every fabric is a dialogue between comfort and durability.
+          </motion.p>
+        </div>
+        
+        {/* Decorative Parallax Elements */}
+        <motion.div 
+          animate={{ 
+            y: [0, -40, 0],
+            rotate: [0, 10, 0],
+            opacity: [0.1, 0.2, 0.1]
+          }}
+          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute top-40 left-[5%] w-[40vw] h-[40vw] border border-white/5 rounded-full pointer-events-none blur-3xl" 
+        />
+        <motion.div 
+          animate={{ 
+            y: [0, 60, 0],
+            rotate: [0, -15, 0],
+            opacity: [0.05, 0.15, 0.05]
+          }}
+          transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+          className="absolute bottom-40 right-[5%] w-[50vw] h-[50vw] border border-white/5 rounded-full pointer-events-none blur-3xl" 
+        />
+      </motion.section>
+
+      {/* Quality & Craft - Progressive Reveal */}
+      <section className="py-80 px-6 md:px-12 max-w-[1800px] mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-40 items-center">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, filter: 'blur(20px)' }}
+            whileInView={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            viewport={{ once: true }}
+            transition={{ duration: 2.5, ease: [0.22, 1, 0.36, 1] }}
+            className="relative aspect-[4/5] overflow-hidden group rounded-sm"
+          >
+            <img 
+              src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&q=80&w=1000" 
+              alt="Craftsmanship"
+              className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-2000 group-hover:scale-110"
+              referrerPolicy="no-referrer"
+            />
+            <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors duration-2000" />
           </motion.div>
           
-          <div className="relative z-10">
-            <motion.h2 
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 2 }}
-              className="text-6xl md:text-[10vw] font-display font-bold tracking-tighter mb-24 uppercase leading-[0.8]"
-            >
-              JOIN THE<br/><span className="text-accent">ECOSYSTEM.</span>
-            </motion.h2>
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: 1.5, delay: 0.5 }}
-            >
-              <Link
-                to="/collection"
-                className="group relative inline-flex items-center justify-center px-20 py-8 overflow-hidden rounded-full border border-white/20 transition-all duration-500 hover:border-accent"
+          <div className="space-y-32">
+            {[
+              { title: "Engineered Fabrics", desc: "Sourced from the finest mills in Japan and Italy, our textiles are chosen for their technical performance and tactile luxury." },
+              { title: "Precision Tailoring", desc: "Every pattern is digitally mapped and laser-cut to ensure a fit that feels like a second skin." },
+              { title: "Sustainable Intent", desc: "We believe in longevity. Our pieces are designed to be worn for a lifetime, not a season." }
+            ].map((item, i) => (
+              <motion.div 
+                key={i}
+                initial={{ opacity: 0, y: 60, filter: 'blur(5px)' }}
+                whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                viewport={{ once: true }}
+                transition={{ duration: 2, delay: i * 0.4, ease: [0.22, 1, 0.36, 1] }}
+                className="group"
               >
-                <div className="absolute inset-0 bg-white translate-y-[101%] group-hover:translate-y-0 transition-transform duration-500 ease-[0.22, 1, 0.36, 1]" />
-                <span className="relative z-10 text-[11px] tracking-[0.5em] font-bold uppercase text-white group-hover:text-black transition-colors duration-500">
-                  Enter Collection
-                </span>
-              </Link>
-            </motion.div>
+                <span className="text-accent font-mono text-xs mb-6 block opacity-30 group-hover:opacity-100 transition-opacity duration-700">0{i + 1}</span>
+                <h3 className="text-4xl md:text-6xl font-display font-medium mb-8 tracking-tighter leading-none">{item.title}</h3>
+                <p className="text-gray-500 text-lg md:text-xl font-light leading-relaxed max-w-lg">{item.desc}</p>
+              </motion.div>
+            ))}
           </div>
-        </section>
-      </motion.div>
-    </motion.div>
+        </div>
+      </section>
+
+      {/* Packaging Section - Immersive */}
+      <motion.section 
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 2.5 }}
+        className="py-80 bg-white text-black text-center px-6 relative overflow-hidden"
+      >
+        <div className="max-w-5xl mx-auto relative z-10">
+          <motion.h2 
+            initial={{ opacity: 0, scale: 0.8, filter: 'blur(20px)' }}
+            whileInView={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+            viewport={{ once: true }}
+            transition={{ duration: 2, ease: [0.22, 1, 0.36, 1] }}
+            className="text-6xl md:text-[12vw] font-display font-bold tracking-tighter mb-16 leading-none"
+          >
+            CHILS LOOP™
+          </motion.h2>
+          <motion.p 
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 2, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="text-2xl md:text-4xl font-light mb-24 max-w-3xl mx-auto leading-[1.1]"
+          >
+            Our packaging is 100% compostable. <br />
+            <span className="font-bold">Engineered for a second life.</span>
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, scaleX: 0 }}
+            whileInView={{ opacity: 1, scaleX: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 2.5, delay: 1, ease: [0.22, 1, 0.36, 1] }}
+            className="h-px bg-black/10 w-full mb-24 origin-left"
+          />
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.5, delay: 1.2 }}
+          >
+            <Link 
+              to="/collection" 
+              className="inline-block bg-black text-white px-20 py-8 rounded-full text-[10px] uppercase tracking-[0.5em] font-bold hover:bg-gray-900 transition-all duration-700 hover:scale-105 active:scale-95 shadow-2xl"
+            >
+              Explore Collection
+            </Link>
+          </motion.div>
+        </div>
+      </motion.section>
+
+      {/* Final CTA */}
+      <section className="py-80 px-6 text-center bg-black overflow-hidden">
+        <motion.h2 
+          initial={{ opacity: 0, y: 100, filter: 'blur(20px)' }}
+          whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+          viewport={{ once: true }}
+          transition={{ duration: 2.5, ease: [0.22, 1, 0.36, 1] }}
+          className="text-5xl md:text-[10vw] font-display font-bold tracking-tighter mb-32 uppercase leading-[0.8] text-white"
+        >
+          Essential by Design.<br/>Elevated by Intent.
+        </motion.h2>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          transition={{ duration: 2, delay: 1, ease: [0.22, 1, 0.36, 1] }}
+        >
+          <Link
+            to="/collection"
+            className="inline-block border border-white/20 text-white px-24 py-8 text-[10px] tracking-[0.6em] font-bold uppercase hover:bg-white hover:text-black transition-all duration-1000 rounded-full"
+          >
+            Shop Now
+          </Link>
+        </motion.div>
+      </section>
+    </div>
   );
 };
 

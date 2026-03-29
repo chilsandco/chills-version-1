@@ -4,7 +4,7 @@ import { Product } from '../types';
 import { useCart } from '../CartContext';
 import { useCheckout } from '../hooks/useCheckout';
 import { motion } from 'motion/react';
-import { ChevronLeft, ChevronRight, Plus, Minus, CreditCard } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 
 const ProductDetail: React.FC = () => {
   const { id } = useParams();
@@ -111,7 +111,13 @@ const ProductDetail: React.FC = () => {
                 >
                   {isProcessing ? 'Processing...' : (
                     <>
-                      <CreditCard size={16} />
+                      <motion.div
+                        whileHover={{ scale: 1.1 }}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
+                        className="text-accent"
+                      >
+                        <CreditCard size={16} />
+                      </motion.div>
                       Buy Now
                     </>
                   )}

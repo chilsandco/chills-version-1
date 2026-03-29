@@ -4,8 +4,14 @@
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-display: "Space Grotesk", sans-serif;
-  --color-accent: #D4AF37; /* Premium Gold */
-  --color-brand-navy: #001e3c; /* Navy from the logo */
+  --color-accent: #d4af37; /* Gold accent */
+  --color-brand-navy: #001e3c;
+}
+
+@layer utilities {
+  .gold-icon {
+    filter: brightness(0) saturate(100%) invert(85%) sepia(13%) saturate(1229%) hue-rotate(356deg) brightness(98%) contrast(90%) drop-shadow(0 0 8px rgba(212, 175, 55, 0.4));
+  }
 }
 
 @layer base {
