@@ -3,9 +3,21 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
+import WooCommerceRestApi from "@woocommerce/woocommerce-rest-api";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Initialize WooCommerce API
+const WooCommerce = new (WooCommerceRestApi as any).default({
+  url: process.env.WOOCOMMERCE_URL || "https://example.com",
+  consumerKey: process.env.WOOCOMMERCE_KEY || "",
+  consumerSecret: process.env.WOOCOMMERCE_SECRET || "",
+  version: "wc/v3"
+});
 
 async function startServer() {
   const app = express();
@@ -14,84 +26,63 @@ async function startServer() {
   app.use(cors());
   app.use(express.json());
 
-  // Mock Product Data
-  const products = [
-    {
-      id: "t1",
-      name: "SYNTAX OVERLOAD TEE",
-      category: "T-Shirts",
-      price: 1899,
-      description: "Heavyweight 240GSM cotton. Oversized fit. Screen printed graphics.",
-      concept: "A tribute to the late-night refactoring sessions where logic becomes art.",
-      material: "100% Organic Cotton, 240 GSM.",
-      fit: "Oversized, dropped shoulders.",
-      care: "Machine wash cold, inside out. Do not iron on print.",
-      images: [
-        "https://picsum.photos/seed/syntax1/1200/1600",
-        "https://picsum.photos/seed/syntax2/1200/1600"
-      ],
-      status: "Available"
-    },
-    {
-      id: "t2",
-      name: "SILICON WAFER TEE",
-      category: "T-Shirts",
-      price: 1999,
-      description: "Premium pima cotton. Minimalist silicon pattern embroidery.",
-      concept: "The foundation of everything we build, rendered in thread.",
-      material: "95% Pima Cotton, 5% Elastane.",
-      fit: "Regular fit, true to size.",
-      care: "Hand wash recommended. Dry flat.",
-      images: [
-        "https://picsum.photos/seed/silicon1/1200/1600",
-        "https://picsum.photos/seed/silicon2/1200/1600"
-      ],
-      status: "Available"
-    },
-    {
-      id: "t3",
-      name: "BINARY LOGIC HOODIE",
-      category: "T-Shirts",
-      price: 3499,
-      description: "Brushed fleece interior. 400GSM. Minimalist binary code detail.",
-      concept: "Zeros and ones. The only truth in a world of variables.",
-      material: "80% Cotton, 20% Polyester Fleece.",
-      fit: "Boxy fit.",
-      care: "Cold wash. Tumble dry low.",
-      images: [
-        "https://picsum.photos/seed/binary1/1200/1600",
-        "https://picsum.photos/seed/binary2/1200/1600"
-      ],
-      status: "Available"
-    },
-    {
-      id: "s1",
-      name: "DEBUGGER OVERSHIRT",
-      category: "Shirts",
-      price: 4500,
-      description: "Technical fabric. Water resistant. Multiple utility pockets.",
-      concept: "Engineered for the transition from terminal to the real world.",
-      material: "Nylon Ripstop.",
-      fit: "Relaxed overshirt fit.",
-      care: "Wipe clean or delicate wash.",
-      images: [
-        "https://picsum.photos/seed/debug1/1200/1600",
-        "https://picsum.photos/seed/debug2/1200/1600"
-      ],
-      status: "Coming Soon"
-    }
-  ];
-
-  // API Routes
-  app.get("/api/products", (req, res) => {
-    res.json(products);
+  // Helper to map WC product to App product
+  const mapProduct = (wcProduct: any) => ({
+    id: wcProduct.id.toString(),
+    name: wcProduct.name,
+    category: wcProduct.categories[0]?.name || "Uncategorized",
+    price: parseFloat(wcProduct.price || "0"),
+    description: wcProduct.short_description.replace(/<[^>]*>?/gm, ""), // Strip HTML
+    concept: wcProduct.attributes.find((a: any) => a.name.toLowerCase() === "concept")?.options[0] || "A precise exploration of form and function.",
+    material: wcProduct.attributes.find((a: any) => a.name.toLowerCase() === "material")?.options[0] || "Premium technical fabric.",
+    fit: wcProduct.attributes.find((a: any) => a.name.toLowerCase() === "fit")?.options[0] || "Regular fit.",
+    care: wcProduct.attributes.find((a: any) => a.name.toLowerCase() === "care")?.options[0] || "Machine wash cold.",
+    images: wcProduct.images.map((img: any) => img.src),
+    status: wcProduct.stock_status === "instock" ? "Available" : "Coming Soon"
   });
 
-  app.get("/api/products/:id", (req, res) => {
-    const product = products.find(p => p.id === req.params.id);
-    if (product) {
-      res.json(product);
-    } else {
+  // API Routes
+  app.get("/api/products", async (req, res) => {
+    try {
+      if (!process.env.WOOCOMMERCE_KEY) {
+        // Fallback to mock data if credentials are missing to prevent crash
+        return res.json([
+          {
+            id: "t1",
+            name: "SYNTAX OVERLOAD TEE",
+            category: "T-Shirts",
+            price: 1899,
+            description: "Heavyweight 240GSM cotton. Oversized fit. Screen printed graphics.",
+            concept: "A tribute to the late-night refactoring sessions where logic becomes art.",
+            material: "100% Organic Cotton, 240 GSM.",
+            fit: "Oversized, dropped shoulders.",
+            care: "Machine wash cold, inside out. Do not iron on print.",
+            images: [
+              "https://picsum.photos/seed/syntax1/1200/1600",
+              "https://picsum.photos/seed/syntax2/1200/1600"
+            ],
+            status: "Available"
+          }
+        ]);
+      }
+      const response = await WooCommerce.get("products", { per_page: 20 });
+      const mappedProducts = response.data.map(mapProduct);
+      res.json(mappedProducts);
+    } catch (error) {
+      console.error("WooCommerce API Error:", error);
+      res.status(500).json({ message: "Failed to fetch products from WooCommerce" });
+    }
+  });
+
+  app.get("/api/products/:id", async (req, res) => {
+    try {
+      if (!process.env.WOOCOMMERCE_KEY) {
+        return res.status(404).json({ message: "Product not found (Mock Mode)" });
+      }
+      const response = await WooCommerce.get(`products/${req.params.id}`);
+      res.json(mapProduct(response.data));
+    } catch (error) {
+      console.error("WooCommerce API Error:", error);
       res.status(404).json({ message: "Product not found" });
     }
   });
