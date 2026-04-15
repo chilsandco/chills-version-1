@@ -21,10 +21,13 @@ const WooCommerce = new (WooCommerceRestApi as any).default({
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
+  const PORT = process.env.PORT || 3000;
 
   app.use(cors());
   app.use(express.json());
+
+  // Health check
+  app.get("/api/health", (req, res) => res.json({ status: "ok", env: process.env.NODE_ENV }));
 
   // Helper to map WC product to App product
   const mapProduct = (wcProduct: any) => ({
@@ -107,10 +110,10 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), "dist");
+    const distPath = path.resolve(__dirname, "dist");
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+      res.sendFile(path.resolve(distPath, "index.html"));
     });
   }
 
