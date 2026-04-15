@@ -58,7 +58,6 @@ const ProductDetail: React.FC = () => {
                 src={img}
                 alt={`${product.name} ${i + 1}`}
                 className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
               />
             </div>
           ))}

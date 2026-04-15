@@ -12,10 +12,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Initialize WooCommerce API
+const WOO_URL = process.env.WOOCOMMERCE_URL || "";
+const WOO_KEY = process.env.WOOCOMMERCE_KEY || "";
+const WOO_SECRET = process.env.WOOCOMMERCE_SECRET || "";
+
+if (!WOO_URL || !WOO_KEY || !WOO_SECRET) {
+  console.warn("⚠️ WooCommerce credentials missing. App will run in Mock Mode.");
+}
+
 const WooCommerce = new (WooCommerceRestApi as any).default({
-  url: process.env.WOOCOMMERCE_URL || "https://example.com",
-  consumerKey: process.env.WOOCOMMERCE_KEY || "",
-  consumerSecret: process.env.WOOCOMMERCE_SECRET || "",
+  url: WOO_URL.startsWith('http') ? WOO_URL : `https://${WOO_URL}`,
+  consumerKey: WOO_KEY,
+  consumerSecret: WOO_SECRET,
   version: "wc/v3"
 });
 
@@ -27,29 +35,36 @@ async function startServer() {
   app.use(express.json());
 
   // Helper to map WC product to App product
-  const mapProduct = (wcProduct: any) => ({
-    id: wcProduct.id.toString(),
-    name: wcProduct.name,
-    category: wcProduct.categories[0]?.name || "Uncategorized",
-    price: parseFloat(wcProduct.price || "0"),
-    description: wcProduct.short_description.replace(/<[^>]*>?/gm, ""), // Strip HTML
-    concept: wcProduct.attributes.find((a: any) => a.name.toLowerCase() === "concept")?.options[0] || "A precise exploration of form and function.",
-    material: wcProduct.attributes.find((a: any) => a.name.toLowerCase() === "material")?.options[0] || "Premium technical fabric.",
-    fit: wcProduct.attributes.find((a: any) => a.name.toLowerCase() === "fit")?.options[0] || "Regular fit.",
-    care: wcProduct.attributes.find((a: any) => a.name.toLowerCase() === "care")?.options[0] || "Machine wash cold.",
-    images: wcProduct.images.map((img: any) => img.src),
-    status: wcProduct.stock_status === "instock" ? "Available" : "Coming Soon"
-  });
+  const mapProduct = (wcProduct: any) => {
+    try {
+      return {
+        id: wcProduct.id.toString(),
+        name: wcProduct.name,
+        category: wcProduct.categories[0]?.name || "Uncategorized",
+        price: parseFloat(wcProduct.price || "0"),
+        description: (wcProduct.short_description || "").replace(/<[^>]*>?/gm, ""), // Strip HTML
+        concept: wcProduct.attributes?.find((a: any) => a.name.toLowerCase() === "concept")?.options[0] || "A precise exploration of form and function.",
+        material: wcProduct.attributes?.find((a: any) => a.name.toLowerCase() === "material")?.options[0] || "Premium technical fabric.",
+        fit: wcProduct.attributes?.find((a: any) => a.name.toLowerCase() === "fit")?.options[0] || "Regular fit.",
+        care: wcProduct.attributes?.find((a: any) => a.name.toLowerCase() === "care")?.options[0] || "Machine wash cold.",
+        images: (wcProduct.images || []).map((img: any) => img.src),
+        status: wcProduct.stock_status === "instock" ? "Available" : "Coming Soon"
+      };
+    } catch (err) {
+      console.error("Mapping Error for product:", wcProduct.id, err);
+      return null;
+    }
+  };
 
   // API Routes
   app.get("/api/products", async (req, res) => {
     try {
-      if (!process.env.WOOCOMMERCE_KEY) {
-        // Fallback to mock data if credentials are missing to prevent crash
+      if (!WOO_KEY) {
+        console.log("Serving mock products (No API Key)");
         return res.json([
           {
             id: "t1",
-            name: "SYNTAX OVERLOAD TEE",
+            name: "SYNTAX OVERLOAD TEE (MOCK)",
             category: "T-Shirts",
             price: 1899,
             description: "Heavyweight 240GSM cotton. Oversized fit. Screen printed graphics.",
@@ -65,24 +80,34 @@ async function startServer() {
           }
         ]);
       }
+      
+      console.log(`Fetching products from: ${WOO_URL}`);
       const response = await WooCommerce.get("products", { per_page: 20 });
-      const mappedProducts = response.data.map(mapProduct);
+      const mappedProducts = response.data.map(mapProduct).filter(Boolean);
       res.json(mappedProducts);
-    } catch (error) {
-      console.error("WooCommerce API Error:", error);
-      res.status(500).json({ message: "Failed to fetch products from WooCommerce" });
+    } catch (error: any) {
+      console.error("WooCommerce API Error:", error.response?.data || error.message);
+      res.status(500).json({ 
+        message: "Failed to fetch products from WooCommerce",
+        details: error.message 
+      });
     }
   });
 
   app.get("/api/products/:id", async (req, res) => {
     try {
-      if (!process.env.WOOCOMMERCE_KEY) {
+      if (!WOO_KEY) {
         return res.status(404).json({ message: "Product not found (Mock Mode)" });
       }
       const response = await WooCommerce.get(`products/${req.params.id}`);
-      res.json(mapProduct(response.data));
-    } catch (error) {
-      console.error("WooCommerce API Error:", error);
+      const product = mapProduct(response.data);
+      if (product) {
+        res.json(product);
+      } else {
+        res.status(404).json({ message: "Product mapping failed" });
+      }
+    } catch (error: any) {
+      console.error("WooCommerce API Error:", error.response?.data || error.message);
       res.status(404).json({ message: "Product not found" });
     }
   });
