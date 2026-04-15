@@ -17,6 +17,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           src={product.images[0]}
           alt={product.name}
           className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000"
+          referrerPolicy="no-referrer"
         />
         <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors duration-1000" />
       </div>
