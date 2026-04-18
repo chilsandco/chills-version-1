@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
-    "build": "vite build",
-    "start": "node --experimental-strip-types server.ts",
+    "build": "vite build && npm run build:server",
+    "build:server": "esbuild server.ts --bundle --platform=node --format=esm --outfile=server.js --external:vite --external:express --external:cors --external:@woocommerce/woocommerce-rest-api --external:dotenv --external:razorpay",
+    "start": "NODE_ENV=production node server.js",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
@@ -19,6 +20,7 @@
     "clsx": "^2.1.1",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
+    "esbuild": "^0.28.0",
     "express": "^4.22.1",
     "lenis": "^1.3.21",
     "lucide-react": "^0.546.0",

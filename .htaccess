@@ -1,0 +1,12 @@
+RewriteEngine On
+RewriteBase /
+
+# Force SSL (Optional, recommended)
+# RewriteCond %{HTTPS} off
+# RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Proxy all requests to the Node.js application
+# Note: Hostinger usually uses a passenger or proxy setup.
+# If your Node app is running on a specific port (like 3000), 
+# this ensures even /api routes are sent to Node.
+RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]

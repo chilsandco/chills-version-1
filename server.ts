@@ -11,13 +11,18 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Initialize WooCommerce API
-const WooCommerce = new (WooCommerceRestApi as any).default({
-  url: process.env.WOOCOMMERCE_URL || "https://example.com",
-  consumerKey: process.env.WOOCOMMERCE_KEY || "",
-  consumerSecret: process.env.WOOCOMMERCE_SECRET || "",
-  version: "wc/v3"
-});
+// Initialize WooCommerce API helper
+function getWooCommerce() {
+  if (!process.env.WOOCOMMERCE_KEY || !process.env.WOOCOMMERCE_SECRET) {
+    return null;
+  }
+  return new (WooCommerceRestApi as any).default({
+    url: process.env.WOOCOMMERCE_URL || "https://example.com",
+    consumerKey: process.env.WOOCOMMERCE_KEY,
+    consumerSecret: process.env.WOOCOMMERCE_SECRET,
+    version: "wc/v3"
+  });
+}
 
 async function startServer() {
   const app = express();
@@ -47,8 +52,9 @@ async function startServer() {
   // API Routes
   app.get("/api/products", async (req, res) => {
     try {
-      if (!process.env.WOOCOMMERCE_KEY) {
-        // Fallback to mock data if credentials are missing to prevent crash
+      const wc = getWooCommerce();
+      if (!wc) {
+        // Fallback to mock data if credentials are missing
         return res.json([
           {
             id: "t1",
@@ -68,7 +74,7 @@ async function startServer() {
           }
         ]);
       }
-      const response = await WooCommerce.get("products", { per_page: 20 });
+      const response = await wc.get("products", { per_page: 20 });
       const mappedProducts = response.data.map(mapProduct);
       res.json(mappedProducts);
     } catch (error) {
@@ -79,10 +85,11 @@ async function startServer() {
 
   app.get("/api/products/:id", async (req, res) => {
     try {
-      if (!process.env.WOOCOMMERCE_KEY) {
+      const wc = getWooCommerce();
+      if (!wc) {
         return res.status(404).json({ message: "Product not found (Mock Mode)" });
       }
-      const response = await WooCommerce.get(`products/${req.params.id}`);
+      const response = await wc.get(`products/${req.params.id}`);
       res.json(mapProduct(response.data));
     } catch (error) {
       console.error("WooCommerce API Error:", error);
@@ -118,7 +125,10 @@ async function startServer() {
   }
 
   app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`[CHILS & CO.] Production Server started successfully`);
+    console.log(`[CHILS & CO.] Listening on port: ${PORT}`);
+    console.log(`[CHILS & CO.] Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`[CHILS & CO.] Servicing static files from: ${path.resolve(__dirname, "dist")}`);
   });
 }
 
