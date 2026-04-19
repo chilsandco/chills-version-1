@@ -1,43 +1,130 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Product } from '../types';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'motion/react';
 
 interface ProductCardProps {
   product: Product;
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  // Motion values for 3D tilt
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  const mouseXSpring = useSpring(x, { stiffness: 150, damping: 20 });
+  const mouseYSpring = useSpring(y, { stiffness: 150, damping: 20 });
+
+  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["10deg", "-10deg"]);
+  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-10deg", "10deg"]);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!cardRef.current) return;
+    const rect = cardRef.current.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const xPct = mouseX / width - 0.5;
+    const yPct = mouseY / height - 0.5;
+
+    x.set(xPct);
+    y.set(yPct);
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    x.set(0);
+    y.set(0);
+  };
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isHovered && product.images.length > 1) {
+      interval = setInterval(() => {
+        setCurrentImageIndex((prev) => (prev + 1) % product.images.length);
+      }, 1500);
+    } else {
+      setCurrentImageIndex(0);
+    }
+    return () => clearInterval(interval);
+  }, [isHovered, product.images.length]);
+
   return (
-    <Link to={`/product/${product.id}`} className="group relative block overflow-hidden bg-neutral-950">
-      <div className="aspect-[3/4] overflow-hidden relative">
-        <motion.img
-          whileHover={{ scale: 1.08 }}
-          transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
-          src={product.images[0]}
-          alt={product.name}
-          className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000"
-          referrerPolicy="no-referrer"
-        />
-        <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors duration-1000" />
-      </div>
-
-      <div className="p-8 flex justify-between items-start bg-black border-t border-white/5">
-        <div>
-          <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-2 group-hover:text-accent transition-colors duration-500">{product.name}</h3>
-          <p className="text-[10px] text-neutral-600 uppercase tracking-widest">{product.category}</p>
+    <motion.div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        rotateX,
+        rotateY,
+        transformStyle: "preserve-3d",
+      }}
+      className="group relative block overflow-hidden bg-neutral-950 perspective-1000 transition-shadow duration-500"
+    >
+      <Link 
+        to={`/product/${product.id}`} 
+        className="block"
+        data-cursor="inspect"
+      >
+        <div className="aspect-[3/4] overflow-hidden relative" style={{ transform: "translateZ(50px)" }}>
+          <AnimatePresence mode="wait">
+            <motion.img
+              key={currentImageIndex}
+              initial={{ opacity: 0, scale: 1.1, y: 10 }}
+              animate={{ opacity: 1, scale: 1.05, y: 0 }}
+              exit={{ opacity: 0, scale: 1, y: -10 }}
+              transition={{ 
+                duration: 0.8,
+                ease: [0.22, 1, 0.36, 1]
+              }}
+              src={product.images[currentImageIndex]}
+              alt={product.name}
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
+          </AnimatePresence>
+          
+          <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors duration-1000" />
+          
+          {/* Progress Indicators */}
+          {product.images.length > 1 && isHovered && (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-20">
+              {product.images.map((_, i) => (
+                <motion.div 
+                  key={i} 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`h-[1px] transition-all duration-500 ${i === currentImageIndex ? 'w-6 bg-accent' : 'w-2 bg-white/20'}`}
+                />
+              ))}
+            </div>
+          )}
         </div>
-        <p className="text-[11px] font-mono opacity-40 group-hover:opacity-100 transition-opacity duration-500">₹{product.price.toLocaleString()}</p>
-      </div>
 
-      {product.status === "Coming Soon" && (
-        <div className="absolute top-6 left-6 bg-white text-black text-[9px] font-bold px-3 py-1.5 tracking-[0.2em] uppercase">
-          Coming Soon
+        <div className="p-8 flex justify-between items-start bg-black border-t border-white/5 relative z-10" style={{ transform: "translateZ(30px)" }}>
+          <div>
+            <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-2 group-hover:text-accent transition-colors duration-500">{product.name}</h3>
+            <p className="text-[10px] text-neutral-600 uppercase tracking-widest">{product.category}</p>
+          </div>
+          <p className="text-[11px] font-mono opacity-40 group-hover:opacity-100 transition-opacity duration-500">₹{product.price.toLocaleString()}</p>
         </div>
-      )}
 
-      <div className="absolute inset-0 border border-white/0 group-hover:border-white/10 transition-colors pointer-events-none" />
-    </Link>
+        {product.status === "Coming Soon" && (
+          <div className="absolute top-6 left-6 bg-white text-black text-[9px] font-bold px-3 py-1.5 tracking-[0.2em] uppercase z-30" style={{ transform: "translateZ(60px)" }}>
+            Coming Soon
+          </div>
+        )}
+
+        <div className="absolute inset-0 border border-white/0 group-hover:border-white/10 transition-colors pointer-events-none z-40" />
+      </Link>
+    </motion.div>
   );
 };
 

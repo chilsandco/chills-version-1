@@ -1,17 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Product } from '../types';
 import { useCart } from '../CartContext';
 import { useCheckout } from '../hooks/useCheckout';
-import { motion } from 'motion/react';
-import { CreditCard } from 'lucide-react';
+import { motion, AnimatePresence, useSpring } from 'motion/react';
+import { CreditCard, ZoomIn, ZoomOut, X } from 'lucide-react';
+import { useGesture } from '@use-gesture/react';
 
 const ProductDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeImage, setActiveImage] = useState(0);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  
+  // Spring-based motion values for ultra-smooth transitions
+  const scale = useSpring(1, { stiffness: 150, damping: 25 });
+  const positionX = useSpring(0, { stiffness: 150, damping: 25 });
+  const positionY = useSpring(0, { stiffness: 150, damping: 25 });
+
   const { addToCart, totalPrice } = useCart();
   const { triggerCheckout, isProcessing } = useCheckout();
 
@@ -28,24 +35,56 @@ const ProductDetail: React.FC = () => {
       .catch(() => navigate('/collection'));
   }, [id, navigate]);
 
+  // Prevent scrolling when modal is open
+  useEffect(() => {
+    if (selectedImage) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [selectedImage]);
+
   const handleBuyNow = async () => {
     if (!product) return;
-    
-    // Add to cart first
     addToCart(product);
-    
-    // Calculate new total (old total + this product's price)
-    // We do this because the cart state update won't be reflected in the current render cycle
     const newTotal = totalPrice + product.price;
-    
-    // Trigger Razorpay
     await triggerCheckout(newTotal);
-    
-    // After successful payment, navigate to home or success page
     navigate('/');
   };
 
-  if (loading || !product) return <div className="h-screen flex items-center justify-center">Loading...</div>;
+  const handleZoomIn = () => scale.set(Math.min(scale.get() + 0.5, 4));
+  const handleZoomOut = () => scale.set(Math.max(scale.get() - 0.5, 1));
+
+  // Advanced Gesture Bindings
+  const bind = (useGesture as any)(
+    {
+      onPinch: ({ offset: [d] }) => {
+        const newScale = 1 + d / 150; 
+        scale.set(Math.max(1, Math.min(newScale, 5)));
+      },
+      onDrag: ({ offset: [dx, dy] }) => {
+        if (scale.get() > 1.01) {
+          positionX.set(dx);
+          positionY.set(dy);
+        }
+      },
+      onDoubleClick: () => {
+        if (scale.get() > 1) {
+          scale.set(1);
+          positionX.set(0);
+          positionY.set(0);
+        } else {
+          scale.set(3);
+        }
+      }
+    },
+    {
+      drag: { from: () => [positionX.get(), positionY.get()] }
+    }
+  );
+
+  if (loading || !product) return <div className="h-screen flex items-center justify-center font-display tracking-widest text-neutral-500 uppercase text-xs">Awaiting Precision...</div>;
 
   return (
     <div className="pt-24 pb-24 px-6 md:px-12 max-w-[1800px] mx-auto">
@@ -53,14 +92,25 @@ const ProductDetail: React.FC = () => {
         {/* Image Gallery */}
         <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-4">
           {product.images.map((img, i) => (
-            <div key={i} className="aspect-[3/4] bg-neutral-900 overflow-hidden">
-              <img
+            <motion.div 
+              key={i} 
+              className="aspect-[3/4] bg-neutral-900 overflow-hidden cursor-zoom-in"
+              whileHover={{ scale: 1.02 }}
+              onClick={() => {
+                setSelectedImage(img);
+                scale.set(1);
+                positionX.set(0);
+                positionY.set(0);
+              }}
+              data-cursor="inspect"
+            >
+              <motion.img
                 src={img}
                 alt={`${product.name} ${i + 1}`}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover origin-center transition-transform duration-700 hover:scale-110"
                 referrerPolicy="no-referrer"
               />
-            </div>
+            </motion.div>
           ))}
         </div>
 
@@ -134,6 +184,76 @@ const ProductDetail: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Full Image Viewer Modal */}
+      <AnimatePresence>
+        {selectedImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-xl touch-none"
+            onClick={() => setSelectedImage(null)}
+          >
+            {/* Modal UI Controls */}
+            <div 
+              className="absolute top-8 right-8 flex gap-6 z-[110]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button 
+                onClick={handleZoomIn}
+                className="text-white/60 hover:text-white transition-colors p-2"
+                title="Zoom In"
+              >
+                <ZoomIn size={24} />
+              </button>
+              <button 
+                onClick={handleZoomOut}
+                className="text-white/60 hover:text-white transition-colors p-2"
+                title="Zoom Out"
+              >
+                <ZoomOut size={24} />
+              </button>
+              <button 
+                onClick={() => setSelectedImage(null)}
+                className="text-white/60 hover:text-white transition-colors p-2 ml-4"
+                title="Close"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Instruction Overlay on mobile */}
+            <div className="absolute top-8 left-8 hidden md:block text-[9px] tracking-[0.3em] text-white/30 uppercase pointer-events-none">
+              Pinch to Zoom • Drag to Explore • Dbl Click to Reset
+            </div>
+
+            {/* Main Image Container */}
+            <div 
+              className="w-full h-full flex items-center justify-center p-12 overflow-hidden"
+              {...(bind() as any)}
+            >
+              <motion.div
+                className="relative max-w-full max-h-full flex items-center justify-center"
+                style={{ scale, x: positionX, y: positionY }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <motion.img
+                  src={selectedImage}
+                  alt="Full view"
+                  className="max-w-full max-h-[85vh] object-contain shadow-2xl rounded-sm pointer-events-none"
+                  referrerPolicy="no-referrer"
+                />
+              </motion.div>
+            </div>
+
+            {/* Bottom Info */}
+            <div className="absolute bottom-12 text-center text-[10px] tracking-[0.4em] text-white/40 uppercase pointer-events-none">
+              {product.name} — Surface Inspection
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

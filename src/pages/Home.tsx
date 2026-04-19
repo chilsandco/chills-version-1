@@ -161,7 +161,7 @@ const Home: React.FC = () => {
             <img 
               src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&q=80&w=1000" 
               alt="Craftsmanship"
-              className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-2000 group-hover:scale-110"
+              className="w-full h-full object-cover transition-all duration-2000 group-hover:scale-110"
               referrerPolicy="no-referrer"
             />
             <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors duration-2000" />

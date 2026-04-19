@@ -9,13 +9,15 @@ import ProductDetail from './pages/ProductDetail';
 import Checkout from './pages/Checkout';
 import SmoothScroll from './components/SmoothScroll';
 import ScrollProgress from './components/ScrollProgress';
+import CustomCursor from './components/CustomCursor';
 
 export default function App() {
   return (
     <CartProvider>
       <Router>
         <SmoothScroll>
-          <div className="min-h-screen flex flex-col bg-black text-white selection:bg-white selection:text-black">
+          <div className="min-h-screen flex flex-col bg-black text-white selection:bg-white selection:text-black lg:cursor-none">
+            <CustomCursor />
             <ScrollProgress />
             <Navbar />
             <main className="flex-grow">
