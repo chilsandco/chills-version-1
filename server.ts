@@ -5,8 +5,11 @@ import { fileURLToPath } from "url";
 import cors from "cors";
 import WooCommerceRestApi from "@woocommerce/woocommerce-rest-api";
 import dotenv from "dotenv";
+import jwt from "jsonwebtoken";
 
 dotenv.config();
+
+const JWT_SECRET = process.env.JWT_SECRET || 'X1jtvpOK_J<.x%yEe3pm^pGN6!BwN_TLv@ibyA4Ix)3$+IA8I@=^G-5BRRqB9H_M';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,7 +20,7 @@ function getWooCommerce() {
     return null;
   }
   return new (WooCommerceRestApi as any).default({
-    url: process.env.WOOCOMMERCE_URL || "https://example.com",
+    url: process.env.WOOCOMMERCE_URL || "https://chilsandco.com",
     consumerKey: process.env.WOOCOMMERCE_KEY,
     consumerSecret: process.env.WOOCOMMERCE_SECRET,
     version: "wc/v3"
@@ -30,6 +33,20 @@ async function startServer() {
 
   app.use(cors());
   app.use(express.json());
+
+  // JWT Middleware
+  const authenticateToken = (req: any, res: any, next: any) => {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1];
+
+    if (!token) return res.status(401).json({ message: "Access denied. No token provided." });
+
+    jwt.verify(token, JWT_SECRET, (err: any, user: any) => {
+      if (err) return res.status(403).json({ message: "Invalid or expired token." });
+      req.user = user;
+      next();
+    });
+  };
 
   // Request logger for production debugging
   app.use((req, res, next) => {
@@ -113,6 +130,133 @@ async function startServer() {
       currency: currency || "INR",
       receipt: `receipt_${Date.now()}`
     });
+  });
+
+  app.post("/api/auth/register", async (req, res) => {
+    try {
+      const { email, first_name, last_name, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
+      const wc = getWooCommerce();
+      if (!wc) {
+        // Mock success in development if no WC keys
+        console.log("[CHILS & CO.] Registering mock customer:", email);
+        return res.json({
+          id: Math.floor(Math.random() * 1000),
+          email,
+          first_name: first_name || "",
+          last_name: last_name || "",
+          username: email.split('@')[0],
+          message: "Registration successful (Mock Mode)"
+        });
+      }
+
+      const customerData = {
+        email,
+        first_name: first_name || "",
+        last_name: last_name || "",
+        password,
+        username: email.split('@')[0]
+      };
+
+      const response = await wc.post("customers", customerData);
+      res.status(201).json(response.data);
+    } catch (error: any) {
+      console.error("WooCommerce Registration Error:", error.response?.data || error);
+      const errorMessage = error.response?.data?.message || "Failed to register user";
+      res.status(error.response?.status || 400).json({ message: errorMessage });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
+      const wpUrl = process.env.WOOCOMMERCE_URL || "https://chilsandco.com";
+      
+      // Hit the real WordPress JWT endpoint
+      const response = await fetch(`${wpUrl}/wp-json/jwt-auth/v1/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: email, // WP JWT Auth allows email or username here
+          password: password
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("WordPress Login Failed:", data);
+        return res.status(response.status).json({ 
+          message: data.message || "Invalid credentials" 
+        });
+      }
+
+      // Verified response structure from your live server:
+      // { token, user_email, user_nicename, user_display_name }
+      res.json({
+        token: data.token,
+        user: {
+          id: 0, // ID is hidden in token payload per standard response
+          email: data.user_email,
+          username: data.user_nicename
+        },
+        message: "Login successful"
+      });
+    } catch (error: any) {
+      console.error("Login Server Error:", error);
+      res.status(500).json({ message: "Login failed due to server error" });
+    }
+  });
+
+  // Protected route example
+  app.get("/api/auth/me", authenticateToken, (req: any, res) => {
+    res.json(req.user);
+  });
+
+  app.get("/api/orders", authenticateToken, async (req: any, res) => {
+    try {
+      const wc = getWooCommerce();
+      if (!wc) {
+        // Mock orders if no WC keys
+        return res.json([
+          {
+            id: 101,
+            number: "WC-101",
+            status: "processing",
+            date_created: new Date().toISOString(),
+            total: "4500.00",
+            line_items: [{ name: "SYNTAX OVERLOAD TEE", quantity: 1 }]
+          }
+        ]);
+      }
+
+      // The WordPress JWT plugin stores user data in data.user
+      // We need to extract the user ID
+      const customerId = req.user?.data?.user?.id;
+
+      if (!customerId) {
+        return res.status(400).json({ message: "Unable to identify customer from token" });
+      }
+
+      const response = await wc.get("orders", {
+        customer: customerId,
+        per_page: 10
+      });
+
+      res.json(response.data);
+    } catch (error: any) {
+      console.error("WooCommerce Orders Error:", error);
+      res.status(500).json({ message: "Failed to fetch orders" });
+    }
   });
 
   // Vite middleware for development

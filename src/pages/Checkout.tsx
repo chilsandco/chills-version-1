@@ -13,7 +13,8 @@ const Checkout: React.FC = () => {
   const handlePayment = async () => {
     const success = await triggerCheckout();
     if (success) {
-      navigate('/');
+      const orderId = `SGL-${Math.floor(100000 + Math.random() * 900000)}`;
+      navigate(`/order-success/${orderId}`);
     }
   };
 
@@ -36,7 +37,7 @@ const Checkout: React.FC = () => {
         {/* Cart Items */}
         <div className="lg:col-span-7 space-y-8">
           {cart.map(item => (
-            <div key={item.id} className="flex gap-6 pb-8 border-b border-neutral-900">
+            <div key={`${item.id}-${item.selectedSize}`} className="flex gap-6 pb-8 border-b border-neutral-900">
               <div className="w-24 h-32 bg-neutral-900 flex-shrink-0">
                 <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" />
               </div>
@@ -44,9 +45,12 @@ const Checkout: React.FC = () => {
                 <div className="flex justify-between items-start">
                   <div>
                     <h3 className="text-[11px] tracking-[0.1em] font-bold uppercase mb-1">{item.name}</h3>
-                    <p className="text-[10px] text-neutral-500 uppercase">{item.category}</p>
+                    <p className="text-[10px] text-neutral-500 uppercase mb-2">{item.category}</p>
+                    {item.selectedSize && (
+                      <p className="text-[10px] tracking-widest text-accent uppercase font-bold">Build: {item.selectedSize}</p>
+                    )}
                   </div>
-                  <button onClick={() => removeFromCart(item.id)} className="text-accent hover:text-white transition-colors">
+                  <button onClick={() => removeFromCart(item.id, item.selectedSize)} className="text-accent hover:text-white transition-colors">
                     <motion.div
                       whileHover={{ scale: 1.2, rotate: 10 }}
                       whileTap={{ scale: 0.8 }}
@@ -58,13 +62,13 @@ const Checkout: React.FC = () => {
 
                 <div className="flex justify-between items-end">
                   <div className="flex items-center border border-neutral-800">
-                    <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-2 hover:bg-neutral-900 transition-colors text-accent">
+                    <button onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedSize)} className="p-2 hover:bg-neutral-900 transition-colors text-accent">
                       <motion.div whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.8 }}>
                         <Minus size={12} />
                       </motion.div>
                     </button>
                     <span className="w-10 text-center text-xs font-mono">{item.quantity}</span>
-                    <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-2 hover:bg-neutral-900 transition-colors text-accent">
+                    <button onClick={() => updateQuantity(item.id, item.quantity + 1, item.selectedSize)} className="p-2 hover:bg-neutral-900 transition-colors text-accent">
                       <motion.div whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.8 }}>
                         <Plus size={12} />
                       </motion.div>

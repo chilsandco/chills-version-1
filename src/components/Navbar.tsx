@@ -1,14 +1,28 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingBag, Menu, X, Search } from 'lucide-react';
+import { ShoppingBag, Menu, X, Search, User, Heart } from 'lucide-react';
 import { useCart } from '../CartContext';
+import { useWishlist } from '../WishlistContext';
+import { useAuth } from '../AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 
 const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { totalItems } = useCart();
+  const { wishlist } = useWishlist();
+  const { user, isAuthenticated } = useAuth();
   const location = useLocation();
+  const [pulse, setPulse] = useState(false);
+
+  useEffect(() => {
+    const handlePulse = () => {
+      setPulse(true);
+      setTimeout(() => setPulse(false), 500);
+    };
+    window.addEventListener('pulse-cart', handlePulse);
+    return () => window.removeEventListener('pulse-cart', handlePulse);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
@@ -86,8 +100,43 @@ const Navbar: React.FC = () => {
           >
             <Search size={20} strokeWidth={1.5} />
           </motion.button>
-          <Link to="/checkout" className="relative hover:opacity-50 transition-opacity text-accent">
+          
+          <Link to="/wishlist" className="relative hover:opacity-50 transition-opacity text-accent">
             <motion.div
+              whileHover={{ scale: 1.1, y: -2 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <Heart size={20} strokeWidth={1.5} fill={wishlist.length > 0 ? "currentColor" : "none"} />
+            </motion.div>
+            {wishlist.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-accent text-black text-[8px] font-bold w-3 h-3 rounded-full flex items-center justify-center">
+                {wishlist.length}
+              </span>
+            )}
+          </Link>
+          <Link to="/auth" className="hover:opacity-50 transition-opacity text-accent">
+            <motion.div
+              whileHover={{ scale: 1.1, y: -2 }}
+              whileTap={{ scale: 0.9 }}
+              className="flex items-center justify-center"
+            >
+              {isAuthenticated && user ? (
+                <div className="w-6 h-6 rounded-full border border-accent flex items-center justify-center text-[10px] font-bold">
+                  {user.username.charAt(0).toUpperCase()}
+                </div>
+              ) : (
+                <User size={20} strokeWidth={1.5} />
+              )}
+            </motion.div>
+          </Link>
+          <Link 
+            id="cart-icon" 
+            to="/checkout" 
+            className="relative hover:opacity-50 transition-opacity text-accent"
+          >
+            <motion.div
+              animate={pulse ? { scale: [1, 1.3, 1], rotate: [0, -10, 10, 0] } : {}}
+              transition={{ duration: 0.4 }}
               whileHover={{ scale: 1.1, rotate: -5, y: -2 }}
               whileTap={{ scale: 0.9 }}
             >
@@ -133,6 +182,20 @@ const Navbar: React.FC = () => {
                   {link.name}
                 </Link>
               ))}
+              <Link
+                to="/wishlist"
+                onClick={() => setIsMenuOpen(false)}
+                className="text-4xl font-display font-bold tracking-tighter"
+              >
+                WISHLIST
+              </Link>
+              <Link
+                to="/auth"
+                onClick={() => setIsMenuOpen(false)}
+                className="text-4xl font-display font-bold tracking-tighter"
+              >
+                {isAuthenticated ? 'ACCOUNT' : 'LOG IN'}
+              </Link>
             </div>
           </motion.div>
         )}

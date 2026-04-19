@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Product } from '../types';
+import { useWishlist } from '../WishlistContext';
+import { Heart } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'motion/react';
 
 interface ProductCardProps {
@@ -8,6 +10,7 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+  const { toggleWishlist, isInWishlist } = useWishlist();
   const [isHovered, setIsHovered] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const cardRef = useRef<HTMLDivElement>(null);
@@ -74,6 +77,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         data-cursor="inspect"
       >
         <div className="aspect-[3/4] overflow-hidden relative" style={{ transform: "translateZ(50px)" }}>
+          <button 
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              toggleWishlist(product);
+            }}
+            className="absolute top-4 right-4 z-30 p-2 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-white transition-all hover:scale-110 active:scale-95 group/heart"
+          >
+            <Heart 
+              size={14} 
+              strokeWidth={2}
+              className={`transition-colors duration-300 ${isInWishlist(product.id) ? 'fill-accent text-accent' : 'text-white'}`}
+            />
+          </button>
+          
           <AnimatePresence mode="wait">
             <motion.img
               key={currentImageIndex}
