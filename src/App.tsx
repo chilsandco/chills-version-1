@@ -10,6 +10,9 @@ import Collection from './pages/Collection';
 import ProductDetail from './pages/ProductDetail';
 import Checkout from './pages/Checkout';
 import OrderSuccess from './pages/OrderSuccess';
+import OrderSignals from './pages/OrderSignals';
+import SignalDetails from './pages/SignalDetails';
+import Onboarding from './pages/Onboarding';
 import Wishlist from './pages/Wishlist';
 import Auth from './pages/Auth';
 import SmoothScroll from './components/SmoothScroll';
@@ -34,6 +37,9 @@ export default function App() {
                   <Route path="/product/:id" element={<ProductDetail />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/order-success/:orderId" element={<OrderSuccess />} />
+                  <Route path="/onboarding" element={<Onboarding />} />
+                  <Route path="/console/orders" element={<OrderSignals />} />
+                  <Route path="/console/orders/:id" element={<SignalDetails />} />
                   <Route path="/wishlist" element={<Wishlist />} />
                   <Route path="/auth" element={<Auth />} />
                 </Routes>

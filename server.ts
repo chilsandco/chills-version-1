@@ -1,5 +1,6 @@
 import express from "express";
 import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
 import cors from "cors";
 import WooCommerceRestApi from "@woocommerce/woocommerce-rest-api";
@@ -8,8 +9,8 @@ import jwt from "jsonwebtoken";
 
 dotenv.config();
 
-// Ensure NODE_ENV is set to something, default to production for safety on hosts like Hostinger
-const IS_PROD = process.env.NODE_ENV === "production" || !process.env.NODE_ENV;
+// Ensure NODE_ENV is set to something, default to development for the preview environment
+const IS_PROD = process.env.NODE_ENV === "production";
 const JWT_SECRET = process.env.JWT_SECRET || 'X1jtvpOK_J<.x%yEe3pm^pGN6!BwN_TLv@ibyA4Ix)3$+IA8I@=^G-5BRRqB9H_M';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -23,11 +24,14 @@ function getWooCommerce() {
   const rawUrl = process.env.WOOCOMMERCE_URL || "https://chilsandco.com";
   const apiUrl = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl;
   
-  return new (WooCommerceRestApi as any).default({
+  const WooCommerce = (WooCommerceRestApi as any).default || WooCommerceRestApi;
+  
+  return new WooCommerce({
     url: apiUrl,
     consumerKey: process.env.WOOCOMMERCE_KEY,
     consumerSecret: process.env.WOOCOMMERCE_SECRET,
-    version: "wc/v3"
+    version: "wc/v3",
+    queryStringAuth: true
   });
 }
 
@@ -63,29 +67,93 @@ async function startServer() {
     next();
   });
 
-  // Health check
-  app.get("/api/health", (req, res) => res.json({ status: "ok", env: process.env.NODE_ENV }));
+  // Health check with active WooCommerce connectivity test
+  app.get("/api/health", async (req, res) => {
+    const wc = getWooCommerce();
+    let connectivity = "Not tested";
+    
+    if (wc) {
+      try {
+        const test = await wc.get("products", { per_page: 1 });
+        connectivity = test.status === 200 ? "Success" : `Failed (Status: ${test.status})`;
+      } catch (err: any) {
+        connectivity = `Error: ${err.message}`;
+      }
+    }
+
+    res.json({ 
+      status: "ok", 
+      env: process.env.NODE_ENV,
+      woocommerce: {
+        configured: !!wc,
+        url: process.env.WOOCOMMERCE_URL,
+        hasKey: !!process.env.WOOCOMMERCE_KEY,
+        hasSecret: !!process.env.WOOCOMMERCE_SECRET,
+        connectivity
+      }
+    });
+  });
 
   // Helper to map WC product to App product
-  const mapProduct = (wcProduct: any) => ({
-    id: wcProduct.id.toString(),
-    name: wcProduct.name,
-    category: wcProduct.categories[0]?.name || "Uncategorized",
-    price: parseFloat(wcProduct.price || "0"),
-    description: wcProduct.short_description.replace(/<[^>]*>?/gm, ""), // Strip HTML
-    concept: wcProduct.attributes.find((a: any) => a.name.toLowerCase() === "concept")?.options[0] || "A precise exploration of form and function.",
-    material: wcProduct.attributes.find((a: any) => a.name.toLowerCase() === "material")?.options[0] || "Premium technical fabric.",
-    fit: wcProduct.attributes.find((a: any) => a.name.toLowerCase() === "fit")?.options[0] || "Regular fit.",
-    care: wcProduct.attributes.find((a: any) => a.name.toLowerCase() === "care")?.options[0] || "Machine wash cold.",
-    images: wcProduct.images.map((img: any) => img.src),
-    status: wcProduct.stock_status === "instock" ? "Available" : "Coming Soon"
+  const mapProduct = (wcProduct: any) => {
+    const attributes = Array.isArray(wcProduct.attributes) ? wcProduct.attributes : [];
+    const categories = Array.isArray(wcProduct.categories) ? wcProduct.categories : [];
+    const images = Array.isArray(wcProduct.images) ? wcProduct.images : [];
+
+    return {
+      id: (wcProduct.id || "").toString(),
+      name: wcProduct.name || "Unknown Product",
+      category: categories[0]?.name || "Uncategorized",
+      price: parseFloat(wcProduct.price || "0"),
+      description: (wcProduct.short_description || "").replace(/<[^>]*>?/gm, ""), // Strip HTML
+      concept: attributes.find((a: any) => a.name?.toLowerCase() === "concept")?.options?.[0] || "A precise exploration of form and function.",
+      material: attributes.find((a: any) => a.name?.toLowerCase() === "material")?.options?.[0] || "Premium technical fabric.",
+      fit: attributes.find((a: any) => a.name?.toLowerCase() === "fit")?.options?.[0] || "Regular fit.",
+      care: attributes.find((a: any) => a.name?.toLowerCase() === "care")?.options?.[0] || "Machine wash cold.",
+      images: images.map((img: any) => img.src).filter(Boolean),
+      status: wcProduct.stock_status === "instock" ? "Available" : "Coming Soon"
+    };
+  };
+
+  // Helper to generate a Signal ID from a WooCommerce Order ID
+  const toSignalId = (id: string | number) => {
+    const numId = typeof id === 'string' ? parseInt(id, 10) : id;
+    // Simple deterministic mapping for CHLS ecosystem
+    const signalNum = (numId % 900000) + 100000;
+    return `CHLS-${signalNum}`;
+  };
+
+  // Helper to map WC order to App signal
+  const mapOrderToSignal = (order: any) => ({
+    id: order.id.toString(),
+    signalId: toSignalId(order.id),
+    status: order.status,
+    date: order.date_created,
+    total: parseFloat(order.total),
+    currency: order.currency,
+    items: order.line_items.map((item: any) => ({
+      name: item.name,
+      quantity: item.quantity,
+      price: parseFloat(item.price),
+      total: parseFloat(item.total)
+    })),
+    shipping: {
+      address: `${order.shipping.address_1}, ${order.shipping.city}`,
+      method: order.shipping_lines[0]?.method_title || "Standard Delivery"
+    }
   });
 
   // API Routes
   app.get("/api/products", async (req, res) => {
+    // Force no-cache for debugging
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+
     try {
       const wc = getWooCommerce();
       if (!wc) {
+        console.log("[CHILS & CO.] No WooCommerce credentials found. Serving mock data.");
         // Fallback to mock data if credentials are missing
         return res.json([
           {
@@ -106,7 +174,19 @@ async function startServer() {
           }
         ]);
       }
+      console.log(`[CHILS & CO.] Fetching products from WooCommerce: ${process.env.WOOCOMMERCE_URL}`);
       const response = await wc.get("products", { per_page: 20 });
+      
+      console.log(`[CHILS & CO.] WooCommerce Response Status: ${response.status}`);
+      
+      // Ensure response.data is an array before mapping
+      if (!Array.isArray(response.data)) {
+        console.warn("[CHILS & CO.] WooCommerce did not return an array. Data type:", typeof response.data);
+        console.warn("[CHILS & CO.] Payload received:", JSON.stringify(response.data).substring(0, 200));
+        return res.json([]);
+      }
+
+      console.log(`[CHILS & CO.] Successfully fetched ${response.data.length} products.`);
       const mappedProducts = response.data.map(mapProduct);
       res.json(mappedProducts);
     } catch (error) {
@@ -129,16 +209,80 @@ async function startServer() {
     }
   });
 
-  app.post("/api/checkout/create-order", (req, res) => {
-    const { amount, currency } = req.body;
-    // Razorpay placeholder logic
-    const orderId = `order_${Math.random().toString(36).substring(7)}`;
-    res.json({
-      id: orderId,
-      amount: amount * 100, // Razorpay expects amount in paise
-      currency: currency || "INR",
-      receipt: `receipt_${Date.now()}`
-    });
+  app.post("/api/checkout/create-order", async (req, res) => {
+    try {
+      const { amount, currency, customerDetails, lineItems } = req.body;
+      const wc = getWooCommerce();
+      
+      let customerId = 0;
+      if (req.headers.authorization) {
+        // If logged in, get user ID from token
+        const token = req.headers.authorization.split(' ')[1];
+        try {
+          const decoded: any = jwt.verify(token, JWT_SECRET);
+          customerId = decoded.data?.user?.id || decoded.id || 0;
+        } catch (e) {
+          console.error("JWT verification failed for checkout:", e);
+        }
+      }
+
+      if (wc) {
+        // Create order in WooCommerce
+        const orderData = {
+          payment_method: "razorpay",
+          payment_method_title: "Razorpay",
+          set_paid: true,
+          customer_id: customerId,
+          billing: {
+            first_name: customerDetails.firstName,
+            last_name: customerDetails.lastName,
+            address_1: customerDetails.address,
+            city: customerDetails.city,
+            state: customerDetails.state,
+            postcode: customerDetails.pincode,
+            country: "IN",
+            email: customerDetails.email,
+            phone: customerDetails.phone
+          },
+          shipping: {
+            first_name: customerDetails.firstName,
+            last_name: customerDetails.lastName,
+            address_1: customerDetails.address,
+            city: customerDetails.city,
+            state: customerDetails.state,
+            postcode: customerDetails.pincode,
+            country: "IN"
+          },
+          line_items: lineItems.map((item: any) => ({
+            product_id: parseInt(item.id),
+            quantity: item.quantity,
+            meta_data: item.selectedSize ? [{ key: "pa_size", value: item.selectedSize }] : []
+          }))
+        };
+
+        console.log("[CHILS & CO.] Creating WooCommerce Order:", orderData);
+        const response = await wc.post("orders", orderData);
+        
+        return res.json({
+          id: response.data.id.toString(), // Return WC Order ID
+          amount: amount * 100,
+          currency: currency || "INR",
+          receipt: `receipt_${response.data.id}`
+        });
+      }
+
+      // Fallback/Mock logic if no WC keys
+      const orderId = `order_${Math.random().toString(36).substring(7)}`;
+      res.json({
+        id: orderId,
+        amount: amount * 100,
+        currency: currency || "INR",
+        receipt: `receipt_${Date.now()}`
+      });
+    } catch (error: any) {
+      console.error("Checkout Order Creation Error:", error.response?.data || error);
+      res.status(500).json({ message: "Failed to create order in system" });
+    }
   });
 
   app.post("/api/auth/register", async (req, res) => {
@@ -192,6 +336,7 @@ async function startServer() {
       const wpUrl = rawWpUrl.endsWith('/') ? rawWpUrl.slice(0, -1) : rawWpUrl;
       
       // Hit the real WordPress JWT endpoint
+      console.log(`[CHILS & CO.] Attempting login to: ${wpUrl}/wp-json/jwt-auth/v1/token`);
       const response = await fetch(`${wpUrl}/wp-json/jwt-auth/v1/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -199,6 +344,9 @@ async function startServer() {
           username: email, // WP JWT Auth allows email or username here
           password: password
         })
+      }).catch(err => {
+        console.error("[CHILS & CO.] Network error during WP login:", err);
+        throw err;
       });
 
       const data = await response.json();
@@ -238,34 +386,79 @@ async function startServer() {
       if (!wc) {
         // Mock orders if no WC keys
         return res.json([
-          {
+          mapOrderToSignal({
             id: 101,
             number: "WC-101",
             status: "processing",
             date_created: new Date().toISOString(),
             total: "4500.00",
-            line_items: [{ name: "SYNTAX OVERLOAD TEE", quantity: 1 }]
-          }
+            currency: "INR",
+            line_items: [{ name: "SYNTAX OVERLOAD TEE", quantity: 1, price: "4500.00", total: "4500.00" }],
+            shipping: { address_1: "System Hub 01", city: "Neo Metro" },
+            shipping_lines: [{ method_title: "Drone Relay" }]
+          })
         ]);
       }
 
-      // The WordPress JWT plugin stores user data in data.user
-      // We need to extract the user ID
-      const customerId = req.user?.data?.user?.id;
+      // Robust lookups for the customer ID within various JWT payload structures
+      let customerId = req.user?.id || 
+                       req.user?.data?.user?.id || 
+                       req.user?.user?.id || 
+                       req.user?.sub ||
+                       req.user?.data?.id;
 
-      if (!customerId) {
+      if (!customerId && (req.user?.email || req.user?.data?.user?.email || req.user?.user_email)) {
+        // Fallback: search by email
+        const email = req.user?.email || req.user?.data?.user?.email || req.user?.user_email;
+        console.log(`[CHILS & CO.] ID missing from token, searching WC by email: ${email}`);
+        
+        const customerSearch = await wc.get("customers", { email });
+        if (customerSearch.data && customerSearch.data.length > 0) {
+          customerId = customerSearch.data[0].id;
+          console.log(`[CHILS & CO.] Found customer ID linked to email: ${customerId}`);
+        }
+      }
+
+      if (!customerId && !wc) {
+         // Allow mock flow to continue
+         customerId = "mock-123";
+      } else if (!customerId) {
         return res.status(400).json({ message: "Unable to identify customer from token" });
       }
 
       const response = await wc.get("orders", {
         customer: customerId,
-        per_page: 10
+        per_page: 20
       });
 
-      res.json(response.data);
+      res.json(response.data.map(mapOrderToSignal));
     } catch (error: any) {
       console.error("WooCommerce Orders Error:", error);
       res.status(500).json({ message: "Failed to fetch orders" });
+    }
+  });
+
+  app.get("/api/orders/:id", authenticateToken, async (req: any, res) => {
+    try {
+      const wc = getWooCommerce();
+      if (!wc) {
+        return res.json(mapOrderToSignal({
+          id: req.params.id,
+          status: "processing",
+          date_created: new Date().toISOString(),
+          total: "4500.00",
+          currency: "INR",
+          line_items: [{ name: "SYNTAX OVERLOAD TEE", quantity: 1, price: "4500.00", total: "4500.00" }],
+          shipping: { address_1: "System Hub 01", city: "Neo Metro" },
+          shipping_lines: [{ method_title: "Drone Relay" }]
+        }));
+      }
+
+      const response = await wc.get(`orders/${req.params.id}`);
+      res.json(mapOrderToSignal(response.data));
+    } catch (error: any) {
+      console.error("WooCommerce Order Detail Error:", error);
+      res.status(404).json({ message: "Signal not found" });
     }
   });
 
@@ -280,11 +473,20 @@ async function startServer() {
     console.log(`[CHILS & CO.] Development mode: Vite middleware active`);
   } else {
     const distPath = path.resolve(__dirname, "dist");
-    console.log(`[CHILS & CO.] Production mode: Serving static files from ${distPath}`);
-    app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.resolve(distPath, "index.html"));
-    });
+    
+    if (fs.existsSync(distPath)) {
+      console.log(`[CHILS & CO.] Production mode: Serving static files from ${distPath}`);
+      app.use(express.static(distPath));
+      app.get("*", (req, res) => {
+        res.sendFile(path.resolve(distPath, "index.html"));
+      });
+    } else {
+      console.warn(`[CHILS & CO.] Production mode active but 'dist' directory not found at ${distPath}`);
+      console.warn(`[CHILS & CO.] Falling back to a placeholder message. Run 'npm run build' to fix this.`);
+      app.get("*", (req, res) => {
+        res.status(500).send("Application is in production mode but 'dist' directory is missing. Please build the frontend.");
+      });
+    }
   }
 
   try {

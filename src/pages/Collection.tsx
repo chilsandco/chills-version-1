@@ -9,7 +9,18 @@ const Collection: React.FC = () => {
   useEffect(() => {
     fetch('/api/products')
       .then(res => res.json())
-      .then(data => setProducts(data));
+      .then(data => {
+        if (Array.isArray(data)) {
+          setProducts(data);
+        } else {
+          console.error("Collection: Data is not an array", data);
+          setProducts([]);
+        }
+      })
+      .catch(err => {
+        console.error("Collection: Error fetching products", err);
+        setProducts([]);
+      });
   }, []);
 
   const filteredProducts = filter === 'All'

@@ -24,3 +24,24 @@ export interface Customer {
   last_name: string;
   username: string;
 }
+
+export interface SignalItem {
+  name: string;
+  quantity: number;
+  price: number;
+  total: number;
+}
+
+export interface Signal {
+  id: string;
+  signalId: string;
+  status: string;
+  date: string;
+  total: number;
+  currency: string;
+  items: SignalItem[];
+  shipping: {
+    address: string;
+    method: string;
+  };
+}

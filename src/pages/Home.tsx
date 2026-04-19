@@ -14,7 +14,17 @@ const Home: React.FC = () => {
     fetch('/api/products')
       .then(res => res.json())
       .then(data => {
-        setProducts(data);
+        if (Array.isArray(data)) {
+          setProducts(data);
+        } else {
+          console.error("Home: Products data is not an array", data);
+          setProducts([]);
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Home: Error fetching products", err);
+        setProducts([]);
         setLoading(false);
       });
   }, []);
@@ -25,7 +35,31 @@ const Home: React.FC = () => {
 
       {/* Collection Preview - Cinematic Reveal */}
       <section className="py-60 px-6 md:px-12 max-w-[1800px] mx-auto overflow-hidden">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-32 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-32">
+          {loading ? (
+            Array(4).fill(0).map((_, i) => (
+              <div key={i} className="aspect-[3/4] bg-white/5 animate-pulse" />
+            ))
+          ) : (
+            products.slice(0, 4).map((product, i) => (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, y: 80, scale: 0.98, filter: 'blur(5px)' }}
+                whileInView={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                viewport={{ once: true, margin: "-50px" }}
+                transition={{ 
+                  duration: 2, 
+                  delay: i * 0.2, 
+                  ease: [0.22, 1, 0.36, 1] 
+                }}
+              >
+                <ProductCard product={product} />
+              </motion.div>
+            ))
+          )}
+        </div>
+
+        <div className="flex flex-col md:flex-row justify-between items-end gap-12">
           <motion.div
             initial={{ opacity: 0, x: -60, filter: 'blur(10px)' }}
             whileInView={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
@@ -61,30 +95,6 @@ const Home: React.FC = () => {
               </motion.div>
             </Link>
           </motion.div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {loading ? (
-            Array(4).fill(0).map((_, i) => (
-              <div key={i} className="aspect-[3/4] bg-white/5 animate-pulse" />
-            ))
-          ) : (
-            products.slice(0, 4).map((product, i) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 80, scale: 0.98, filter: 'blur(5px)' }}
-                whileInView={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ 
-                  duration: 2, 
-                  delay: i * 0.2, 
-                  ease: [0.22, 1, 0.36, 1] 
-                }}
-              >
-                <ProductCard product={product} />
-              </motion.div>
-            ))
-          )}
         </div>
       </section>
 

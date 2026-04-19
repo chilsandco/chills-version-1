@@ -24,7 +24,7 @@ const Hero: React.FC = () => {
       >
         <iframe
           className="w-[100vw] h-[56.25vw] min-h-[100vh] min-w-[177.77vh] absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-40 grayscale hover:grayscale-0 transition-all duration-1000"
-          src="https://www.youtube.com/embed/G1cpYdshdA0?autoplay=1&mute=1&controls=0&loop=1&playlist=G1cpYdshdA0&rel=0&showinfo=0&modestbranding=1&iv_load_policy=3&disablekb=1"
+          src="https://www.youtube.com/embed/SDzl9uB7j0s?autoplay=1&mute=1&controls=0&loop=1&playlist=SDzl9uB7j0s&rel=0&showinfo=0&modestbranding=1&iv_load_policy=3&disablekb=1"
           allow="autoplay; encrypted-media"
         ></iframe>
         {/* Central Vignette for Contrast */}

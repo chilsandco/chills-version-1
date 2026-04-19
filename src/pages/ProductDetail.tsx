@@ -22,7 +22,7 @@ const ProductDetail: React.FC = () => {
   const positionX = useSpring(0, { stiffness: 150, damping: 25 });
   const positionY = useSpring(0, { stiffness: 150, damping: 25 });
 
-  const { addToCart } = useCart();
+  const { cart, addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
 
   useEffect(() => {
@@ -158,7 +158,13 @@ const ProductDetail: React.FC = () => {
       return;
     }
     setIsBuyNowProcessing(true);
-    addToCart(product, selectedSize);
+    
+    // Check if the item (product + size) is already in the cart
+    const isAlreadyInCart = cart.some(item => item.id === product.id && item.selectedSize === selectedSize);
+    
+    if (!isAlreadyInCart) {
+      addToCart(product, selectedSize);
+    }
     
     // Instant redirect after a tiny delay for the text swap
     setTimeout(() => {

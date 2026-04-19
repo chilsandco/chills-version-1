@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ArrowRight, CheckCircle2, AlertCircle, LogOut, Package, ExternalLink } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
+
+import { Signal } from '../types';
 
 const Orders: React.FC = () => {
   const { token } = useAuth();
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Signal[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -16,7 +18,7 @@ const Orders: React.FC = () => {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
-        if (response.ok) {
+        if (response.ok && Array.isArray(data)) {
           setOrders(data);
         }
       } catch (err) {
@@ -29,13 +31,13 @@ const Orders: React.FC = () => {
     if (token) fetchOrders();
   }, [token]);
 
-  if (loading) return <div className="text-[10px] text-white/40 tracking-widest uppercase">Fetching history...</div>;
+  if (loading) return <div className="text-[10px] text-white/40 tracking-widest uppercase">Retrieving transmissions...</div>;
 
   if (orders.length === 0) {
     return (
       <div className="py-8 text-center border border-white/10 bg-white/5 rounded-sm">
         <Package className="mx-auto mb-3 opacity-20" size={32} />
-        <p className="text-[10px] text-white/40 tracking-widest uppercase">No orders found</p>
+        <p className="text-[10px] text-white/40 tracking-widest uppercase italic">"No signals detected in the archive."</p>
       </div>
     );
   }
@@ -43,25 +45,32 @@ const Orders: React.FC = () => {
   return (
     <div className="space-y-4 text-left">
       {orders.map((order) => (
-        <div key={order.id} className="border border-white/10 bg-white/5 p-4 rounded-sm group hover:border-white/30 transition-colors">
+        <Link 
+          key={order.id} 
+          to={`/console/orders/${order.id}`}
+          className="block border border-white/10 bg-white/5 p-4 rounded-sm group hover:border-accent transition-all"
+        >
           <div className="flex justify-between items-start mb-2">
             <div>
-              <p className="text-[10px] text-white/40 tracking-widest uppercase mb-1">Order #{order.number}</p>
-              <p className="text-xs font-bold tracking-tight">{new Date(order.date_created).toLocaleDateString()}</p>
+              <p className="text-[8px] text-white/40 tracking-widest uppercase mb-1">Signal Identity</p>
+              <p className="text-xs font-bold tracking-tight font-mono group-hover:text-accent transition-colors">#{order.signalId}</p>
             </div>
             <div className={`text-[9px] px-2 py-0.5 rounded-full uppercase font-bold tracking-widest ${
-              order.status === 'completed' ? 'bg-green-500/20 text-green-500' : 'bg-white/10 text-white/60'
+              order.status === 'completed' ? 'bg-green-500/20 text-green-500' : 'bg-accent/20 text-accent animate-pulse'
             }`}>
               {order.status}
             </div>
           </div>
           <div className="flex justify-between items-end">
-            <p className="text-xs text-white/60">
-              {order.line_items.length} {order.line_items.length === 1 ? 'item' : 'items'}
-            </p>
-            <p className="font-mono text-sm">₹{parseFloat(order.total).toLocaleString()}</p>
+            <div>
+              <p className="text-[8px] text-white/40 tracking-widest uppercase mb-1">Registration</p>
+              <p className="text-xs text-white/60">
+                {new Date(order.date).toLocaleDateString()}
+              </p>
+            </div>
+            <p className="font-mono text-sm">₹{order.total.toLocaleString()}</p>
           </div>
-        </div>
+        </Link>
       ))}
     </div>
   );
@@ -108,7 +117,27 @@ const Auth: React.FC = () => {
 
       if (isRegister) {
         setSuccess(true);
-        setTimeout(() => setIsRegister(false), 2000); // Switch to login after registration success
+        // Automatically log in after registration
+        try {
+          const loginResponse = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: formData.email, password: formData.password })
+          });
+          const loginData = await loginResponse.json();
+          if (loginResponse.ok && loginData.token && loginData.user) {
+            authLogin(loginData.token, loginData.user);
+            setTimeout(() => navigate('/onboarding'), 1500);
+          } else {
+            // If auto-login fails, just go to login mode
+            setTimeout(() => {
+              setIsRegister(false);
+              setSuccess(false);
+            }, 2000);
+          }
+        } catch (err) {
+          setTimeout(() => setIsRegister(false), 2000);
+        }
       } else {
         // Handle login success
         if (data.token && data.user) {
