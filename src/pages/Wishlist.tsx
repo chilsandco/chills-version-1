@@ -12,7 +12,6 @@ const Wishlist: React.FC = () => {
   if (wishlist.length === 0) {
     return (
       <div className="h-screen flex flex-col items-center justify-center px-6 text-center">
-        <p className="text-[8px] tracking-[0.5em] text-neutral-600 uppercase mb-4">System Status: Null</p>
         <h1 className="text-4xl font-display font-bold mb-8 uppercase tracking-tighter">Wishlist is empty</h1>
         <Link 
           to="/collection" 

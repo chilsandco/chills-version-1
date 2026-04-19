@@ -234,7 +234,6 @@ const ProductDetail: React.FC = () => {
             <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-500 mb-4">{product.category}</p>
             <div className="flex items-center gap-3 mb-4">
               <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tighter uppercase">{product.name}</h1>
-              <span className="text-[9px] tracking-[0.2em] text-accent border border-accent/30 px-2 py-1 rounded-full uppercase font-medium">System Assigned Output</span>
             </div>
             <p className="text-xl font-medium">₹{product.price.toLocaleString()}</p>
           </div>
@@ -279,10 +278,6 @@ const ProductDetail: React.FC = () => {
                   </motion.div>
                 )}
               </AnimatePresence>
-              <p className="text-[10px] tracking-widest text-neutral-500 uppercase">
-                Signal Assignment: <span className="text-neutral-300">System Generated</span><br />
-                No two drops are identical
-              </p>
             </div>
 
             <div className="py-10 border-y border-neutral-900/50">
@@ -292,7 +287,6 @@ const ProductDetail: React.FC = () => {
                 transition={{ duration: 1.2, ease: "easeOut" }}
                 viewport={{ once: true }}
               >
-                <p className="text-[8px] tracking-[0.5em] text-neutral-600 uppercase mb-3">System Log</p>
                 <h3 className="text-[11px] tracking-[0.4em] font-bold uppercase mb-6 text-accent">Signal Protocol</h3>
                 <div className="space-y-6 text-neutral-500 text-[11px] leading-relaxed tracking-wide font-light">
                   <p className="text-neutral-200 font-medium tracking-normal">Each piece carries a coded message.</p>
