@@ -1,5 +1,4 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
@@ -9,6 +8,8 @@ import jwt from "jsonwebtoken";
 
 dotenv.config();
 
+// Ensure NODE_ENV is set to something, default to production for safety on hosts like Hostinger
+const IS_PROD = process.env.NODE_ENV === "production" || !process.env.NODE_ENV;
 const JWT_SECRET = process.env.JWT_SECRET || 'X1jtvpOK_J<.x%yEe3pm^pGN6!BwN_TLv@ibyA4Ix)3$+IA8I@=^G-5BRRqB9H_M';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -19,8 +20,11 @@ function getWooCommerce() {
   if (!process.env.WOOCOMMERCE_KEY || !process.env.WOOCOMMERCE_SECRET) {
     return null;
   }
+  const rawUrl = process.env.WOOCOMMERCE_URL || "https://chilsandco.com";
+  const apiUrl = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl;
+  
   return new (WooCommerceRestApi as any).default({
-    url: process.env.WOOCOMMERCE_URL || "https://chilsandco.com",
+    url: apiUrl,
     consumerKey: process.env.WOOCOMMERCE_KEY,
     consumerSecret: process.env.WOOCOMMERCE_SECRET,
     version: "wc/v3"
@@ -29,7 +33,12 @@ function getWooCommerce() {
 
 async function startServer() {
   const app = express();
-  const PORT = Number(process.env.PORT) || 3000;
+  
+  // Defensive port parsing for Hostinger/Cloud environments
+  const rawPort = process.env.PORT;
+  const PORT = rawPort && !isNaN(parseInt(rawPort, 10)) && parseInt(rawPort, 10) !== 0
+    ? parseInt(rawPort, 10) 
+    : 3000;
 
   app.use(cors());
   app.use(express.json());
@@ -179,7 +188,8 @@ async function startServer() {
         return res.status(400).json({ message: "Email and password are required" });
       }
 
-      const wpUrl = process.env.WOOCOMMERCE_URL || "https://chilsandco.com";
+      const rawWpUrl = process.env.WOOCOMMERCE_URL || "https://chilsandco.com";
+      const wpUrl = rawWpUrl.endsWith('/') ? rawWpUrl.slice(0, -1) : rawWpUrl;
       
       // Hit the real WordPress JWT endpoint
       const response = await fetch(`${wpUrl}/wp-json/jwt-auth/v1/token`, {
@@ -260,26 +270,46 @@ async function startServer() {
   });
 
   // Vite middleware for development
-  if (process.env.NODE_ENV !== "production") {
+  if (!IS_PROD) {
+    const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
+    console.log(`[CHILS & CO.] Development mode: Vite middleware active`);
   } else {
     const distPath = path.resolve(__dirname, "dist");
+    console.log(`[CHILS & CO.] Production mode: Serving static files from ${distPath}`);
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
       res.sendFile(path.resolve(distPath, "index.html"));
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`[CHILS & CO.] Production Server started successfully`);
-    console.log(`[CHILS & CO.] Listening on port: ${PORT}`);
-    console.log(`[CHILS & CO.] Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`[CHILS & CO.] Servicing static files from: ${path.resolve(__dirname, "dist")}`);
-  });
+  try {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`[CHILS & CO.] Server started successfully`);
+      console.log(`[CHILS & CO.] Listening on port: ${PORT}`);
+      console.log(`[CHILS & CO.] Mode: ${IS_PROD ? 'Production' : 'Development'}`);
+    });
+  } catch (error) {
+    console.error("[CHILS & CO.] Critical Failure during server startup:", error);
+    process.exit(1);
+  }
 }
 
-startServer();
+// Global error handlers for production
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[CHILS & CO.] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[CHILS & CO.] Uncaught Exception thrown:', err);
+  process.exit(1);
+});
+
+startServer().catch(err => {
+  console.error("[CHILS & CO.] Failed to start server:", err);
+  process.exit(1);
+});
