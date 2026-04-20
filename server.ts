@@ -360,10 +360,21 @@ async function startServer() {
 
       // Verified response structure from your live server:
       // { token, user_email, user_nicename, user_display_name }
+      
+      // We sign our own token using our JWT_SECRET so we can verify it consistently
+      const userPayload = {
+        email: data.user_email,
+        username: data.user_nicename,
+        displayName: data.user_display_name
+      };
+
+      // Long-lived token for e-commerce persistence (30 days)
+      const locallySignedToken = jwt.sign(userPayload, JWT_SECRET, { expiresIn: '30d' });
+
       res.json({
-        token: data.token,
+        token: locallySignedToken,
         user: {
-          id: 0, // ID is hidden in token payload per standard response
+          id: 0, // Fallback ID, real ID will be looked up by email in orders route
           email: data.user_email,
           username: data.user_nicename
         },

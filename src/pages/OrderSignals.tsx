@@ -8,12 +8,15 @@ import { useAuth } from '../AuthContext';
 const OrderSignals: React.FC = () => {
   const [signals, setSignals] = useState<Signal[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
+  const { user, token } = useAuth();
 
   useEffect(() => {
     const fetchSignals = async () => {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
       try {
-        const token = localStorage.getItem('token');
         const res = await fetch('/api/orders', {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -31,7 +34,7 @@ const OrderSignals: React.FC = () => {
     };
 
     fetchSignals();
-  }, []);
+  }, [token]);
 
   if (loading) {
     return (

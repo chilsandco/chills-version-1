@@ -13,7 +13,7 @@ export const useCheckout = () => {
 
     try {
       // 1. Create order on backend
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem('chils_auth_token');
       const response = await fetch('/api/checkout/create-order', {
         method: 'POST',
         headers: { 

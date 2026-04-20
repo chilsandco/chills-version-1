@@ -3,16 +3,21 @@ import { useParams, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Activity, Box, MapPin, CreditCard, ChevronLeft, Package, Sparkles } from 'lucide-react';
 import { Signal } from '../types';
+import { useAuth } from '../AuthContext';
 
 const SignalDetails: React.FC = () => {
   const { id } = useParams();
   const [signal, setSignal] = useState<Signal | null>(null);
   const [loading, setLoading] = useState(true);
+  const { token } = useAuth();
 
   useEffect(() => {
     const fetchSignal = async () => {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
       try {
-        const token = localStorage.getItem('token');
         const res = await fetch(`/api/orders/${id}`, {
           headers: {
             'Authorization': `Bearer ${token}`
@@ -28,7 +33,7 @@ const SignalDetails: React.FC = () => {
     };
 
     fetchSignal();
-  }, [id]);
+  }, [id, token]);
 
   if (loading) {
     return (
