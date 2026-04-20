@@ -26,10 +26,12 @@ export interface Customer {
 }
 
 export interface SignalItem {
+  productId: string;
   name: string;
   quantity: number;
   price: number;
   total: number;
+  image?: string;
 }
 
 export interface Signal {

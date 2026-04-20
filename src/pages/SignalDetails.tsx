@@ -120,14 +120,33 @@ const SignalDetails: React.FC = () => {
             <div className="space-y-6">
               {signal.items.map((item, idx) => (
                 <div key={idx} className="flex justify-between items-center pb-6 border-b border-neutral-900 last:border-0 last:pb-0">
-                  <div>
-                    <h4 className="text-[11px] font-bold uppercase tracking-widest mb-1">{item.name}</h4>
-                    <p className="text-[10px] text-neutral-600 uppercase tracking-widest">Quantity: {item.quantity}</p>
+                  <div className="flex items-center gap-6">
+                    {item.image ? (
+                      <img 
+                        src={item.image} 
+                        alt={item.name} 
+                        className="w-16 h-20 object-cover bg-neutral-900 flex-shrink-0" 
+                        referrerPolicy="no-referrer"
+                      />
+                    ) : (
+                      <div className="w-16 h-20 bg-neutral-900 flex items-center justify-center flex-shrink-0">
+                        <Package size={20} className="text-neutral-700" />
+                      </div>
+                    )}
+                    <div>
+                      <Link 
+                        to={`/product/${item.productId}`}
+                        className="text-[11px] font-bold uppercase tracking-widest mb-1 hover:text-accent transition-colors block"
+                      >
+                        {item.name}
+                      </Link>
+                      <p className="text-[10px] text-neutral-600 uppercase tracking-widest">Quantity: {item.quantity}</p>
+                    </div>
                   </div>
                   <p className="font-mono text-xs">₹{item.total.toLocaleString()}</p>
                 </div>
               ))}
-              <div className="pt-6 flex justify-between items-center bg-neutral-900/30 -mx-8 px-8">
+              <div className="pt-6 flex justify-between items-center bg-neutral-900/10 -mx-8 px-8">
                 <p className="text-[10px] font-bold uppercase tracking-widest">Signal Value</p>
                 <p className="text-lg font-display font-bold tracking-tighter">₹{signal.total.toLocaleString()}</p>
               </div>

@@ -70,6 +70,31 @@ const Orders: React.FC = () => {
             </div>
             <p className="font-mono text-sm">₹{order.total.toLocaleString()}</p>
           </div>
+
+          {/* Item Summary */}
+          <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-4">
+            <div className="flex -space-x-2">
+              {order.items.slice(0, 3).map((item, i) => (
+                <div key={i} className="w-8 h-10 border border-black bg-white/5 rounded-sm overflow-hidden relative">
+                   {item.image ? (
+                     <img src={item.image} alt={item.name} className="w-full h-full object-cover opacity-80" referrerPolicy="no-referrer" />
+                   ) : (
+                     <div className="w-full h-full flex items-center justify-center">
+                       <Package size={10} className="opacity-20" />
+                     </div>
+                   )}
+                   {order.items.length > 3 && i === 2 && (
+                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-[7px] font-bold">
+                       +{order.items.length - 2}
+                     </div>
+                   )}
+                </div>
+              ))}
+            </div>
+            <p className="text-[9px] text-white/30 uppercase tracking-[0.1em] truncate flex-1">
+              {order.items.map(i => i.name).join(' + ')}
+            </p>
+          </div>
         </Link>
       ))}
     </div>

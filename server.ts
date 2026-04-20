@@ -137,10 +137,13 @@ async function startServer() {
         total: parseFloat(order.total || "0"),
         currency: order.currency || "INR",
         items: lineItems.map((item: any) => ({
+          productId: (item.product_id || "").toString(),
           name: item.name || "Unknown Item",
           quantity: parseInt(item.quantity || "1", 10),
           price: parseFloat(item.price || "0"),
-          total: parseFloat(item.total || "0")
+          total: parseFloat(item.total || "0"),
+          // WC V3 often includes image object in line_items if configured
+          image: item.image?.src || null 
         })),
         shipping: {
           address: order.shipping ? `${order.shipping.address_1 || ""}${order.shipping.address_1 && order.shipping.city ? ", " : ""}${order.shipping.city || ""}` : "No address provided",

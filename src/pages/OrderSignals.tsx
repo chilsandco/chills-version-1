@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
-import { ArrowUpRight, Activity, Clock, Box } from 'lucide-react';
+import { ArrowUpRight, Activity, Clock, Box, Package } from 'lucide-react';
 import { Signal } from '../types';
 import { useAuth } from '../AuthContext';
 
@@ -84,45 +84,83 @@ const OrderSignals: React.FC = () => {
             transition={{ delay: idx * 0.1 }}
             className="group block"
           >
-            <Link 
-              to={`/console/orders/${signal.id}`}
-              className="flex flex-col md:flex-row md:items-center justify-between p-8 bg-black hover:bg-neutral-950 transition-all gap-8"
-            >
-              <div className="flex flex-col md:flex-row md:items-center gap-8 md:gap-16">
-                <div>
-                  <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Signal Identity</p>
-                  <p className="font-mono text-sm tracking-widest group-hover:text-accent transition-colors">#{signal.signalId}</p>
-                </div>
-                
-                <div>
-                  <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Registration</p>
-                  <div className="flex items-center gap-2">
-                    <Clock size={12} className="text-neutral-700" />
-                    <p className="text-[10px] uppercase font-bold tracking-widest">
-                      {new Date(signal.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </p>
+            <div className="flex flex-col md:flex-row md:items-stretch bg-black border-b border-neutral-900 last:border-0 hover:bg-neutral-950 transition-all">
+              {/* Left Column: Metadata */}
+              <Link 
+                to={`/console/orders/${signal.id}`}
+                className="flex-1 flex flex-col md:flex-row md:items-center justify-between p-8 gap-8"
+              >
+                <div className="flex flex-col md:flex-row md:items-center gap-8 md:gap-16">
+                  <div className="w-40">
+                    <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Signal Identity</p>
+                    <p className="font-mono text-sm tracking-widest group-hover:text-accent transition-colors">#{signal.signalId}</p>
+                  </div>
+                  
+                  <div className="w-32">
+                    <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Registration</p>
+                    <div className="flex items-center gap-2">
+                      <Clock size={12} className="text-neutral-700" />
+                      <p className="text-[10px] uppercase font-bold tracking-widest">
+                        {new Date(signal.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="w-24">
+                    <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Status</p>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-1.5 h-1.5 rounded-full ${signal.status === 'completed' ? 'bg-green-500' : 'bg-accent animate-pulse'}`} />
+                      <p className="text-[10px] uppercase font-bold tracking-widest">{signal.status}</p>
+                    </div>
                   </div>
                 </div>
 
-                <div>
-                  <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Status</p>
-                  <div className="flex items-center gap-2">
-                    <div className={`w-1.5 h-1.5 rounded-full ${signal.status === 'completed' ? 'bg-green-500' : 'bg-accent animate-pulse'}`} />
-                    <p className="text-[10px] uppercase font-bold tracking-widest">{signal.status}</p>
+                <div className="flex items-center gap-8 md:gap-12">
+                  <div className="text-right">
+                    <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Output Value</p>
+                    <p className="font-mono text-sm tracking-widest uppercase">₹{signal.total.toLocaleString()}</p>
+                  </div>
+                  <div className="w-10 h-10 rounded-full border border-neutral-800 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
+                    <ArrowUpRight size={16} />
                   </div>
                 </div>
-              </div>
+              </Link>
 
-              <div className="flex items-center justify-between md:justify-end gap-12">
-                <div>
-                  <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2 text-right">Output Value</p>
-                  <p className="font-mono text-sm tracking-widest uppercase">₹{signal.total.toLocaleString()}</p>
-                </div>
-                <div className="w-12 h-12 rounded-full border border-neutral-800 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
-                  <ArrowUpRight size={18} />
+              {/* Right Column: Build Contents (Images & Names) */}
+              <div className="md:w-1/3 bg-neutral-900/10 p-8 border-l border-neutral-900 flex flex-col justify-center">
+                <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-4">Transmission Content</p>
+                <div className="space-y-4">
+                  {signal.items.map((item, i) => (
+                    <div key={i} className="flex items-center gap-4">
+                      {item.image ? (
+                        <img 
+                          src={item.image} 
+                          alt={item.name} 
+                          className="w-12 h-16 object-cover bg-neutral-900 flex-shrink-0" 
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <div className="w-12 h-16 bg-neutral-900 flex items-center justify-center flex-shrink-0">
+                          <Package size={14} className="text-neutral-700" />
+                        </div>
+                      )}
+                      <div>
+                        <Link 
+                          to={`/product/${item.productId}`}
+                          className="text-[10px] uppercase font-bold tracking-widest hover:text-accent transition-colors block leading-tight mb-1"
+                        >
+                          {item.name}
+                        </Link>
+                        <p className="text-[9px] text-neutral-500 uppercase tracking-widest">Qty: {item.quantity}</p>
+                      </div>
+                    </div>
+                  ))}
+                  {signal.items.length === 0 && (
+                    <p className="text-[9px] text-neutral-600 uppercase italic">Signal metadata only</p>
+                  )}
                 </div>
               </div>
-            </Link>
+            </div>
           </motion.div>
         ))}
       </div>
