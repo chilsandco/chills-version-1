@@ -124,24 +124,44 @@ async function startServer() {
   };
 
   // Helper to map WC order to App signal
-  const mapOrderToSignal = (order: any) => ({
-    id: order.id.toString(),
-    signalId: toSignalId(order.id),
-    status: order.status,
-    date: order.date_created,
-    total: parseFloat(order.total),
-    currency: order.currency,
-    items: order.line_items.map((item: any) => ({
-      name: item.name,
-      quantity: item.quantity,
-      price: parseFloat(item.price),
-      total: parseFloat(item.total)
-    })),
-    shipping: {
-      address: `${order.shipping.address_1}, ${order.shipping.city}`,
-      method: order.shipping_lines[0]?.method_title || "Standard Delivery"
+  const mapOrderToSignal = (order: any) => {
+    try {
+      const lineItems = Array.isArray(order.line_items) ? order.line_items : [];
+      const shippingLines = Array.isArray(order.shipping_lines) ? order.shipping_lines : [];
+      
+      return {
+        id: (order.id || "").toString(),
+        signalId: toSignalId(order.id),
+        status: order.status || "pending",
+        date: order.date_created || new Date().toISOString(),
+        total: parseFloat(order.total || "0"),
+        currency: order.currency || "INR",
+        items: lineItems.map((item: any) => ({
+          name: item.name || "Unknown Item",
+          quantity: parseInt(item.quantity || "1", 10),
+          price: parseFloat(item.price || "0"),
+          total: parseFloat(item.total || "0")
+        })),
+        shipping: {
+          address: order.shipping ? `${order.shipping.address_1 || ""}${order.shipping.address_1 && order.shipping.city ? ", " : ""}${order.shipping.city || ""}` : "No address provided",
+          method: shippingLines[0]?.method_title || "Standard Delivery"
+        }
+      };
+    } catch (err) {
+      console.error("[CHILS & CO.] Error mapping order to signal:", err);
+      // Return a minimal valid signal object to prevent 500
+      return {
+        id: (order.id || "0").toString(),
+        signalId: "CHLS-ERR",
+        status: "error",
+        date: new Date().toISOString(),
+        total: 0,
+        currency: "INR",
+        items: [],
+        shipping: { address: "Error processing signal", method: "N/A" }
+      };
     }
-  });
+  };
 
   // API Routes
   app.get("/api/products", async (req, res) => {
@@ -350,6 +370,7 @@ async function startServer() {
       });
 
       const data = await response.json();
+      console.log(`[CHILS & CO.] WordPress login successful for: ${data.user_email}`);
 
       if (!response.ok) {
         console.error("WordPress Login Failed:", data);
@@ -358,11 +379,28 @@ async function startServer() {
         });
       }
 
+      // Try to find the WooCommerce customer ID to include it in the token
+      const wc = getWooCommerce();
+      let customerId = 0;
+      if (wc) {
+        try {
+          console.log(`[CHILS & CO.] Looking up WC customer ID for: ${data.user_email}`);
+          const search = await wc.get("customers", { email: data.user_email });
+          if (Array.isArray(search.data) && search.data.length > 0) {
+            customerId = search.data[0].id;
+            console.log(`[CHILS & CO.] Found WC customer ID: ${customerId}`);
+          }
+        } catch (err) {
+          console.error("[CHILS & CO.] Error searching for customer ID:", err);
+        }
+      }
+
       // Verified response structure from your live server:
       // { token, user_email, user_nicename, user_display_name }
       
       // We sign our own token using our JWT_SECRET so we can verify it consistently
       const userPayload = {
+        id: customerId,
         email: data.user_email,
         username: data.user_nicename,
         displayName: data.user_display_name
@@ -374,7 +412,7 @@ async function startServer() {
       res.json({
         token: locallySignedToken,
         user: {
-          id: 0, // Fallback ID, real ID will be looked up by email in orders route
+          id: customerId,
           email: data.user_email,
           username: data.user_nicename
         },
@@ -418,31 +456,48 @@ async function startServer() {
                        req.user?.sub ||
                        req.user?.data?.id;
 
-      if (!customerId && (req.user?.email || req.user?.data?.user?.email || req.user?.user_email)) {
-        // Fallback: search by email
-        const email = req.user?.email || req.user?.data?.user?.email || req.user?.user_email;
-        console.log(`[CHILS & CO.] ID missing from token, searching WC by email: ${email}`);
+      const userEmail = req.user?.email || req.user?.data?.user?.email || req.user?.user_email;
+
+      if (!customerId && userEmail) {
+        // Fallback: search by email to get the actual ID
+        console.log(`[CHILS & CO.] ID missing from token, searching WC by email: ${userEmail}`);
         
-        const customerSearch = await wc.get("customers", { email });
-        if (customerSearch.data && customerSearch.data.length > 0) {
-          customerId = customerSearch.data[0].id;
-          console.log(`[CHILS & CO.] Found customer ID linked to email: ${customerId}`);
+        try {
+          const customerSearch = await wc.get("customers", { email: userEmail });
+          if (Array.isArray(customerSearch.data) && customerSearch.data.length > 0) {
+            customerId = customerSearch.data[0].id;
+            console.log(`[CHILS & CO.] Found customer ID linked to email: ${customerId}`);
+          }
+        } catch (searchErr) {
+          console.error("[CHILS & CO.] Email search fallback failed:", searchErr);
         }
       }
 
-      if (!customerId && !wc) {
-         // Allow mock flow to continue
-         customerId = "mock-123";
-      } else if (!customerId) {
+      let orders;
+      if (customerId) {
+        console.log(`[CHILS & CO.] Fetching orders for customer ID: ${customerId}`);
+        const response = await wc.get("orders", {
+          customer: customerId,
+          per_page: 50
+        });
+        orders = response.data;
+      } else if (userEmail) {
+        // Absolute fallback: try to find orders by email directly if WC API supports it
+        // Or if customer ID still missing, try to fetch recent orders and filter manually
+        console.log(`[CHILS & CO.] No customer ID found, fetching recent orders to filter by email: ${userEmail}`);
+        const response = await wc.get("orders", { per_page: 100 });
+        orders = response.data.filter((o: any) => o.billing?.email?.toLowerCase() === userEmail.toLowerCase());
+      } else {
         return res.status(400).json({ message: "Unable to identify customer from token" });
       }
 
-      const response = await wc.get("orders", {
-        customer: customerId,
-        per_page: 20
-      });
+      if (!Array.isArray(orders)) {
+        console.warn("[CHILS & CO.] WC did not return an array of orders.");
+        return res.json([]);
+      }
 
-      res.json(response.data.map(mapOrderToSignal));
+      console.log(`[CHILS & CO.] Successfully retrieved ${orders.length} orders.`);
+      res.json(orders.map(mapOrderToSignal));
     } catch (error: any) {
       console.error("WooCommerce Orders Error:", error);
       res.status(500).json({ message: "Failed to fetch orders" });
