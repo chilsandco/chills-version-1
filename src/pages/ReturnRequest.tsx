@@ -174,7 +174,7 @@ const ReturnRequest: React.FC = () => {
         >
           <CheckCircle2 size={40} className="text-black" />
         </motion.div>
-        <h2 className="text-4xl font-display font-bold mb-4 tracking-tighter uppercase">Return Protocol Initiated</h2>
+        <h2 className="text-4xl font-display font-bold mb-4 tracking-tighter uppercase">Reversal Protocol Initiated</h2>
         <p className="text-[11px] text-white/50 tracking-widest uppercase italic mb-12 max-w-md">Our team is reviewing your transmission. You will be notified once the reversal is authorized.</p>
         <Link to="/console/orders" className="bg-white text-black px-12 py-5 text-[11px] tracking-[0.3em] font-bold uppercase hover:bg-accent transition-colors">GO TO DASHBOARD</Link>
       </div>
@@ -192,7 +192,7 @@ const ReturnRequest: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
         <div className="lg:col-span-12">
-           <h1 className="text-5xl font-display font-bold tracking-tighter uppercase mb-2">Return Processing</h1>
+           <h1 className="text-5xl font-display font-bold tracking-tighter uppercase mb-2">Reversal Processing</h1>
            <p className="text-[11px] text-white/40 tracking-[0.2em] font-medium uppercase mb-16">Signal: #{signal?.signalId}</p>
         </div>
 
@@ -215,7 +215,7 @@ const ReturnRequest: React.FC = () => {
                 
                 <h3 className="text-[11px] tracking-[0.3em] font-bold uppercase mb-8 flex items-center gap-3">
                   <span className="w-1 h-3 bg-accent" />
-                  Return Request Notice
+                  Reversal Request Notice
                 </h3>
                 
                 <div className="space-y-6 max-w-3xl">
@@ -376,7 +376,7 @@ const ReturnRequest: React.FC = () => {
                       <motion.div animate={{ rotate: 360 }} transition={{ duration: 10, repeat: Infinity, ease: "linear" }}>
                         <RefreshCcw size={16} />
                       </motion.div>
-                      SEND RETURN SIGNAL
+                      SEND REVERSAL SIGNAL
                     </>
                   )}
                 </button>

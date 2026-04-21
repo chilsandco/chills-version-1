@@ -8,9 +8,9 @@ const CustomCursor: React.FC = () => {
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
-  // Smooth movement for the cursor
-  const cursorX = useSpring(mouseX, { stiffness: 500, damping: 35 });
-  const cursorY = useSpring(mouseY, { stiffness: 500, damping: 35 });
+  // High-performance spring for zero-latency feel
+  const cursorX = useSpring(mouseX, { stiffness: 1200, damping: 65, restDelta: 0.001 });
+  const cursorY = useSpring(mouseY, { stiffness: 1200, damping: 65, restDelta: 0.001 });
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {

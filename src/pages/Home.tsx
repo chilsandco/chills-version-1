@@ -1,16 +1,20 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import Hero from '../components/Hero';
 import ProductCard from '../components/ProductCard';
 import { Product } from '../types';
-import { motion, useScroll, useTransform } from 'motion/react';
-import { ArrowRight } from 'lucide-react';
+import { motion } from 'motion/react';
+import { ArrowRight, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Home: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasSeenSustainability, setHasSeenSustainability] = useState(false);
 
   useEffect(() => {
+    const seen = sessionStorage.getItem('chils_sustainability_seen');
+    if (seen) setHasSeenSustainability(true);
+    
     fetch('/api/products')
       .then(res => res.json())
       .then(data => {
@@ -200,53 +204,188 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Packaging Section - Immersive */}
+      {/* Second Life Section - Cinematic Tunnel Reveal */}
       <motion.section 
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 2.5 }}
-        className="py-80 bg-white text-black text-center px-6 relative overflow-hidden"
+        className="py-16 md:py-24 lg:py-32 bg-black text-white text-center px-6 relative overflow-hidden"
+        onViewportEnter={() => {
+          if (!hasSeenSustainability) {
+            sessionStorage.setItem('chils_sustainability_seen', 'true');
+          }
+        }}
       >
-        <div className="max-w-5xl mx-auto relative z-10">
-          <motion.h2 
-            initial={{ opacity: 0, scale: 0.8, filter: 'blur(20px)' }}
-            whileInView={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+        {/* Cinematic White Expansion (Light at the end of the tunnel) */}
+        {!hasSeenSustainability ? (
+          <motion.div 
+            initial={{ scale: 0, opacity: 0 }}
+            whileInView={{ scale: 12, opacity: 1 }}
+            viewport={{ once: true, margin: "-20%" }}
+            transition={{ duration: 4.5, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[25vw] h-[25vw] bg-white rounded-full z-0 pointer-events-none blur-[140px]"
+          />
+        ) : (
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[25vw] h-[25vw] bg-white rounded-full z-0 pointer-events-none blur-[140px] scale-[12]" />
+        )}
+
+        <motion.div 
+          initial={hasSeenSustainability ? { color: "#000000", scale: 1, opacity: 1 } : { color: "#ffffff", scale: 0.985, opacity: 0 }}
+          whileInView={{ color: "#000000", scale: 1, opacity: 1 }}
+          viewport={{ once: true, margin: "-20%" }}
+          transition={{ 
+            color: { duration: 3, delay: 0.2 },
+            scale: { duration: 5, ease: [0.22, 1, 0.36, 1] },
+            opacity: { duration: 2, delay: 0.4 }
+          }}
+          className="max-w-5xl mx-auto relative z-10"
+        >
+          <motion.div
+            initial={hasSeenSustainability ? { opacity: 1, y: 0 } : { opacity: 0, y: 15 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 2, ease: [0.22, 1, 0.36, 1] }}
-            className="text-6xl md:text-[12vw] font-display font-bold tracking-tighter mb-16 leading-none"
+            transition={{ duration: 2, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+            className="flex justify-center mb-12"
           >
-            CHILS LOOP™
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ 
+                duration: 45, 
+                repeat: Infinity, 
+                ease: "linear"
+              }}
+            >
+              <RefreshCw className="w-10 h-10 stroke-[0.5px]" />
+            </motion.div>
+          </motion.div>
+
+          <motion.h2 
+            initial={hasSeenSustainability ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 2, delay: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="text-6xl md:text-[7vw] font-display font-bold tracking-tighter mb-8 leading-none uppercase"
+          >
+            SECOND LIFE™
           </motion.h2>
           <motion.p 
-            initial={{ opacity: 0, y: 40 }}
+            initial={hasSeenSustainability ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 2, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
-            className="text-2xl md:text-4xl font-light mb-24 max-w-3xl mx-auto leading-[1.1]"
+            transition={{ duration: 2, delay: 0.9, ease: [0.22, 1, 0.36, 1] }}
+            className="text-xl md:text-2xl font-display font-bold tracking-tight mb-12 uppercase italic"
           >
-            Our packaging is 100% compostable. <br />
-            <span className="font-bold">Engineered for a second life.</span>
+            Engineered for a second life.
           </motion.p>
+          <motion.div 
+            initial={hasSeenSustainability ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 2, delay: 1.1, ease: [0.22, 1, 0.36, 1] }}
+            className="text-lg md:text-xl font-light mb-16 max-w-2xl mx-auto leading-relaxed space-y-6"
+          >
+            <motion.p 
+              initial={hasSeenSustainability ? { opacity: 1 } : { opacity: 0.85 }}
+              whileInView={{ opacity: 1 }}
+              transition={{ duration: 1.5, delay: 1.2 }}
+              className="text-3xl md:text-4xl font-display font-bold tracking-[-0.04em] mb-10 text-black leading-[1.1]"
+            >
+              Not made to be discarded.
+            </motion.p>
+            <div className="space-y-4 opacity-50 text-[#1a1a1a]">
+              <p>What you receive is only the beginning.</p>
+              <p>
+                Our packaging is designed to stay — not to be discarded.
+              </p>
+              <p>
+                Even the smallest details are built with a purpose beyond the first use.
+              </p>
+            </div>
+            <p className="font-medium mt-10 text-black">Because what we build shouldn’t end at delivery.</p>
+          </motion.div>
           <motion.div
-            initial={{ opacity: 0, scaleX: 0 }}
+            initial={hasSeenSustainability ? { opacity: 1, scaleX: 1 } : { opacity: 0, scaleX: 0 }}
             whileInView={{ opacity: 1, scaleX: 1 }}
             viewport={{ once: true }}
-            transition={{ duration: 2.5, delay: 1, ease: [0.22, 1, 0.36, 1] }}
-            className="h-px bg-black/10 w-full mb-24 origin-left"
+            transition={{ duration: 2, delay: 1.3, ease: [0.22, 1, 0.36, 1] }}
+            className="h-px bg-current opacity-10 w-full mb-16 origin-left"
           />
+        </motion.div>
+      </motion.section>
+
+      {/* Eco Engineered Section - Premium Precision */}
+      <motion.section 
+        className="py-16 md:py-24 lg:py-32 bg-black text-white text-center px-6 relative overflow-hidden"
+      >
+        {/* OLED-Hardened Film Grain Overlay */}
+        <div 
+          className="absolute inset-0 opacity-[0.015] pointer-events-none mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-[length:256px_256px]" 
+          style={{ filter: 'contrast(120%) brightness(110%)' }}
+        />
+
+        <div className="max-w-5xl mx-auto relative z-10">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1.5, delay: 1.2 }}
+            initial={hasSeenSustainability ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true, margin: "-20%" }}
+            transition={{ duration: 2.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            className="flex justify-center mb-16"
           >
-            <Link 
-              to="/collection" 
-              className="inline-block bg-black text-white px-20 py-8 rounded-full text-[10px] uppercase tracking-[0.5em] font-bold hover:bg-gray-900 transition-all duration-700 hover:scale-105 active:scale-95 shadow-2xl"
+            <div className="relative w-12 h-12 flex items-center justify-center opacity-20">
+              <div className="absolute inset-0 border border-[#5F7D63] rounded-sm transform rotate-45" />
+              <div className="w-1.5 h-1.5 bg-[#5F7D63] rounded-full" />
+            </div>
+          </motion.div>
+
+          <motion.h2 
+            initial={hasSeenSustainability ? { opacity: 1, y: 0, filter: 'blur(0px)' } : { opacity: 0, y: 15, filter: 'blur(8px)' }}
+            whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+            viewport={{ once: true, margin: "-20%" }}
+            transition={{ duration: 2.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="text-6xl md:text-[8vw] font-display font-bold tracking-tighter mb-12 leading-none uppercase text-[#5F7D63]"
+          >
+             ECO ENGINEERED™
+          </motion.h2>
+          
+          {/* Horizontal Precision Sweep Animation - Responsive Speed */}
+          <div className="relative overflow-hidden mb-20 py-6 inline-block mx-auto max-w-full">
+            <motion.p 
+              initial={hasSeenSustainability ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-20%" }}
+              transition={{ duration: 2, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              className="text-xl md:text-3xl font-display font-bold tracking-tight uppercase text-[#5F7D63] italic relative z-10"
             >
-              Explore Collection
-            </Link>
+              Built with purpose. Designed without waste.
+            </motion.p>
+            {!hasSeenSustainability && (
+              <motion.div 
+                initial={{ left: '-10%' }}
+                whileInView={{ left: '110%' }}
+                viewport={{ once: true, margin: "-20%" }}
+                transition={{ 
+                  duration: typeof window !== 'undefined' && window.innerWidth < 768 ? 3.5 : 5, 
+                  delay: 0.8, 
+                  ease: [0.4, 0, 0.2, 1] 
+                }}
+                className="absolute top-0 bottom-0 w-px bg-[#5F7D63] z-0 opacity-25 shadow-[0_0_8px_rgba(95,125,99,0.2)]"
+              />
+            )}
+          </div>
+
+          <motion.div 
+            initial={hasSeenSustainability ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-20%" }}
+            transition={{ duration: 2, delay: 1, ease: [0.22, 1, 0.36, 1] }}
+            className="text-lg md:text-2xl font-light text-[#EAEAEA] max-w-4xl mx-auto leading-relaxed space-y-12"
+          >
+            <p>
+              Sustainability at Chils & Co. isn’t added later — it’s engineered into every layer.
+            </p>
+            <p>
+              We eliminate plastic entirely, reduce unnecessary materials, and design every component with long-term use in mind.
+            </p>
+            <p className="text-[#5F7D63] font-medium opacity-80">
+              From packaging to product details, everything is built to minimize waste while maintaining performance and form.
+            </p>
           </motion.div>
         </div>
       </motion.section>

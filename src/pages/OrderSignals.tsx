@@ -41,7 +41,7 @@ const OrderSignals: React.FC = () => {
       <div className="pt-32 pb-24 px-6 md:px-12 flex items-center justify-center min-h-screen">
         <div className="flex flex-col items-center gap-4">
           <Activity className="animate-pulse text-accent" size={32} />
-          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-neutral-500">Retrieving system signals...</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-neutral-500">Retrieving order history...</p>
         </div>
       </div>
     );
@@ -50,8 +50,8 @@ const OrderSignals: React.FC = () => {
   if (!user && signals.length === 0) {
     return (
       <div className="pt-32 pb-24 px-6 md:px-12 flex flex-col items-center justify-center min-h-screen text-center">
-        <h1 className="text-4xl font-display font-bold mb-8 uppercase tracking-tighter">No Active Signals</h1>
-        <p className="text-neutral-500 uppercase text-[10px] tracking-widest mb-12 max-w-sm">No transmissions detected from this origin.</p>
+        <h1 className="text-4xl font-display font-bold mb-8 uppercase tracking-tighter">No Order History</h1>
+        <p className="text-neutral-500 uppercase text-[10px] tracking-widest mb-12 max-w-sm">No records found in this origin.</p>
         <Link 
           to="/auth" 
           className="bg-white text-black px-12 py-5 text-[11px] tracking-[0.3em] font-bold uppercase hover:bg-accent transition-colors"
@@ -69,9 +69,9 @@ const OrderSignals: React.FC = () => {
           <Activity className="text-accent" size={16} />
           <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase">Archive Logs</p>
         </div>
-        <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter uppercase mb-4">Order Signals</h1>
+        <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter uppercase mb-4">Orders Archive</h1>
         <p className="text-neutral-500 uppercase text-[10px] tracking-widest max-w-xl">
-          Complete log of all registered transmissions and system outputs.
+          Every piece you’ve owned.
         </p>
       </header>
 
@@ -92,7 +92,7 @@ const OrderSignals: React.FC = () => {
               >
                 <div className="flex flex-col md:flex-row md:items-center gap-8 md:gap-16">
                   <div className="w-40">
-                    <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Signal Identity</p>
+                    <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Order Identity</p>
                     <p className="font-mono text-sm tracking-widest group-hover:text-accent transition-colors">#{signal.signalId}</p>
                   </div>
                   
@@ -128,7 +128,7 @@ const OrderSignals: React.FC = () => {
 
               {/* Right Column: Build Contents (Images & Names) */}
               <div className="md:w-1/3 bg-neutral-900/10 p-8 border-l border-neutral-900 flex flex-col justify-center">
-                <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-4">Transmission Content</p>
+                <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-4">Order Content</p>
                 <div className="space-y-4">
                   {signal.items.map((item, i) => (
                     <div key={i} className="flex items-center gap-4">

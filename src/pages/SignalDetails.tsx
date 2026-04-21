@@ -209,10 +209,13 @@ const SignalDetails: React.FC = () => {
                       return (
                         <Link 
                           to={`/console/orders/${signal.id}/return`}
-                          className="w-full bg-white/5 border border-white/10 text-white p-4 text-[10px] tracking-[0.3em] font-bold uppercase hover:bg-accent hover:border-accent hover:text-black transition-all flex items-center justify-center gap-3"
+                          className="w-full bg-white/5 border border-white/10 text-white p-4 uppercase hover:bg-accent hover:border-accent hover:text-black transition-all flex flex-col items-center justify-center gap-1 group"
                         >
-                          <RefreshCcw size={14} />
-                          Initiate Reversal
+                          <div className="flex items-center gap-3 text-[10px] tracking-[0.3em] font-bold uppercase">
+                            <RefreshCcw size={14} className="group-hover:rotate-180 transition-transform duration-500" />
+                            Initiate Reversal
+                          </div>
+                          <span className="text-[9px] tracking-widest opacity-40 font-medium italic">Request a return for this order</span>
                         </Link>
                       );
                     } else {

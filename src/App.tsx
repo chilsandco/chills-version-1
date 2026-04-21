@@ -15,6 +15,8 @@ import SignalDetails from './pages/SignalDetails';
 import Onboarding from './pages/Onboarding';
 import Wishlist from './pages/Wishlist';
 import ReturnRequest from './pages/ReturnRequest';
+import Returns from './pages/Returns';
+import Shipping from './pages/Shipping';
 import Auth from './pages/Auth';
 import SmoothScroll from './components/SmoothScroll';
 import ScrollProgress from './components/ScrollProgress';
@@ -26,7 +28,7 @@ export default function App() {
       <CartProvider>
         <WishlistProvider>
           <Router>
-          <SmoothScroll>
+            <SmoothScroll>
             <div className="min-h-screen flex flex-col bg-black text-white selection:bg-white selection:text-black lg:cursor-none">
               <CustomCursor />
               <ScrollProgress />
@@ -42,6 +44,8 @@ export default function App() {
                   <Route path="/console/orders" element={<OrderSignals />} />
                   <Route path="/console/orders/:id" element={<SignalDetails />} />
                   <Route path="/console/orders/:id/return" element={<ReturnRequest />} />
+                  <Route path="/returns-refunds" element={<Returns />} />
+                  <Route path="/shipping-delivery" element={<Shipping />} />
                   <Route path="/wishlist" element={<Wishlist />} />
                   <Route path="/auth" element={<Auth />} />
                 </Routes>
