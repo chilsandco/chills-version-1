@@ -23,6 +23,8 @@ export interface Customer {
   first_name: string;
   last_name: string;
   username: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 export interface SignalItem {
@@ -42,6 +44,7 @@ export interface Signal {
   total: number;
   currency: string;
   items: SignalItem[];
+  dateCompleted?: string;
   shipping: {
     address: string;
     method: string;

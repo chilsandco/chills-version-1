@@ -45,7 +45,8 @@ async function startServer() {
     : 3000;
 
   app.use(cors());
-  app.use(express.json());
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
   // JWT Middleware
   const authenticateToken = (req: any, res: any, next: any) => {
@@ -134,6 +135,7 @@ async function startServer() {
         signalId: toSignalId(order.id),
         status: order.status || "pending",
         date: order.date_created || new Date().toISOString(),
+        dateCompleted: order.date_completed || null,
         total: parseFloat(order.total || "0"),
         currency: order.currency || "INR",
         items: lineItems.map((item: any) => ({
@@ -385,13 +387,18 @@ async function startServer() {
       // Try to find the WooCommerce customer ID to include it in the token
       const wc = getWooCommerce();
       let customerId = 0;
+      let firstName = '';
+      let lastName = '';
       if (wc) {
         try {
           console.log(`[CHILS & CO.] Looking up WC customer ID for: ${data.user_email}`);
           const search = await wc.get("customers", { email: data.user_email });
           if (Array.isArray(search.data) && search.data.length > 0) {
-            customerId = search.data[0].id;
-            console.log(`[CHILS & CO.] Found WC customer ID: ${customerId}`);
+            const customer = search.data[0];
+            customerId = customer.id;
+            firstName = customer.first_name || '';
+            lastName = customer.last_name || '';
+            console.log(`[CHILS & CO.] Found WC customer ID: ${customerId}, Name: ${firstName} ${lastName}`);
           }
         } catch (err) {
           console.error("[CHILS & CO.] Error searching for customer ID:", err);
@@ -406,7 +413,9 @@ async function startServer() {
         id: customerId,
         email: data.user_email,
         username: data.user_nicename,
-        displayName: data.user_display_name
+        displayName: data.user_display_name,
+        firstName,
+        lastName
       };
 
       // Long-lived token for e-commerce persistence (30 days)
@@ -417,7 +426,11 @@ async function startServer() {
         user: {
           id: customerId,
           email: data.user_email,
-          username: data.user_nicename
+          username: data.user_nicename,
+          first_name: firstName,
+          last_name: lastName,
+          firstName,
+          lastName
         },
         message: "Login successful"
       });
@@ -513,8 +526,9 @@ async function startServer() {
       if (!wc) {
         return res.json(mapOrderToSignal({
           id: req.params.id,
-          status: "processing",
+          status: "completed",
           date_created: new Date().toISOString(),
+          date_completed: new Date().toISOString(),
           total: "4500.00",
           currency: "INR",
           line_items: [{ name: "SYNTAX OVERLOAD TEE", quantity: 1, price: "4500.00", total: "4500.00" }],
@@ -528,6 +542,72 @@ async function startServer() {
     } catch (error: any) {
       console.error("WooCommerce Order Detail Error:", error);
       res.status(404).json({ message: "Signal not found" });
+    }
+  });
+
+  app.post("/api/orders/:id/return", authenticateToken, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { reason, description, products, images } = req.body;
+      const rmaSecret = process.env.RMA_API_SECRET || "wps_e48738cedfb75d113a6e3f11a6dc18ff5ca4b9b4";
+      const rawWpUrl = process.env.WOOCOMMERCE_URL || "https://chilsandco.com";
+      const wpUrl = rawWpUrl.endsWith('/') ? rawWpUrl.slice(0, -1) : rawWpUrl;
+
+      console.log(`[CHILS & CO.] Processing return for order ${id} via RMA API`);
+
+      const rmaSecretClean = rmaSecret.trim();
+      const authHeader = 'Basic ' + Buffer.from(`secret_key:${rmaSecretClean}`).toString('base64');
+      
+      // Construct a unified reason string that includes description and images since the API is basic
+      const fullReason = `Reason: ${reason}\nDescription: ${description}\nImages: ${images ? images.join(', ') : 'None'}`;
+
+      const rmaPayload: any = {
+        order_id: id.toString(), // Use string ID as shown in docs
+        reason: fullReason,
+      };
+
+      // If specific products are selected for return
+      if (products && products.length > 0) {
+        // The RMA API requires products as a stringified JSON array
+        rmaPayload.products = JSON.stringify(products.map((p: any) => ({
+          product_id: parseInt(p.productId, 10),
+          qty: parseInt(p.quantity, 10)
+        })));
+      }
+
+      console.log(`[CHILS & CO.] Transmitting payload to: ${wpUrl}/wp-json/rma/refund-request`);
+
+      // Using Fetch with additional headers to simulate a standard browser/curl request
+      // We keep the query param for redundancy as some WP setups require it for REST auth
+      const rmaResponse = await fetch(`${wpUrl}/wp-json/rma/refund-request?secret_key=${rmaSecretClean}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': authHeader,
+          'secret_key': rmaSecretClean, // Direct header option
+          'wps-rma-secret-key': rmaSecretClean, // Common plugin-specific variant
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        },
+        body: JSON.stringify(rmaPayload)
+      });
+
+      const responseText = await rmaResponse.text();
+      let rmaData;
+      try {
+        rmaData = JSON.parse(responseText);
+      } catch (e) {
+        rmaData = { message: responseText };
+      }
+
+      if (!rmaResponse.ok) {
+        console.error(`[CHILS & CO.] RMA Rejection: ${rmaResponse.status} - ${responseText}`);
+        throw new Error(rmaData.message || `RMA API failed with status ${rmaResponse.status}`);
+      }
+
+      res.json({ success: true, message: "Transmission verified. Return request logged.", data: rmaData });
+    } catch (error: any) {
+      console.error("[CHILS & CO.] Return Request Error:", error);
+      res.status(500).json({ message: error.message || "Failed to process return request" });
     }
   });
 

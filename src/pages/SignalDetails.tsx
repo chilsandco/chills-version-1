@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Activity, Box, MapPin, CreditCard, ChevronLeft, Package, Sparkles } from 'lucide-react';
+import { Activity, Box, MapPin, CreditCard, ChevronLeft, Package, Sparkles, ShieldAlert, RefreshCcw, CheckCircle2 } from 'lucide-react';
 import { Signal } from '../types';
 import { useAuth } from '../AuthContext';
 
@@ -45,11 +45,13 @@ const SignalDetails: React.FC = () => {
 
   if (!signal) return null;
 
+  const isRefunded = signal.status === 'refunded';
+
   const steps = [
-    { label: "Signal Received", status: "completed" },
-    { label: "Processing", status: signal.status === 'processing' || signal.status === 'completed' ? 'completed' : 'pending' },
-    { label: "Dispatched", status: signal.status === 'shipping' || signal.status === 'completed' ? 'completed' : 'pending' },
-    { label: "Delivered", status: signal.status === 'completed' ? 'completed' : 'pending' },
+    { label: "Order Received", status: "completed" },
+    { label: "Processing", status: (signal.status === 'processing' || signal.status === 'completed' || isRefunded) ? 'completed' : 'pending' },
+    { label: "Dispatched", status: (signal.status === 'shipping' || signal.status === 'completed' || isRefunded) ? 'completed' : 'pending' },
+    { label: "Delivered", status: (signal.status === 'completed' || isRefunded) ? 'completed' : 'pending' },
   ];
 
   return (
@@ -65,57 +67,101 @@ const SignalDetails: React.FC = () => {
       <header className="mb-16">
         <div className="flex justify-between items-end gap-8 flex-wrap">
           <div>
-            <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase mb-3">System Output</p>
-            <h1 className="text-5xl font-display font-bold tracking-tighter uppercase mb-4">Signal Details</h1>
+            <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase mb-3">Order Confirmation</p>
+            <h1 className="text-5xl font-display font-bold tracking-tighter uppercase mb-4">
+              {isRefunded ? 'Refund Complete' : 'Order Details'}
+            </h1>
             <div className="flex items-center gap-4">
-              <p className="font-mono text-xl tracking-tighter text-accent">#{signal.signalId}</p>
+              <p className={`font-mono text-xl tracking-tighter ${isRefunded ? 'text-red-500' : 'text-accent'}`}>#{signal.signalId}</p>
               <span className="w-1 h-1 rounded-full bg-neutral-800" />
-              <p className="text-[10px] text-neutral-600 uppercase tracking-widest uppercase">
-                Registered: {new Date(signal.date).toLocaleString()}
+              <p className="text-[10px] text-neutral-600 uppercase tracking-widest">
+                Date: {new Date(signal.date).toLocaleDateString()}
               </p>
             </div>
           </div>
-          <div className="bg-neutral-950 border border-neutral-900 px-6 py-4 rounded-sm">
-            <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1">Current State</p>
-            <p className="text-[11px] font-bold uppercase tracking-widest">{signal.status}</p>
+          <div className={`px-6 py-4 border rounded-sm ${isRefunded ? 'bg-red-500/5 border-red-500/20' : 'bg-neutral-950 border-neutral-900'}`}>
+            <p className={`text-[8px] tracking-[0.3em] uppercase mb-1 ${isRefunded ? 'text-red-500/50' : 'text-neutral-600'}`}>Status</p>
+            <p className={`text-[11px] font-bold uppercase tracking-widest ${isRefunded ? 'text-red-500' : ''}`}>
+               {isRefunded ? '✅ Refunded' : signal.status}
+            </p>
           </div>
         </div>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-        {/* Status Timeline */}
         <div className="lg:col-span-2 space-y-12">
+          {isRefunded && (
+             <motion.section 
+               initial={{ opacity: 0, y: 10 }}
+               animate={{ opacity: 1, y: 0 }}
+               className="bg-white/5 border border-white/10 p-10 md:p-14"
+             >
+               <div className="flex flex-col md:flex-row gap-10">
+                 <div className="w-16 h-16 rounded-full bg-accent flex items-center justify-center shrink-0">
+                    <CheckCircle2 size={24} className="text-black" />
+                 </div>
+                 <div className="flex-grow">
+                    <h3 className="text-[11px] font-bold uppercase tracking-[0.3em] text-accent mb-6 italic">This piece has completed its cycle with you.</h3>
+                    
+                    <div className="space-y-6 text-[13px] text-white/70 leading-relaxed font-light mb-10">
+                      <p>Your refund has been successfully processed. The value has been returned to your original payment method. Depending on your bank, it may take 3–7 business days to reflect in your account.</p>
+                      <p className="italic">We appreciate you experiencing Chils & Co. — every product is built with intention, and your support means a lot to us.</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 py-8 border-y border-white/5">
+                      <div>
+                        <p className="text-[8px] text-white/30 uppercase tracking-widest mb-1 font-bold">Amount Refunded</p>
+                        <p className="text-lg font-display font-bold text-red-500">₹{signal.total.toLocaleString()}</p>
+                      </div>
+                      <div>
+                        <p className="text-[8px] text-white/30 uppercase tracking-widest mb-1 font-bold">Status</p>
+                        <p className="text-[10px] uppercase font-bold tracking-widest text-green-500">Success</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-4 mt-10">
+                      <Link to="/collection" className="bg-white text-black px-8 py-3 text-[10px] tracking-widest font-bold uppercase hover:bg-accent transition-colors">Shop Again</Link>
+                      <button className="border border-white/10 px-8 py-3 text-[10px] tracking-widest font-bold uppercase hover:border-white transition-colors">Support</button>
+                    </div>
+                 </div>
+               </div>
+             </motion.section>
+          )}
+
           <section className="bg-neutral-950 border border-neutral-900 p-8">
             <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-12 flex items-center gap-3">
-              <Activity size={14} className="text-accent" />
-              Propagation Status
+              <Activity size={14} className={isRefunded ? 'text-white/20' : 'text-accent'} />
+              Order Status
             </h2>
             
             <div className="relative pl-8 space-y-12">
               <div className="absolute left-[3px] top-1 bottom-1 w-[1px] bg-neutral-900" />
               {steps.map((step, idx) => (
                 <div key={idx} className="relative">
-                  <div className={`absolute -left-[32px] top-1 w-2.5 h-2.5 rounded-full border border-black ${step.status === 'completed' ? 'bg-accent' : 'bg-neutral-800'}`} />
+                  <div className={`absolute -left-[32px] top-1 w-2.5 h-2.5 rounded-full border border-black ${step.status === 'completed' ? (isRefunded ? 'bg-white/10' : 'bg-accent') : 'bg-neutral-800'}`} />
                   <div>
-                    <p className={`text-[11px] font-bold uppercase tracking-widest mb-1 ${step.status === 'completed' ? 'text-white' : 'text-neutral-600'}`}>
+                    <p className={`text-[11px] font-bold uppercase tracking-widest mb-1 ${step.status === 'completed' ? 'text-white/40' : 'text-neutral-600'}`}>
                       {step.label}
                     </p>
-                    {step.status === 'completed' && (
-                      <p className="text-[9px] text-neutral-500 uppercase tracking-widest italic">
-                        &gt; {idx === 0 ? "Initial transmission detected" : "System checkpoint verified"}
-                      </p>
-                    )}
                   </div>
                 </div>
               ))}
+              {isRefunded && (
+                <div className="relative">
+                  <div className="absolute -left-[32px] top-1 w-2.5 h-2.5 rounded-full border border-black bg-red-500" />
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-widest mb-1 text-red-500">Refunded</p>
+                    <p className="text-[9px] text-red-500/50 uppercase tracking-widest italic">Recoupment successful</p>
+                  </div>
+                </div>
+              )}
             </div>
           </section>
 
-          {/* Products */}
           <section className="bg-neutral-950 border border-neutral-900 p-8">
             <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-8 flex items-center gap-3">
               <Box size={14} className="text-accent" />
-              Transmission Content
+              Order Summary
             </h3>
             <div className="space-y-6">
               {signal.items.map((item, idx) => (
@@ -125,7 +171,7 @@ const SignalDetails: React.FC = () => {
                       <img 
                         src={item.image} 
                         alt={item.name} 
-                        className="w-16 h-20 object-cover bg-neutral-900 flex-shrink-0" 
+                        className={`w-16 h-20 object-cover flex-shrink-0 ${isRefunded ? 'grayscale opacity-10' : 'bg-neutral-900'}`} 
                         referrerPolicy="no-referrer"
                       />
                     ) : (
@@ -136,30 +182,59 @@ const SignalDetails: React.FC = () => {
                     <div>
                       <Link 
                         to={`/product/${item.productId}`}
-                        className="text-[11px] font-bold uppercase tracking-widest mb-1 hover:text-accent transition-colors block"
+                        className={`text-[11px] font-bold uppercase tracking-widest mb-1 transition-colors block ${isRefunded ? 'text-white/40' : 'hover:text-accent'}`}
                       >
                         {item.name}
                       </Link>
                       <p className="text-[10px] text-neutral-600 uppercase tracking-widest">Quantity: {item.quantity}</p>
                     </div>
                   </div>
-                  <p className="font-mono text-xs">₹{item.total.toLocaleString()}</p>
+                  <p className={`font-mono text-xs ${isRefunded ? 'line-through text-white/20' : ''}`}>₹{item.total.toLocaleString()}</p>
                 </div>
               ))}
-              <div className="pt-6 flex justify-between items-center bg-neutral-900/10 -mx-8 px-8">
-                <p className="text-[10px] font-bold uppercase tracking-widest">Signal Value</p>
-                <p className="text-lg font-display font-bold tracking-tighter">₹{signal.total.toLocaleString()}</p>
+              <div className="pt-6 flex justify-between items-center bg-neutral-900/10 -mx-8 px-8 mb-4">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Order Total</p>
+                <p className={`text-lg font-display font-bold tracking-tighter ${isRefunded ? 'text-white/40' : ''}`}>₹{signal.total.toLocaleString()}</p>
               </div>
+
+              {!isRefunded && signal.status === 'completed' && (
+                <div className="pt-4 border-t border-white/5">
+                  {(() => {
+                    const now = new Date();
+                    const deliveryDate = signal.dateCompleted ? new Date(signal.dateCompleted) : new Date(signal.date);
+                    const diffHours = (now.getTime() - deliveryDate.getTime()) / (1000 * 60 * 60);
+                    const isWindowActive = diffHours <= 48;
+
+                    if (isWindowActive) {
+                      return (
+                        <Link 
+                          to={`/console/orders/${signal.id}/return`}
+                          className="w-full bg-white/5 border border-white/10 text-white p-4 text-[10px] tracking-[0.3em] font-bold uppercase hover:bg-accent hover:border-accent hover:text-black transition-all flex items-center justify-center gap-3"
+                        >
+                          <RefreshCcw size={14} />
+                          Initiate Reversal
+                        </Link>
+                      );
+                    } else {
+                      return (
+                        <div className="w-full bg-neutral-900/10 border border-neutral-900/20 text-neutral-600 p-4 text-[9px] tracking-[0.2em] font-bold uppercase flex items-center justify-center gap-2 cursor-not-allowed">
+                          <ShieldAlert size={12} className="opacity-30" />
+                          Authorized Return window closed (48h)
+                        </div>
+                      );
+                    }
+                  })()}
+                </div>
+              )}
             </div>
           </section>
 
-          {/* Packaging Module */}
           <section className="bg-accent/5 border border-accent/20 p-8 relative overflow-hidden group">
             <Sparkles className="absolute -right-4 -top-4 text-accent/10 w-24 h-24 rotate-12 group-hover:scale-110 transition-transform duration-1000" />
             <div className="relative z-10">
               <div className="flex items-center gap-3 mb-4">
                 <Package size={18} className="text-accent" />
-                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase">Packaging Module</h3>
+                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase">Packaging Unit</h3>
               </div>
               <p className="text-[13px] font-medium leading-relaxed mb-3">
                 This shipment includes a reusable packaging unit.
@@ -175,7 +250,6 @@ const SignalDetails: React.FC = () => {
           </section>
         </div>
 
-        {/* Sidebar info */}
         <div className="space-y-8">
           <section className="bg-neutral-950 border border-neutral-900 p-8">
             <div className="flex items-center gap-3 mb-6">
@@ -184,7 +258,7 @@ const SignalDetails: React.FC = () => {
             </div>
             <p className="text-[12px] font-medium leading-relaxed mb-4">{signal.shipping.address}</p>
             <div className="pt-4 border-t border-neutral-900">
-              <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1">Logistics Protocol</p>
+              <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1">Method</p>
               <p className="text-[10px] font-bold uppercase tracking-widest">{signal.shipping.method}</p>
             </div>
           </section>
@@ -199,14 +273,14 @@ const SignalDetails: React.FC = () => {
               <p className="text-[11px] font-bold uppercase tracking-widest">Authenticated</p>
             </div>
             <p className="text-[10px] text-neutral-500 uppercase tracking-widest leading-relaxed italic">
-              "The cost of the build was registered in the ledger successfully."
+              Payment was registered successfully.
             </p>
           </section>
 
           <div className="p-8 border border-neutral-900 text-center">
             <p className="text-[9px] text-neutral-600 uppercase tracking-[0.3em] leading-relaxed">
-              Need assistance with this signal?<br/>
-              <span className="text-white hover:text-accent cursor-pointer transition-colors mt-2 block">Contact System Admin</span>
+              Need assistance?<br/>
+              <span className="text-white hover:text-accent cursor-pointer transition-colors mt-2 block">Support</span>
             </p>
           </div>
         </div>

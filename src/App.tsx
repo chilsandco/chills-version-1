@@ -14,6 +14,7 @@ import OrderSignals from './pages/OrderSignals';
 import SignalDetails from './pages/SignalDetails';
 import Onboarding from './pages/Onboarding';
 import Wishlist from './pages/Wishlist';
+import ReturnRequest from './pages/ReturnRequest';
 import Auth from './pages/Auth';
 import SmoothScroll from './components/SmoothScroll';
 import ScrollProgress from './components/ScrollProgress';
@@ -40,6 +41,7 @@ export default function App() {
                   <Route path="/onboarding" element={<Onboarding />} />
                   <Route path="/console/orders" element={<OrderSignals />} />
                   <Route path="/console/orders/:id" element={<SignalDetails />} />
+                  <Route path="/console/orders/:id/return" element={<ReturnRequest />} />
                   <Route path="/wishlist" element={<Wishlist />} />
                   <Route path="/auth" element={<Auth />} />
                 </Routes>

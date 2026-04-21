@@ -151,7 +151,15 @@ const Auth: React.FC = () => {
           });
           const loginData = await loginResponse.json();
           if (loginResponse.ok && loginData.token && loginData.user) {
-            authLogin(loginData.token, loginData.user);
+            // Ensure first and last names from registration form are preserved if server didn't have them yet
+            const userWithNames = {
+              ...loginData.user,
+              first_name: loginData.user.first_name || formData.first_name,
+              last_name: loginData.user.last_name || formData.last_name,
+              firstName: loginData.user.firstName || formData.first_name,
+              lastName: loginData.user.lastName || formData.last_name
+            };
+            authLogin(loginData.token, userWithNames);
             setTimeout(() => navigate('/onboarding'), 1500);
           } else {
             // If auto-login fails, just go to login mode
