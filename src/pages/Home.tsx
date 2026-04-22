@@ -162,15 +162,26 @@ const Home: React.FC = () => {
         />
       </motion.section>
 
-      {/* Quality & Craft - Progressive Reveal */}
-      <section className="py-80 px-6 md:px-12 max-w-[1800px] mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-40 items-center">
+      {/* Our Promise Section - Progressive Reveal */}
+      <section className="py-20 md:py-32 px-6 md:px-12 max-w-[1800px] mx-auto">
+        <motion.div
+           initial={{ opacity: 0, y: 30 }}
+           whileInView={{ opacity: 1, y: 0 }}
+           viewport={{ once: true }}
+           transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+           className="mb-16"
+        >
+          <span className="text-accent text-[10px] uppercase tracking-[0.6em] mb-4 block font-bold">The Commitment</span>
+          <h2 className="text-4xl md:text-6xl font-display font-medium tracking-tighter uppercase">Our Promise</h2>
+        </motion.div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-start">
           <motion.div
             initial={{ opacity: 0, scale: 0.9, filter: 'blur(20px)' }}
             whileInView={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
             viewport={{ once: true }}
             transition={{ duration: 2.5, ease: [0.22, 1, 0.36, 1] }}
-            className="relative aspect-[4/5] overflow-hidden group rounded-sm"
+            className="relative aspect-[4/5] overflow-hidden group rounded-sm lg:sticky lg:top-32"
           >
             <img 
               src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&q=80&w=1000" 
@@ -181,11 +192,25 @@ const Home: React.FC = () => {
             <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors duration-2000" />
           </motion.div>
           
-          <div className="space-y-32">
+          <div className="space-y-24 md:space-y-32">
             {[
-              { title: "Engineered Fabrics", desc: "Sourced from the finest mills in Japan and Italy, our textiles are chosen for their technical performance and tactile luxury." },
-              { title: "Precision Tailoring", desc: "Every pattern is digitally mapped and laser-cut to ensure a fit that feels like a second skin." },
-              { title: "Sustainable Intent", desc: "We believe in longevity. Our pieces are designed to be worn for a lifetime, not a season." }
+              { 
+                title: "Well Vetted Fabric", 
+                desc: "Sourced from trusted manufacturers with an uncompromising standard for build quality. We exclusively utilize 240GSM fine premium cloth, engineered for substance and tactile endurance." 
+              },
+              { 
+                title: "Precision Tailoring", 
+                desc: "Every pattern is digitally mapped and laser-cut to ensure a fit that feels like a second skin, balancing anatomical comfort with geometric precision." 
+              },
+              { 
+                title: "Design Philosophy", 
+                subtext: "Creative Overflow",
+                desc: "While we lead the design today, we are paving the way for the Chils Co-Creator concept. Soon, you will be invited to submit designs, collaborate on artifacts, and receive rewards as an active part of our creative ecosystem." 
+              },
+              { 
+                title: "Worn for a reason, not for season.", 
+                desc: "Every aesthetic choice is anchored in intent. We have eliminated plastic from our lifecycle, prioritizing the 'Second Life' philosophy to ensure our pieces outlast trends." 
+              }
             ].map((item, i) => (
               <motion.div 
                 key={i}
@@ -195,8 +220,13 @@ const Home: React.FC = () => {
                 transition={{ duration: 2, delay: i * 0.4, ease: [0.22, 1, 0.36, 1] }}
                 className="group"
               >
-                <span className="text-accent font-mono text-xs mb-6 block opacity-30 group-hover:opacity-100 transition-opacity duration-700">0{i + 1}</span>
-                <h3 className="text-4xl md:text-6xl font-display font-medium mb-8 tracking-tighter leading-none">{item.title}</h3>
+                <div className="flex items-center gap-4 mb-4">
+                  <span className="text-accent font-mono text-xs opacity-30 group-hover:opacity-100 transition-opacity duration-700">0{i + 1}</span>
+                  {item.subtext && (
+                    <span className="text-[10px] uppercase tracking-widest text-[#5F7D63] font-bold">/ {item.subtext}</span>
+                  )}
+                </div>
+                <h3 className="text-3xl md:text-5xl font-display font-medium mb-4 tracking-tighter leading-none group-hover:text-accent transition-colors duration-700">{item.title}</h3>
                 <p className="text-gray-500 text-lg md:text-xl font-light leading-relaxed max-w-lg">{item.desc}</p>
               </motion.div>
             ))}
@@ -339,7 +369,7 @@ const Home: React.FC = () => {
             whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
             viewport={{ once: true, margin: "-20%" }}
             transition={{ duration: 2.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="text-6xl md:text-[8vw] font-display font-bold tracking-tighter mb-12 leading-none uppercase text-[#5F7D63]"
+            className="text-5xl sm:text-6xl md:text-[8vw] font-display font-bold tracking-tighter mb-12 leading-none uppercase text-[#5F7D63] whitespace-nowrap"
           >
              ECO ENGINEERED™
           </motion.h2>
