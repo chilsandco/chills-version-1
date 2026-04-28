@@ -330,7 +330,7 @@ const Home: React.FC = () => {
                 </div>
 
                 <h2 className="text-5xl md:text-7xl font-display font-bold tracking-tighter mb-8 leading-[0.9] uppercase">
-                  SECOND LIFE™
+                  SECOND LIFE
                 </h2>
                 
                 <div className="space-y-8 text-neutral-600 text-lg md:text-xl font-light leading-relaxed max-w-lg mb-12">
@@ -409,7 +409,7 @@ const Home: React.FC = () => {
             transition={{ duration: 2.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="text-5xl sm:text-6xl md:text-[8vw] font-display font-bold tracking-tighter mb-12 leading-none uppercase text-[#5F7D63] whitespace-nowrap"
           >
-             ECO ENGINEERED™
+             ECO ENGINEERED
           </motion.h2>
           
           {/* Horizontal Precision Sweep Animation - Responsive Speed */}
