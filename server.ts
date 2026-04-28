@@ -440,6 +440,94 @@ async function startServer() {
     }
   });
 
+  app.post("/api/bespoke/waitlist", async (req, res) => {
+    try {
+      const { email } = req.body;
+      if (!email) return res.status(400).json({ message: "Email is required" });
+
+      const wc = getWooCommerce();
+      if (!wc) {
+        console.log("[CHILS & CO.] No WooCommerce credentials. Waitlist signal mocked.");
+        return res.json({ success: true, message: "Waitlist signal received (Mock Mode)" });
+      }
+
+      console.log(`[CHILS & CO.] Processing waitlist for: ${email}`);
+
+      // Check if user already exists using explicit email filter
+      const existing = await wc.get("customers", { email: email });
+      if (Array.isArray(existing.data) && existing.data.length > 0) {
+        const customerId = existing.data[0].id;
+        console.log(`[CHILS & CO.] Updating existing customer ${customerId} with Bespoke tag.`);
+        await wc.put(`customers/${customerId}`, {
+          meta_data: [
+            { key: "bespoke_waitlist", value: "true" }
+          ]
+        });
+        return res.json({ success: true, message: "Existing profile updated for Bespoke." });
+      }
+
+      // Try to create new customer
+      try {
+        const response = await wc.post("customers", {
+          email,
+          username: email.split('@')[0],
+          meta_data: [
+            { key: "bespoke_waitlist", value: "true" }
+          ]
+        });
+        console.log(`[CHILS & CO.] Created new WooCommerce customer for Bespoke: ${email}`);
+        res.json({ success: true, data: response.data });
+      } catch (createError: any) {
+        // Fallback: If creation fails because email exists (race condition or search failure)
+        const errorData = createError.response?.data;
+        if (errorData?.code === 'registration-error-email-exists') {
+          console.log(`[CHILS & CO.] Email exists during create. Attempting recovery update for: ${email}`);
+          // Search again to get the ID for update
+          const recoverySearch = await wc.get("customers", { email: email });
+          if (Array.isArray(recoverySearch.data) && recoverySearch.data.length > 0) {
+            const recoveryId = recoverySearch.data[0].id;
+            await wc.put(`customers/${recoveryId}`, {
+              meta_data: [{ key: "bespoke_waitlist", value: "true" }]
+            });
+            return res.json({ success: true, message: "Customer found and updated via recovery." });
+          }
+        }
+        throw createError;
+      }
+    } catch (error: any) {
+      console.error("[CHILS & CO.] Waitlist Processing Error:", error.response?.data || error);
+      res.status(500).json({ message: "Failed to process waitlist signal" });
+    }
+  });
+
+  app.get("/api/bespoke/list", authenticateToken, async (req: any, res) => {
+    try {
+      const wc = getWooCommerce();
+      if (!wc) {
+        return res.json([]);
+      }
+
+      // WooCommerce API doesn't support complex metadata queries directly via simple GET easily without plugins,
+      // but we can fetch recent customers and filter, or use the 'search' parameter if we stored it in a specific way.
+      // For now, we'll fetch the latest customers.
+      const response = await wc.get("customers", {
+        per_page: 100,
+        orderby: "registered_date",
+        order: "desc"
+      });
+
+      // Filter for those with our specific meta key
+      const waitlist = response.data.filter((customer: any) => 
+        customer.meta_data?.some((meta: any) => meta.key === 'bespoke_waitlist' && meta.value === 'true')
+      );
+
+      res.json(waitlist);
+    } catch (error) {
+      console.error("[CHILS & CO.] Fetch Bespoke List Error:", error);
+      res.status(500).json({ message: "Failed to fetch waitlist" });
+    }
+  });
+
   // Protected route example
   app.get("/api/auth/me", authenticateToken, (req: any, res) => {
     res.json(req.user);

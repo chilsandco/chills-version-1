@@ -208,7 +208,7 @@ const Checkout: React.FC = () => {
         {isAuthenticated && (
             <div className="flex items-center gap-3 px-4 py-2 bg-white/5 border border-white/10 rounded-full">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[10px] uppercase font-bold tracking-widest text-white/60">Session Active: {user?.username}</span>
+                <span className="text-[12px] uppercase font-bold tracking-widest text-white/60">Session Active: {user?.username}</span>
             </div>
         )}
       </div>
@@ -221,12 +221,12 @@ const Checkout: React.FC = () => {
           <section className="space-y-8">
             <div className="flex items-center gap-3">
               <span className="w-1 h-3 bg-accent" />
-              <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Identity Verification</h2>
+              <h2 className="text-[13px] tracking-[0.2em] font-bold uppercase">Identity Verification</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-[9px] text-neutral-500 uppercase tracking-widest block font-bold">First Name *</label>
+                <label className="text-[11px] text-neutral-500 uppercase tracking-widest block font-bold">First Name *</label>
                 <div className="relative">
                   <User className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
                   <input
@@ -241,7 +241,7 @@ const Checkout: React.FC = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[9px] text-neutral-500 uppercase tracking-widest block font-bold">Last Name</label>
+                <label className="text-[11px] text-neutral-500 uppercase tracking-widest block font-bold">Last Name</label>
                 <input
                   type="text"
                   name="lastName"
@@ -252,7 +252,7 @@ const Checkout: React.FC = () => {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-[9px] text-neutral-500 uppercase tracking-widest block font-bold">Email Interface *</label>
+                <label className="text-[11px] text-neutral-500 uppercase tracking-widest block font-bold">Email Interface *</label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
                   <input
@@ -267,7 +267,7 @@ const Checkout: React.FC = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <label className="text-[9px] text-neutral-500 uppercase tracking-widest block font-bold">Mobile Link *</label>
+                <label className="text-[11px] text-neutral-500 uppercase tracking-widest block font-bold">Mobile Link *</label>
                 <div className="relative">
                   <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-700" size={14} />
                   <input
@@ -290,13 +290,13 @@ const Checkout: React.FC = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <span className="w-1 h-3 bg-accent" />
-                <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Signal Destination</h2>
+                <h2 className="text-[13px] tracking-[0.2em] font-bold uppercase">Signal Destination</h2>
               </div>
               {addresses.length > 0 && !showAddressForm && (
                 <button 
                     type="button" 
                     onClick={() => { setShowAddressForm(true); setEditingAddressId(null); setAddressFormData({ label:'', type:'other', address:'', city:'', state:'', pincode:'' }); }}
-                    className="text-[9px] uppercase tracking-widest font-bold text-accent hover:text-white transition-colors flex items-center gap-2"
+                    className="text-[11px] uppercase tracking-widest font-bold text-accent hover:text-white transition-colors flex items-center gap-2"
                 >
                     <Plus size={12} />
                     New Addr
@@ -322,7 +322,7 @@ const Checkout: React.FC = () => {
                                 <div className="flex justify-between items-start mb-4">
                                     <div className="flex items-center gap-2">
                                         <div className={`w-2 h-2 rounded-full ${selectedAddressId === addr.id ? 'bg-accent' : 'bg-neutral-800'}`} />
-                                        <span className="text-[9px] uppercase font-bold tracking-widest text-neutral-400">{addr.label}</span>
+                                        <span className="text-[11px] uppercase font-bold tracking-widest text-neutral-400">{addr.label}</span>
                                         {addr.isDefault && <span className="text-[7px] px-1.5 py-0.5 bg-neutral-900 border border-neutral-800 rounded uppercase font-bold tracking-tighter text-neutral-600">Default</span>}
                                     </div>
                                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -346,7 +346,7 @@ const Checkout: React.FC = () => {
                                 </div>
                                 <p className="text-xs font-mono leading-relaxed mb-4 text-white/80">{addr.address}, {addr.city}</p>
                                 <div className="flex items-center justify-between">
-                                    <p className="text-[9px] uppercase tracking-widest text-neutral-600">{addr.state} • {addr.pincode}</p>
+                                    <p className="text-[11px] uppercase tracking-widest text-neutral-600">{addr.state} • {addr.pincode}</p>
                                     {selectedAddressId === addr.id && <Check size={14} className="text-accent" />}
                                 </div>
                             </div>
@@ -357,7 +357,7 @@ const Checkout: React.FC = () => {
                                 className="md:col-span-2 py-12 border-2 border-dashed border-neutral-900 hover:border-neutral-700 transition-colors flex flex-col items-center justify-center cursor-pointer group"
                             >
                                 <MapPin className="text-neutral-800 group-hover:text-accent transition-colors mb-4" size={32} />
-                                <p className="text-[10px] uppercase tracking-widest text-neutral-600 font-bold">No registered coordinates. Click to add.</p>
+                                <p className="text-[13px] uppercase tracking-widest text-neutral-600 font-bold">No registered coordinates. Click to add.</p>
                             </div>
                         )}
                     </motion.div>
@@ -369,7 +369,7 @@ const Checkout: React.FC = () => {
                         className="bg-neutral-950 border border-neutral-900 p-8 space-y-8"
                     >
                         <div className="flex items-center justify-between">
-                            <h3 className="text-[10px] font-bold uppercase tracking-[0.2em]">{editingAddressId ? 'Edit Coordinate' : 'Register Coordinate'}</h3>
+                            <h3 className="text-[13px] font-bold uppercase tracking-[0.2em]">{editingAddressId ? 'Edit Coordinate' : 'Register Coordinate'}</h3>
                             <button type="button" onClick={() => { setShowAddressForm(false); setEditingAddressId(null); }} className="text-neutral-500 hover:text-white transition-colors">
                                 <X size={16} />
                             </button>
@@ -378,7 +378,7 @@ const Checkout: React.FC = () => {
                         <div className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
                                 <div className="space-y-2">
-                                    <label className="text-[8px] text-neutral-600 uppercase tracking-widest font-bold">Protocol Label (Home/Work)</label>
+                                    <label className="text-[10px] text-neutral-600 uppercase tracking-widest font-bold">Protocol Label (Home/Work)</label>
                                     <div className="flex gap-2">
                                         {['home', 'work', 'other'].map(t => (
                                             <button
@@ -394,7 +394,7 @@ const Checkout: React.FC = () => {
                                 </div>
                                 {addressFormData.type === 'other' && (
                                     <div className="space-y-2">
-                                        <label className="text-[8px] text-neutral-600 uppercase tracking-widest font-bold">Custom Identification</label>
+                                        <label className="text-[10px] text-neutral-600 uppercase tracking-widest font-bold">Custom Identification</label>
                                         <input
                                             type="text"
                                             name="label"
@@ -406,7 +406,7 @@ const Checkout: React.FC = () => {
                                     </div>
                                 )}
                                 <div className="md:col-span-2 space-y-2">
-                                    <label className="text-[8px] text-neutral-600 uppercase tracking-widest font-bold">Physical Address* (Building, Street, Area)</label>
+                                    <label className="text-[10px] text-neutral-600 uppercase tracking-widest font-bold">Physical Address* (Building, Street, Area)</label>
                                     <input
                                         type="text"
                                         name="address"
@@ -418,7 +418,7 @@ const Checkout: React.FC = () => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[8px] text-neutral-600 uppercase tracking-widest font-bold">Sector/City*</label>
+                                    <label className="text-[10px] text-neutral-600 uppercase tracking-widest font-bold">Sector/City*</label>
                                     <input
                                         type="text"
                                         name="city"
@@ -430,7 +430,7 @@ const Checkout: React.FC = () => {
                                     />
                                 </div>
                                 <div className="space-y-2">
-                                    <label className="text-[8px] text-neutral-600 uppercase tracking-widest font-bold">Pincode*</label>
+                                    <label className="text-[10px] text-neutral-600 uppercase tracking-widest font-bold">Pincode*</label>
                                     <input
                                         type="text"
                                         name="pincode"
@@ -447,14 +447,14 @@ const Checkout: React.FC = () => {
                                 <button
                                     type="button"
                                     onClick={saveAddress}
-                                    className="flex-1 bg-white text-black py-4 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-accent transition-colors"
+                                    className="flex-1 bg-white text-black py-4 text-[13px] font-bold uppercase tracking-[0.2em] hover:bg-accent transition-colors"
                                 >
                                     Verify Coordinate
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => { setShowAddressForm(false); setEditingAddressId(null); }}
-                                    className="px-8 border border-neutral-900 py-4 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-neutral-900 transition-colors"
+                                    className="px-8 border border-neutral-900 py-4 text-[13px] font-bold uppercase tracking-[0.2em] hover:bg-neutral-900 transition-colors"
                                 >
                                     Cancel
                                 </button>
@@ -469,7 +469,7 @@ const Checkout: React.FC = () => {
           <section className="space-y-8">
             <div className="flex items-center gap-3">
               <span className="w-1 h-3 bg-accent" />
-              <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Signal Contents</h2>
+              <h2 className="text-[13px] tracking-[0.2em] font-bold uppercase">Signal Contents</h2>
             </div>
             
             <div className="space-y-8">
@@ -486,10 +486,10 @@ const Checkout: React.FC = () => {
                   <div className="flex-grow flex flex-col justify-between py-1">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="text-[11px] tracking-[0.1em] font-bold uppercase mb-1">{item.name}</h3>
-                        <p className="text-[10px] text-neutral-500 uppercase mb-2">{item.category}</p>
+                        <h3 className="text-[13px] tracking-[0.1em] font-bold uppercase mb-1">{item.name}</h3>
+                        <p className="text-[12px] text-neutral-500 uppercase mb-2">{item.category}</p>
                         {item.selectedSize && (
-                          <p className="text-[10px] tracking-widest text-accent uppercase font-bold">Build: {item.selectedSize}</p>
+                          <p className="text-[12px] tracking-widest text-accent uppercase font-bold">Build: {item.selectedSize}</p>
                         )}
                       </div>
                       <button type="button" onClick={() => removeFromCart(item.id, item.selectedSize)} className="text-accent hover:text-white transition-colors">
@@ -528,7 +528,7 @@ const Checkout: React.FC = () => {
         {/* Summary */}
         <div className="lg:col-span-5">
           <div className="bg-neutral-950 p-8 border border-neutral-900 sticky top-32">
-            <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-8">Order Summary</h2>
+            <h2 className="text-[13px] tracking-[0.2em] font-bold uppercase mb-8">Order Summary</h2>
 
             <div className="space-y-4 mb-8">
               <div className="flex justify-between text-sm">
@@ -537,7 +537,7 @@ const Checkout: React.FC = () => {
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-neutral-500">Shipping</span>
-                <span className="text-accent uppercase tracking-widest text-[10px] font-bold">Complimentary delivery</span>
+                <span className="text-accent uppercase tracking-widest text-[12px] font-bold">Complimentary delivery</span>
               </div>
               <div className="flex justify-between text-sm pt-4 border-t border-neutral-900 font-bold">
                 <span>Total Output Value</span>
@@ -548,7 +548,7 @@ const Checkout: React.FC = () => {
             <button
               type="submit"
               disabled={isProcessing || (addresses.length === 0 && !showAddressForm)}
-              className="w-full bg-white text-black py-5 text-[11px] tracking-[0.3em] font-bold uppercase hover:bg-accent transition-colors flex items-center justify-center gap-3 disabled:opacity-50"
+              className="w-full bg-white text-black py-5 text-[13px] tracking-[0.3em] font-bold uppercase hover:bg-accent transition-colors flex items-center justify-center gap-3 disabled:opacity-50"
             >
               {isProcessing ? 'Confirming Signal...' : (
                 <>
@@ -564,7 +564,7 @@ const Checkout: React.FC = () => {
               )}
             </button>
 
-            <p className="mt-6 text-[9px] text-neutral-600 text-center uppercase tracking-widest leading-relaxed">
+            <p className="mt-6 text-[11px] text-neutral-600 text-center uppercase tracking-widest leading-relaxed">
               Secure checkout encrypted via system protocol.<br/>
               By proceeding, you authorize the physical manifestation of this signal.
             </p>

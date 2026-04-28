@@ -18,7 +18,7 @@ import { Link } from 'react-router-dom';
 
 const Shipping: React.FC = () => {
   return (
-    <div className="pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen">
+    <div className="pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen bg-black">
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
@@ -44,7 +44,7 @@ const Shipping: React.FC = () => {
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
-        className="mb-24 p-8 md:p-12 border border-neutral-900 bg-neutral-950 relative overflow-hidden"
+        className="mb-24 p-8 md:p-12 border border-neutral-900 bg-black relative overflow-hidden"
       >
         <div className="absolute top-0 right-0 p-8 opacity-5">
             <Truck size={120} />
@@ -93,7 +93,7 @@ const Shipping: React.FC = () => {
         </section>
 
         {/* Delivery Timelines */}
-        <section className="md:col-span-2 p-8 border border-neutral-900 bg-neutral-950 space-y-6">
+        <section className="md:col-span-2 p-8 border border-neutral-900 bg-black space-y-6">
             <div className="flex items-center gap-4">
                 <div className="p-2 bg-neutral-900 rounded">
                     <Truck className="text-accent" size={20} />
@@ -215,7 +215,7 @@ const Shipping: React.FC = () => {
                         <li>• Hem tag doubles as a bookmark</li>
                     </ul>
                 </div>
-                <div className="p-8 border border-neutral-900 bg-neutral-950 flex flex-col justify-center items-center text-center">
+                <div className="p-8 border border-neutral-900 bg-black flex flex-col justify-center items-center text-center">
                     <p className="text-lg font-display italic leading-tight">
                         "This isn’t just packaging — it’s a system built for a second life."
                     </p>
@@ -224,7 +224,7 @@ const Shipping: React.FC = () => {
         </section>
 
         {/* Delays */}
-        <section className="md:col-span-2 p-8 border border-neutral-900 bg-neutral-950 flex flex-col md:flex-row justify-between items-center gap-8">
+        <section className="md:col-span-2 p-8 border border-neutral-900 bg-black flex flex-col md:flex-row justify-between items-center gap-8">
             <div className="flex items-center gap-4">
                 <RefreshCcw className="text-neutral-700" size={24} />
                 <h3 className="text-[11px] tracking-[0.5em] font-bold uppercase text-neutral-500">Delays (If Any)</h3>
@@ -254,7 +254,7 @@ const Shipping: React.FC = () => {
 
         {/* Need Help */}
         <section className="md:col-span-2 flex flex-col items-center pt-12 border-t border-neutral-900">
-            <div className="bg-neutral-950 border border-neutral-900 p-8 flex flex-col md:flex-row items-center gap-8 w-full">
+            <div className="bg-black border border-neutral-900 p-8 flex flex-col md:flex-row items-center gap-8 w-full">
                 <div className="p-4 bg-accent/10 rounded-full">
                     <Mail className="text-accent" size={24} />
                 </div>

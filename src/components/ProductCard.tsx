@@ -128,14 +128,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
 
         <div className="p-8 flex justify-between items-start bg-black border-t border-white/5 relative z-10" style={{ transform: "translateZ(30px)" }}>
           <div>
-            <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-2 group-hover:text-accent transition-colors duration-500">{product.name}</h3>
-            <p className="text-[10px] text-neutral-600 uppercase tracking-widest">{product.category}</p>
+            <h3 className="text-[13px] tracking-[0.2em] font-bold uppercase mb-2 group-hover:text-accent transition-colors duration-500">{product.name}</h3>
+            <p className="text-[12px] text-neutral-600 uppercase tracking-widest">{product.category}</p>
           </div>
-          <p className="text-[11px] font-mono opacity-40 group-hover:opacity-100 transition-opacity duration-500">₹{product.price.toLocaleString()}</p>
+          <p className="text-[13px] font-mono opacity-40 group-hover:opacity-100 transition-opacity duration-500">₹{product.price.toLocaleString()}</p>
         </div>
 
         {product.status === "Coming Soon" && (
-          <div className="absolute top-6 left-6 bg-white text-black text-[9px] font-bold px-3 py-1.5 tracking-[0.2em] uppercase z-30" style={{ transform: "translateZ(60px)" }}>
+          <div className="absolute top-6 left-6 bg-white text-black text-[11px] font-bold px-3 py-1.5 tracking-[0.2em] uppercase z-30" style={{ transform: "translateZ(60px)" }}>
             Coming Soon
           </div>
         )}

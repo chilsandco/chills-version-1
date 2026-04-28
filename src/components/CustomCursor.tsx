@@ -51,8 +51,8 @@ const CustomCursor: React.FC = () => {
             {/* Ambient Glow */}
             <motion.div
               animate={{
-                scale: isHovering ? 1.5 : 1,
-                opacity: isHovering ? 0.4 : 0.15,
+                scale: isHovering ? 1.2 : 1,
+                opacity: isHovering ? 0.25 : 0.15,
               }}
               className="absolute w-12 h-12 bg-accent/40 blur-[20px] rounded-full"
             />
@@ -60,19 +60,19 @@ const CustomCursor: React.FC = () => {
             {/* Snowflake Icon Cursor */}
             <motion.div
               animate={{
-                scale: isHovering ? 1.2 : 0.8,
+                scale: isHovering ? 0.9 : 0.8,
                 rotate: 360
               }}
               transition={{
                 scale: { type: 'spring', stiffness: 300, damping: 20 },
                 rotate: { duration: 15, repeat: Infinity, ease: "linear" }
               }}
-              className="relative w-8 h-8 flex items-center justify-center"
+              className="relative w-8 h-8 flex items-center justify-center text-accent"
             >
               <img 
                 src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png"
                 alt="cursor"
-                className="w-full h-full object-contain gold-icon drop-shadow-[0_0_10px_rgba(212,175,55,0.5)]"
+                className="w-full h-full object-contain gold-icon drop-shadow-[0_0_8px_rgba(212,175,55,0.3)]"
                 referrerPolicy="no-referrer"
               />
             </motion.div>

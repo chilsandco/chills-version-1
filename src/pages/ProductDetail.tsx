@@ -237,7 +237,7 @@ const ProductDetail: React.FC = () => {
         {/* Product Info */}
         <div className="lg:col-span-5 lg:sticky lg:top-32 h-fit">
           <div className="mb-12">
-            <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-500 mb-4">{product.category}</p>
+            <p className="text-[12px] tracking-[0.3em] uppercase text-neutral-500 mb-4">{product.category}</p>
             <div className="flex items-center gap-3 mb-4">
               <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tighter uppercase">{product.name}</h1>
             </div>
@@ -246,7 +246,7 @@ const ProductDetail: React.FC = () => {
 
           <div className="space-y-8 mb-12">
             <div>
-              <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-4">Choose Your Size</h3>
+              <h3 className="text-[13px] tracking-[0.2em] font-bold uppercase mb-4">Choose Your Size</h3>
               <div className="flex gap-3 mb-4">
                 {['S', 'M', 'L', 'XL', '2XL'].map(size => (
                   <motion.button 
@@ -278,7 +278,7 @@ const ProductDetail: React.FC = () => {
                     className="flex items-center gap-2 mb-4"
                   >
                     <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
-                    <p className="text-[10px] text-red-500 tracking-[0.3em] uppercase font-bold">
+                    <p className="text-[12px] text-red-500 tracking-[0.3em] uppercase font-bold">
                       CAUTION: Select your size
                     </p>
                   </motion.div>
@@ -293,8 +293,8 @@ const ProductDetail: React.FC = () => {
                 transition={{ duration: 1.2, ease: "easeOut" }}
                 viewport={{ once: true }}
               >
-                <h3 className="text-[11px] tracking-[0.4em] font-bold uppercase mb-6 text-accent">Signal Protocol</h3>
-                <div className="space-y-6 text-neutral-500 text-[11px] leading-relaxed tracking-wide font-light">
+                <h3 className="text-[13px] tracking-[0.4em] font-bold uppercase mb-6 text-accent">Signal Protocol</h3>
+                <div className="space-y-6 text-neutral-500 text-[13px] leading-relaxed tracking-wide font-light">
                   <p className="text-neutral-200 font-medium tracking-normal">Each piece carries a coded message.</p>
                   
                   <div className="space-y-2">
@@ -303,29 +303,29 @@ const ProductDetail: React.FC = () => {
 
                   <p>At dispatch, the system embeds a unique output into your garment.<br />No two drops are identical.</p>
                   
-                  <p className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] pt-2 border-t border-neutral-900/30 inline-block">— Decoded on arrival.</p>
+                  <p className="text-[11px] text-neutral-600 uppercase tracking-[0.2em] pt-2 border-t border-neutral-900/30 inline-block">— Decoded on arrival.</p>
                 </div>
               </motion.div>
             </div>
 
             <div>
-              <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-4">Concept</h3>
+              <h3 className="text-[13px] tracking-[0.2em] font-bold uppercase mb-4">Concept</h3>
               <p className="text-neutral-400 text-sm leading-relaxed">{product.concept}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-8">
               <div>
-                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-4">Material</h3>
+                <h3 className="text-[13px] tracking-[0.2em] font-bold uppercase mb-4">Material</h3>
                 <p className="text-neutral-400 text-sm">{product.material}</p>
               </div>
               <div>
-                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-4">Fit</h3>
+                <h3 className="text-[13px] tracking-[0.2em] font-bold uppercase mb-4">Fit</h3>
                 <p className="text-neutral-400 text-sm">{product.fit}</p>
               </div>
             </div>
 
             <div>
-              <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-4">Care</h3>
+              <h3 className="text-[13px] tracking-[0.2em] font-bold uppercase mb-4">Care</h3>
               <p className="text-neutral-400 text-sm">{product.care}</p>
             </div>
           </div>
@@ -342,12 +342,12 @@ const ProductDetail: React.FC = () => {
                     borderColor: "rgba(255, 255, 255, 0.6)"
                   }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full bg-white text-black py-5 text-[11px] tracking-[0.3em] font-bold uppercase transition-all duration-300 border border-transparent active:opacity-90"
+                  className="w-full bg-white text-black py-5 text-[13px] tracking-[0.3em] font-bold uppercase transition-all duration-300 border border-transparent active:opacity-90"
                 >
                   {buttonText}
                 </motion.button>
                 <div className="flex flex-col items-center gap-2">
-                  <p className="text-center text-[9px] tracking-widest text-neutral-600 uppercase">
+                  <p className="text-center text-[11px] tracking-widest text-neutral-600 uppercase">
                     Signal assigned at dispatch
                   </p>
                   <AnimatePresence>
@@ -356,15 +356,15 @@ const ProductDetail: React.FC = () => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="text-center text-[10px] tracking-widest text-accent uppercase font-bold"
+                        className="text-center text-[12px] tracking-widest text-accent uppercase font-bold"
                       >
                         Added to Cart ✓ <br/>
-                        <span className="text-[8px] font-normal opacity-60">Signal assigned at dispatch</span>
+                        <span className="text-[10px] font-normal opacity-60">Signal assigned at dispatch</span>
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </div>
-
+ 
                 <motion.button
                   onClick={handleBuyNow}
                   disabled={isBuyNowProcessing}
@@ -374,7 +374,7 @@ const ProductDetail: React.FC = () => {
                     color: "rgba(0, 0, 0, 1)"
                   }}
                   whileTap={{ scale: 0.98 }}
-                  className="w-full border border-neutral-800 py-5 text-[11px] tracking-[0.3em] font-bold uppercase transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50"
+                  className="w-full border border-neutral-800 py-5 text-[13px] tracking-[0.3em] font-bold uppercase transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50"
                 >
                   {isBuyNowProcessing ? 'Securing Checkout...' : (
                     <>
@@ -392,7 +392,7 @@ const ProductDetail: React.FC = () => {
 
                 <button
                   onClick={() => toggleWishlist(product)}
-                  className="w-full flex items-center justify-center gap-3 py-3 text-[10px] tracking-[0.3em] font-bold uppercase text-neutral-500 hover:text-white transition-colors group"
+                  className="w-full flex items-center justify-center gap-3 py-3 text-[12px] tracking-[0.3em] font-bold uppercase text-neutral-500 hover:text-white transition-colors group"
                 >
                   <Heart 
                     size={16} 

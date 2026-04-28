@@ -1,10 +1,95 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingBag, Menu, X, Search, User, Heart } from 'lucide-react';
+import { ShoppingBag, Menu, X, Heart } from 'lucide-react';
 import { useCart } from '../CartContext';
 import { useWishlist } from '../WishlistContext';
 import { useAuth } from '../AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
+
+const ProfileIcon = () => (
+  <motion.div
+    whileHover="hover"
+    initial="initial"
+    className="relative flex items-center justify-center p-1"
+  >
+    {/* Refined Ambient Glow - Only on Hover */}
+    <motion.div
+      variants={{
+        initial: { opacity: 0, scale: 0.8 },
+        hover: { opacity: 0.2, scale: 1.5 }
+      }}
+      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+      className="absolute bg-accent/30 blur-[10px] rounded-full w-full h-full"
+    />
+    
+    <motion.svg
+      width="22"
+      height="22"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      variants={{
+        initial: { y: 0, scale: 1 },
+        hover: { y: -2, scale: 1.05 }
+      }}
+      transition={{ 
+        duration: 0.5, 
+        ease: [0.22, 1, 0.36, 1]
+      }}
+    >
+      {/* Head */}
+      <motion.circle 
+        cx="12" cy="5.5" r="2.2" 
+        fill="#D4AF37"
+      />
+      
+      {/* Body / Torso */}
+      <motion.path 
+        d="M10.5 8.5h3v7h-3z" 
+        fill="#D4AF37"
+        variants={{
+          hover: { scaleY: 1.05, originY: "bottom" }
+        }}
+      />
+
+      {/* Arm (Left) - Continuous Subtle Wave + Hover Acknowledgement */}
+      <motion.path
+        d="M10.5 9.5L7.5 6.5"
+        stroke="#D4AF37"
+        strokeWidth="2"
+        strokeLinecap="round"
+        animate={{ 
+          rotate: [-6, 6, -6] 
+        }}
+        variants={{
+          hover: { rotate: [-10, 10, 0] }
+        }}
+        transition={{ 
+          animate: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+          hover: { duration: 0.6, ease: [0.22, 1, 0.36, 1] }
+        }}
+        style={{ originX: "10.5px", originY: "9.5px" }}
+      />
+
+      {/* Arm (Right) */}
+      <motion.path
+        d="M13.5 9.5L16.5 12.5"
+        stroke="#D4AF37"
+        strokeWidth="2"
+        strokeLinecap="round"
+        variants={{
+          hover: { rotate: [5, -5, 0] }
+        }}
+        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+        style={{ originX: "13.5px", originY: "9.5px" }}
+      />
+
+      {/* Legs */}
+      <path d="M11 15.5v5" stroke="#D4AF37" strokeWidth="2" strokeLinecap="round" />
+      <path d="M13 15.5v5" stroke="#D4AF37" strokeWidth="2" strokeLinecap="round" />
+    </motion.svg>
+  </motion.div>
+);
 
 const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -33,8 +118,10 @@ const Navbar: React.FC = () => {
   const navLinks = [
     { name: 'COLLECTION', path: '/collection' },
     { name: 'ORDERS ARCHIVE', path: '/console/orders' },
+    { name: 'BESPOKE SIGNALS', path: '/console/bespoke' },
     { name: 'STORY', path: '/#story' },
     { name: 'PHILOSOPHY', path: '/#philosophy' },
+    { name: 'BESPOKE', path: '/bespoke' },
   ];
 
   const isHome = location.pathname === '/';
@@ -94,14 +181,6 @@ const Navbar: React.FC = () => {
 
         {/* Right: Icons */}
         <div className="flex items-center gap-6">
-          <motion.button 
-            whileHover={{ scale: 1.1, rotate: 5, y: -2 }}
-            whileTap={{ scale: 0.9 }}
-            className="hidden md:block hover:opacity-50 transition-opacity text-accent"
-          >
-            <Search size={20} strokeWidth={1.5} />
-          </motion.button>
-          
           <Link to="/wishlist" className="relative hover:opacity-50 transition-opacity text-accent">
             <motion.div
               whileHover={{ scale: 1.1, y: -2 }}
@@ -121,13 +200,7 @@ const Navbar: React.FC = () => {
               whileTap={{ scale: 0.9 }}
               className="flex items-center justify-center"
             >
-              {isAuthenticated && user ? (
-                <div className="w-6 h-6 rounded-full border border-accent flex items-center justify-center text-[10px] font-bold">
-                  {user.username.charAt(0).toUpperCase()}
-                </div>
-              ) : (
-                <User size={20} strokeWidth={1.5} />
-              )}
+              <ProfileIcon />
             </motion.div>
           </Link>
           <Link 

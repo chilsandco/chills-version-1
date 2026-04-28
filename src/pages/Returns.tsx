@@ -19,7 +19,7 @@ import { Link } from 'react-router-dom';
 
 const Returns: React.FC = () => {
   return (
-    <div className="pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen">
+    <div className="pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen bg-black">
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
@@ -45,7 +45,7 @@ const Returns: React.FC = () => {
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
-        className="mb-24 p-8 md:p-12 border border-neutral-900 bg-neutral-950 relative overflow-hidden"
+        className="mb-24 p-8 md:p-12 border border-neutral-900 bg-black relative overflow-hidden"
       >
         <div className="absolute top-0 right-0 p-8 opacity-5">
             <RotateCcw size={120} />
@@ -94,11 +94,11 @@ const Returns: React.FC = () => {
             <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Eligible Reasons</h2>
           </div>
           <div className="grid grid-cols-1 gap-4">
-            <div className="p-4 border border-neutral-900 bg-neutral-950">
+            <div className="p-4 border border-neutral-900 bg-black">
                 <p className="text-[10px] text-accent uppercase font-bold tracking-widest mb-2">Primary</p>
                 <p className="text-sm">Size or fit issues</p>
             </div>
-            <div className="p-4 border border-neutral-900 bg-neutral-950 space-y-2">
+            <div className="p-4 border border-neutral-900 bg-black space-y-2">
                 <p className="text-[10px] text-neutral-500 uppercase font-bold tracking-widest mb-2">Secondary</p>
                 <ul className="text-sm space-y-1 text-neutral-400 uppercase tracking-wider text-[11px]">
                     <li>• Damaged product</li>
@@ -111,7 +111,7 @@ const Returns: React.FC = () => {
         </section>
 
         {/* Before You Request */}
-        <section className="md:col-span-2 p-8 border border-neutral-900 bg-neutral-950 space-y-6">
+        <section className="md:col-span-2 p-8 border border-neutral-900 bg-black space-y-6">
             <div className="flex items-center gap-4">
                 <div className="p-2 bg-neutral-900 rounded">
                     <Brain className="text-accent" size={20} />
@@ -199,7 +199,7 @@ const Returns: React.FC = () => {
                     </div>
                     <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Refund Process</h2>
                 </div>
-                <div className="p-6 bg-neutral-950 border border-neutral-900 space-y-4">
+                <div className="p-6 bg-black border border-neutral-900 space-y-4">
                     <p className="text-sm">Refunds are initiated after approval and inspection.</p>
                     <div className="flex justify-between items-center border-t border-neutral-900 pt-4">
                         <span className="text-[9px] uppercase tracking-[0.2em] text-neutral-600">Method</span>
@@ -263,7 +263,7 @@ const Returns: React.FC = () => {
 
         {/* Need Help */}
         <section className="md:col-span-2 flex flex-col items-center pt-12 border-t border-neutral-900">
-            <div className="bg-neutral-950 border border-neutral-900 p-8 flex flex-col md:flex-row items-center gap-8 w-full">
+            <div className="bg-black border border-neutral-900 p-8 flex flex-col md:flex-row items-center gap-8 w-full">
                 <div className="p-4 bg-accent/10 rounded-full">
                     <Mail className="text-accent" size={24} />
                 </div>

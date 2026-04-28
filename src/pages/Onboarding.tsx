@@ -60,7 +60,7 @@ const Onboarding: React.FC = () => {
                 initial={{ rotate: -20, opacity: 0 }}
                 animate={{ rotate: 0, opacity: 1 }}
                 transition={{ duration: 1, type: "spring" }}
-                className="w-20 h-20 rounded-full border border-neutral-800 flex items-center justify-center bg-neutral-950"
+                className="w-20 h-20 rounded-full border border-neutral-800 flex items-center justify-center bg-black"
               >
                 {steps[step].icon}
               </motion.div>

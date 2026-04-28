@@ -43,14 +43,14 @@ const Hero: React.FC = () => {
           animate={{ 
             opacity: 1, 
             scale: 1, 
-            filter: 'blur(0px)'
+            filter: 'blur(0px)',
+            rotate: -360
           }}
-          whileHover={{ rotate: 360 }}
           transition={{ 
             opacity: { duration: 2, delay: 0.2, ease: [0.22, 1, 0.36, 1] },
             scale: { duration: 2, delay: 0.2, ease: [0.22, 1, 0.36, 1] },
             filter: { duration: 2, delay: 0.2, ease: [0.22, 1, 0.36, 1] },
-            rotate: { duration: 10, repeat: Infinity, ease: "linear" }
+            rotate: { duration: 20, repeat: Infinity, ease: "linear" }
           }}
         >
           <img 
