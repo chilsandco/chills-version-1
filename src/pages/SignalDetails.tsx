@@ -105,7 +105,7 @@ const SignalDetails: React.FC = () => {
                     
                     <div className="space-y-6 text-[13px] text-white/70 leading-relaxed font-light mb-10">
                       <p>Your refund has been successfully processed. The value has been returned to your original payment method. Depending on your bank, it may take 3–7 business days to reflect in your account.</p>
-                      <p className="italic">We appreciate you experiencing Chils & Co. — every product is built with intention, and your support means a lot to us.</p>
+                      <p className="italic">We appreciate you experiencing Chils & Co — every product is built with intention, and your support means a lot to us.</p>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 py-8 border-y border-white/5">

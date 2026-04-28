@@ -225,7 +225,7 @@ const ReturnRequest: React.FC = () => {
                   
                   <div className="space-y-4 text-[13px] text-white/60 leading-relaxed tracking-wide">
                     <p>
-                      Every Chils & Co. piece is designed, tested, and packaged with a lot of thought, time, and care — from fabric selection and color accuracy to wash and durability checks. What you see on the site is exactly what we aim to deliver to you.
+                      Every Chils & Co piece is designed, tested, and packaged with a lot of thought, time, and care — from fabric selection and color accuracy to wash and durability checks. What you see on the site is exactly what we aim to deliver to you.
                     </p>
                     <p>
                       If your return is due to a sizing issue, we completely understand and will take care of it.
@@ -361,7 +361,7 @@ const ReturnRequest: React.FC = () => {
                       </div>
                     </div>
                     <span className="text-[11px] text-white/50 leading-relaxed tracking-wide group-hover:text-white transition-colors italic">
-                      I’ve read and understood the return policy. I acknowledge that returns are primarily intended for size-related issues and that other requests are reviewed manually to maintain the quality and intent of the Chils & Co. ecosystem.
+                      I’ve read and understood the return policy. I acknowledge that returns are primarily intended for size-related issues and that other requests are reviewed manually to maintain the quality and intent of the Chils & Co ecosystem.
                     </span>
                   </label>
                 </div>
@@ -416,7 +416,7 @@ const ReturnRequest: React.FC = () => {
 
                   <div className="bg-accent/5 border border-accent/20 p-8 rounded-sm">
                     <p className="text-[10px] text-accent font-bold uppercase tracking-widest leading-loose italic">
-                      "Returns are primarily intended for size-related issues. For any other concerns, we carefully review each request to maintain the quality and intent behind every Chils & Co. piece."
+                      "Returns are primarily intended for size-related issues. For any other concerns, we carefully review each request to maintain the quality and intent behind every Chils & Co piece."
                     </p>
                   </div>
                </div>

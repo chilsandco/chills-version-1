@@ -51,7 +51,7 @@ const Shipping: React.FC = () => {
         </div>
         <div className="relative z-10 space-y-6 max-w-2xl leading-relaxed text-neutral-300 italic">
           <p>
-            Every Chils & Co. order is prepared with the same level of attention that goes into the product itself — carefully packed, verified, and dispatched to reach you exactly as designed.
+            Every Chils & Co order is prepared with the same level of attention that goes into the product itself — carefully packed, verified, and dispatched to reach you exactly as designed.
           </p>
         </div>
       </motion.div>
@@ -207,7 +207,7 @@ const Shipping: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                 <div className="space-y-6 text-sm text-neutral-400 leading-relaxed uppercase tracking-wider text-[11px]">
-                    <p>Every Chils & Co. shipment is designed to minimize waste and extend utility beyond delivery.</p>
+                    <p>Every Chils & Co shipment is designed to minimize waste and extend utility beyond delivery.</p>
                     <ul className="space-y-2">
                         <li>• No plastic is used in our packaging</li>
                         <li>• Durable cardboard box with recyclable outer wrap</li>

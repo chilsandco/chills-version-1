@@ -137,7 +137,7 @@ const Home: React.FC = () => {
             transition={{ duration: 2, delay: 0.8, ease: [0.22, 1, 0.36, 1] }}
             className="text-gray-500 text-xl md:text-3xl font-light leading-relaxed max-w-3xl mx-auto"
           >
-            Chils & Co. was born from a desire to strip away the unnecessary. Every stitch is a decision. Every fabric is a dialogue between comfort and durability.
+            Chils & Co was born from a desire to strip away the unnecessary. Every stitch is a decision. Every fabric is a dialogue between comfort and durability.
           </motion.p>
         </div>
         
@@ -408,7 +408,7 @@ const Home: React.FC = () => {
             className="text-lg md:text-2xl font-light text-[#EAEAEA] max-w-4xl mx-auto leading-relaxed space-y-12"
           >
             <p>
-              Sustainability at Chils & Co. isn’t added later — it’s engineered into every layer.
+              Sustainability at Chils & Co isn’t added later — it’s engineered into every layer.
             </p>
             <p>
               We eliminate plastic entirely, reduce unnecessary materials, and design every component with long-term use in mind.

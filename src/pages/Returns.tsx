@@ -52,7 +52,7 @@ const Returns: React.FC = () => {
         </div>
         <div className="relative z-10 space-y-6 max-w-2xl leading-relaxed text-neutral-300">
           <p>
-            At Chils & Co., every piece is designed beyond just appearance — from fabric behavior and color accuracy to durability and finish.
+            At Chils & Co, every piece is designed beyond just appearance — from fabric behavior and color accuracy to durability and finish.
           </p>
           <div className="py-4">
             <p className="text-accent font-display text-2xl font-bold uppercase tracking-widest italic">
@@ -120,7 +120,7 @@ const Returns: React.FC = () => {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-4 text-sm text-neutral-400 leading-relaxed uppercase tracking-wider text-[11px]">
-                    <p>Every Chils & Co. piece goes through multiple stages of testing — including wash, color consistency, and overall finish.</p>
+                    <p>Every Chils & Co piece goes through multiple stages of testing — including wash, color consistency, and overall finish.</p>
                     <p>What you see on our site is what we aim to deliver — as accurately as possible.</p>
                     <p>If your concern is related to sizing, we completely understand and will help you through it.</p>
                 </div>

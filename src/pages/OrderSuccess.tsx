@@ -85,7 +85,7 @@ const OrderSuccess: React.FC = () => {
           <div className="pt-8 border-t border-neutral-900">
             <p className="text-[10px] text-neutral-500 text-center uppercase tracking-[0.3em] mb-8">Share Signal Origin</p>
             <ShareSignal 
-              productName="Chils & Co. Signal"
+              productName="Chils & Co Signal"
               productUrl={window.location.origin}
               isOrderSuccess={true}
             />

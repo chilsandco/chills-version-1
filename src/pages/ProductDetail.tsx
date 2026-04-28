@@ -37,10 +37,10 @@ const ProductDetail: React.FC = () => {
         
         // Update Metadata for Sharing
         const brandLine = "Not made for seasons. Made for reasons. — Chils & Co";
-        document.title = `${data.name} | Chils & Co.`;
+        document.title = `${data.name} | Chils & Co`;
         
         const metaTags = {
-          'og:title': `${data.name} | Chils & Co.`,
+          'og:title': `${data.name} | Chils & Co`,
           'og:description': brandLine,
           'og:image': data.images[0],
           'og:url': window.location.href,
