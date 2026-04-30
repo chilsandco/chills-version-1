@@ -153,19 +153,19 @@ const CoCreator = () => {
 
         {/* Morphing CO Section */}
         <section className="mb-40 py-24 border-y border-white/5">
-          <div className="flex flex-col xl:flex-row gap-16 xl:gap-24 items-center">
-            <div className="w-full xl:w-2/3 relative h-[120px] md:h-[200px] flex items-center">
-              <div className="text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-display font-bold text-accent uppercase tracking-tighter flex items-center gap-4 w-full">
+          <div className="flex flex-col lg:flex-row gap-12 lg:gap-24 items-start lg:items-center">
+            <div className="w-full lg:w-3/5">
+              <div className="text-3xl md:text-5xl lg:text-6xl xl:text-7xl font-display font-bold text-accent uppercase tracking-tighter flex items-center gap-x-4 md:gap-x-8 flex-wrap">
                 <span className="shrink-0">CO =</span>
-                <div className="flex-grow flex items-center overflow-hidden h-full min-w-0">
+                <div className="relative min-w-0">
                   <AnimatePresence mode="wait">
                     <motion.span
                       key={morphWords[wordIndex]}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -20 }}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: 20 }}
                       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                      className="text-white whitespace-nowrap block"
+                      className="text-white whitespace-nowrap inline-block"
                     >
                       {morphWords[wordIndex]}
                     </motion.span>
@@ -173,8 +173,8 @@ const CoCreator = () => {
                 </div>
               </div>
             </div>
-            <div className="w-full xl:w-1/3 space-y-6">
-              <h2 className="text-2xl md:text-3xl font-display font-bold uppercase tracking-tight text-white leading-tight">Every design carries a mind behind it. <br /><span className="text-accent underline decoration-accent/30 underline-offset-8">We’re opening the system to yours.</span></h2>
+            <div className="w-full lg:w-2/5 space-y-6">
+              <h2 className="text-xl md:text-2xl lg:text-3xl font-display font-bold uppercase tracking-tight text-white leading-tight">Every design carries a mind behind it. <br /><span className="text-accent underline decoration-accent/30 underline-offset-8">We’re opening the system to yours.</span></h2>
               <p className="text-neutral-400 font-light leading-relaxed max-w-lg normal-case text-sm md:text-base">
                 The co-creation protocol bridges the gap between individual vision and industrial production. A recursive loop of shared intent.
               </p>
