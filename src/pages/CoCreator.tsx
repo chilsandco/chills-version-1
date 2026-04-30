@@ -426,9 +426,7 @@ const CoCreator = () => {
                 <div className="space-y-2 mb-16">
                   <p className="text-neutral-500 uppercase text-[12px] tracking-[0.6em] font-bold">Phase 01 access is strictly limited</p>
                   <div className="flex items-center justify-center gap-4">
-                    <div className="w-32 h-[1px] bg-white/5" />
-                    <p className="text-accent text-[10px] uppercase tracking-widest font-bold italic">Node capacity: 84% utilized</p>
-                    <div className="w-32 h-[1px] bg-white/5" />
+                    <div className="w-64 h-[1px] bg-white/5" />
                   </div>
                 </div>
                 
