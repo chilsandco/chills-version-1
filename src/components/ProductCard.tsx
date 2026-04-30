@@ -140,6 +140,13 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           </div>
         )}
 
+        {product.totalSales !== undefined && product.totalSales > 0 && (
+          <div className="absolute top-6 left-6 bg-accent text-black text-[9px] font-bold px-3 py-1 tracking-[0.3em] uppercase z-30 flex items-center gap-2" style={{ transform: "translateZ(60px)" }}>
+            <span className="w-1 h-1 rounded-full bg-black animate-pulse" />
+            Deployed: {product.totalSales}
+          </div>
+        )}
+
         <div className="absolute inset-0 border border-white/0 group-hover:border-white/10 transition-colors pointer-events-none z-40" />
       </Link>
     </motion.div>

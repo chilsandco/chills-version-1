@@ -115,13 +115,18 @@ const Navbar: React.FC = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  const adminEmails = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
+  const userEmail = user?.email || "";
+  const isAdmin = user && adminEmails.some(email => email.toLowerCase() === userEmail.toLowerCase());
+
   const navLinks = [
     { name: 'COLLECTION', path: '/collection' },
+    { name: 'BESPOKE', path: '/bespoke' },
+    { name: 'CO-CREATOR', path: '/co-creator' },
     { name: 'ORDERS ARCHIVE', path: '/console/orders' },
-    { name: 'BESPOKE SIGNALS', path: '/console/bespoke' },
+    ...(isAdmin ? [{ name: 'BESPOKE SIGNALS', path: '/console/bespoke' }] : []),
     { name: 'STORY', path: '/#story' },
     { name: 'PHILOSOPHY', path: '/#philosophy' },
-    { name: 'BESPOKE', path: '/bespoke' },
   ];
 
   const isHome = location.pathname === '/';

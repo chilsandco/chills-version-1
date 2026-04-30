@@ -10,6 +10,8 @@ export interface Product {
   care: string;
   images: string[];
   status: "Available" | "Coming Soon";
+  totalSales?: number;
+  stockQuantity?: number;
 }
 
 export interface CartItem extends Product {
@@ -25,6 +27,8 @@ export interface Customer {
   username: string;
   firstName?: string;
   lastName?: string;
+  onWaitlist?: boolean;
+  bespokeUnlocked?: boolean;
 }
 
 export interface SignalItem {

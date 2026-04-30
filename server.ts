@@ -101,18 +101,39 @@ async function startServer() {
     const categories = Array.isArray(wcProduct.categories) ? wcProduct.categories : [];
     const images = Array.isArray(wcProduct.images) ? wcProduct.images : [];
 
+    // Simple HTML entity decoder for common entities
+    const decodeEntities = (str: string) => {
+      return (str || "")
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#039;/g, "'")
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&mdash;/g, '—')
+        .replace(/&ndash;/g, '–');
+    };
+
+    // Strip HTML tags for clean text display
+    const cleanHtml = (html: string) => {
+      return (html || "").replace(/<[^>]*>?/gm, "").trim();
+    };
+
     return {
       id: (wcProduct.id || "").toString(),
-      name: wcProduct.name || "Unknown Product",
-      category: categories[0]?.name || "Uncategorized",
+      name: decodeEntities(wcProduct.name || "Unknown Product"),
+      category: decodeEntities(categories[0]?.name || "Uncategorized"),
       price: parseFloat(wcProduct.price || "0"),
-      description: (wcProduct.short_description || "").replace(/<[^>]*>?/gm, ""), // Strip HTML
+      // Prefer long description if available, otherwise short description
+      description: decodeEntities(cleanHtml(wcProduct.description || wcProduct.short_description || "")),
       concept: attributes.find((a: any) => a.name?.toLowerCase() === "concept")?.options?.[0] || "A precise exploration of form and function.",
       material: attributes.find((a: any) => a.name?.toLowerCase() === "material")?.options?.[0] || "Premium technical fabric.",
       fit: attributes.find((a: any) => a.name?.toLowerCase() === "fit")?.options?.[0] || "Regular fit.",
       care: attributes.find((a: any) => a.name?.toLowerCase() === "care")?.options?.[0] || "Machine wash cold.",
       images: images.map((img: any) => img.src).filter(Boolean),
-      status: wcProduct.stock_status === "instock" ? "Available" : "Coming Soon"
+      status: wcProduct.stock_status === "instock" ? "Available" : "Coming Soon",
+      totalSales: parseInt(wcProduct.total_sales || "0", 10),
+      stockQuantity: wcProduct.stock_quantity || 0
     };
   };
 
@@ -389,6 +410,9 @@ async function startServer() {
       let customerId = 0;
       let firstName = '';
       let lastName = '';
+      let onWaitlist = false;
+      let bespokeUnlocked = false;
+
       if (wc) {
         try {
           console.log(`[CHILS & CO.] Looking up WC customer ID for: ${data.user_email}`);
@@ -398,7 +422,20 @@ async function startServer() {
             customerId = customer.id;
             firstName = customer.first_name || '';
             lastName = customer.last_name || '';
-            console.log(`[CHILS & CO.] Found WC customer ID: ${customerId}, Name: ${firstName} ${lastName}`);
+            
+            const waitlistMeta = customer.meta_data?.find((m: any) => String(m.key).toLowerCase() === "bespoke_waitlist");
+            const unlockedMeta = customer.meta_data?.find((m: any) => String(m.key).toLowerCase() === "bespoke_unlocked");
+            
+            const isTrue = (val: any) => {
+              if (typeof val === 'string') {
+                const v = val.trim().toLowerCase();
+                return v === 'true' || v === '1' || v === 'yes' || v === 'on';
+              }
+              return val === true || val === 1;
+            };
+
+            onWaitlist = isTrue(waitlistMeta?.value);
+            bespokeUnlocked = isTrue(unlockedMeta?.value);
           }
         } catch (err) {
           console.error("[CHILS & CO.] Error searching for customer ID:", err);
@@ -415,7 +452,9 @@ async function startServer() {
         username: data.user_nicename,
         displayName: data.user_display_name,
         firstName,
-        lastName
+        lastName,
+        onWaitlist,
+        bespokeUnlocked
       };
 
       // Long-lived token for e-commerce persistence (30 days)
@@ -430,7 +469,9 @@ async function startServer() {
           first_name: firstName,
           last_name: lastName,
           firstName,
-          lastName
+          lastName,
+          onWaitlist,
+          bespokeUnlocked
         },
         message: "Login successful"
       });
@@ -442,7 +483,8 @@ async function startServer() {
 
   app.post("/api/bespoke/waitlist", async (req, res) => {
     try {
-      const { email } = req.body;
+      const { email: rawEmail } = req.body;
+      const email = (rawEmail || "").toLowerCase();
       if (!email) return res.status(400).json({ message: "Email is required" });
 
       const wc = getWooCommerce();
@@ -451,19 +493,63 @@ async function startServer() {
         return res.json({ success: true, message: "Waitlist signal received (Mock Mode)" });
       }
 
-      console.log(`[CHILS & CO.] Processing waitlist for: ${email}`);
+      console.log(`[CHILS & CO.] Processing Bespoke join for: ${email}`);
 
-      // Check if user already exists using explicit email filter
-      const existing = await wc.get("customers", { email: email });
-      if (Array.isArray(existing.data) && existing.data.length > 0) {
-        const customerId = existing.data[0].id;
-        console.log(`[CHILS & CO.] Updating existing customer ${customerId} with Bespoke tag.`);
-        await wc.put(`customers/${customerId}`, {
+      // Check if user already exists using explicit email search
+      let customerId: number | null = null;
+      try {
+        const response = await wc.get("customers", { email: email });
+        if (Array.isArray(response.data) && response.data.length > 0) {
+          customerId = response.data[0].id;
+          console.log(`[CHILS & CO.] Found exact customer match: ${customerId}`);
+        } else {
+          // Try broader search
+          const search = await wc.get("customers", { search: email });
+          if (Array.isArray(search.data) && search.data.length > 0) {
+            const match = search.data.find((c: any) => c.email?.toLowerCase() === email.toLowerCase());
+            if (match) {
+              customerId = match.id;
+              console.log(`[CHILS & CO.] Found fuzzy customer match: ${customerId}`);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn("[CHILS & CO.] Search failed", err);
+      }
+
+      if (customerId) {
+        console.log(`[CHILS & CO.] Tagging customer ${customerId} for Bespoke waitlist.`);
+        const response = await wc.put(`customers/${customerId}`, {
           meta_data: [
             { key: "bespoke_waitlist", value: "true" }
           ]
         });
-        return res.json({ success: true, message: "Existing profile updated for Bespoke." });
+        
+        // Use the response data if available to return updated state
+        const updatedCustomer = response.data;
+        const waitlistMeta = updatedCustomer?.meta_data?.find((m: any) => String(m.key).toLowerCase() === "bespoke_waitlist");
+        const unlockedMeta = updatedCustomer?.meta_data?.find((m: any) => String(m.key).toLowerCase() === "bespoke_unlocked");
+        
+        const isTrue = (val: any) => {
+          if (typeof val === 'string') {
+            const v = val.trim().toLowerCase();
+            return v === 'true' || v === '1' || v === 'yes' || v === 'on';
+          }
+          return val === true || val === 1;
+        };
+
+        return res.json({ 
+          success: true, 
+          message: "Existing profile updated for Bespoke.", 
+          isExisting: true,
+          onWaitlist: true,
+          user: {
+            id: customerId,
+            email,
+            onWaitlist: isTrue(waitlistMeta?.value),
+            bespokeUnlocked: isTrue(unlockedMeta?.value)
+          }
+        });
       }
 
       // Try to create new customer
@@ -476,21 +562,45 @@ async function startServer() {
           ]
         });
         console.log(`[CHILS & CO.] Created new WooCommerce customer for Bespoke: ${email}`);
-        res.json({ success: true, data: response.data });
+        res.json({ 
+          success: true, 
+          data: response.data, 
+          onWaitlist: true,
+          user: {
+            id: response.data.id,
+            email,
+            onWaitlist: true
+          }
+        });
       } catch (createError: any) {
-        // Fallback: If creation fails because email exists (race condition or search failure)
         const errorData = createError.response?.data;
-        if (errorData?.code === 'registration-error-email-exists') {
-          console.log(`[CHILS & CO.] Email exists during create. Attempting recovery update for: ${email}`);
-          // Search again to get the ID for update
-          const recoverySearch = await wc.get("customers", { email: email });
-          if (Array.isArray(recoverySearch.data) && recoverySearch.data.length > 0) {
-            const recoveryId = recoverySearch.data[0].id;
-            await wc.put(`customers/${recoveryId}`, {
+        if (errorData?.code === 'registration-error-email-exists' || errorData?.code === 'customer_invalid_email') {
+          console.log(`[CHILS & CO.] Email exists during create. Final recovery search for: ${email}`);
+          
+          // One last attempt to find the ID to update them
+          const finalSearch = await wc.get("customers", { search: email });
+          const exactMatch = Array.isArray(finalSearch.data) 
+            ? finalSearch.data.find((c: any) => c.email?.toLowerCase() === email.toLowerCase())
+            : null;
+
+          if (exactMatch) {
+            await wc.put(`customers/${exactMatch.id}`, {
               meta_data: [{ key: "bespoke_waitlist", value: "true" }]
             });
-            return res.json({ success: true, message: "Customer found and updated via recovery." });
+            return res.json({ 
+              success: true, 
+              message: "Customer tagged via recovery.", 
+              isExisting: true, 
+              onWaitlist: true 
+            });
           }
+          
+          return res.json({ 
+            success: true, 
+            message: "Signal acknowledged. Security verified.", 
+            isExisting: true, 
+            onWaitlist: true 
+          });
         }
         throw createError;
       }
@@ -500,28 +610,93 @@ async function startServer() {
     }
   });
 
-  app.get("/api/bespoke/list", authenticateToken, async (req: any, res) => {
+  app.post("/api/bespoke/check-status", async (req, res) => {
     try {
+      const { email: rawEmail } = req.body;
+      const email = (rawEmail || "").toLowerCase().trim();
+      if (!email) return res.status(400).json({ message: "Email is required" });
+
       const wc = getWooCommerce();
-      if (!wc) {
-        return res.json([]);
+      if (!wc) return res.json({ onWaitlist: false });
+
+      console.log(`[CHILS & CO.] Status check search for: ${email}`);
+      
+      let customer = null;
+      try {
+        // Search specifically for the email
+        const response = await wc.get("customers", { search: email, per_page: 20 });
+        if (Array.isArray(response.data)) {
+          // Find exact match as WooCommerce search can be fuzzy
+          customer = response.data.find((c: any) => 
+            c.email?.toLowerCase() === email || 
+            c.billing?.email?.toLowerCase() === email
+          );
+        }
+      } catch (err) {
+        console.warn("[CHILS & CO.] Search failed in status check", err);
       }
 
-      // WooCommerce API doesn't support complex metadata queries directly via simple GET easily without plugins,
-      // but we can fetch recent customers and filter, or use the 'search' parameter if we stored it in a specific way.
-      // For now, we'll fetch the latest customers.
+      // Add no-cache headers
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+
+      if (customer) {
+        const waitlistMeta = customer.meta_data?.find((m: any) => String(m.key).toLowerCase() === "bespoke_waitlist");
+        const unlockedMeta = customer.meta_data?.find((m: any) => String(m.key).toLowerCase() === "bespoke_unlocked");
+        
+        const isTrue = (val: any) => {
+          if (typeof val === 'string') {
+            const v = val.trim().toLowerCase();
+            return v === 'true' || v === '1' || v === 'yes' || v === 'on';
+          }
+          return val === true || val === 1;
+        };
+
+        const onWaitlist = isTrue(waitlistMeta?.value);
+        const bespokeUnlocked = isTrue(unlockedMeta?.value);
+
+        console.log(`[CHILS & CO.] Status for ${email}: Waitlist=${onWaitlist}, Unlocked=${bespokeUnlocked}`);
+
+        return res.json({ 
+          onWaitlist,
+          bespokeUnlocked,
+          isExisting: true,
+          email: customer.email
+        });
+      }
+
+      res.json({ onWaitlist: false, isExisting: false });
+    } catch (error) {
+      console.error("[CHILS & CO.] Status Check Error:", error);
+      res.status(500).json({ message: "Failed to check status" });
+    }
+  });
+
+  app.get("/api/bespoke/list", authenticateToken, async (req: any, res) => {
+    try {
+      // Secure endpoint for admin only
+      const adminEmails = ['chilsandco.com@gmail.com', 'chilsandco@gmail.com'];
+      const userEmail = req.user?.email || "";
+      if (!adminEmails.some(email => email.toLowerCase() === userEmail.toLowerCase())) {
+        return res.status(403).json({ message: "Access Denied: Admin clearance required." });
+      }
+
+      const wc = getWooCommerce();
+      if (!wc) return res.json([]);
+
+      // Fetch customers and filter for those with bespoke_waitlist tag
       const response = await wc.get("customers", {
         per_page: 100,
-        orderby: "registered_date",
-        order: "desc"
+        role: "all"
       });
 
-      // Filter for those with our specific meta key
-      const waitlist = response.data.filter((customer: any) => 
-        customer.meta_data?.some((meta: any) => meta.key === 'bespoke_waitlist' && meta.value === 'true')
-      );
-
-      res.json(waitlist);
+      if (Array.isArray(response.data)) {
+        const waitlisted = response.data.filter((c: any) => 
+          c.meta_data?.some((m: any) => m.key === "bespoke_waitlist" && m.value === "true")
+        );
+        return res.json(waitlisted);
+      }
+      
+      res.json([]);
     } catch (error) {
       console.error("[CHILS & CO.] Fetch Bespoke List Error:", error);
       res.status(500).json({ message: "Failed to fetch waitlist" });
@@ -529,8 +704,88 @@ async function startServer() {
   });
 
   // Protected route example
-  app.get("/api/auth/me", authenticateToken, (req: any, res) => {
-    res.json(req.user);
+  app.get("/api/auth/me", authenticateToken, async (req: any, res) => {
+    try {
+      const wc = getWooCommerce();
+      if (!wc) return res.json(req.user);
+
+      // Robust search: Try ID from token first, then email
+      let customer = null;
+      let customerIdFromToken = req.user?.id || req.user?.data?.user?.id || req.user?.user_id;
+      const email = (req.user?.email || req.user?.data?.user?.user_email || "").toLowerCase();
+      
+      try {
+        if (customerIdFromToken) {
+          const idResponse = await wc.get(`customers/${customerIdFromToken}`);
+          if (idResponse.status === 200 && idResponse.data?.id) {
+            customer = idResponse.data;
+          }
+        }
+
+        if (!customer && email) {
+          const directResponse = await wc.get("customers", { email });
+          if (Array.isArray(directResponse.data) && directResponse.data.length > 0) {
+            customer = directResponse.data[0];
+          } else {
+            const searchResponse = await wc.get("customers", { search: email });
+            if (Array.isArray(searchResponse.data)) {
+              customer = searchResponse.data.find((c: any) => c.email?.toLowerCase() === email.toLowerCase());
+            }
+          }
+
+          // More aggressive search by username if email search is failing
+          if (!customer) {
+            const username = email.split('@')[0];
+            const usernameResponse = await wc.get("customers", { search: username });
+            if (Array.isArray(usernameResponse.data)) {
+              customer = usernameResponse.data.find((c: any) => 
+                c.email?.toLowerCase() === email.toLowerCase() || 
+                c.username?.toLowerCase() === username.toLowerCase()
+              );
+            }
+          }
+        }
+      } catch (lookupErr) {
+        console.warn("[CHILS & CO.] Customer lookup failed in auth/me", lookupErr);
+      }
+
+        if (customer) {
+          const waitlistMeta = customer.meta_data?.find((m: any) => String(m.key).toLowerCase() === "bespoke_waitlist");
+          const bespokeUnlocked = customer.meta_data?.find((m: any) => String(m.key).toLowerCase() === "bespoke_unlocked");
+          
+          console.log(`[CHILS & CO.] Meta check for ${email}:`, {
+            foundWaitlist: !!waitlistMeta,
+            waitlistValue: waitlistMeta?.value,
+            foundUnlocked: !!bespokeUnlocked,
+            unlockedValue: bespokeUnlocked?.value
+          });
+
+          // Robust boolean check for metadata values
+        const isTrue = (val: any) => {
+          if (typeof val === 'string') {
+            const v = val.trim().toLowerCase();
+            return v === 'true' || v === '1' || v === 'yes' || v === 'on';
+          }
+          return val === true || val === 1;
+        };
+
+        const enhancedUser = {
+          ...req.user,
+          ...customer, // Include all WC customer data
+          onWaitlist: isTrue(waitlistMeta?.value),
+          bespokeUnlocked: isTrue(bespokeUnlocked?.value),
+          id: customer.id, // Ensure we use the WC customer ID
+          email: (customer.email || email).toLowerCase()
+        };
+        console.log(`[CHILS & CO.] Verified profile for ${email}: Waitlist=${enhancedUser.onWaitlist}, Unlocked=${enhancedUser.bespokeUnlocked}`);
+        return res.json(enhancedUser);
+      }
+      
+      res.json(req.user);
+    } catch (error) {
+      console.warn("[CHILS & CO.] Recovery failed for auth meta", error);
+      res.json(req.user);
+    }
   });
 
   app.get("/api/orders", authenticateToken, async (req: any, res) => {

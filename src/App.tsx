@@ -20,6 +20,7 @@ import Shipping from './pages/Shipping';
 import Auth from './pages/Auth';
 import Bespoke from './pages/Bespoke';
 import BespokeSignals from './pages/BespokeSignals';
+import CoCreator from './pages/CoCreator';
 import SmoothScroll from './components/SmoothScroll';
 import ScrollProgress from './components/ScrollProgress';
 import CustomCursor from './components/CustomCursor';
@@ -51,6 +52,7 @@ export default function App() {
                   <Route path="/wishlist" element={<Wishlist />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/bespoke" element={<Bespoke />} />
+                  <Route path="/co-creator" element={<CoCreator />} />
                   <Route path="/console/bespoke" element={<BespokeSignals />} />
                 </Routes>
               </main>

@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { useAuth } from '../AuthContext';
-import { Activity, Clock, User, Mail, Shield } from 'lucide-react';
+import { Activity, Clock, User, Mail, Shield, Download } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 const BespokeSignals: React.FC = () => {
   const [waitlist, setWaitlist] = useState<any[]>([]);
@@ -34,6 +35,26 @@ const BespokeSignals: React.FC = () => {
     fetchWaitlist();
   }, [token, authLoading]);
 
+  const exportToExcel = () => {
+    if (waitlist.length === 0) return;
+
+    // Prepare data for export
+    const dataToExport = waitlist.map(customer => ({
+      ID: customer.id,
+      Email: customer.email,
+      'Registration Date': new Date(customer.date_created).toLocaleDateString(),
+      Status: 'Waitlisted'
+    }));
+
+    // Create worksheet
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Waitlist");
+
+    // Generate and download file
+    XLSX.writeFile(workbook, `Chils_Bespoke_Waitlist_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
   if (loading || authLoading) {
     return (
       <div className="pt-32 pb-24 px-6 md:px-12 flex items-center justify-center min-h-screen bg-black">
@@ -45,14 +66,9 @@ const BespokeSignals: React.FC = () => {
     );
   }
 
-  // Simplified "admin" check: if logged in user’s email matches current dev/admin profile
-  const adminEmails = [
-    'chilsandco.com@gmail.com', 
-    'ud@gmail.com', 
-    'ud.ai.kumar.dev@gmail.com',
-    'chilsandco@gmail.com'
-  ];
-  const canAccess = user && adminEmails.includes(user.email);
+  // Admin check: strictly restricted to system owners
+  const adminEmails = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
+  const canAccess = user && adminEmails.some(email => email.toLowerCase() === user.email.toLowerCase());
 
   if (!canAccess) {
     return (
@@ -67,15 +83,28 @@ const BespokeSignals: React.FC = () => {
 
   return (
     <div className="pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen bg-black text-white">
-      <header className="mb-16">
-        <div className="flex items-center gap-3 mb-4">
-          <Activity className="text-accent" size={16} />
-          <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase">System Intelligence</p>
+      <header className="mb-16 flex flex-col md:flex-row md:items-end md:justify-between gap-8">
+        <div>
+          <div className="flex items-center gap-3 mb-4">
+            <Activity className="text-accent" size={16} />
+            <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase">System Intelligence</p>
+          </div>
+          <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter uppercase mb-4">Bespoke Signals</h1>
+          <p className="text-neutral-500 uppercase text-[10px] tracking-widest max-w-xl">
+            List of engineers who have requested early access to the construction system.
+          </p>
         </div>
-        <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter uppercase mb-4">Bespoke Signals</h1>
-        <p className="text-neutral-500 uppercase text-[10px] tracking-widest max-w-xl">
-          List of engineers who have requested early access to the construction system.
-        </p>
+
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={exportToExcel}
+          disabled={waitlist.length === 0}
+          className="flex items-center gap-2 px-6 py-3 bg-accent text-black uppercase text-[10px] font-bold tracking-widest rounded-sm hover:bg-accent/80 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+        >
+          <Download size={14} />
+          Export to Excel
+        </motion.button>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

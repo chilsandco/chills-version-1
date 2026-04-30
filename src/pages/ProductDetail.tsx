@@ -5,8 +5,10 @@ import { useCart } from '../CartContext';
 import { useWishlist } from '../WishlistContext';
 import ShareSignal from '../components/ShareSignal';
 import { motion, AnimatePresence, useSpring } from 'motion/react';
-import { CreditCard, ZoomIn, ZoomOut, X, Heart } from 'lucide-react';
+import { CreditCard, ZoomIn, ZoomOut, X, Heart, Ruler, ChevronLeft } from 'lucide-react';
 import { useGesture } from '@use-gesture/react';
+import { Link } from 'react-router-dom';
+import SizeGuide from '../components/SizeGuide';
 
 const ProductDetail: React.FC = () => {
   const { id } = useParams();
@@ -16,6 +18,8 @@ const ProductDetail: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [sizeError, setSizeError] = useState(false);
+  const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
+  const [isDescOpen, setIsDescOpen] = useState(false);
   
   // Spring-based motion values for ultra-smooth transitions
   const scale = useSpring(1, { stiffness: 150, damping: 25 });
@@ -72,13 +76,13 @@ const ProductDetail: React.FC = () => {
 
   // Prevent scrolling when modal is open
   useEffect(() => {
-    if (selectedImage) {
+    if (selectedImage || isDescOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
     }
     return () => { document.body.style.overflow = 'unset'; };
-  }, [selectedImage]);
+  }, [selectedImage, isDescOpen]);
 
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -207,6 +211,25 @@ const ProductDetail: React.FC = () => {
 
   return (
     <div className="pt-24 pb-24 px-6 md:px-12 max-w-[1800px] mx-auto">
+      {/* Navigation Breadcrumb */}
+      <motion.div 
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ duration: 0.8, delay: 0.2 }}
+        className="mb-12"
+      >
+        <Link 
+          to="/collection" 
+          className="group inline-flex items-center gap-3 text-[10px] tracking-[0.4em] font-bold uppercase text-neutral-500 hover:text-white transition-all duration-300"
+        >
+          <div className="w-8 h-[1px] bg-neutral-800 group-hover:w-12 group-hover:bg-accent transition-all duration-500" />
+          <div className="flex items-center gap-1 group-hover:translate-x-1 transition-transform duration-500">
+            <ChevronLeft size={12} className="group-hover:text-accent transition-colors" />
+            Back to Collections
+          </div>
+        </Link>
+      </motion.div>
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
         {/* Image Gallery */}
         <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -244,9 +267,46 @@ const ProductDetail: React.FC = () => {
             <p className="text-xl font-medium">₹{product.price.toLocaleString()}</p>
           </div>
 
-          <div className="space-y-8 mb-12">
+          {/* Precision Metrics */}
+          <div className="flex gap-12 mb-6 py-4 border-y border-neutral-900/50">
             <div>
-              <h3 className="text-[13px] tracking-[0.2em] font-bold uppercase mb-4">Choose Your Size</h3>
+              <p className="text-[9px] tracking-[0.2em] font-bold uppercase text-neutral-500 mb-1">Signals Deployed</p>
+              <p className="text-xl font-display font-bold tracking-tighter text-accent">
+                {product.totalSales || 0}
+              </p>
+            </div>
+          </div>
+
+          {/* Product Intel (Brief Description) */}
+          <div className="mb-8">
+            <div className="relative group">
+              <p className="text-neutral-400 text-[12px] leading-relaxed tracking-wide font-light whitespace-pre-line border-l border-accent/20 pl-4 py-1 line-clamp-4">
+                {product.description}
+              </p>
+              {product.description.length > 150 && (
+                <button 
+                  onClick={() => setIsDescOpen(true)}
+                  className="mt-3 text-[9px] uppercase tracking-[0.3em] font-bold text-accent hover:text-white transition-colors cursor-pointer flex items-center gap-2 group/btn"
+                >
+                  <div className="w-1 h-3 bg-accent group-hover/btn:bg-white transition-colors" />
+                  Read Full Intel
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-6 mb-10">
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase text-neutral-500">Choose Your Size</h3>
+                <button 
+                  onClick={() => setIsSizeGuideOpen(true)}
+                  className="flex items-center gap-2 text-[10px] tracking-[0.2em] font-bold uppercase text-accent hover:text-accent/80 transition-colors cursor-pointer"
+                >
+                  <Ruler size={12} />
+                  Size Guide
+                </button>
+              </div>
               <div className="flex gap-3 mb-4">
                 {['S', 'M', 'L', 'XL', '2XL'].map(size => (
                   <motion.button 
@@ -269,6 +329,9 @@ const ProductDetail: React.FC = () => {
                   </motion.button>
                 ))}
               </div>
+              <p className="text-[10px] text-neutral-600 uppercase tracking-widest mb-4">
+                Model is 5'9" wearing size M for a standard fit.
+              </p>
               <AnimatePresence>
                 {sizeError && (
                   <motion.div 
@@ -286,47 +349,46 @@ const ProductDetail: React.FC = () => {
               </AnimatePresence>
             </div>
 
-            <div className="py-10 border-y border-neutral-900/50">
+
+
+            <div className="py-6 border-b border-neutral-900/50">
               <motion.div
                 initial={{ opacity: 0, y: 5 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1.2, ease: "easeOut" }}
                 viewport={{ once: true }}
               >
-                <h3 className="text-[13px] tracking-[0.4em] font-bold uppercase mb-6 text-accent">Signal Protocol</h3>
-                <div className="space-y-6 text-neutral-500 text-[13px] leading-relaxed tracking-wide font-light">
-                  <p className="text-neutral-200 font-medium tracking-normal">Each piece carries a coded message.</p>
-                  
-                  <div className="space-y-2">
-                    <p>Your signal is not selected.<br />It is assigned.</p>
-                  </div>
-
-                  <p>At dispatch, the system embeds a unique output into your garment.<br />No two drops are identical.</p>
-                  
-                  <p className="text-[11px] text-neutral-600 uppercase tracking-[0.2em] pt-2 border-t border-neutral-900/30 inline-block">— Decoded on arrival.</p>
+                <h3 className="text-[11px] tracking-[0.3em] font-bold uppercase mb-4 text-accent">Signal Protocol</h3>
+                <div className="space-y-4 text-neutral-500 text-[12px] leading-relaxed tracking-wide font-light">
+                  <p className="text-neutral-200">Each piece carries a coded message.</p>
+                  <p>Your signal is not selected. It is assigned.</p>
+                  <p>At dispatch, the system embeds a unique output into your garment. No two drops are identical.</p>
+                  <p className="text-[10px] text-neutral-600 uppercase tracking-[0.2em] pt-2 border-t border-neutral-900/10 inline-block">— Decoded on arrival.</p>
                 </div>
               </motion.div>
             </div>
 
-            <div>
-              <h3 className="text-[13px] tracking-[0.2em] font-bold uppercase mb-4">Concept</h3>
-              <p className="text-neutral-400 text-sm leading-relaxed">{product.concept}</p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-8">
+            <div className="py-6 space-y-6">
               <div>
-                <h3 className="text-[13px] tracking-[0.2em] font-bold uppercase mb-4">Material</h3>
-                <p className="text-neutral-400 text-sm">{product.material}</p>
+                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-2 text-neutral-500">Concept</h3>
+                <p className="text-neutral-400 text-sm leading-relaxed">{product.concept}</p>
               </div>
-              <div>
-                <h3 className="text-[13px] tracking-[0.2em] font-bold uppercase mb-4">Fit</h3>
-                <p className="text-neutral-400 text-sm">{product.fit}</p>
-              </div>
-            </div>
 
-            <div>
-              <h3 className="text-[13px] tracking-[0.2em] font-bold uppercase mb-4">Care</h3>
-              <p className="text-neutral-400 text-sm">{product.care}</p>
+              <div className="grid grid-cols-2 gap-8">
+                <div>
+                  <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-2 text-neutral-500">Material</h3>
+                  <p className="text-neutral-400 text-sm">{product.material}</p>
+                </div>
+                <div>
+                  <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-2 text-neutral-500">Fit</h3>
+                  <p className="text-neutral-400 text-sm">{product.fit}</p>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-2 text-neutral-500">Care</h3>
+                <p className="text-neutral-400 text-sm">{product.care}</p>
+              </div>
             </div>
           </div>
 
@@ -420,6 +482,61 @@ const ProductDetail: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <SizeGuide 
+        isOpen={isSizeGuideOpen} 
+        onClose={() => setIsSizeGuideOpen(false)} 
+      />
+
+      {/* Product Description Modal */}
+      <AnimatePresence>
+        {isDescOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/95 backdrop-blur-xl"
+            onClick={() => setIsDescOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="bg-neutral-950 border border-neutral-900 p-8 md:p-12 max-w-2xl w-full max-h-[80vh] overflow-y-auto relative scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-800"
+              onClick={(e) => e.stopPropagation()}
+              data-lenis-prevent
+            >
+              <button 
+                onClick={() => setIsDescOpen(false)}
+                className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors"
+              >
+                <X size={20} />
+              </button>
+              
+              <div className="flex items-center gap-3 mb-8">
+                <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
+                <h2 className="text-[11px] tracking-[0.5em] font-bold uppercase text-accent">Full Product Intelligence</h2>
+              </div>
+              
+              <p className="text-white text-lg md:text-xl font-light leading-relaxed tracking-tight whitespace-pre-line mb-12">
+                {product.description}
+              </p>
+
+              <div className="grid grid-cols-2 gap-8 pt-8 border-t border-neutral-900 text-[10px] tracking-[0.2em] font-bold uppercase text-neutral-500">
+                <div>
+                  <p className="text-neutral-700 mb-1">Status</p>
+                  <p className="text-accent">Authenticated Record</p>
+                </div>
+                <div>
+                  <p className="text-neutral-700 mb-1">Index</p>
+                  <p className="text-white">RECORD-{product.id.padStart(3, '0')}</p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Full Image Viewer Modal */}
       <AnimatePresence>

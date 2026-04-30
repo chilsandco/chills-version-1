@@ -27,7 +27,7 @@ const Collection: React.FC = () => {
     ? products
     : products.filter(p => p.category === filter);
 
-  const categories = ['All', 'T-Shirts', 'Shirts'];
+  const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
 
   return (
     <div className="pt-32 pb-24 px-6 md:px-12 max-w-[1800px] mx-auto min-h-screen">

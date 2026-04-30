@@ -137,7 +137,14 @@ const Auth: React.FC = () => {
       }
 
       if (!response.ok) {
-        throw new Error(data.message || 'Something went wrong');
+        // Specific handling for known error codes or patterns
+        if (data.message?.toLowerCase().includes('password') && data.message?.toLowerCase().includes('incorrect')) {
+          throw new Error('Verification failed: The password provided is incorrect for this system identity.');
+        }
+        if (data.code === 'registration-error-email-exists') {
+          throw new Error('Identity already exists: This email is already registered. Please sign in instead.');
+        }
+        throw new Error(data.message || 'Transmission error. Please verify your connection.');
       }
 
       if (isRegister) {

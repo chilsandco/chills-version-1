@@ -75,6 +75,36 @@ const OrderSignals: React.FC = () => {
         </p>
       </header>
 
+      {/* Bespoke Waitlist Status Card */}
+      {user?.onWaitlist && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-12 p-8 border border-accent/20 bg-accent/5 rounded-sm relative overflow-hidden group"
+        >
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
+                <p className="text-[9px] tracking-[0.4em] font-bold uppercase text-accent">Active Protocol: Bespoke Waitlist</p>
+              </div>
+              <h3 className="text-2xl font-display font-bold uppercase tracking-tight text-white italic">Signal Detected</h3>
+              <p className="text-neutral-400 text-xs tracking-tight font-light max-w-md">
+                You are currently prioritized in our build list for early access to the Bespoke engineering room. 
+                We will notify you via encrypted signal when initialization is complete.
+              </p>
+            </div>
+            <Link 
+              to="/bespoke" 
+              className="text-[10px] tracking-[0.3em] font-bold uppercase py-4 px-8 border border-accent text-accent hover:bg-accent hover:text-black transition-all text-center"
+            >
+              Monitor Progress
+            </Link>
+          </div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 blur-3xl rounded-full -mr-32 -mt-32 group-hover:bg-accent/10 transition-colors" />
+        </motion.div>
+      )}
+
       <div className="space-y-[1px] bg-neutral-900 border border-neutral-900">
         {signals.map((signal, idx) => (
           <motion.div
