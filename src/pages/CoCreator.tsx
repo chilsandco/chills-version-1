@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowRight, Fingerprint, Palette, Send, Rocket, DollarSign, Cpu, Globe, Lock } from 'lucide-react';
+import { ArrowRight, Fingerprint, Palette, Send, Rocket, IndianRupee, Cpu, Globe, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const HandshakeScene = () => {
@@ -70,12 +70,28 @@ const CoCreator = () => {
     if (email) setSubmitted(true);
   };
 
+  const morphWords = [
+    "COLLABORATION",
+    "CO-OWNERSHIP",
+    "CO-AUTHORSHIP",
+    "CO-SIGNAL",
+    "CO-EXECUTION"
+  ];
+  const [wordIndex, setWordIndex] = React.useState(0);
+
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      setWordIndex((prev) => (prev + 1) % morphWords.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   const steps = [
     { number: "01", title: "Identity", description: "Define your pseudo-identity. This becomes your creator signature.", icon: Fingerprint },
     { number: "02", title: "Create", description: "Translate intent into form. AI or manual—tooling is irrelevant.", icon: Palette },
     { number: "03", title: "Submit", description: "Your work enters the internal gate. Reviewed for alignment and feasibility.", icon: Send },
     { number: "04", title: "Launch", description: "Approved artifacts move to production. Limited runs. Global exposure.", icon: Rocket },
-    { number: "05", title: "Earn", description: "5% per unit. Fully visible. System tracked.", icon: DollarSign }
+    { number: "05", title: "Earn", description: "5% per unit. Fully visible. System tracked.", icon: IndianRupee }
   ];
 
   return (
@@ -137,42 +153,29 @@ const CoCreator = () => {
 
         {/* Morphing CO Section */}
         <section className="mb-40 py-24 border-y border-white/5">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
-            <div className="relative h-[200px] flex items-center">
-              <motion.div 
-                className="text-7xl md:text-8xl font-display font-bold text-accent uppercase tracking-tighter flex items-center gap-4"
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-              >
-                CO-
-                <div className="relative w-[400px]">
-                   <motion.div
-                    animate={{ opacity: [1, 0, 1] }}
-                    transition={{ duration: 4, repeat: Infinity }}
-                    className="text-white"
-                   >
+          <div className="flex flex-col xl:flex-row gap-16 xl:gap-24 items-center">
+            <div className="w-full xl:w-2/3 relative h-[120px] md:h-[200px] flex items-center">
+              <div className="text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-display font-bold text-accent uppercase tracking-tighter flex items-center gap-4 w-full">
+                <span className="shrink-0">CO =</span>
+                <div className="flex-grow flex items-center overflow-hidden h-full min-w-0">
+                  <AnimatePresence mode="wait">
                     <motion.span
-                      animate={{ 
-                        content: ["OWNERSHIP", "STORY", "LAB"],
-                      }}
-                      transition={{ 
-                        duration: 6,
-                        repeat: Infinity,
-                        times: [0, 0.33, 0.66]
-                      }}
+                      key={morphWords[wordIndex]}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                      className="text-white whitespace-nowrap block"
                     >
-                      OWNERSHIP
+                      {morphWords[wordIndex]}
                     </motion.span>
-                   </motion.div>
+                  </AnimatePresence>
                 </div>
-              </motion.div>
-              <div className="absolute -bottom-4 left-0 text-[10px] text-neutral-500 font-mono tracking-widest">
-                LOG // SYSTEM_MORPH_SEQUENCE
               </div>
             </div>
-            <div className="space-y-6">
-              <h2 className="text-3xl font-display font-bold uppercase tracking-tight text-white leading-tight">Every design carries a mind behind it. <br /><span className="text-accent underline decoration-accent/30 underline-offset-8">We’re opening the system to yours.</span></h2>
-              <p className="text-neutral-400 font-light leading-relaxed max-w-lg normal-case">
+            <div className="w-full xl:w-1/3 space-y-6">
+              <h2 className="text-2xl md:text-3xl font-display font-bold uppercase tracking-tight text-white leading-tight">Every design carries a mind behind it. <br /><span className="text-accent underline decoration-accent/30 underline-offset-8">We’re opening the system to yours.</span></h2>
+              <p className="text-neutral-400 font-light leading-relaxed max-w-lg normal-case text-sm md:text-base">
                 The co-creation protocol bridges the gap between individual vision and industrial production. A recursive loop of shared intent.
               </p>
             </div>
@@ -320,7 +323,7 @@ const CoCreator = () => {
                     </div>
                     <div className="space-y-2">
                        <span className="text-[10px] text-neutral-600 uppercase tracking-widest block">Lifetime Extraction</span>
-                       <span className="text-lg text-white font-mono tracking-tight">$14,208.50 <span className="text-xs text-neutral-500">USD</span></span>
+                       <span className="text-lg text-white font-mono tracking-tight">₹14,20,208.50 <span className="text-xs text-neutral-500">INR</span></span>
                     </div>
                  </div>
               </div>

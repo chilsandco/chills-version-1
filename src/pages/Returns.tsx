@@ -8,12 +8,12 @@ import {
   FileText, 
   Camera, 
   Search, 
-  CircleDollarSign, 
   AlertTriangle, 
   Handshake, 
   Mail,
   ArrowRight,
-  ExternalLink
+  ExternalLink,
+  IndianRupee
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -195,7 +195,7 @@ const Returns: React.FC = () => {
             <section className="space-y-6">
                 <div className="flex items-center gap-4">
                     <div className="p-2 bg-neutral-900 rounded">
-                        <CircleDollarSign className="text-accent" size={20} />
+                        <IndianRupee className="text-accent" size={20} />
                     </div>
                     <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Refund Process</h2>
                 </div>
