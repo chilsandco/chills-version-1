@@ -29,7 +29,7 @@ const Footer: React.FC = () => {
             <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-6">Explore</h3>
             <ul className="flex flex-col gap-4">
               <li><Link to="/collection" className="text-neutral-500 hover:text-white text-sm transition-colors">Collection</Link></li>
-              <li><Link to="/console/orders" className="text-neutral-500 hover:text-white text-sm transition-colors">Orders Archive</Link></li>
+              <li><Link to="/auth" className="text-neutral-500 hover:text-white text-sm transition-colors">Account</Link></li>
               <li><Link to="/#story" className="text-neutral-500 hover:text-white text-sm transition-colors">Our Story</Link></li>
               <li><Link to="/#philosophy" className="text-neutral-500 hover:text-white text-sm transition-colors">Philosophy</Link></li>
             </ul>

@@ -123,7 +123,6 @@ const Navbar: React.FC = () => {
     { name: 'COLLECTION', path: '/collection' },
     { name: 'BESPOKE', path: '/bespoke' },
     { name: 'CO-CREATOR', path: '/co-creator' },
-    { name: 'ORDERS ARCHIVE', path: '/console/orders' },
     ...(isAdmin ? [{ name: 'BESPOKE SIGNALS', path: '/console/bespoke' }] : []),
     { name: 'STORY', path: '/#story' },
     { name: 'PHILOSOPHY', path: '/#philosophy' },

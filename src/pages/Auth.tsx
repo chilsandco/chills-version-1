@@ -237,8 +237,8 @@ const Auth: React.FC = () => {
           {/* Orders Section */}
           <div className="lg:col-span-2">
             <div className="mb-10">
-              <h4 className="text-3xl font-display font-bold tracking-tighter mb-2">ORDER HISTORY</h4>
-              <p className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-medium">Your recent transactions with CHILS & CO.</p>
+              <h4 className="text-3xl font-display font-bold tracking-tighter mb-2">ORDERS ARCHIVE</h4>
+              <p className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-medium">Historical logs and status of your active transmissions.</p>
             </div>
             
             <Orders />
