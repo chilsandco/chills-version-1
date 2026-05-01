@@ -207,7 +207,7 @@ const CoCreator = () => {
   ];
 
   return (
-    <div className="bg-black min-h-screen pt-32 pb-24 overflow-hidden selection:bg-accent selection:text-black uppercase">
+    <div className="bg-black min-h-screen pt-28 md:pt-32 pb-24 overflow-hidden selection:bg-accent selection:text-black uppercase">
       {/* Background Grid */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />

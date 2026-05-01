@@ -37,7 +37,7 @@ const SignalDetails: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="pt-32 pb-24 px-6 md:px-12 flex items-center justify-center min-h-screen">
+      <div className="pt-28 md:pt-32 pb-24 px-6 md:px-12 flex items-center justify-center min-h-screen">
         <Activity className="animate-pulse text-accent" size={32} />
       </div>
     );
@@ -55,7 +55,7 @@ const SignalDetails: React.FC = () => {
   ];
 
   return (
-    <div className="pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen">
+    <div className="pt-28 md:pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen">
       <Link 
         to="/console/orders" 
         className="inline-flex items-center gap-2 group mb-12 text-[10px] uppercase font-bold tracking-[0.2em] text-neutral-500 hover:text-white transition-colors"

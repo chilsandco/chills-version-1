@@ -30,7 +30,7 @@ const Collection: React.FC = () => {
   const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
 
   return (
-    <div className="pt-32 pb-24 px-6 md:px-12 max-w-[1800px] mx-auto min-h-screen">
+    <div className="pt-28 md:pt-40 pb-24 px-6 md:px-12 max-w-[1800px] mx-auto min-h-screen">
       <header className="mb-16">
         <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter mb-8 uppercase">Collection</h1>
         <div className="flex gap-8 border-b border-neutral-900 pb-4">

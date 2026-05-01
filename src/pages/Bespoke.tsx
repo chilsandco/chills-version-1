@@ -112,7 +112,7 @@ const Bespoke: React.FC = () => {
   };
 
   return (
-    <div className="bg-black min-h-screen pt-32 pb-24 overflow-hidden">
+    <div className="bg-black min-h-screen pt-28 md:pt-32 pb-24 overflow-hidden">
       {/* Hero / Header */}
       <section className="px-6 md:px-12 mb-24 md:mb-40">
         <div className="max-w-5xl mx-auto text-center">

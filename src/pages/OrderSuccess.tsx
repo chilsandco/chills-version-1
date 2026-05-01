@@ -12,7 +12,7 @@ const OrderSuccess: React.FC = () => {
   const signalId = searchParams.get('signal') || `#CHLS-${Math.floor(100000 + Math.random() * 900000)}`;
   
   return (
-    <div className="pt-32 pb-24 px-6 md:px-12 max-w-[800px] mx-auto min-h-screen flex flex-col items-center">
+    <div className="pt-28 md:pt-32 pb-24 px-6 md:px-12 max-w-[800px] mx-auto min-h-screen flex flex-col items-center">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}

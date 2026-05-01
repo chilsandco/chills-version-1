@@ -57,7 +57,7 @@ const BespokeSignals: React.FC = () => {
 
   if (loading || authLoading) {
     return (
-      <div className="pt-32 pb-24 px-6 md:px-12 flex items-center justify-center min-h-screen bg-black">
+      <div className="pt-28 md:pt-32 pb-24 px-6 md:px-12 flex items-center justify-center min-h-screen bg-black">
         <div className="flex flex-col items-center gap-4">
           <Activity className="animate-pulse text-accent" size={32} />
           <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-neutral-500">Scanning waitlist signals...</p>
@@ -72,7 +72,7 @@ const BespokeSignals: React.FC = () => {
 
   if (!canAccess) {
     return (
-      <div className="pt-32 pb-24 px-6 md:px-12 flex flex-col items-center justify-center min-h-screen text-center bg-black">
+      <div className="pt-28 md:pt-32 pb-24 px-6 md:px-12 flex flex-col items-center justify-center min-h-screen text-center bg-black">
         <Shield className="text-red-500 mb-8" size={48} />
         <h1 className="text-4xl font-display font-bold mb-4 uppercase tracking-tighter text-white">Access Denied</h1>
         <p className="text-neutral-500 uppercase text-[10px] tracking-widest max-w-sm mb-4">Insufficient clearance level for bespoke signals.</p>
@@ -82,7 +82,7 @@ const BespokeSignals: React.FC = () => {
   }
 
   return (
-    <div className="pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen bg-black text-white">
+    <div className="pt-28 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen bg-black text-white">
       <header className="mb-16 flex flex-col md:flex-row md:items-end md:justify-between gap-8">
         <div>
           <div className="flex items-center gap-3 mb-4">
