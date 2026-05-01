@@ -29,6 +29,7 @@ export interface Customer {
   lastName?: string;
   onWaitlist?: boolean;
   bespokeUnlocked?: boolean;
+  coCreatorInterest?: boolean;
 }
 
 export interface SignalItem {

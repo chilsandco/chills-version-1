@@ -210,7 +210,7 @@ const ProductDetail: React.FC = () => {
   if (loading || !product) return <div className="h-screen flex items-center justify-center font-display tracking-widest text-neutral-500 uppercase text-xs">Awaiting Precision...</div>;
 
   return (
-    <div className="pt-28 md:pt-32 pb-24 px-6 md:px-12 max-w-[1800px] mx-auto">
+    <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1800px] mx-auto">
       {/* Navigation Breadcrumb */}
       <motion.div 
         initial={{ opacity: 0, x: -10 }}

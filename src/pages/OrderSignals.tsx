@@ -63,7 +63,7 @@ const OrderSignals: React.FC = () => {
   }
 
   return (
-    <div className="pt-28 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen">
+    <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen">
       <header className="mb-16">
         <div className="flex items-center gap-3 mb-4">
           <Activity className="text-accent" size={16} />

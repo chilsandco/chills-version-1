@@ -202,7 +202,7 @@ const Checkout: React.FC = () => {
   }
 
   return (
-    <div className="pt-28 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen">
+    <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen">
       <div className="flex items-center justify-between mb-16">
         <h1 className="text-5xl font-display font-bold tracking-tighter uppercase">Checkout</h1>
         {isAuthenticated && (

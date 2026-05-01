@@ -146,7 +146,7 @@ const ReturnRequest: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen pt-28 md:pt-32 flex items-center justify-center">
+      <div className="min-h-screen pt-36 md:pt-32 flex items-center justify-center">
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
           <RefreshCcw className="text-accent" size={32} />
         </motion.div>
@@ -184,7 +184,7 @@ const ReturnRequest: React.FC = () => {
   const isWindowExpired = signal?.status === 'completed' && !isReturnable();
 
   return (
-    <div className="pt-28 md:pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen">
+    <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen">
       <Link to={`/console/orders/${id}`} className="inline-flex items-center gap-2 text-white/40 hover:text-accent transition-colors mb-12 group">
         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
         <span className="text-[10px] uppercase tracking-widest font-bold">Back to Signal Details</span>

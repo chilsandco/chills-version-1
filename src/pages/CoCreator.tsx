@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowRight, Fingerprint, Palette, Send, Rocket, IndianRupee, Cpu, Globe, Lock } from 'lucide-react';
+import { ArrowRight, Fingerprint, Palette, Send, Rocket, IndianRupee, Cpu, Globe, Lock, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../AuthContext';
 
 const HandshakeScene = () => {
   return (
@@ -77,7 +78,7 @@ const SubmissionProtocolTransition = () => {
     setIsTransitioning(true);
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (isTransitioning) {
       if (currentLineIndex < terminalLines.length) {
         const timer = setTimeout(() => {
@@ -172,14 +173,107 @@ const SubmissionProtocolTransition = () => {
   );
 };
 
-const CoCreator = () => {
+const CoCreator: React.FC = () => {
+  const { user, refreshUser, updateUser, isLoading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [hasAutoPopulated, setHasAutoPopulated] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
+  const [coCreatorInterestLocal, setCoCreatorInterestLocal] = useState<boolean | null>(null);
+  const [interestCount, setInterestCount] = useState<number>(182);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const coCreatorInterest = user?.coCreatorInterest || coCreatorInterestLocal || submitted;
+
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('/api/cocreator/stats');
+      const data = await response.json();
+      if (data.interestCount) setInterestCount(data.interestCount);
+    } catch (err) {
+      console.warn("Failed to fetch stats", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchStats();
+    // Poll every 30 seconds for "real-time" feel
+    const interval = setInterval(fetchStats, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const checkInterestStatus = async (emailToCheck: string) => {
+    if (!emailToCheck) return;
+    setIsVerifying(true);
+    try {
+      const response = await fetch('/api/cocreator/check-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: emailToCheck })
+      });
+      const data = await response.json();
+      setCoCreatorInterestLocal(data.coCreatorInterest);
+    } catch (err) {
+      console.error("[CHILS & CO.] Status check error:", err);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.email) {
+      checkInterestStatus(user.email);
+    }
+  }, [user?.email]);
+
+  useEffect(() => {
+    if (user?.email && !hasAutoPopulated) {
+      setEmail(user.email);
+      setHasAutoPopulated(true);
+    }
+  }, [user, hasAutoPopulated]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email) setSubmitted(true);
+    if (!email) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/cocreator/interest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      
+      const data = await response.json();
+      if (response.ok) {
+        setSubmitted(true);
+        setCoCreatorInterestLocal(true);
+        
+        if (data.user) {
+          updateUser(data.user);
+        } else {
+          updateUser({ coCreatorInterest: true });
+        }
+        
+        setTimeout(() => {
+          refreshUser();
+        }, 1000);
+      } else {
+        alert(data.message || 'Failed to process signal. Please try again.');
+      }
+    } catch (error) {
+      console.error('Co-Creator signal error:', error);
+      alert('Network error. Pulse failed.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleManualCheck = (e: React.FormEvent) => {
+    e.preventDefault();
+    checkInterestStatus(email);
   };
 
   const morphWords = [
@@ -191,7 +285,7 @@ const CoCreator = () => {
   ];
   const [wordIndex, setWordIndex] = React.useState(0);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const interval = setInterval(() => {
       setWordIndex((prev) => (prev + 1) % morphWords.length);
     }, 3000);
@@ -207,7 +301,7 @@ const CoCreator = () => {
   ];
 
   return (
-    <div className="bg-black min-h-screen pt-28 md:pt-32 pb-24 overflow-hidden selection:bg-accent selection:text-black uppercase">
+    <div className="bg-black min-h-screen pt-36 md:pt-32 pb-24 overflow-hidden selection:bg-accent selection:text-black uppercase">
       {/* Background Grid */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
@@ -250,15 +344,30 @@ const CoCreator = () => {
             </div>
             
             <div className="pt-12">
-              <Link 
-                to="/auth" 
-                className="inline-flex flex-col items-center group no-underline"
-              >
-                <div className="px-12 py-5 bg-accent text-black text-[11px] font-bold uppercase tracking-[0.4em] transition-all hover:scale-105 active:scale-95 flex items-center gap-3">
-                  Request Access <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+              {coCreatorInterest ? (
+                <div className="flex flex-col items-center gap-4">
+                  <div className="px-12 py-5 border border-accent bg-accent/10 text-accent text-[11px] font-bold uppercase tracking-[0.4em] flex items-center gap-3">
+                    Already Aligned <CheckCircle2 size={14} className="text-accent" />
+                  </div>
+                  <span className="text-[9px] text-neutral-500 uppercase tracking-widest italic font-light">Your interest has been persisted in the network</span>
                 </div>
-                <span className="mt-4 text-[9px] text-neutral-600 uppercase tracking-widest italic font-light">Authentication required to enter the system</span>
-              </Link>
+              ) : (
+                <Link 
+                  to={user ? "#interest" : "/auth"} 
+                  className="inline-flex flex-col items-center group no-underline"
+                  onClick={(e) => {
+                    if (user) {
+                      e.preventDefault();
+                      document.getElementById('interest')?.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
+                >
+                  <div className="px-12 py-5 bg-accent text-black text-[11px] font-bold uppercase tracking-[0.4em] transition-all hover:scale-105 active:scale-95 flex items-center gap-3">
+                    Show Interest <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  </div>
+                  <span className="mt-4 text-[9px] text-neutral-600 uppercase tracking-widest italic font-light">Signal your alignment with the system protocol</span>
+                </Link>
+              )}
             </div>
           </motion.div>
         </section>
@@ -406,88 +515,7 @@ const CoCreator = () => {
           </motion.div>
         </section>
 
-        {/* Authorship Section */}
-        <section className="mb-40">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
-            <div className="space-y-12">
-              <h2 className="text-5xl md:text-7xl font-display font-bold uppercase tracking-tighter text-white leading-[0.9]">Artifact <br />Authorship</h2>
-              <div className="space-y-8 text-neutral-400 font-light leading-relaxed text-xl normal-case">
-                <p>Your identity is embedded into every artifact.</p>
-                <p className="text-white italic uppercase font-bold tracking-tighter text-2xl">Not as credit—but as authorship.</p>
-                <p>Over time, your name doesn’t just appear. <br /><span className="text-accent font-bold uppercase tracking-widest block mt-4 border-b-2 border-accent/20 pb-2 w-fit">It compounds.</span></p>
-              </div>
 
-              <div className="p-8 border border-white/5 bg-white/[0.02] rounded-sm space-y-8 backdrop-blur-sm">
-                 <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 text-accent text-[10px] font-bold uppercase tracking-[0.4em]">
-                      <Globe size={14} />
-                      <span>Network Node Status</span>
-                    </div>
-                    <div className="flex items-center gap-2 px-3 py-1 bg-accent/10 rounded-full border border-accent/20">
-                      <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
-                      <span className="text-[9px] text-accent font-bold uppercase tracking-widest">Live Integration</span>
-                    </div>
-                 </div>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                    <div className="space-y-2">
-                       <span className="text-[10px] text-neutral-600 uppercase tracking-widest block">Active Creator Node</span>
-                       <span className="text-lg text-white font-mono tracking-tight">@VOID_SYNTAX</span>
-                    </div>
-                    <div className="space-y-2">
-                       <span className="text-[10px] text-neutral-600 uppercase tracking-widest block">Lifetime Extraction</span>
-                       <span className="text-lg text-white font-mono tracking-tight">₹14,20,208.50 <span className="text-xs text-neutral-500">INR</span></span>
-                    </div>
-                 </div>
-              </div>
-            </div>
-            
-            <div className="relative flex justify-center">
-               <motion.div 
-                whileHover={{ y: -15, scale: 1.02 }}
-                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-                className="relative group w-full max-w-md"
-              >
-                <div className="aspect-[3/4] bg-neutral-900 border border-white/10 relative overflow-hidden group-hover:border-accent transition-colors duration-700 shadow-2xl">
-                  <img 
-                    src="https://images.unsplash.com/photo-1598033129183-c4f50c717658?q=80&w=2000&auto=format&fit=crop" 
-                    alt="Co-Created Artifact" 
-                    className="w-full h-full object-cover grayscale brightness-50 group-hover:brightness-90 scale-110 group-hover:scale-100 transition-all duration-1000"
-                  />
-                  
-                  {/* Meta Overlay */}
-                  <div className="absolute inset-0 p-10 flex flex-col justify-between">
-                    <div className="flex justify-between items-start">
-                      <div className="px-5 py-2 bg-accent text-black text-[10px] font-bold uppercase tracking-[0.4em] skew-x-[-12deg] shadow-lg">
-                        CO-CREATED
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[10px] text-white/40 font-mono tracking-[0.3em] block mb-1">ID // ARTIFACT_99X</span>
-                        <div className="w-12 h-[1px] bg-white/20 ml-auto" />
-                      </div>
-                    </div>
-                    
-                    <div className="space-y-8">
-                      <div className="space-y-3">
-                        <h4 className="text-5xl font-display font-bold text-white uppercase tracking-tighter leading-[0.8]">SIGNAL <br />FADE</h4>
-                        <div className="flex items-center gap-3">
-                          <div className="w-6 h-[1px] bg-accent" />
-                          <p className="text-[12px] text-accent font-bold uppercase tracking-[0.5em]">AUTH: @ALIAS_01</p>
-                        </div>
-                      </div>
-                      <div className="pt-8 border-t border-white/10 flex justify-between items-center text-[10px] text-neutral-500 uppercase tracking-[0.3em]">
-                        <span className="flex items-center gap-2.5">
-                          <span className="w-2 h-2 bg-accent rounded-full animate-pulse shadow-[0_0_10px_rgba(212,175,55,0.5)]" />
-                          182 DISTRIBUTIONS
-                        </span>
-                        <span className="text-white font-bold italic">Active</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </div>
-        </section>
 
         {/* Creator Submission Interface */}
         <section className="mb-40">
@@ -538,21 +566,24 @@ const CoCreator = () => {
         </section>
 
         {/* Final Hook / Waitlist */}
-        <section className="text-center py-24 pb-60">
+        <section id="interest" className="text-center py-24 pb-60">
           <AnimatePresence mode="wait">
-            {!submitted ? (
+            {!coCreatorInterest ? (
               <motion.div
                 key="form"
                 initial={{ opacity: 0, scale: 0.95 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.05 }}
               >
-                <div className="inline-block p-6 border border-accent/20 bg-accent/5 rounded-full mb-10 shadow-[0_0_40px_rgba(212,175,55,0.05)] text-accent">
+                <div className="inline-block p-6 border border-accent/20 bg-accent/5 rounded-full mb-10 shadow-[0_0_40px_rgba(212,175,55,0.05)] text-accent relative">
                   <Fingerprint size={48} strokeWidth={1} />
+                  <div className="absolute -top-2 -right-2 bg-accent text-black text-[9px] font-bold px-2 py-1 rounded-full animate-pulse">
+                    {interestCount}
+                  </div>
                 </div>
-                <h2 className="text-6xl md:text-8xl font-display font-bold uppercase tracking-tighter text-white mb-8">Unlock Creator Mode</h2>
+                <h2 className="text-6xl md:text-8xl font-display font-bold uppercase tracking-tighter text-white mb-8">Show Some Love</h2>
                 <div className="space-y-2 mb-16">
-                  <p className="text-neutral-500 uppercase text-[12px] tracking-[0.6em] font-bold">Phase 01 access is strictly limited</p>
+                  <p className="text-neutral-500 uppercase text-[12px] tracking-[0.6em] font-bold">Express your interest to accelerate this concept</p>
                   <div className="flex items-center justify-center gap-4">
                     <div className="w-64 h-[1px] bg-white/5" />
                   </div>
@@ -570,9 +601,17 @@ const CoCreator = () => {
                     />
                     <button 
                       type="submit"
-                      className="px-12 py-5 bg-accent text-black font-bold uppercase tracking-[0.4em] text-[11px] hover:bg-white transition-all shadow-[0_0_20px_rgba(212,175,55,0.2)]"
+                      disabled={isSubmitting}
+                      className="px-12 py-5 bg-accent text-black font-bold uppercase tracking-[0.4em] text-[11px] hover:bg-white transition-all shadow-[0_0_20px_rgba(212,175,55,0.2)] disabled:opacity-50 disabled:cursor-wait flex items-center justify-center gap-2 min-w-[140px]"
                     >
-                      Transmit
+                      {isSubmitting ? (
+                        <>
+                          <RefreshCw size={14} className="animate-spin" />
+                          ALIGNED
+                        </>
+                      ) : (
+                        'Transmit'
+                      )}
                     </button>
                   </div>
                   <p className="text-[10px] text-neutral-600 uppercase tracking-[0.4em] italic font-light">Secure your unique position in the co-creation network</p>
@@ -585,8 +624,11 @@ const CoCreator = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-16"
               >
-                <div className="w-32 h-32 bg-accent rounded-full flex items-center justify-center mx-auto mb-8 shadow-[0_0_80px_rgba(212,175,55,0.3)]">
-                  <Send className="text-black" size={48} />
+                <div className="w-32 h-32 bg-accent rounded-full flex items-center justify-center mx-auto mb-8 shadow-[0_0_80px_rgba(212,175,55,0.3)] relative">
+                  <CheckCircle2 className="text-black" size={48} />
+                  <div className="absolute -top-2 -right-2 bg-white text-black text-[10px] font-bold px-3 py-1 rounded-full border-2 border-black">
+                    {interestCount}
+                  </div>
                 </div>
                 <div className="space-y-6">
                   <h2 className="text-6xl md:text-8xl font-display font-bold uppercase tracking-tighter text-white uppercase italic leading-none">Signal Received</h2>
@@ -608,6 +650,15 @@ const CoCreator = () => {
                    </p>
                    <p className="text-white text-xs font-mono uppercase tracking-widest">chils_and_co.internal.alpha_node_01</p>
                 </div>
+                
+                {user && (
+                  <button 
+                    onClick={() => refreshUser()}
+                    className="mt-8 text-[10px] text-accent font-bold uppercase tracking-widest flex items-center gap-2 mx-auto hover:underline"
+                  >
+                    <RefreshCw size={12} /> Sync Profile Status
+                  </button>
+                )}
               </motion.div>
             )}
           </AnimatePresence>

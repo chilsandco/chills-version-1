@@ -196,7 +196,7 @@ const Auth: React.FC = () => {
 
   if (isAuthenticated && user) {
     return (
-      <div className="min-h-screen pt-28 md:pt-32 pb-24 px-6">
+      <div className="min-h-screen pt-36 md:pt-32 pb-24 px-6">
         <div className="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-12">
           {/* Profile Sidebar */}
           <motion.div 
@@ -249,7 +249,7 @@ const Auth: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen pt-28 md:pt-32 flex flex-col md:flex-row">
+    <div className="min-h-screen pt-36 md:pt-32 flex flex-col md:flex-row">
       {/* Left: Branding */}
       <div className="hidden md:flex flex-1 bg-[#0a0a0a] items-center justify-center p-12 border-r border-white/10">
         <div className="max-w-md">

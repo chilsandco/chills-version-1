@@ -135,9 +135,9 @@ const Navbar: React.FC = () => {
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
-      className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${isScrolled || !isHome ? 'bg-black/95 backdrop-blur-md py-3 md:py-4' : 'bg-transparent py-6 md:py-8'}`}
+      className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${isScrolled || !isHome ? 'bg-black/98 backdrop-blur-xl py-2 md:py-4' : 'bg-transparent py-4 md:py-8'}`}
     >
-      <div className="max-w-[1800px] mx-auto px-6 md:px-12 flex justify-between items-center">
+      <div className="max-w-[1800px] mx-auto px-4 md:px-12 flex justify-between items-center h-14 md:h-auto">
         <motion.button 
           whileHover={{ scale: 1.1, y: -2 }}
           whileTap={{ scale: 0.9 }}

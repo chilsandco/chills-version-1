@@ -18,7 +18,7 @@ import { Link } from 'react-router-dom';
 
 const Shipping: React.FC = () => {
   return (
-    <div className="pt-28 md:pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen bg-black">
+    <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen bg-black">
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
