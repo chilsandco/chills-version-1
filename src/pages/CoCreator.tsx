@@ -60,6 +60,118 @@ const HandshakeScene = () => {
   );
 };
 
+const SubmissionProtocolTransition = () => {
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [currentLineIndex, setCurrentLineIndex] = useState(0);
+
+  const terminalLines = [
+    "[SYSTEM] SEARCHING FOR EXTERNAL INPUT MODULE...",
+    "[SYSTEM] MODULE LOCATED: CHILS_CREATOR_SUBMISSION_V1",
+    "[DEBUG] CHECKING SECTOR ALIGNMENT... OK",
+    "[SECURITY] CRYPTOGRAPHIC HANDSHAKE INITIATED",
+    "[PROTOCOL] REDIRECTING SIGNAL TO SECURE LAYER...",
+    "[SYSTEM] REDIRECTION AUTHORIZED. ENTERING PROTOCOL..."
+  ];
+
+  const handleInitiate = () => {
+    setIsTransitioning(true);
+  };
+
+  React.useEffect(() => {
+    if (isTransitioning) {
+      if (currentLineIndex < terminalLines.length) {
+        const timer = setTimeout(() => {
+          setCurrentLineIndex(prev => prev + 1);
+        }, 600 + Math.random() * 600); // Faster sequence
+        return () => clearTimeout(timer);
+      } else {
+        // Final redirect
+        const finalTimer = setTimeout(() => {
+          const formUrl = 'https://forms.gle/mL3jdNzUnwXsSbWp8';
+          const newWindow = window.open(formUrl, '_blank');
+          
+          // If popup is blocked (often happens in iframes or setTimeouts), fallback to same tab
+          if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+            window.location.href = formUrl;
+          }
+          
+          setIsTransitioning(false);
+          setCurrentLineIndex(0);
+        }, 1000);
+        return () => clearTimeout(finalTimer);
+      }
+    }
+  }, [isTransitioning, currentLineIndex, terminalLines.length]);
+
+  return (
+    <>
+      <button 
+        onClick={handleInitiate}
+        className="w-full max-w-sm py-6 bg-accent text-black text-[11px] font-bold uppercase tracking-[0.4em] hover:bg-white transition-all shadow-[0_0_30px_rgba(212,175,55,0.15)] flex items-center justify-center gap-3 active:scale-95 group"
+      >
+        Initiate Submission Protocol
+        <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+      </button>
+
+      <AnimatePresence>
+        {isTransitioning && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex items-center justify-center p-6"
+          >
+            <div className="w-full max-w-2xl bg-neutral-950 border border-neutral-900 rounded-sm p-8 md:p-12 space-y-10 relative overflow-hidden">
+              {/* Scanline Effect */}
+              <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%)] bg-[length:100%_2px] pointer-events-none opacity-20" />
+              
+              <div className="flex justify-between items-center border-b border-neutral-900 pb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
+                  <span className="text-[10px] text-accent font-bold uppercase tracking-[0.4em]">Secure Handshake Protocol</span>
+                </div>
+                <span className="text-[9px] font-mono text-neutral-600">ID: {(Math.random() * 0xFFFFFF << 0).toString(16).toUpperCase()}</span>
+              </div>
+
+              <div className="font-mono text-[11px] md:text-xs space-y-4 min-h-[160px]">
+                {terminalLines.slice(0, currentLineIndex + 1).map((line, i) => (
+                  <motion.div 
+                    key={i}
+                    initial={{ opacity: 0, x: -5 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className={i === currentLineIndex ? "text-white" : "text-neutral-500"}
+                  >
+                    <span className="text-neutral-700 mr-4">[{new Date().toLocaleTimeString('en-GB')}]</span>
+                    {line}
+                    {i === currentLineIndex && currentLineIndex < terminalLines.length && (
+                      <motion.span 
+                        animate={{ opacity: [0, 1, 0] }}
+                        transition={{ duration: 0.8, repeat: Infinity }}
+                        className="inline-block w-2 h-4 bg-accent ml-2 translate-y-1"
+                      />
+                    )}
+                  </motion.div>
+                ))}
+              </div>
+
+              <div className="pt-6 border-t border-neutral-900 flex justify-between items-center">
+                 <div className="flex gap-1">
+                    {[0, 1, 2].map(dot => (
+                      <div key={dot} className={`w-1 h-3 ${currentLineIndex > dot * 1.5 ? 'bg-accent' : 'bg-neutral-800'}`} />
+                    ))}
+                 </div>
+                 <p className="text-[9px] uppercase tracking-widest text-neutral-600 italic">
+                    {currentLineIndex < terminalLines.length ? "Processing payload..." : "Success. Handover complete."}
+                 </p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+};
+
 const CoCreator = () => {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -377,35 +489,51 @@ const CoCreator = () => {
           </div>
         </section>
 
-        {/* Preview System Teaser */}
-        <section className="mb-40 py-32 border border-white/5 bg-white/[0.01] rounded-sm relative overflow-hidden group">
-          <div className="absolute inset-0 bg-black/40 blur-3xl group-hover:bg-accent/5 transition-colors duration-1000" />
-          <div className="max-w-2xl mx-auto text-center relative z-10 space-y-12 px-6">
-            <div className="relative inline-block">
-               <Lock className="text-neutral-700 mx-auto group-hover:text-accent group-hover:scale-110 transition-all duration-700" size={64} strokeWidth={1} />
-               <motion.div 
-                animate={{ opacity: [0.2, 0.5, 0.2] }}
-                transition={{ duration: 3, repeat: Infinity }}
-                className="absolute inset-0 bg-accent/20 blur-2xl rounded-full"
-               />
+        {/* Creator Submission Interface */}
+        <section className="mb-40">
+          <div className="flex flex-col items-center mb-16 text-center">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
+              <h2 className="text-[11px] tracking-[0.5em] font-bold uppercase text-accent">Protocol: Artifact Submission</h2>
             </div>
-            <div className="space-y-4">
-              <h2 className="text-4xl font-display font-bold uppercase tracking-tight text-white leading-none">System Interface Detected</h2>
-              <div className="flex items-center justify-center gap-3">
-                <span className="text-neutral-500 text-[10px] uppercase tracking-[0.5em] font-mono">Network access:</span>
-                <span className="text-red-500 text-[10px] uppercase tracking-[0.5em] font-mono font-bold">RESTRICTED</span>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-3 gap-6 opacity-10 blur-[3px] scale-90 select-none pointer-events-none group-hover:blur-sm group-hover:opacity-20 transition-all duration-1000">
-              <div className="h-40 bg-white/5 border border-white/10 rounded-sm" />
-              <div className="h-40 bg-white/5 border border-white/10 rounded-sm" />
-              <div className="h-40 bg-white/5 border border-white/10 rounded-sm" />
-            </div>
+            <h3 className="text-4xl md:text-6xl font-display font-bold uppercase tracking-tighter text-white">The Submission Interface</h3>
+            <p className="text-neutral-500 text-sm mt-4 uppercase tracking-[0.2em] font-light italic">Only verified signals will proceed to activation.</p>
+          </div>
 
-            <button className="px-12 py-5 bg-white/5 border border-white/20 text-white text-[10px] font-bold uppercase tracking-[0.4em] hover:border-accent hover:text-accent hover:bg-accent/5 transition-all outline-none">
-              Preview System Dashboard
-            </button>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-1 border border-white/5 bg-white/5">
+            {[
+              { title: "Declare Identity", desc: "Define your creator alias and technical background.", status: "REQUIRED" },
+              { title: "Define Philosophy", desc: "Articulate the intent behind the artifact.", status: "REQUIRED" },
+              { title: "Upload Artifact", desc: "Initial blueprint or high-fidelity renders.", status: "AWAITING SOURCE" }
+            ].map((box, i) => (
+              <div key={i} className="bg-black p-10 space-y-6 hover:bg-neutral-900/40 transition-colors group relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-[1px] h-0 bg-accent group-hover:h-full transition-all duration-700" />
+                <div className="flex justify-between items-start">
+                  <span className="text-[10px] font-mono text-neutral-700">0{i + 1}</span>
+                  <span className="text-[9px] font-bold text-accent/40 group-hover:text-accent font-mono tracking-widest">{box.status}</span>
+                </div>
+                <div className="space-y-3">
+                  <h4 className="text-xl font-bold uppercase tracking-widest text-white group-hover:text-accent transition-colors">{box.title}</h4>
+                  <p className="text-neutral-500 text-sm leading-relaxed lowercase">{box.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-1 flex justify-center">
+            <SubmissionProtocolTransition />
+          </div>
+          
+          <div className="mt-8 flex items-center justify-center gap-6">
+             <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-neutral-800 rounded-full" />
+                <span className="text-[9px] text-neutral-600 uppercase tracking-widest font-bold">Low-effort submissions filtered</span>
+             </div>
+             <div className="w-1 h-1 bg-neutral-800 rounded-full" />
+             <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-neutral-800 rounded-full" />
+                <span className="text-[9px] text-neutral-600 uppercase tracking-widest font-bold">Encrypted Handshake Required</span>
+             </div>
           </div>
         </section>
 
