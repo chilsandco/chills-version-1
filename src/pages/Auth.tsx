@@ -206,13 +206,19 @@ const Auth: React.FC = () => {
           >
             <div className="relative inline-block mb-6">
               <div className="w-24 h-24 bg-white text-black rounded-full flex items-center justify-center text-4xl font-bold mx-auto">
-                {user.username.charAt(0).toUpperCase()}
+                {(user.pseudoName || user.username).charAt(0).toUpperCase()}
               </div>
               <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-4 border-black rounded-full" />
+              
+              {user.coCreatorInterest && (
+                <div className="absolute -top-2 -right-2 bg-accent text-black text-[8px] font-bold px-2 py-0.5 rounded-full border border-black shadow-[0_0_10px_rgba(212,175,55,0.5)]">
+                  CO-CREATOR
+                </div>
+              )}
             </div>
             
-            <h3 className="text-2xl font-display font-bold tracking-tight mb-2">
-              {user.username.toUpperCase()}
+            <h3 className="text-2xl font-display font-bold tracking-tight mb-1 flex items-center justify-center gap-2">
+              {(user.pseudoName || user.username).toUpperCase()}
             </h3>
             <p className="text-[10px] text-white/40 tracking-widest uppercase mb-10">{user.email}</p>
             

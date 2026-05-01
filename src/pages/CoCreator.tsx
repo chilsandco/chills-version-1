@@ -176,6 +176,7 @@ const SubmissionProtocolTransition = () => {
 const CoCreator: React.FC = () => {
   const { user, refreshUser, updateUser, isLoading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
+  const [pseudoName, setPseudoName] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -214,6 +215,7 @@ const CoCreator: React.FC = () => {
       });
       const data = await response.json();
       setCoCreatorInterestLocal(data.coCreatorInterest);
+      if (data.pseudoName) setPseudoName(data.pseudoName);
     } catch (err) {
       console.error("[CHILS & CO.] Status check error:", err);
     } finally {
@@ -230,6 +232,7 @@ const CoCreator: React.FC = () => {
   useEffect(() => {
     if (user?.email && !hasAutoPopulated) {
       setEmail(user.email);
+      if (user.pseudoName) setPseudoName(user.pseudoName);
       setHasAutoPopulated(true);
     }
   }, [user, hasAutoPopulated]);
@@ -243,7 +246,7 @@ const CoCreator: React.FC = () => {
       const response = await fetch('/api/cocreator/interest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email, pseudoName })
       });
       
       const data = await response.json();
@@ -254,7 +257,7 @@ const CoCreator: React.FC = () => {
         if (data.user) {
           updateUser(data.user);
         } else {
-          updateUser({ coCreatorInterest: true });
+          updateUser({ coCreatorInterest: true, pseudoName });
         }
         
         setTimeout(() => {
@@ -589,15 +592,23 @@ const CoCreator: React.FC = () => {
                   </div>
                 </div>
                 
-                <form onSubmit={handleSubmit} className="max-w-lg mx-auto flex flex-col gap-6">
-                  <div className="flex flex-col sm:flex-row gap-4">
+                <form onSubmit={handleSubmit} className="max-w-2xl mx-auto flex flex-col gap-6">
+                  <div className="flex flex-col md:flex-row gap-4">
+                    <input 
+                      type="text" 
+                      required
+                      placeholder="ENTER PSEUDO NAME" 
+                      value={pseudoName}
+                      onChange={(e) => setPseudoName(e.target.value.toUpperCase())}
+                      className="flex-1 bg-white/5 border border-white/10 px-8 py-5 text-white rounded-sm outline-none focus:border-accent transition-colors text-[12px] tracking-[0.3em] uppercase placeholder:text-neutral-700"
+                    />
                     <input 
                       type="email" 
                       required
                       placeholder="ENTER PROTOCOL EMAIL" 
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="flex-grow bg-white/5 border border-white/10 px-8 py-5 text-white rounded-sm outline-none focus:border-accent transition-colors text-[12px] tracking-[0.3em] uppercase placeholder:text-neutral-700"
+                      className="flex-1 bg-white/5 border border-white/10 px-8 py-5 text-white rounded-sm outline-none focus:border-accent transition-colors text-[12px] tracking-[0.3em] uppercase placeholder:text-neutral-700"
                     />
                     <button 
                       type="submit"
@@ -607,7 +618,7 @@ const CoCreator: React.FC = () => {
                       {isSubmitting ? (
                         <>
                           <RefreshCw size={14} className="animate-spin" />
-                          ALIGNED
+                          SIGNALING
                         </>
                       ) : (
                         'Transmit'

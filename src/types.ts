@@ -30,6 +30,7 @@ export interface Customer {
   onWaitlist?: boolean;
   bespokeUnlocked?: boolean;
   coCreatorInterest?: boolean;
+  pseudoName?: string;
 }
 
 export interface SignalItem {
