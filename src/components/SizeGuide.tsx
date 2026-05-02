@@ -41,7 +41,7 @@ const measurements = [
     label: 'Sleeve Open', 
     desc: 'Width of the sleeve hem',
     howTo: 'Measure the width of the sleeve cuff flat.',
-    labelPos: { x: 345, y: 165 }
+    labelPos: { x: 360, y: 180 }
   },
   { 
     key: 'collar', 
@@ -175,7 +175,7 @@ const SizeGuide: React.FC<SizeGuideProps> = ({ isOpen, onClose }) => {
                       onMouseEnter={() => setActiveMeasurement('opening')}
                       onMouseLeave={() => setActiveMeasurement(null)}
                       animate={{ stroke: activeMeasurement === 'opening' ? '#C2A15E' : '#FFFFFF' }}
-                      x1="310" y1="175" x2="345" y2="175" strokeWidth="1.5" markerStart="url(#arrow-start)" markerEnd="url(#arrow-end)" className="cursor-pointer"
+                      x1="365" y1="145" x2="325" y2="185" strokeWidth="1.5" markerStart="url(#arrow-start)" markerEnd="url(#arrow-end)" className="cursor-pointer"
                     />
 
                     {/* Labels within SVG */}
