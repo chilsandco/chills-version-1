@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Hero from '../components/Hero';
 import ProductCard from '../components/ProductCard';
+import EcoEngineeredLogo from '../components/EcoEngineeredLogo';
 import { Product } from '../types';
 import { motion } from 'motion/react';
 import { ArrowRight, RefreshCw, Smartphone, Monitor, Watch } from 'lucide-react';
@@ -207,9 +208,10 @@ const Home: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    if (location.hash === '#philosophy') {
+    if (location.hash) {
+      const id = location.hash.replace('#', '');
       setTimeout(() => {
-        const el = document.getElementById('philosophy');
+        const el = document.getElementById(id);
         if (el) el.scrollIntoView({ behavior: 'smooth' });
       }, 500); // Small delay to ensure component is rendered
     }
@@ -380,7 +382,7 @@ const Home: React.FC = () => {
       <PhilosophySystem />
 
       {/* Our Promise Section - Progressive Reveal */}
-      <section className="py-16 md:py-24 px-6 md:px-12 max-w-[1800px] mx-auto">
+      <section id="promise" className="py-16 md:py-24 px-6 md:px-12 max-w-[1800px] mx-auto">
         <motion.div
            initial={{ opacity: 0, y: 30 }}
            whileInView={{ opacity: 1, y: 0 }}
@@ -453,6 +455,7 @@ const Home: React.FC = () => {
 
       {/* Second Life Section - Cinematic Reveal with Visual Evidence */}
       <motion.section 
+        id="second-life"
         className="py-24 md:py-40 bg-white text-black relative z-10 overflow-hidden"
         onViewportEnter={() => {
           if (!hasSeenSustainability) {
@@ -491,10 +494,14 @@ const Home: React.FC = () => {
                     Not made to be discarded.
                   </p>
                   <p>
-                    What you receive is only the beginning. Our packaging is designed to stay — not to be discarded.
+                    What you receive is not an end product — it is the beginning of a second function.
                   </p>
                   <p>
-                    From the structured compartmentalization to the tactile finish, every element is built with a purpose beyond the first use.
+                    Our packaging is designed as a reusable system: <br />
+                    storage, organization, and utility beyond delivery.
+                  </p>
+                  <p>
+                    From compartmental structure to material finish, every detail is designed to persist.
                   </p>
                 </div>
 
@@ -533,6 +540,7 @@ const Home: React.FC = () => {
 
       {/* Eco Engineered Section - Premium Precision */}
       <motion.section 
+        id="eco-engineered"
         className="py-12 md:py-20 bg-black text-white text-center px-6 relative overflow-hidden"
       >
         {/* OLED-Hardened Film Grain Overlay */}
@@ -549,10 +557,7 @@ const Home: React.FC = () => {
             transition={{ duration: 2.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
             className="flex justify-center mb-16"
           >
-            <div className="relative w-12 h-12 flex items-center justify-center opacity-20">
-              <div className="absolute inset-0 border border-[#5F7D63] rounded-sm transform rotate-45" />
-              <div className="w-1.5 h-1.5 bg-[#5F7D63] rounded-full" />
-            </div>
+            <EcoEngineeredLogo />
           </motion.div>
 
           <motion.h2 
@@ -560,7 +565,7 @@ const Home: React.FC = () => {
             whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
             viewport={{ once: true, margin: "-20%" }}
             transition={{ duration: 2.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="text-5xl sm:text-6xl md:text-[8vw] font-display font-bold tracking-tighter mb-12 leading-none uppercase text-[#5F7D63] whitespace-nowrap"
+            className="text-5xl sm:text-6xl md:text-[8vw] font-display font-bold tracking-tighter mb-12 leading-none uppercase text-[#5CA904] whitespace-nowrap"
           >
              ECO ENGINEERED
           </motion.h2>
@@ -572,7 +577,7 @@ const Home: React.FC = () => {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-20%" }}
               transition={{ duration: 2, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              className="text-xl md:text-3xl font-display font-bold tracking-tight uppercase text-[#5F7D63] italic relative z-10"
+              className="text-xl md:text-3xl font-display font-medium tracking-tight uppercase text-[#5CA904] italic relative z-10"
             >
               Built with purpose. Designed without waste.
             </motion.p>
@@ -586,7 +591,7 @@ const Home: React.FC = () => {
                   delay: 0.8, 
                   ease: [0.4, 0, 0.2, 1] 
                 }}
-                className="absolute top-0 bottom-0 w-px bg-[#5F7D63] z-0 opacity-25 shadow-[0_0_8px_rgba(95,125,99,0.2)]"
+                className="absolute top-0 bottom-0 w-px bg-[#5CA904] z-0 opacity-25 shadow-[0_0_8px_rgba(92,169,4,0.2)]"
               />
             )}
           </div>
@@ -596,16 +601,16 @@ const Home: React.FC = () => {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "-20%" }}
             transition={{ duration: 2, delay: 1, ease: [0.22, 1, 0.36, 1] }}
-            className="text-lg md:text-2xl font-light text-[#EAEAEA] max-w-4xl mx-auto leading-relaxed space-y-12"
+            className="text-lg md:text-2xl font-sans font-light text-[#EAEAEA] max-w-4xl mx-auto leading-relaxed space-y-12"
           >
             <p>
-              Sustainability at Chils & Co isn’t added later — it’s engineered into every layer.
+              Sustainability at Chils & Co. is not an addition — it is engineered into the system.
             </p>
             <p>
-              We eliminate plastic entirely, reduce unnecessary materials, and design every component with long-term use in mind.
+              We eliminate plastic entirely, reduce material excess, and design every component to function beyond its first use.
             </p>
-            <p className="text-[#5F7D63] font-medium opacity-80">
-              From packaging to product details, everything is built to minimize waste while maintaining performance and form.
+            <p className="text-[#5CA904] font-medium opacity-80">
+              From packaging to product detailing, every element is structured for durability, reuse, and extended life.
             </p>
           </motion.div>
         </div>

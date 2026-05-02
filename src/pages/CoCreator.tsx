@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import confetti from 'canvas-confetti';
 import { ArrowRight, Fingerprint, Palette, Send, Rocket, IndianRupee, Cpu, Globe, Lock, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
@@ -61,9 +62,10 @@ const HandshakeScene = () => {
   );
 };
 
-const SubmissionProtocolTransition = () => {
+const SubmissionProtocolTransition = ({ isLocked }: { isLocked: boolean }) => {
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [currentLineIndex, setCurrentLineIndex] = useState(0);
+  const [showTooltip, setShowTooltip] = useState(false);
 
   const terminalLines = [
     "[SYSTEM] SEARCHING FOR EXTERNAL INPUT MODULE...",
@@ -75,6 +77,11 @@ const SubmissionProtocolTransition = () => {
   ];
 
   const handleInitiate = () => {
+    if (isLocked) {
+      setShowTooltip(true);
+      setTimeout(() => setShowTooltip(false), 3000);
+      return;
+    }
     setIsTransitioning(true);
   };
 
@@ -105,13 +112,32 @@ const SubmissionProtocolTransition = () => {
   }, [isTransitioning, currentLineIndex, terminalLines.length]);
 
   return (
-    <>
+    <div className="relative w-full max-w-sm flex flex-col items-center">
+      <AnimatePresence>
+        {showTooltip && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 10 }}
+            className="absolute -top-14 left-1/2 -translate-x-1/2 bg-accent text-black text-[9px] font-bold px-4 py-2 rounded-sm shadow-[0_0_30px_rgba(212,175,55,0.3)] z-[110] whitespace-nowrap border border-white/10"
+          >
+            YOU NEED TO BE A CO CREATOR FOR THIS TO GET UNLOCKED
+            <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-accent rotate-45" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <button 
         onClick={handleInitiate}
-        className="w-full max-w-sm py-6 bg-accent text-black text-[11px] font-bold uppercase tracking-[0.4em] hover:bg-white transition-all shadow-[0_0_30px_rgba(212,175,55,0.15)] flex items-center justify-center gap-3 active:scale-95 group"
+        className={`w-full py-6 text-[11px] font-bold uppercase tracking-[0.4em] flex items-center justify-center gap-3 transition-all active:scale-95 group relative overflow-hidden ${
+          isLocked 
+            ? 'bg-neutral-900/50 text-neutral-600 cursor-not-allowed border border-white/5 grayscale' 
+            : 'bg-accent text-black hover:bg-white shadow-[0_0_30px_rgba(212,175,55,0.15)]'
+        }`}
       >
+        {isLocked && <Lock size={12} className="opacity-40" />}
         Initiate Submission Protocol
-        <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+        {!isLocked && <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />}
       </button>
 
       <AnimatePresence>
@@ -169,7 +195,7 @@ const SubmissionProtocolTransition = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+    </div>
   );
 };
 
@@ -185,7 +211,7 @@ const CoCreator: React.FC = () => {
   const [coCreatorInterestLocal, setCoCreatorInterestLocal] = useState<boolean | null>(null);
   const [stats, setStats] = useState<{waitlistPool: number, coCreators: number} | null>(null);
 
-  const coCreatorInterest = user?.coCreatorInterest || coCreatorInterestLocal || submitted;
+  const coCreatorInterest = !!user?.coCreatorInterest || coCreatorInterestLocal === true || submitted;
 
   const fetchStats = async () => {
     try {
@@ -216,6 +242,14 @@ const CoCreator: React.FC = () => {
       const data = await response.json();
       setCoCreatorInterestLocal(data.coCreatorInterest);
       if (data.pseudoName) setPseudoName(data.pseudoName);
+      
+      // Update global user state if we found interest
+      if (data.coCreatorInterest) {
+        updateUser({ 
+          coCreatorInterest: true, 
+          pseudoName: data.pseudoName || pseudoName 
+        });
+      }
     } catch (err) {
       console.error("[CHILS & CO.] Status check error:", err);
     } finally {
@@ -254,15 +288,27 @@ const CoCreator: React.FC = () => {
         setSubmitted(true);
         setCoCreatorInterestLocal(true);
         
+        // Immediate local count update for "real-time" feel
+        setStats(prev => prev ? { ...prev, coCreators: prev.coCreators + 1 } : prev);
+        
+        // Celebration!
+        confetti({
+          particleCount: 150,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#D4AF37', '#ffffff', '#A0A0A0'] // Gold, white, silver
+        });
+        
         if (data.user) {
           updateUser(data.user);
         } else {
           updateUser({ coCreatorInterest: true, pseudoName });
         }
         
-        setTimeout(() => {
-          refreshUser();
-        }, 1000);
+        // Remove immediate refresh to prevent WooCommerce cache delay from overwriting local success
+        // setTimeout(() => {
+        //   refreshUser();
+        // }, 1000);
       } else {
         alert(data.message || 'Failed to process signal. Please try again.');
       }
@@ -578,7 +624,7 @@ const CoCreator: React.FC = () => {
           </div>
 
           <div className="mt-1 flex justify-center">
-            <SubmissionProtocolTransition />
+            <SubmissionProtocolTransition isLocked={!coCreatorInterest} />
           </div>
           
           <div className="mt-8 flex items-center justify-center gap-6">
@@ -612,9 +658,9 @@ const CoCreator: React.FC = () => {
                     </div>
                   )}
                 </div>
-                <h2 className="text-6xl md:text-8xl font-display font-bold uppercase tracking-tighter text-white mb-8">Show Some Love</h2>
+                <h2 className="text-6xl md:text-8xl font-display font-bold uppercase tracking-tighter text-white mb-8">Become a Co-Creator</h2>
                 <div className="space-y-2 mb-16">
-                  <p className="text-neutral-500 uppercase text-[12px] tracking-[0.6em] font-bold">Express your interest to accelerate this concept</p>
+                  <p className="text-neutral-500 uppercase text-[12px] tracking-[0.6em] font-bold">Join a community shaping what comes next in design.</p>
                   <div className="flex items-center justify-center gap-4">
                     <div className="w-64 h-[1px] bg-white/5" />
                   </div>
@@ -672,7 +718,7 @@ const CoCreator: React.FC = () => {
                   )}
                 </div>
                 <div className="space-y-6">
-                  <h2 className="text-6xl md:text-8xl font-display font-bold uppercase tracking-tighter text-white uppercase italic leading-none">Author Registered</h2>
+                  <h2 className="text-6xl md:text-8xl font-display font-bold uppercase tracking-tighter text-white uppercase italic leading-none">You are now a Co-Creator</h2>
                   <div className="flex items-center justify-center gap-4">
                     <div className="w-12 h-[1px] bg-accent/30" />
                     <div className="flex items-center gap-3">

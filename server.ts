@@ -425,23 +425,27 @@ async function startServer() {
             firstName = customer.first_name || '';
             lastName = customer.last_name || '';
             
-            const waitlistMeta = customer.meta_data?.find((m: any) => String(m.key).toLowerCase() === "bespoke_waitlist");
-            const unlockedMeta = customer.meta_data?.find((m: any) => String(m.key).toLowerCase() === "bespoke_unlocked");
-            const coCreatorMeta = customer.meta_data?.find((m: any) => String(m.key).toLowerCase() === "co_creator_interest");
-            const pseudoMeta = customer.meta_data?.find((m: any) => String(m.key).toLowerCase() === "pseudo_name");
-            
-            const isTrue = (val: any) => {
-              if (typeof val === 'string') {
-                const v = val.trim().toLowerCase();
-                return v === 'true' || v === '1' || v === 'yes' || v === 'on';
-              }
-              return val === true || val === 1;
+            const getMetaValue = (metaData: any[], key: string) => {
+              const match = metaData?.find((m: any) => {
+                const k = String(m.key).toLowerCase();
+                return k === key || k === `_${key}` || k === key.replace(/_/g, '-');
+              });
+              return match?.value;
             };
 
-            onWaitlist = isTrue(waitlistMeta?.value);
-            bespokeUnlocked = isTrue(unlockedMeta?.value);
-            coCreatorInterest = isTrue(coCreatorMeta?.value);
-            pseudoName = pseudoMeta?.value || '';
+            const isTrue = (val: any) => {
+              if (val === true || val === 1 || val === '1') return true;
+              if (typeof val === 'string') {
+                const v = val.trim().toLowerCase();
+                return v === 'true' || v === 'yes' || v === 'on' || v === 'active';
+              }
+              return false;
+            };
+
+            onWaitlist = isTrue(getMetaValue(customer.meta_data, "bespoke_waitlist"));
+            bespokeUnlocked = isTrue(getMetaValue(customer.meta_data, "bespoke_unlocked"));
+            coCreatorInterest = isTrue(getMetaValue(customer.meta_data, "co_creator_interest"));
+            pseudoName = getMetaValue(customer.meta_data, "pseudo_name") || '';
           }
         } catch (err) {
           console.error("[CHILS & CO.] Error searching for customer ID:", err);
@@ -625,7 +629,13 @@ async function startServer() {
             success: true, 
             message: "Signal acknowledged. Security verified.", 
             isExisting: true, 
-            onWaitlist: true 
+            onWaitlist: true,
+            user: {
+              ...(exactMatch || {}),
+              email,
+              onWaitlist: true,
+              pseudoName: pseudoName || ''
+            }
           });
         }
         throw createError;
@@ -796,13 +806,13 @@ async function startServer() {
         return res.json({ 
           success: true, 
           message: "Profile updated with interest.", 
-          coCreatorInterest: isTrue(coCreatorMeta?.value),
-          pseudoName: pseudoMeta?.value || '',
+          coCreatorInterest: true,
+          pseudoName: pseudoMeta?.value || pseudoName || '',
           user: {
             id: customerId,
             email,
-            coCreatorInterest: isTrue(coCreatorMeta?.value),
-            pseudoName: pseudoMeta?.value || ''
+            coCreatorInterest: true,
+            pseudoName: pseudoMeta?.value || pseudoName || ''
           }
         });
       }
@@ -837,9 +847,27 @@ async function startServer() {
             await wc.put(`customers/${exactMatch.id}`, {
               meta_data: metaToUpdate
             });
-            return res.json({ success: true, coCreatorInterest: true, pseudoName });
+            return res.json({ 
+              success: true, 
+              coCreatorInterest: true, 
+              pseudoName,
+              user: {
+                ...exactMatch,
+                coCreatorInterest: true,
+                pseudoName: pseudoName || ''
+              }
+            });
           }
-          return res.json({ success: true, coCreatorInterest: true, pseudoName });
+          return res.json({ 
+            success: true, 
+            coCreatorInterest: true, 
+            pseudoName,
+            user: {
+              email,
+              coCreatorInterest: true,
+              pseudoName: pseudoName || ''
+            }
+          });
         }
         throw createError;
       }
@@ -865,18 +893,29 @@ async function startServer() {
       }
 
       if (customer) {
-        const coCreatorMeta = customer.meta_data?.find((m: any) => String(m.key).toLowerCase() === "co_creator_interest");
-        const pseudoMeta = customer.meta_data?.find((m: any) => String(m.key).toLowerCase() === "pseudo_name");
+        const getMetaValue = (metaData: any[], key: string) => {
+          const match = metaData?.find((m: any) => {
+            const k = String(m.key).toLowerCase();
+            return k === key || k === `_${key}` || k === key.replace(/_/g, '-');
+          });
+          return match?.value;
+        };
+
         const isTrue = (val: any) => {
+          if (val === true || val === 1 || val === '1') return true;
           if (typeof val === 'string') {
             const v = val.trim().toLowerCase();
-            return v === 'true' || v === '1' || v === 'yes' || v === 'on';
+            return v === 'true' || v === 'yes' || v === 'on' || v === 'active';
           }
-          return val === true || val === 1;
+          return false;
         };
+
+        const coCreatorInterest = isTrue(getMetaValue(customer.meta_data, "co_creator_interest"));
+        const pseudoName = getMetaValue(customer.meta_data, "pseudo_name") || '';
+
         return res.json({ 
-          coCreatorInterest: isTrue(coCreatorMeta?.value),
-          pseudoName: pseudoMeta?.value || ''
+          coCreatorInterest,
+          pseudoName
         });
       }
 
@@ -964,45 +1003,41 @@ async function startServer() {
         console.warn("[CHILS & CO.] Customer lookup failed in auth/me", lookupErr);
       }
 
-        if (customer) {
-          const waitlistMeta = customer.meta_data?.find((m: any) => String(m.key).toLowerCase() === "bespoke_waitlist");
-          const bespokeUnlocked = customer.meta_data?.find((m: any) => String(m.key).toLowerCase() === "bespoke_unlocked");
-          const coCreatorInterest = customer.meta_data?.find((m: any) => String(m.key).toLowerCase() === "co_creator_interest");
-          const pseudoMeta = customer.meta_data?.find((m: any) => String(m.key).toLowerCase() === "pseudo_name");
-          
-          console.log(`[CHILS & CO.] Meta check for ${email}:`, {
-            foundWaitlist: !!waitlistMeta,
-            waitlistValue: waitlistMeta?.value,
-            foundUnlocked: !!bespokeUnlocked,
-            unlockedValue: bespokeUnlocked?.value,
-            foundCoCreator: !!coCreatorInterest,
-            coCreatorValue: coCreatorInterest?.value,
-            foundPseudo: !!pseudoMeta,
-            pseudoValue: pseudoMeta?.value
+        const getMetaValue = (metaData: any[], key: string) => {
+          const match = metaData?.find((m: any) => {
+            const k = String(m.key).toLowerCase();
+            return k === key || k === `_${key}` || k === key.replace(/_/g, '-');
           });
+          return match?.value;
+        };
 
-          // Robust boolean check for metadata values
         const isTrue = (val: any) => {
+          if (val === true || val === 1 || val === '1') return true;
           if (typeof val === 'string') {
             const v = val.trim().toLowerCase();
-            return v === 'true' || v === '1' || v === 'yes' || v === 'on';
+            return v === 'true' || v === 'yes' || v === 'on' || v === 'active';
           }
-          return val === true || val === 1;
+          return false;
         };
 
-        const enhancedUser = {
-          ...req.user,
-          ...customer, // Include all WC customer data
-          onWaitlist: isTrue(waitlistMeta?.value),
-          bespokeUnlocked: isTrue(bespokeUnlocked?.value),
-          coCreatorInterest: isTrue(coCreatorInterest?.value),
-          pseudoName: pseudoMeta?.value || '',
-          id: customer.id, // Ensure we use the WC customer ID
-          email: (customer.email || email).toLowerCase()
-        };
-        console.log(`[CHILS & CO.] Verified profile for ${email}: Waitlist=${enhancedUser.onWaitlist}, Unlocked=${enhancedUser.bespokeUnlocked}, CoCreator=${enhancedUser.coCreatorInterest}, Pseudo=${enhancedUser.pseudoName}`);
-        return res.json(enhancedUser);
-      }
+        if (customer) {
+          const onWaitlist = isTrue(getMetaValue(customer.meta_data, "bespoke_waitlist"));
+          const bespokeUnlocked = isTrue(getMetaValue(customer.meta_data, "bespoke_unlocked"));
+          const coCreatorInterest = isTrue(getMetaValue(customer.meta_data, "co_creator_interest"));
+          const pseudoName = getMetaValue(customer.meta_data, "pseudo_name") || "";
+          
+          const enhancedUser = {
+            ...req.user,
+            ...customer,
+            onWaitlist,
+            bespokeUnlocked,
+            coCreatorInterest,
+            pseudoName,
+            id: customer.id,
+            email: (customer.email || email).toLowerCase()
+          };
+          return res.json(enhancedUser);
+        }
       
       res.json(req.user);
     } catch (error) {

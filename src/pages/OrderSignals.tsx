@@ -62,6 +62,18 @@ const OrderSignals: React.FC = () => {
     );
   }
 
+  const isFlagActive = (val: any) => {
+    if (val === true || val === 1 || val === '1') return true;
+    if (typeof val === 'string') {
+      const v = val.trim().toLowerCase();
+      return v === 'true' || v === 'yes' || v === 'on' || v === 'active';
+    }
+    return false;
+  };
+
+  const hasWaitlistBadge = isFlagActive(user?.onWaitlist);
+  const hasCoCreatorBadge = isFlagActive(user?.coCreatorInterest);
+
   return (
     <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen">
       <header className="mb-16">
@@ -76,11 +88,11 @@ const OrderSignals: React.FC = () => {
       </header>
 
       {/* Bespoke Waitlist Status Card */}
-      {user?.onWaitlist && (
+      {hasWaitlistBadge && (
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-12 p-8 border border-accent/20 bg-accent/5 rounded-sm relative overflow-hidden group"
+          className="mb-6 p-8 border border-accent/20 bg-accent/5 rounded-sm relative overflow-hidden group"
         >
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
             <div className="space-y-4">
@@ -102,6 +114,36 @@ const OrderSignals: React.FC = () => {
             </Link>
           </div>
           <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 blur-3xl rounded-full -mr-32 -mt-32 group-hover:bg-accent/10 transition-colors" />
+        </motion.div>
+      )}
+
+      {/* Co-Creator Status Card */}
+      {hasCoCreatorBadge && (
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-12 p-8 border border-accent/20 bg-accent/5 rounded-sm relative overflow-hidden group shadow-[0_0_30px_rgba(212,175,55,0.05)]"
+        >
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 bg-accent rounded-full animate-pulse shadow-[0_0_10px_rgba(212,175,55,0.5)]" />
+                <p className="text-[9px] tracking-[0.4em] font-bold uppercase text-accent">Active Protocol: Co-Creator Network</p>
+              </div>
+              <h3 className="text-2xl font-display font-bold uppercase tracking-tight text-white italic">Identity Verified</h3>
+              <p className="text-neutral-400 text-xs tracking-tight font-light max-w-md">
+                Protocol {user?.pseudoName ? `"${user.pseudoName.toUpperCase()}"` : 'Co-Creator'} is active. 
+                Your passive authorship status is secured. Artifact submission portal access will be granted in the next cycle.
+              </p>
+            </div>
+            <Link 
+              to="/co-creator" 
+              className="text-[10px] tracking-[0.3em] font-bold uppercase py-4 px-8 bg-accent text-black hover:bg-white transition-all text-center"
+            >
+              Control Interface
+            </Link>
+          </div>
+          <div className="absolute top-0 right-0 w-64 h-64 bg-accent/10 blur-3xl rounded-full -mr-32 -mt-32 group-hover:bg-accent/20 transition-colors" />
         </motion.div>
       )}
 

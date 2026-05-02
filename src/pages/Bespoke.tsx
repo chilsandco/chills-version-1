@@ -14,26 +14,29 @@ const Bespoke: React.FC = () => {
   const [isExisting, setIsExisting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
 
+  const fetchStats = async () => {
+    try {
+      const response = await fetch('/api/stats');
+      const data = await response.json();
+      if (data) setStats(data);
+    } catch (err) {}
+  };
+
   useEffect(() => {
-    fetch('/api/stats')
-      .then(res => res.json())
-      .then(data => setStats(data))
-      .catch(() => {});
+    fetchStats();
+    const interval = setInterval(fetchStats, 30000); // Poll every 30s
+    return () => clearInterval(interval);
   }, []);
 
   const [onWaitlistLocal, setOnWaitlistLocal] = useState<boolean | null>(null);
   const [unlockedLocal, setUnlockedLocal] = useState<boolean | null>(null);
 
   // Use waitlist status from user profile if available, otherwise use local checked status
-  const onWaitlist = user?.onWaitlist === true || 
-                    user?.onWaitlist === 'true' || 
-                    user?.onWaitlist === 'yes' || 
-                    user?.onWaitlist === '1' ||
+  const onWaitlist = !!user?.onWaitlist || 
                     onWaitlistLocal === true ||
                     submitted;
   
-  const bespokeUnlocked = user?.bespokeUnlocked === true || 
-                           user?.bespokeUnlocked === 'true' || 
+  const bespokeUnlocked = !!user?.bespokeUnlocked || 
                            unlockedLocal === true ||
                            false;
 
@@ -50,6 +53,12 @@ const Bespoke: React.FC = () => {
       if (data.onWaitlist) {
         setOnWaitlistLocal(true);
         setUnlockedLocal(!!data.bespokeUnlocked);
+        
+        // Sync global state
+        updateUser({ 
+          onWaitlist: true, 
+          bespokeUnlocked: !!data.bespokeUnlocked 
+        });
       } else {
         setOnWaitlistLocal(false);
       }
@@ -91,6 +100,9 @@ const Bespoke: React.FC = () => {
         setSubmitted(true);
         setOnWaitlistLocal(true);
         setIsExisting(!!data.isExisting);
+        
+        // Immediate local count update for "real-time" feel
+        setStats(prev => prev ? { ...prev, waitlistPool: prev.waitlistPool + 1 } : prev);
         
         // Update user state with full data if returned, otherwise just tag it
         if (data.user) {

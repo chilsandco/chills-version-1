@@ -28,19 +28,23 @@ const Footer: React.FC = () => {
           <div>
             <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-6">Explore</h3>
             <ul className="flex flex-col gap-4">
-              <li><Link to="/collection" className="text-neutral-500 hover:text-white text-sm transition-colors">Collection</Link></li>
-              <li><Link to="/auth" className="text-neutral-500 hover:text-white text-sm transition-colors">Account</Link></li>
-              <li><Link to="/#story" className="text-neutral-500 hover:text-white text-sm transition-colors">Our Story</Link></li>
-              <li><Link to="/#philosophy" className="text-neutral-500 hover:text-white text-sm transition-colors">Philosophy</Link></li>
+              <li><Link to="/collection" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Collection</Link></li>
+              <li><Link to="/bespoke" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Bespoke</Link></li>
+              <li><Link to="/co-creator" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Co-Creator</Link></li>
+              <li><Link to="/#philosophy" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Philosophy</Link></li>
+              <li><Link to="/#promise" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Promise</Link></li>
+              <li><Link to="/#second-life" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Second Life</Link></li>
+              <li><Link to="/#eco-engineered" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Eco Engineered</Link></li>
+              <li><Link to="/auth" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Account</Link></li>
             </ul>
           </div>
 
           <div>
             <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-6">Support</h3>
             <ul className="flex flex-col gap-4">
-              <li><Link to="/shipping-delivery" className="text-neutral-500 hover:text-white text-sm transition-colors">Shipping</Link></li>
-              <li><Link to="/returns-refunds" className="text-neutral-500 hover:text-white text-sm transition-colors">Returns</Link></li>
-              <li><a href="#" className="text-neutral-500 hover:text-white text-sm transition-colors">Contact</a></li>
+              <li><Link to="/shipping-delivery" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Shipping</Link></li>
+              <li><Link to="/returns-refunds" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Returns</Link></li>
+              <li><a href="#" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Contact</a></li>
             </ul>
           </div>
         </div>
