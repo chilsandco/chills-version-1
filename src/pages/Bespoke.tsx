@@ -9,9 +9,17 @@ const Bespoke: React.FC = () => {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [stats, setStats] = useState<{waitlistPool: number, coCreators: number} | null>(null);
   const [hasAutoPopulated, setHasAutoPopulated] = useState(false);
   const [isExisting, setIsExisting] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
+
+  useEffect(() => {
+    fetch('/api/stats')
+      .then(res => res.json())
+      .then(data => setStats(data))
+      .catch(() => {});
+  }, []);
 
   const [onWaitlistLocal, setOnWaitlistLocal] = useState<boolean | null>(null);
   const [unlockedLocal, setUnlockedLocal] = useState<boolean | null>(null);
@@ -129,6 +137,30 @@ const Bespoke: React.FC = () => {
               <p className="text-accent text-lg md:text-2xl font-display italic tracking-[0.2em] font-light mt-4">
                 Arriving Soon
               </p>
+
+              {stats && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1, duration: 0.8 }}
+                  className="mt-12 group relative"
+                >
+                  <div className="absolute inset-0 bg-accent/5 blur-xl -z-10 group-hover:bg-accent/10 transition-colors" />
+                  <div className="border-y border-white/5 py-8 flex flex-col items-center">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse shadow-[0_0_10px_rgba(212,175,55,0.8)]" />
+                      <span className="text-neutral-500 text-[10px] uppercase tracking-[0.5em] font-mono">GLOBAL QUEUE</span>
+                    </div>
+                    <span className="block text-white text-6xl md:text-7xl font-bold font-mono tracking-tighter leading-none mb-2">
+                      {stats.waitlistPool}
+                    </span>
+                    <div className="flex flex-col items-center">
+                      <span className="text-accent text-[9px] uppercase tracking-[0.4em] font-bold">Identities in Queue</span>
+                      <div className="w-24 h-[1px] bg-gradient-to-r from-transparent via-accent/30 to-transparent mt-4" />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
             </motion.div>
             
             <motion.p 
@@ -355,10 +387,11 @@ const Bespoke: React.FC = () => {
                   
                   <div className="flex items-center justify-center gap-3 py-4 px-8 border border-accent bg-accent/5 rounded-full">
                     <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-                    <span className="text-[11px] text-accent font-bold uppercase tracking-[0.4em]">Position Secured</span>
+                    <span className="text-[11px] text-accent font-bold uppercase tracking-[0.4em]">STATUS: IN WAITLIST POOL</span>
                   </div>
 
                   <p className="mt-8 text-[10px] text-neutral-500 uppercase tracking-widest leading-relaxed">
+                    Identity verified as <span className="text-white">{(user?.pseudoName || user?.username || email || 'ANONYMOUS').toUpperCase()}</span>. <br/>
                     You will receive an encrypted signal via <span className="text-accent">{user?.email || email}</span> once the build phase initializes.
                   </p>
 
@@ -435,30 +468,33 @@ const Bespoke: React.FC = () => {
                     Account verified: <span className="text-white font-bold">{user.email}</span>. Click below to register this identity for early bespoke access.
                   </p>
                   
-                  <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                    <div className="relative">
-                      <input 
-                        type="email" 
-                        value={email}
-                        disabled
-                        className="w-full bg-white/5 border border-white/10 px-6 py-5 text-neutral-400 opacity-50 cursor-not-allowed rounded-sm uppercase tracking-widest text-[11px]"
-                      />
-                      {isSubmitting && (
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                          <RefreshCw className="w-5 h-5 text-accent animate-spin" />
-                        </div>
-                      )}
-                    </div>
-                    <motion.button 
-                      whileHover={{ backgroundColor: '#D4AF37', color: '#000' }}
-                      whileTap={{ scale: 0.98 }}
-                      disabled={isSubmitting}
-                      className="w-full py-5 border border-accent text-accent uppercase tracking-[0.4em] text-[11px] font-bold transition-all duration-500 flex items-center justify-center gap-3 disabled:opacity-50"
-                    >
-                      {isSubmitting ? 'Processing Signal...' : 'Initiate Early Access'}
-                      {!isSubmitting && <ArrowRight size={14} />}
-                    </motion.button>
-                  </form>
+                  <div className="flex flex-col gap-4">
+                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                      <div className="relative">
+                        <input 
+                          type="email" 
+                          value={email}
+                          disabled
+                          className="w-full bg-white/5 border border-white/10 px-6 py-5 text-neutral-400 opacity-50 cursor-not-allowed rounded-sm uppercase tracking-widest text-[11px]"
+                        />
+                        {isSubmitting && (
+                          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                            <RefreshCw className="w-5 h-5 text-accent animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                      
+                      <motion.button 
+                        whileHover={{ backgroundColor: '#D4AF37', color: '#000' }}
+                        whileTap={{ scale: 0.98 }}
+                        disabled={isSubmitting}
+                        className="w-full py-5 border border-accent text-accent uppercase tracking-[0.4em] text-[11px] font-bold transition-all duration-500 flex items-center justify-center gap-3 disabled:opacity-50"
+                      >
+                        {isSubmitting ? 'Processing Signal...' : 'Initiate Early Access'}
+                        {!isSubmitting && <ArrowRight size={14} />}
+                      </motion.button>
+                    </form>
+                  </div>
                 </>
               )}
         </motion.div>

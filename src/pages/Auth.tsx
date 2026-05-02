@@ -215,6 +215,11 @@ const Auth: React.FC = () => {
                   CO-CREATOR
                 </div>
               )}
+              {user.onWaitlist && (
+                <div className="absolute -bottom-2 -left-2 bg-white text-black text-[8px] font-bold px-2 py-0.5 rounded-full border border-black uppercase tracking-tighter">
+                  BESPOKE POOL
+                </div>
+              )}
             </div>
             
             <h3 className="text-2xl font-display font-bold tracking-tight mb-1 flex items-center justify-center gap-2">

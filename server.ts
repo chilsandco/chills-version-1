@@ -493,7 +493,7 @@ async function startServer() {
 
   app.post("/api/bespoke/waitlist", async (req, res) => {
     try {
-      const { email: rawEmail } = req.body;
+      const { email: rawEmail, pseudoName } = req.body;
       const email = (rawEmail || "").toLowerCase();
       if (!email) return res.status(400).json({ message: "Email is required" });
 
@@ -503,7 +503,7 @@ async function startServer() {
         return res.json({ success: true, message: "Waitlist signal received (Mock Mode)" });
       }
 
-      console.log(`[CHILS & CO.] Processing Bespoke join for: ${email}`);
+      console.log(`[CHILS & CO.] Processing Bespoke join for: ${email}`, { pseudoName });
 
       // Check if user already exists using explicit email search
       let customerId: number | null = null;
@@ -527,18 +527,24 @@ async function startServer() {
         console.warn("[CHILS & CO.] Search failed", err);
       }
 
+      const metaToUpdate = [
+        { key: "bespoke_waitlist", value: "true" }
+      ];
+      if (pseudoName) {
+        metaToUpdate.push({ key: "pseudo_name", value: pseudoName });
+      }
+
       if (customerId) {
         console.log(`[CHILS & CO.] Tagging customer ${customerId} for Bespoke waitlist.`);
         const response = await wc.put(`customers/${customerId}`, {
-          meta_data: [
-            { key: "bespoke_waitlist", value: "true" }
-          ]
+          meta_data: metaToUpdate
         });
         
         // Use the response data if available to return updated state
         const updatedCustomer = response.data;
         const waitlistMeta = updatedCustomer?.meta_data?.find((m: any) => String(m.key).toLowerCase() === "bespoke_waitlist");
         const unlockedMeta = updatedCustomer?.meta_data?.find((m: any) => String(m.key).toLowerCase() === "bespoke_unlocked");
+        const pseudoMeta = updatedCustomer?.meta_data?.find((m: any) => String(m.key).toLowerCase() === "pseudo_name");
         
         const isTrue = (val: any) => {
           if (typeof val === 'string') {
@@ -557,7 +563,8 @@ async function startServer() {
             id: customerId,
             email,
             onWaitlist: isTrue(waitlistMeta?.value),
-            bespokeUnlocked: isTrue(unlockedMeta?.value)
+            bespokeUnlocked: isTrue(unlockedMeta?.value),
+            pseudoName: pseudoMeta?.value || ''
           }
         });
       }
@@ -567,19 +574,19 @@ async function startServer() {
         const response = await wc.post("customers", {
           email,
           username: email.split('@')[0],
-          meta_data: [
-            { key: "bespoke_waitlist", value: "true" }
-          ]
+          meta_data: metaToUpdate
         });
         console.log(`[CHILS & CO.] Created new WooCommerce customer for Bespoke: ${email}`);
         res.json({ 
           success: true, 
           data: response.data, 
           onWaitlist: true,
+          pseudoName: pseudoName || '',
           user: {
             id: response.data.id,
             email,
-            onWaitlist: true
+            onWaitlist: true,
+            pseudoName: pseudoName || ''
           }
         });
       } catch (createError: any) {
@@ -594,14 +601,23 @@ async function startServer() {
             : null;
 
           if (exactMatch) {
-            await wc.put(`customers/${exactMatch.id}`, {
-              meta_data: [{ key: "bespoke_waitlist", value: "true" }]
+            const response = await wc.put(`customers/${exactMatch.id}`, {
+              meta_data: metaToUpdate
             });
+            const updatedCustomer = response.data;
+            const pseudoMeta = updatedCustomer?.meta_data?.find((m: any) => String(m.key).toLowerCase() === "pseudo_name");
             return res.json({ 
               success: true, 
               message: "Customer tagged via recovery.", 
               isExisting: true, 
-              onWaitlist: true 
+              onWaitlist: true,
+              pseudoName: pseudoMeta?.value || pseudoName || '',
+              user: {
+                id: exactMatch.id,
+                email,
+                onWaitlist: true,
+                pseudoName: pseudoMeta?.value || pseudoName || ''
+              }
             });
           }
           
@@ -684,31 +700,41 @@ async function startServer() {
     }
   });
 
-  app.get("/api/cocreator/stats", async (req, res) => {
+  app.get("/api/stats", async (req, res) => {
     try {
       const wc = getWooCommerce();
-      if (!wc) return res.json({ interestCount: 42 }); // Mock count
+      if (!wc) return res.json({ waitlistPool: 0, coCreators: 0 });
 
-      // Fetch customers with co_creator_interest = true
-      // We use per_page=1 and check X-WP-Total header for efficiency
-      const response = await wc.get("customers", {
-        role: "all",
-        per_page: 1,
-        // WooCommerce standard API doesn't filter perfectly by meta in GET, 
-        // usually requires additional plugins or custom code.
-        // We'll try common meta query parameters if supported or just return a sensible base + simulated growth
-      });
-      
+      // Logic: WooCommerce REST API maps to wp_users and wp_usermeta tables.
+      // We check x-wp-total for the absolute user count.
+      const response = await wc.get("customers", { per_page: 50 });
       const totalUsers = parseInt(response.headers['x-wp-total'] || '0', 10);
-      
-      // Since we can't easily count specific meta without a custom WP endpoint,
-      // we'll use a portion of total users as an "interest" proxy or a base + growth
-      // In a real WP setup, you'd add a custom REST endpoint for this.
-      const interestCount = Math.max(182, Math.floor(totalUsers * 0.4) + 182);
+      const customers = response.data || [];
 
-      res.json({ interestCount });
+      // Calculate real ratios from the last 50 participants
+      const waitlistCount = customers.filter((c: any) => 
+        c.meta_data?.some((m: any) => String(m.key).toLowerCase() === "bespoke_waitlist" && String(m.value) === "true")
+      ).length;
+
+      const coCreatorCount = customers.filter((c: any) => 
+        c.meta_data?.some((m: any) => String(m.key).toLowerCase() === "co_creator_interest" && String(m.value) === "true")
+      ).length;
+
+      // Projecting the ratio to the total user base (more accurate than hardcoded inflation)
+      const ratioWaitlist = customers.length > 0 ? waitlistCount / customers.length : 0;
+      const ratioCoCreator = customers.length > 0 ? coCreatorCount / customers.length : 0;
+
+      const realWaitlist = Math.floor(totalUsers * ratioWaitlist);
+      const realCoCreators = Math.floor(totalUsers * ratioCoCreator);
+
+      res.json({ 
+        waitlistPool: realWaitlist || waitlistCount, 
+        coCreators: realCoCreators || coCreatorCount,
+        totalBase: totalUsers
+      });
     } catch (error) {
-      res.json({ interestCount: 182 });
+      console.error("[CHILS & CO.] Stats Fetch Error:", error);
+      res.json({ waitlistPool: 0, coCreators: 0 });
     }
   });
 

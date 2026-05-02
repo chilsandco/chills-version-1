@@ -183,15 +183,15 @@ const CoCreator: React.FC = () => {
   const [hasAutoPopulated, setHasAutoPopulated] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
   const [coCreatorInterestLocal, setCoCreatorInterestLocal] = useState<boolean | null>(null);
-  const [interestCount, setInterestCount] = useState<number>(182);
+  const [stats, setStats] = useState<{waitlistPool: number, coCreators: number} | null>(null);
 
   const coCreatorInterest = user?.coCreatorInterest || coCreatorInterestLocal || submitted;
 
   const fetchStats = async () => {
     try {
-      const response = await fetch('/api/cocreator/stats');
+      const response = await fetch('/api/stats');
       const data = await response.json();
-      if (data.interestCount) setInterestCount(data.interestCount);
+      if (data) setStats(data);
     } catch (err) {
       console.warn("Failed to fetch stats", err);
     }
@@ -199,7 +199,7 @@ const CoCreator: React.FC = () => {
 
   useEffect(() => {
     fetchStats();
-    // Poll every 30 seconds for "real-time" feel
+    // Poll every 30 seconds
     const interval = setInterval(fetchStats, 30000);
     return () => clearInterval(interval);
   }, []);
@@ -331,7 +331,33 @@ const CoCreator: React.FC = () => {
               It's a system.
             </h1>
 
-            <div className="max-w-xl mx-auto space-y-4">
+            {stats && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1 }}
+                className="mt-8 group"
+              >
+                <div className="border-y border-white/5 py-10 flex flex-col items-center">
+                  <div className="flex items-center gap-4 mb-3">
+                    <div className="relative">
+                      <div className="w-2 h-2 bg-accent rounded-full animate-ping absolute inset-0" />
+                      <div className="w-2 h-2 bg-accent rounded-full relative" />
+                    </div>
+                    <span className="text-neutral-500 text-[10px] uppercase tracking-[0.6em] font-mono">CREATOR NETWORK</span>
+                  </div>
+                  <span className="block text-white text-7xl md:text-8xl font-bold font-mono tracking-tighter leading-none mb-3 drop-shadow-[0_0_25px_rgba(255,255,255,0.1)]">
+                    {stats.coCreators}
+                  </span>
+                  <div className="flex flex-col items-center">
+                    <span className="text-accent text-[11px] uppercase tracking-[0.5em] font-bold">Active Creators</span>
+                    <p className="text-[9px] text-neutral-600 uppercase tracking-widest mt-4">Sector 01 // Alpha Distribution</p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
+            <div className="max-w-xl mx-auto space-y-4 pt-8">
               <p className="text-neutral-400 text-lg font-light leading-relaxed normal-case">
                 You don’t just wear the brand. <br />
                 <span className="text-white uppercase font-bold tracking-tighter text-2xl">You build it.</span>
@@ -580,9 +606,11 @@ const CoCreator: React.FC = () => {
               >
                 <div className="inline-block p-6 border border-accent/20 bg-accent/5 rounded-full mb-10 shadow-[0_0_40px_rgba(212,175,55,0.05)] text-accent relative">
                   <Fingerprint size={48} strokeWidth={1} />
-                  <div className="absolute -top-2 -right-2 bg-accent text-black text-[9px] font-bold px-2 py-1 rounded-full animate-pulse">
-                    {interestCount}
-                  </div>
+                  {stats && (
+                    <div className="absolute -top-2 -right-2 bg-accent text-black text-[9px] font-bold px-2 py-1 rounded-full animate-pulse shadow-[0_0_15px_rgba(212,175,55,0.4)]">
+                      {stats.coCreators}
+                    </div>
+                  )}
                 </div>
                 <h2 className="text-6xl md:text-8xl font-display font-bold uppercase tracking-tighter text-white mb-8">Show Some Love</h2>
                 <div className="space-y-2 mb-16">
@@ -637,37 +665,40 @@ const CoCreator: React.FC = () => {
               >
                 <div className="w-32 h-32 bg-accent rounded-full flex items-center justify-center mx-auto mb-8 shadow-[0_0_80px_rgba(212,175,55,0.3)] relative">
                   <CheckCircle2 className="text-black" size={48} />
-                  <div className="absolute -top-2 -right-2 bg-white text-black text-[10px] font-bold px-3 py-1 rounded-full border-2 border-black">
-                    {interestCount}
-                  </div>
+                  {stats && (
+                    <div className="absolute -top-3 -right-3 bg-white text-black text-[11px] font-black px-3 py-1 rounded-full border-4 border-black shadow-[0_0_20px_rgba(255,255,255,0.2)]">
+                      {stats.coCreators}
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-6">
-                  <h2 className="text-6xl md:text-8xl font-display font-bold uppercase tracking-tighter text-white uppercase italic leading-none">Signal Received</h2>
+                  <h2 className="text-6xl md:text-8xl font-display font-bold uppercase tracking-tighter text-white uppercase italic leading-none">Author Registered</h2>
                   <div className="flex items-center justify-center gap-4">
                     <div className="w-12 h-[1px] bg-accent/30" />
                     <div className="flex items-center gap-3">
                       <div className="w-2.5 h-2.5 bg-accent rounded-full animate-pulse shadow-[0_0_15px_rgba(212,175,55,0.5)]" />
-                      <span className="text-[13px] text-accent font-bold uppercase tracking-[0.8em]">Sector 04 // Priority Secured</span>
+                      <span className="text-[13px] text-accent font-bold uppercase tracking-[0.8em]">PROTOCOL // {pseudoName || 'IDENTITY'} SECURED</span>
                     </div>
                     <div className="w-12 h-[1px] bg-accent/30" />
                   </div>
                 </div>
                 <p className="text-neutral-500 font-light max-w-xl mx-auto text-xl leading-relaxed normal-case px-6">
-                  Your identity has been queued for recursive verification. An encrypted signal will be dispatched once the co-creation system initializes for your sector.
+                  Your pseudo-identity for passive authorship has been secured. You will be notified when the artifact submission portal opens for your design extractions.
                 </p>
                 <div className="pt-12 border-t border-white/5 max-w-md mx-auto space-y-2">
                    <p className="text-[10px] text-neutral-600 uppercase tracking-[0.5em] font-mono leading-relaxed">
-                     Monitoring node:
+                     AUTHORSHIP STATUS:
                    </p>
-                   <p className="text-white text-xs font-mono uppercase tracking-widest">chils_and_co.internal.alpha_node_01</p>
+                   <p className="text-white text-xs font-mono uppercase tracking-widest italic">ACTIVE PROTOCOL: {pseudoName}</p>
                 </div>
                 
                 {user && (
                   <button 
                     onClick={() => refreshUser()}
                     className="mt-8 text-[10px] text-accent font-bold uppercase tracking-widest flex items-center gap-2 mx-auto hover:underline"
+                    title="Refresh your local profile to see updated badges"
                   >
-                    <RefreshCw size={12} /> Sync Profile Status
+                    <RefreshCw size={12} /> SYNC SYSTEM BADGES
                   </button>
                 )}
               </motion.div>
