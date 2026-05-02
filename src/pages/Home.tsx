@@ -4,7 +4,7 @@ import ProductCard from '../components/ProductCard';
 import { Product } from '../types';
 import { motion } from 'motion/react';
 import { ArrowRight, RefreshCw, Smartphone, Monitor, Watch } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { AnimatePresence, useInView } from 'motion/react';
 
 const contexts = [
@@ -17,242 +17,186 @@ const contexts = [
 ];
 
 const PhilosophySystem: React.FC = () => {
-  const [step, setStep] = useState(0);
   const [contextIndex, setContextIndex] = useState(0);
-  const [isCycling, setIsCycling] = useState(false);
   const scrollRef = useRef(null);
   const isInView = useInView(scrollRef, { once: true, amount: 0.2 });
-  const [hasStarted, setHasStarted] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isFlickering, setIsFlickering] = useState(false);
 
-  // Animation Sequence Controller
+  // Continuous loop for context artifact
   useEffect(() => {
-    if (!isInView || hasStarted) return;
-    setHasStarted(true);
-
-    const sequence = async () => {
-      // Step 1: Identity
-      setStep(1); 
-      await new Promise(r => setTimeout(r, 1800));
-      
-      // Step 2: Builders
-      setStep(2); 
-      await new Promise(r => setTimeout(r, 1800));
-      
-      // Step 3: Belief
-      setStep(3); 
-      await new Promise(r => setTimeout(r, 2200));
-
-      // Step 4: Bridge Reveal
-      setStep(4);
-      await new Promise(r => setTimeout(r, 2000));
-      
-      // Step 5: Artifact & Context Cycle
-      setStep(5);
-      setIsCycling(true);
-      
-      // Run two full cycles for engagement
-      for (let cycle = 0; cycle < 2; cycle++) {
-        for (let i = 0; i < contexts.length; i++) {
-          setContextIndex(i);
-          await new Promise(r => setTimeout(r, 1000));
-        }
-      }
-      
-      setIsCycling(false);
-      await new Promise(r => setTimeout(r, 500));
-      
-      // Step 6: Emotional Drop
-      setStep(6);
-      await new Promise(r => setTimeout(r, 2500));
-      
-      // Step 7: Final Signature
-      setStep(7);
-    };
-
-    sequence();
-  }, [isInView, hasStarted]);
+    const interval = setInterval(() => {
+      setIsFlickering(true);
+      setTimeout(() => {
+        setContextIndex((prev) => (prev + 1) % contexts.length);
+        setIsFlickering(false);
+      }, 100);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
-    <section ref={scrollRef} className="py-32 md:py-64 bg-black flex items-center justify-center p-6 relative overflow-hidden" id="philosophy">
-      {/* Background Lighting System */}
-      <motion.div 
-        animate={{ 
-          backgroundColor: isCycling ? contexts[contextIndex].color : "rgba(0,0,0,0)",
-        }}
-        transition={{ duration: 1.5, ease: "easeInOut" }}
-        className="absolute inset-0 z-0"
-      />
-      
-      {/* Ambient Glow Shifting */}
-      <AnimatePresence>
-        {isCycling && (
-          <motion.div
-            key={contextIndex}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 0.25, scale: 1.2 }}
-            exit={{ opacity: 0, scale: 1.5 }}
-            transition={{ duration: 2, ease: "easeInOut" }}
-            style={{ backgroundColor: contexts[contextIndex].light }}
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[100vw] rounded-full blur-[200px] pointer-events-none"
-          />
-        )}
-      </AnimatePresence>
-
-      <div className="max-w-5xl w-full flex flex-col items-center gap-24 relative z-10">
-        
-        {/* Top Section: The Manifesto Build */}
-        <div className="space-y-12 w-full text-center">
-          <div className="space-y-4">
-            <motion.h3 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: step >= 1 ? 1 : 0, y: step >= 1 ? 0 : 20 }}
-              transition={{ duration: 1.2, ease: "easeOut" }}
-              className="text-4xl md:text-6xl font-display font-medium tracking-tighter text-white"
-            >
-              Designed by techies.
-            </motion.h3>
-            
-            <motion.p 
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: step >= 2 ? 1 : 0, y: step >= 2 ? 0 : 15 }}
-              transition={{ duration: 1.2, ease: "easeOut" }}
-              className="text-xl md:text-3xl font-display font-light text-neutral-400 tracking-tight"
-            >
-              For those who build, ship, and iterate.
-            </motion.p>
-          </div>
-
-          <div className="space-y-6">
-            <motion.p 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: step >= 3 ? 1 : 0 }}
-              transition={{ duration: 1.5 }}
-              className="text-3xl md:text-5xl font-display font-light text-white tracking-tighter"
-            >
-              We believe clothing should move with you — <br className="hidden md:block" />
-              <span className="text-white/40">through every context, without interruption.</span>
-            </motion.p>
-
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: step >= 4 ? 1 : 0, scale: step >= 4 ? 1 : 0.98 }}
-              transition={{ duration: 1.5 }}
-              className="py-4"
-            >
-              <p className="text-accent text-xl md:text-3xl font-bold uppercase tracking-[0.5em] italic">
-                From work to everything after.
-              </p>
-            </motion.div>
-          </div>
-        </div>
-
-        {/* Center Section: THE ARTIFACT */}
+    <div ref={scrollRef} id="philosophy" className="bg-black">
+      {/* SECTION 1: THE SYSTEM (3-COLUMN SPLIT) */}
+      <section className="min-h-screen flex items-center justify-center p-8 md:p-24 relative overflow-hidden">
         <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: step >= 5 ? 1 : 0, scale: step >= 5 ? 1 : 0.9 }}
-          transition={{ duration: 2, ease: "easeOut" }}
-          className="relative flex flex-col items-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: isInView ? 1 : 0 }}
+          transition={{ duration: 2.5, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full max-w-7xl grid grid-cols-1 md:grid-cols-12 gap-16 md:gap-8 items-start relative z-10"
         >
-          <motion.div 
-            animate={{ 
-              y: [0, -10, 0],
-              rotate: [0, 0.5, 0]
-            }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="w-56 h-72 md:w-80 md:h-[420px] bg-neutral-900/40 backdrop-blur-3xl border border-white/10 relative group flex items-center justify-center p-12 rounded-sm shadow-[0_40px_100px_rgba(0,0,0,0.8)]"
-          >
-            {/* Inner "Breathing" Glow */}
-            <div className="absolute inset-0 bg-gradient-to-t from-accent/5 to-transparent opacity-50" />
-            
-            {/* The Silhouette Shape - Real Image Artifact */}
-            <div className="relative z-10 w-full h-full flex items-center justify-center p-4">
+          {/* LEFT: IDENTITY (STATIC) */}
+          <div className="md:col-span-4 space-y-12 pt-4">
+            <div className="space-y-8">
+              <p className="text-accent text-base md:text-xl font-display font-medium tracking-[0.4em] uppercase">Our Philosophy</p>
+              <div className="space-y-4">
+                <h3 className="text-4xl md:text-5xl font-display font-bold text-white tracking-tighter leading-none">
+                  Designed by techies.
+                </h3>
+                <p className="text-xl md:text-2xl text-white/40 font-display font-light leading-snug tracking-tight">
+                  For those who build, <br />
+                  ship, and iterate.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* CENTER: ARTIFACT (CORE VISUAL) - CONTINUOUS */}
+          <div className="md:col-span-4 flex flex-col items-center justify-center relative py-12">
+            <motion.div
+              animate={{ y: [0, -15, 0] }}
+              transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
+              className="relative"
+            >
               <img 
-                src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1777713945/ChatGPT_Image_May_2_2026_12_32_59_PM_xzhxrr.png" 
-                alt="The Chils Artifact" 
-                className="max-w-full max-h-full object-contain filter brightness-110 contrast-105 drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]"
+                src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1777715200/a50f35f2-0d3c-411b-8695-82ada5d97bd5_20260502_151543_0000_u5fzyj.png" 
+                alt="System Artifact" 
+                className={`w-64 md:w-[32vw] max-w-lg h-auto object-contain brightness-110 drop-shadow-[0_40px_100px_rgba(0,0,0,0.8)] transition-opacity duration-100 ${isFlickering ? 'opacity-80' : 'opacity-100'}`}
                 referrerPolicy="no-referrer"
               />
-            </div>
-            
-            {/* Micro Context Terminal */}
-            <div className="absolute bottom-8 left-0 right-0 flex flex-col items-center gap-2">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={contextIndex}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
-                  transition={{ duration: 0.3 }}
-                  className="flex items-center gap-2"
-                >
-                  <span className="w-1 h-1 bg-accent rounded-full animate-pulse" />
-                  <span className="text-[10px] uppercase tracking-[0.7em] font-mono font-bold text-accent">
-                    {contexts[contextIndex].name}
-                  </span>
-                </motion.div>
-              </AnimatePresence>
-              <div className="w-16 h-[1px] bg-white/10" />
-            </div>
-          </motion.div>
 
-          <p className="text-neutral-600 text-[9px] uppercase tracking-[0.8em] font-mono mt-8">
-            Adaptive Logic Processor // v1.0
-          </p>
+              {/* DESKTOP ONLY: ON-SHIRT CONTEXT OVERLAY */}
+              <div className="absolute inset-0 hidden md:flex items-center justify-center">
+                <div className="mt-[-15%] pointer-events-none select-none flex flex-col items-center gap-4">
+                  {/* Constant Anchor */}
+                  <span className="text-[10px] md:text-[11px] font-mono tracking-[0.5em] text-white/20 uppercase">
+                    BUILT FOR EVERY CONTEXT
+                  </span>
+                  
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={contextIndex}
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: isFlickering ? [0.1, 0.6, 0.4] : 0.6, scale: 1 }}
+                      exit={{ opacity: 0, transition: { duration: 0.2 } }}
+                      transition={{ duration: 0.4 }}
+                      className="flex flex-col items-center"
+                    >
+                      <span className="text-[14px] md:text-[16px] font-mono tracking-[1.2rem] text-accent font-bold uppercase mix-blend-overlay">
+                        {contexts[contextIndex].name}
+                      </span>
+                    </motion.div>
+                  </AnimatePresence>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* MOBILE ONLY: ATTACHED CONTEXT LAYER (BELOW SHIRT) */}
+            <div className="flex md:hidden flex-col items-center mt-12 space-y-4 text-center">
+              <span className="text-[10px] font-mono tracking-[0.4em] text-white/30 uppercase">
+                BUILT FOR EVERY CONTEXT
+              </span>
+              <div className="h-8 flex items-center justify-center">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={contextIndex}
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex flex-col items-center"
+                  >
+                    <span className="text-xl font-mono tracking-[0.8em] text-accent font-bold uppercase">
+                      {contexts[contextIndex].name}
+                    </span>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT: BELIEF (DYNAMIC TEXT) */}
+          <div className="md:col-span-4 flex flex-col md:items-end md:text-right space-y-10 md:pt-4">
+            <p className="text-3xl md:text-[2.5rem] font-display font-light text-white tracking-tighter leading-[1.05] max-w-sm">
+              We believe clothing should <br />
+              move with you — <br />
+              <span className="text-white/20 italic font-extra-light">through every context, without interruption.</span>
+            </p>
+            
+            <div className="pt-6 border-t border-white/10 w-full md:w-auto">
+              <p className="text-accent text-[13px] md:text-[15px] font-bold uppercase tracking-[0.6em] leading-tight">
+                FROM WORK TO <br /> EVERYTHING AFTER.
+              </p>
+            </div>
+          </div>
         </motion.div>
 
-        {/* Bottom Section: The Resolution */}
-        <div className="space-y-20 w-full text-center py-20">
-          <motion.h4 
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: step >= 6 ? 1 : 0, y: step >= 6 ? 0 : 30 }}
-            transition={{ duration: 1.5 }}
-            className="text-4xl md:text-7xl font-display font-bold tracking-tighter text-white"
-          >
-            Built for the moments <br />
-            that give you <span className="text-accent italic">chils.</span>
-          </motion.h4>
+        {/* Ambient Glow */}
+        <div 
+          className="absolute inset-0 transition-colors duration-2000 blur-[180px] opacity-[0.04] pointer-events-none"
+          style={{ backgroundColor: contexts[contextIndex].light }} 
+        />
+      </section>
 
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: step >= 7 ? 1 : 0 }}
+      {/* SECTION 2: THE SIGNATURE (STANDALONE) */}
+      <section className="py-16 md:py-20 flex flex-col items-center justify-center px-6 relative overflow-hidden bg-black">
+        <div className="text-center space-y-8 md:space-y-12">
+          <motion.p
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 0.5, y: 0 }}
+            viewport={{ once: true }}
             transition={{ duration: 2 }}
-            className="space-y-8"
+            className="text-4xl md:text-6xl font-display font-extra-light text-white tracking-[0.3em] uppercase"
           >
-            <div className="w-px h-24 bg-gradient-to-b from-white/0 via-white/20 to-accent mx-auto" />
-            <div className="space-y-2">
-              <p className="text-4xl md:text-6xl font-display font-light text-white tracking-widest uppercase">
-                Not just seen.
-              </p>
-              <p className="text-6xl md:text-9xl font-display font-black text-accent tracking-tighter uppercase italic drop-shadow-[0_0_40px_rgba(212,175,55,0.2)]">
+            Not just seen.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.98 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 3, delay: 0.5 }}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            className="relative cursor-default"
+          >
+            <h4 
+              className="text-7xl md:text-[12vw] font-display font-black tracking-tighter uppercase italic leading-none transition-all duration-1000 transform"
+              style={{ 
+                color: '#C5A028',
+                textShadow: isHovered ? '0 0 40px rgba(197, 160, 40, 0.15)' : 'none',
+                scale: isHovered ? 1.01 : 1
+              }}
+            >
+              <span className="relative inline-block overflow-hidden px-4">
                 Lived in.
-              </p>
-            </div>
+                
+                {/* Light Sweep Effect */}
+                <motion.div
+                  initial={{ x: '-150%' }}
+                  animate={isHovered ? { x: '250%' } : { x: '-150%' }}
+                  transition={{ duration: 1.5, ease: "easeInOut" }}
+                  className="absolute inset-0 top-[-100%] bottom-[-100%] w-64 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[-30deg] pointer-events-none"
+                  style={{ mixBlendMode: 'soft-light' }}
+                />
+              </span>
+            </h4>
           </motion.div>
         </div>
-      </div>
-
-      {/* Progress Indicator - Software Style */}
-      <div className="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col gap-4">
-        {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-          <div 
-            key={i} 
-            className={`w-1 transition-all duration-700 ${step >= i ? 'h-8 bg-accent' : 'h-2 bg-white/10'}`} 
-          />
-        ))}
-      </div>
-
-      {/* OS Style Context Switching bars - UI layer */}
-      {isCycling && (
-        <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex gap-1">
-          {contexts.map((_, i) => (
-            <div 
-              key={i} 
-              className={`h-[1px] w-8 transition-all duration-500 ${i === contextIndex ? 'bg-accent w-12' : 'bg-white/10'}`} 
-            />
-          ))}
-        </div>
-      )}
-    </section>
+      </section>
+      
+      <div className="absolute inset-0 opacity-[0.02] pointer-events-none mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-[length:128px_128px]" />
+    </div>
   );
 };
 
@@ -260,6 +204,16 @@ const Home: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasSeenSustainability, setHasSeenSustainability] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash === '#philosophy') {
+      setTimeout(() => {
+        const el = document.getElementById('philosophy');
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      }, 500); // Small delay to ensure component is rendered
+    }
+  }, [location.hash]);
 
   useEffect(() => {
     const seen = sessionStorage.getItem('chils_sustainability_seen');
