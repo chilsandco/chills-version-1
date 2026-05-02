@@ -206,6 +206,8 @@ const Auth: React.FC = () => {
   if (isAuthenticated && user) {
     const hasCoCreatorBadge = isFlagActive(user.coCreatorInterest);
     const hasWaitlistBadge = isFlagActive(user.onWaitlist);
+    const adminEmails = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
+    const isAdmin = adminEmails.some(email => email.toLowerCase() === user.email.toLowerCase());
 
     return (
       <div className="min-h-screen pt-36 md:pt-32 pb-24 px-6">
@@ -217,7 +219,7 @@ const Auth: React.FC = () => {
             className="bg-white/5 border border-white/10 p-12 text-center rounded-sm h-fit"
           >
             <div className="relative inline-block mb-6">
-              <div className="w-24 h-24 bg-white text-black rounded-full flex items-center justify-center text-4xl font-bold mx-auto">
+              <div className="w-24 h-24 bg-white text-black rounded-full flex items-center justify-center text-4xl font-bold mx-auto shadow-[0_0_20px_rgba(255,255,255,0.1)]">
                 {(user.pseudoName || user.username || 'U').charAt(0).toUpperCase()}
               </div>
               <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-4 border-black rounded-full" />
@@ -240,20 +242,42 @@ const Auth: React.FC = () => {
             <p className="text-[10px] text-white/40 tracking-widest uppercase mb-10">{user.email}</p>
             
             <div className="space-y-4">
-              <button 
-                onClick={() => navigate('/collection')}
-                className="w-full border border-white/20 py-4 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
-              >
-                BROWSE PRODUCTS
-                <ExternalLink size={12} />
-              </button>
-              <button 
-                onClick={() => logout()}
-                className="w-full bg-white text-black py-4 text-[10px] font-bold tracking-[0.3em] uppercase flex items-center justify-center gap-2 hover:bg-white/90 transition-colors"
-              >
-                <LogOut size={14} />
-                LOG OUT
-              </button>
+              {isAdmin && (
+                <div className="pt-4 mt-4 border-t border-white/10 space-y-3">
+                  <p className="text-[9px] text-accent font-bold tracking-[0.2em] uppercase text-left mb-2">Admin Console</p>
+                  <button 
+                    onClick={() => navigate('/console/bespoke')}
+                    className="w-full bg-accent text-black py-4 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-accent/90 transition-colors flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(212,175,55,0.2)]"
+                  >
+                    BESPOKE SIGNALS
+                    <ExternalLink size={12} />
+                  </button>
+                  <button 
+                    onClick={() => navigate('/console/orders')}
+                    className="w-full border border-accent/40 text-accent py-4 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-accent/5 transition-colors flex items-center justify-center gap-2"
+                  >
+                    ORDER SIGNALS
+                    <ExternalLink size={12} />
+                  </button>
+                </div>
+              )}
+
+              <div className="pt-4 mt-4 border-t border-white/10 space-y-3">
+                <button 
+                  onClick={() => navigate('/collection')}
+                  className="w-full border border-white/20 py-4 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
+                >
+                  BROWSE PRODUCTS
+                  <ExternalLink size={12} />
+                </button>
+                <button 
+                  onClick={() => logout()}
+                  className="w-full bg-white text-black py-4 text-[10px] font-bold tracking-[0.3em] uppercase flex items-center justify-center gap-2 hover:bg-white/90 transition-colors"
+                >
+                  <LogOut size={14} />
+                  LOG OUT
+                </button>
+              </div>
             </div>
           </motion.div>
 

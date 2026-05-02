@@ -944,9 +944,34 @@ async function startServer() {
       });
 
       if (Array.isArray(response.data)) {
-        const waitlisted = response.data.filter((c: any) => 
-          c.meta_data?.some((m: any) => m.key === "bespoke_waitlist" && m.value === "true")
-        );
+        const getMetaValue = (metaData: any[], key: string) => {
+          const match = metaData?.find((m: any) => {
+            const k = String(m.key).toLowerCase();
+            return k === key || k === `_${key}` || k === key.replace(/_/g, '-');
+          });
+          return match?.value;
+        };
+
+        const isTrue = (val: any) => {
+          if (val === true || val === 1 || val === '1') return true;
+          if (typeof val === 'string') {
+            const v = val.trim().toLowerCase();
+            return v === 'true' || v === 'yes' || v === 'on' || v === 'active';
+          }
+          return false;
+        };
+
+        const waitlisted = response.data
+          .filter((c: any) => isTrue(getMetaValue(c.meta_data, "bespoke_waitlist")))
+          .map((c: any) => ({
+            id: c.id,
+            email: c.email,
+            billing_email: c.billing?.email || c.email,
+            username: c.username,
+            date_created: c.date_created,
+            pseudo_name: getMetaValue(c.meta_data, "pseudo_name") || "",
+            is_co_creator: isTrue(getMetaValue(c.meta_data, "co_creator_interest"))
+          }));
         return res.json(waitlisted);
       }
       

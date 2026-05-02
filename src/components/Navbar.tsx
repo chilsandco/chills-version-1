@@ -126,6 +126,12 @@ const Navbar: React.FC = () => {
     { name: 'PHILOSOPHY', path: '/#philosophy' },
   ];
 
+  const adminLinks = isAdmin ? [
+    { name: 'SIGNALS', path: '/console/bespoke' }
+  ] : [];
+
+  const allLinks = [...navLinks, ...adminLinks];
+
   const isHome = location.pathname === '/';
 
   return (
@@ -147,8 +153,12 @@ const Navbar: React.FC = () => {
 
         {/* Left: Desktop Links */}
         <div className="hidden md:flex gap-8 items-center">
-          {navLinks.map(link => (
-            <Link key={link.name} to={link.path} className="text-[11px] tracking-[0.2em] font-medium hover:opacity-50 transition-opacity">
+          {allLinks.map(link => (
+            <Link 
+              key={link.name} 
+              to={link.path} 
+              className={`text-[11px] tracking-[0.2em] font-medium transition-opacity ${link.name === 'SIGNALS' ? 'text-accent hover:opacity-100' : 'text-neutral-400 hover:text-white'}`}
+            >
               {link.name}
             </Link>
           ))}
@@ -248,12 +258,12 @@ const Navbar: React.FC = () => {
               </button>
             </div>
             <div className="flex flex-col gap-8 mt-12">
-              {navLinks.map(link => (
+              {allLinks.map(link => (
                 <Link
                   key={link.name}
                   to={link.path}
                   onClick={() => setIsMenuOpen(false)}
-                  className="text-4xl font-display font-bold tracking-tighter"
+                  className={`text-4xl font-display font-bold tracking-tighter ${link.name === 'SIGNALS' ? 'text-accent' : 'text-white'}`}
                 >
                   {link.name}
                 </Link>

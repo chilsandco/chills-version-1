@@ -41,7 +41,10 @@ const BespokeSignals: React.FC = () => {
     // Prepare data for export
     const dataToExport = waitlist.map(customer => ({
       ID: customer.id,
-      Email: customer.email,
+      'Registered Email': customer.email,
+      'Billing/Waitlist Email': customer.billing_email || customer.email,
+      'Pseudo Name': customer.pseudo_name || 'N/A',
+      'Co-Creator': customer.is_co_creator ? 'Yes' : 'No',
       'Registration Date': new Date(customer.date_created).toLocaleDateString(),
       Status: 'Waitlisted'
     }));
@@ -117,8 +120,15 @@ const BespokeSignals: React.FC = () => {
             className="p-8 border border-neutral-900 bg-neutral-950/50 hover:border-accent/40 transition-all group"
           >
             <div className="flex items-start justify-between mb-8">
-              <div className="w-12 h-12 bg-accent/10 border border-accent/20 flex items-center justify-center rounded-sm">
-                <User className="text-accent" size={20} />
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-accent/10 border border-accent/20 flex items-center justify-center rounded-sm">
+                  <User className="text-accent" size={20} />
+                </div>
+                {customer.is_co_creator && (
+                  <div className="bg-accent text-black text-[8px] font-bold px-2 py-0.5 rounded-full border border-black shadow-[0_0_10px_rgba(212,175,55,0.5)] uppercase">
+                    Co-Creator
+                  </div>
+                )}
               </div>
               <div className="text-right">
                 <p className="text-[9px] text-neutral-600 uppercase tracking-widest mb-1">Signal ID</p>
@@ -127,12 +137,31 @@ const BespokeSignals: React.FC = () => {
             </div>
 
             <div className="space-y-6">
-              <div>
-                <p className="text-[9px] text-neutral-600 uppercase tracking-widest mb-2">Metadata / Email</p>
-                <div className="flex items-center gap-3">
-                  <Mail size={14} className="text-neutral-700" />
-                  <p className="text-sm font-medium tracking-tight text-white group-hover:text-accent transition-colors">{customer.email}</p>
+              {customer.pseudo_name && (
+                <div>
+                  <p className="text-[9px] text-accent uppercase tracking-widest mb-1">Pseudo Name</p>
+                  <p className="text-lg font-display font-medium text-white tracking-tighter">"{customer.pseudo_name.toUpperCase()}"</p>
                 </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-4">
+                <div>
+                  <p className="text-[9px] text-neutral-600 uppercase tracking-widest mb-2">Registered Email</p>
+                  <div className="flex items-center gap-3">
+                    <Mail size={12} className="text-neutral-700" />
+                    <p className="text-[11px] font-medium tracking-tight text-white group-hover:text-accent transition-colors truncate">{customer.email}</p>
+                  </div>
+                </div>
+
+                {customer.billing_email && customer.billing_email !== customer.email && (
+                  <div>
+                    <p className="text-[9px] text-neutral-600 uppercase tracking-widest mb-2">Waitlist Email</p>
+                    <div className="flex items-center gap-3">
+                      <Mail size={12} className="text-neutral-700" />
+                      <p className="text-[11px] font-medium tracking-tight text-white/60 truncate">{customer.billing_email}</p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center justify-between pt-6 border-t border-neutral-900">
