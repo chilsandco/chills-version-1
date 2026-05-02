@@ -3,7 +3,7 @@ import Hero from '../components/Hero';
 import ProductCard from '../components/ProductCard';
 import { Product } from '../types';
 import { motion } from 'motion/react';
-import { ArrowRight, RefreshCw, Smartphone, Monitor, Watch, Layout } from 'lucide-react';
+import { ArrowRight, RefreshCw, Smartphone, Monitor, Watch } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, useInView } from 'motion/react';
 
@@ -164,9 +164,14 @@ const PhilosophySystem: React.FC = () => {
             {/* Inner "Breathing" Glow */}
             <div className="absolute inset-0 bg-gradient-to-t from-accent/5 to-transparent opacity-50" />
             
-            {/* The Silhouette Shape */}
-            <div className="relative z-10 w-full h-full flex items-center justify-center">
-              <Layout size={120} strokeWidth={0.5} className="text-white/10" />
+            {/* The Silhouette Shape - Real Image Artifact */}
+            <div className="relative z-10 w-full h-full flex items-center justify-center p-4">
+              <img 
+                src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1777713945/ChatGPT_Image_May_2_2026_12_32_59_PM_xzhxrr.png" 
+                alt="The Chils Artifact" 
+                className="max-w-full max-h-full object-contain filter brightness-110 contrast-105 drop-shadow-[0_0_30px_rgba(255,255,255,0.1)]"
+                referrerPolicy="no-referrer"
+              />
             </div>
             
             {/* Micro Context Terminal */}
