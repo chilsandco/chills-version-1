@@ -33,33 +33,42 @@ const Hero: React.FC = () => {
         <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] bg-[length:100%_2px,3px_100%] pointer-events-none opacity-20" />
       </motion.div>
 
+      {/* Static Logo Container */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+        <motion.div
+          style={{ opacity: contentOpacity, scale: contentScale }}
+          className="mb-64 md:mb-80" // Positioned above the text
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, filter: 'blur(10px)', rotate: 0 }}
+            animate={{ 
+              opacity: 1, 
+              scale: 1, 
+              filter: 'blur(0px)',
+              rotate: -360
+            }}
+            transition={{ 
+              opacity: { duration: 2, delay: 0.2, ease: [0.22, 1, 0.36, 1] },
+              scale: { duration: 2, delay: 0.2, ease: [0.22, 1, 0.36, 1] },
+              filter: { duration: 2, delay: 0.2, ease: [0.22, 1, 0.36, 1] },
+              rotate: { duration: 30, repeat: Infinity, ease: "linear" }
+            }}
+          >
+            <img 
+              src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png"
+              alt="CHILS & CO."
+              className="h-16 md:h-24 w-auto gold-icon"
+              referrerPolicy="no-referrer"
+            />
+          </motion.div>
+        </motion.div>
+      </div>
+
       {/* Overlay Content */}
       <motion.div 
         style={{ y: contentY, opacity: contentOpacity, scale: contentScale }}
-        className="relative z-10 text-center px-6 flex flex-col items-center"
+        className="relative z-10 text-center px-6 flex flex-col items-center pt-24"
       >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8, filter: 'blur(10px)', rotate: 0 }}
-          animate={{ 
-            opacity: 1, 
-            scale: 1, 
-            filter: 'blur(0px)',
-            rotate: -360
-          }}
-          transition={{ 
-            opacity: { duration: 2, delay: 0.2, ease: [0.22, 1, 0.36, 1] },
-            scale: { duration: 2, delay: 0.2, ease: [0.22, 1, 0.36, 1] },
-            filter: { duration: 2, delay: 0.2, ease: [0.22, 1, 0.36, 1] },
-            rotate: { duration: 20, repeat: Infinity, ease: "linear" }
-          }}
-        >
-          <img 
-            src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png"
-            alt="CHILS & CO."
-            className="h-16 md:h-24 w-auto mb-10 gold-icon"
-            referrerPolicy="no-referrer"
-          />
-        </motion.div>
         <motion.h1
           initial={{ opacity: 0, y: 40, filter: 'blur(10px)' }}
           animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
