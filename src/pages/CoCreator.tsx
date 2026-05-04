@@ -306,9 +306,9 @@ const CoCreator: React.FC = () => {
         }
         
         // Remove immediate refresh to prevent WooCommerce cache delay from overwriting local success
-        // setTimeout(() => {
-        //   refreshUser();
-        // }, 1000);
+        setTimeout(() => {
+          refreshUser();
+        }, 1000);
       } else {
         alert(data.message || 'Failed to process signal. Please try again.');
       }

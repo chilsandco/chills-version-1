@@ -121,7 +121,7 @@ const SignalDetails: React.FC = () => {
 
                     <div className="flex gap-4 mt-10">
                       <Link to="/collection" className="bg-white text-black px-8 py-3 text-[10px] tracking-widest font-bold uppercase hover:bg-accent transition-colors">Shop Again</Link>
-                      <button className="border border-white/10 px-8 py-3 text-[10px] tracking-widest font-bold uppercase hover:border-white transition-colors">Support</button>
+                      <a href="mailto:chilsandco@gmail.com" className="border border-white/10 px-8 py-3 text-[10px] tracking-widest font-bold uppercase hover:border-white transition-colors text-center inline-block">Support</a>
                     </div>
                  </div>
                </div>
@@ -283,7 +283,7 @@ const SignalDetails: React.FC = () => {
           <div className="p-8 border border-neutral-900 text-center">
             <p className="text-[9px] text-neutral-600 uppercase tracking-[0.3em] leading-relaxed">
               Need assistance?<br/>
-              <span className="text-white hover:text-accent cursor-pointer transition-colors mt-2 block">Support</span>
+              <a href="mailto:chilsandco@gmail.com" className="text-white hover:text-accent transition-colors mt-2 block">Support</a>
             </p>
           </div>
         </div>

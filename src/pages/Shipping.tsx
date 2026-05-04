@@ -263,7 +263,7 @@ const Shipping: React.FC = () => {
                     <p className="text-[10px] text-neutral-500 uppercase tracking-widest">Our support team is here to help root-to-end.</p>
                 </div>
                 <a 
-                    href="mailto:support@chilsandco.com" 
+                    href="mailto:chilsandco@gmail.com" 
                     className="whitespace-nowrap flex items-center gap-2 group text-[11px] font-bold uppercase tracking-[0.3em] text-white hover:text-accent transition-colors"
                 >
                     Contact Support <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />

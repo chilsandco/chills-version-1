@@ -271,12 +271,20 @@ const Returns: React.FC = () => {
                     <h3 className="text-[11px] font-bold uppercase tracking-widest mb-1">Need Assistance?</h3>
                     <p className="text-[10px] text-neutral-500 uppercase tracking-widest">Our support team is active and ready to assist you root-to-end.</p>
                 </div>
-                <Link 
-                    to="/console/orders" 
-                    className="whitespace-nowrap flex items-center gap-2 group text-[11px] font-bold uppercase tracking-[0.3em] text-white hover:text-accent transition-colors"
-                >
-                    Orders Archive <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                </Link>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Link 
+                      to="/console/orders" 
+                      className="whitespace-nowrap flex items-center gap-2 group text-[11px] font-bold uppercase tracking-[0.3em] text-white hover:text-accent transition-colors"
+                  >
+                      Orders Archive <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  </Link>
+                  <a 
+                      href="mailto:chilsandco@gmail.com" 
+                      className="whitespace-nowrap flex items-center gap-2 group text-[11px] font-bold uppercase tracking-[0.3em] text-accent hover:text-white transition-colors"
+                  >
+                      Contact Support <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                  </a>
+                </div>
             </div>
         </section>
       </div>
