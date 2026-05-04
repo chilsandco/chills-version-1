@@ -194,18 +194,19 @@ const Auth: React.FC = () => {
     }
   };
 
-  const isFlagActive = (val: any) => {
+  const isFlagActive = (val: any, sessionKey?: string) => {
     if (val === true || val === 1 || val === '1') return true;
     if (typeof val === 'string') {
       const v = val.trim().toLowerCase();
-      return v === 'true' || v === 'yes' || v === 'active' || v === 'on';
+      if (v === 'true' || v === 'yes' || v === 'active' || v === 'on') return true;
     }
+    if (sessionKey && sessionStorage.getItem(sessionKey) === 'true') return true;
     return false;
   };
 
   if (isAuthenticated && user) {
-    const hasCoCreatorBadge = isFlagActive(user.coCreatorInterest);
-    const hasWaitlistBadge = isFlagActive(user.onWaitlist);
+    const hasCoCreatorBadge = isFlagActive(user.coCreatorInterest, 'chils_cocreator_interest');
+    const hasWaitlistBadge = isFlagActive(user.onWaitlist, 'chils_bespoke_waitlist');
     const adminEmails = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
     const isAdmin = adminEmails.some(email => email.toLowerCase() === user.email.toLowerCase());
 

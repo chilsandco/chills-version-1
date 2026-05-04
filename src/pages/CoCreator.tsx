@@ -208,7 +208,10 @@ const CoCreator: React.FC = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [hasAutoPopulated, setHasAutoPopulated] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
-  const [coCreatorInterestLocal, setCoCreatorInterestLocal] = useState<boolean | null>(null);
+  const [coCreatorInterestLocal, setCoCreatorInterestLocal] = useState<boolean | null>(() => {
+    const stored = sessionStorage.getItem('chils_cocreator_interest');
+    return stored === 'true' ? true : null;
+  });
   const [stats, setStats] = useState<{waitlistPool: number, coCreators: number} | null>(null);
 
   const coCreatorInterest = !!user?.coCreatorInterest || coCreatorInterestLocal === true || submitted;
@@ -240,16 +243,15 @@ const CoCreator: React.FC = () => {
         body: JSON.stringify({ email: emailToCheck })
       });
       const data = await response.json();
-      setCoCreatorInterestLocal(data.coCreatorInterest);
-      if (data.pseudoName) setPseudoName(data.pseudoName);
-      
-      // Update global user state if we found interest
       if (data.coCreatorInterest) {
+        setCoCreatorInterestLocal(true);
+        sessionStorage.setItem('chils_cocreator_interest', 'true');
         updateUser({ 
           coCreatorInterest: true, 
           pseudoName: data.pseudoName || pseudoName 
         });
       }
+      if (data.pseudoName) setPseudoName(data.pseudoName);
     } catch (err) {
       console.error("[CHILS & CO.] Status check error:", err);
     } finally {
@@ -287,6 +289,7 @@ const CoCreator: React.FC = () => {
       if (response.ok) {
         setSubmitted(true);
         setCoCreatorInterestLocal(true);
+        sessionStorage.setItem('chils_cocreator_interest', 'true');
         
         // Immediate local count update for "real-time" feel
         setStats(prev => prev ? { ...prev, coCreators: prev.coCreators + 1 } : prev);
@@ -306,9 +309,7 @@ const CoCreator: React.FC = () => {
         }
         
         // Remove immediate refresh to prevent WooCommerce cache delay from overwriting local success
-        setTimeout(() => {
-          refreshUser();
-        }, 1000);
+        // The local state is already updated via updateUser
       } else {
         alert(data.message || 'Failed to process signal. Please try again.');
       }

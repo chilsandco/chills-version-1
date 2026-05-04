@@ -28,8 +28,14 @@ const Bespoke: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const [onWaitlistLocal, setOnWaitlistLocal] = useState<boolean | null>(null);
-  const [unlockedLocal, setUnlockedLocal] = useState<boolean | null>(null);
+  const [onWaitlistLocal, setOnWaitlistLocal] = useState<boolean | null>(() => {
+    const stored = sessionStorage.getItem('chils_bespoke_waitlist');
+    return stored === 'true' ? true : null;
+  });
+  const [unlockedLocal, setUnlockedLocal] = useState<boolean | null>(() => {
+    const stored = sessionStorage.getItem('chils_bespoke_unlocked');
+    return stored === 'true' ? true : null;
+  });
 
   // Use waitlist status from user profile if available, otherwise use local checked status
   const onWaitlist = !!user?.onWaitlist || 
@@ -53,6 +59,8 @@ const Bespoke: React.FC = () => {
       if (data.onWaitlist) {
         setOnWaitlistLocal(true);
         setUnlockedLocal(!!data.bespokeUnlocked);
+        sessionStorage.setItem('chils_bespoke_waitlist', 'true');
+        if (data.bespokeUnlocked) sessionStorage.setItem('chils_bespoke_unlocked', 'true');
         
         // Sync global state
         updateUser({ 
@@ -99,6 +107,7 @@ const Bespoke: React.FC = () => {
       if (response.ok) {
         setSubmitted(true);
         setOnWaitlistLocal(true);
+        sessionStorage.setItem('chils_bespoke_waitlist', 'true');
         setIsExisting(!!data.isExisting);
         
         // Immediate local count update for "real-time" feel
@@ -111,10 +120,8 @@ const Bespoke: React.FC = () => {
           updateUser({ onWaitlist: true });
         }
         
-        // Wait 1 second before background refresh to allow WC indexing/caching
-        setTimeout(() => {
-          refreshUser();
-        }, 1000);
+        // Remove immediate refresh to prevent WooCommerce cache delay from overwriting local success
+        // The local state is already updated via updateUser
       } else {
         alert(data.message || 'Could not join the list. Please try again.');
       }

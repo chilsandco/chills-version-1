@@ -63,17 +63,18 @@ const OrderSignals: React.FC = () => {
     );
   }
 
-  const isFlagActive = (val: any) => {
+  const isFlagActive = (val: any, sessionKey?: string) => {
     if (val === true || val === 1 || val === '1') return true;
     if (typeof val === 'string') {
       const v = val.trim().toLowerCase();
-      return v === 'true' || v === 'yes' || v === 'on' || v === 'active';
+      if (v === 'true' || v === 'yes' || v === 'on' || v === 'active') return true;
     }
+    if (sessionKey && sessionStorage.getItem(sessionKey) === 'true') return true;
     return false;
   };
 
   const hasWaitlistBadge = isFlagActive(user?.onWaitlist);
-  const hasCoCreatorBadge = isFlagActive(user?.coCreatorInterest);
+  const hasCoCreatorBadge = isFlagActive(user?.coCreatorInterest, 'chils_cocreator_interest');
 
   return (
     <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen">

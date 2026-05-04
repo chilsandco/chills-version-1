@@ -886,6 +886,13 @@ async function startServer() {
       const wc = getWooCommerce();
       if (!wc) return res.json({ coCreatorInterest: false });
 
+      console.log(`[CHILS & CO.] Co-Creator status check search for: ${email}`);
+
+      // Add no-cache headers
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+
       let customer = null;
       const response = await wc.get("customers", { search: email });
       if (Array.isArray(response.data)) {
