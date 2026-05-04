@@ -92,21 +92,24 @@ const OrderSuccess: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row gap-6 justify-center">
-          <Link 
-            to="/console/orders" 
-            className="group flex items-center justify-center gap-3 px-12 py-5 border border-white text-[11px] tracking-[0.3em] font-bold uppercase bg-white text-black hover:bg-accent hover:border-accent transition-all"
-          >
-            Monitor Signals
-            <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform" />
-          </Link>
-          <Link 
-            to="/collection" 
-            className="group flex items-center justify-center gap-3 px-12 py-5 border border-neutral-800 text-[11px] tracking-[0.3em] font-bold uppercase hover:bg-white hover:text-black transition-all"
-          >
-            Exploring
-          </Link>
-        </div>
+          <div className="flex flex-col md:flex-row gap-6 justify-center">
+            <a 
+              href={`https://chilsandco-com-865405.hostingersite.com/wp-admin/admin-ajax.php?print-order=${orderId}&print-order-type=invoice&action=print_order`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group flex items-center justify-center gap-3 px-12 py-5 border border-accent text-[11px] tracking-[0.3em] font-bold uppercase bg-accent/5 text-accent hover:bg-accent hover:text-black transition-all"
+            >
+              Download Invoice
+              <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform" />
+            </a>
+            <Link 
+              to="/console/orders" 
+              className="group flex items-center justify-center gap-3 px-12 py-5 border border-white text-[11px] tracking-[0.3em] font-bold uppercase bg-white text-black hover:bg-accent hover:border-accent transition-all"
+            >
+              Monitor Signals
+              <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform" />
+            </Link>
+          </div>
       </motion.div>
     </div>
   );

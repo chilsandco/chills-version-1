@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ArrowUpRight, Activity, Clock, Box, Package } from 'lucide-react';
 import { Signal } from '../types';
 import { useAuth } from '../AuthContext';
@@ -9,6 +9,7 @@ const OrderSignals: React.FC = () => {
   const [signals, setSignals] = useState<Signal[]>([]);
   const [loading, setLoading] = useState(true);
   const { user, token } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchSignals = async () => {
@@ -158,14 +159,27 @@ const OrderSignals: React.FC = () => {
           >
             <div className="flex flex-col md:flex-row md:items-stretch bg-black border-b border-neutral-900 last:border-0 hover:bg-neutral-950 transition-all">
               {/* Left Column: Metadata */}
-              <Link 
-                to={`/console/orders/${signal.id}`}
-                className="flex-1 flex flex-col md:flex-row md:items-center justify-between p-8 gap-8"
+              <div 
+                onClick={() => navigate(`/console/orders/${signal.id}`)}
+                className="flex-1 flex flex-col md:flex-row md:items-center justify-between p-8 gap-8 cursor-pointer"
               >
                 <div className="flex flex-col md:flex-row md:items-center gap-8 md:gap-16">
                   <div className="w-40">
                     <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Order Identity</p>
-                    <p className="font-mono text-sm tracking-widest group-hover:text-accent transition-colors">#{signal.signalId}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-mono text-sm tracking-widest group-hover:text-accent transition-colors">#{signal.signalId}</p>
+                      <a 
+                        href={`https://chilsandco-com-865405.hostingersite.com/wp-admin/admin-ajax.php?print-order=${signal.id}&print-order-type=invoice&action=print_order`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                        className="text-[8px] text-neutral-500 hover:text-accent uppercase tracking-widest border border-neutral-800 px-1.5 py-0.5"
+                      >
+                        INV
+                      </a>
+                    </div>
                   </div>
                   
                   <div className="w-32">
@@ -196,7 +210,7 @@ const OrderSignals: React.FC = () => {
                     <ArrowUpRight size={16} />
                   </div>
                 </div>
-              </Link>
+              </div>
 
               {/* Right Column: Build Contents (Images & Names) */}
               <div className="md:w-1/3 bg-neutral-900/10 p-8 border-l border-neutral-900 flex flex-col justify-center">

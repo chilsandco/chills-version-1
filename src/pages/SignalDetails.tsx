@@ -79,14 +79,29 @@ const SignalDetails: React.FC = () => {
               </p>
             </div>
           </div>
-          <div className={`px-6 py-4 border rounded-sm ${isRefunded ? 'bg-red-500/5 border-red-500/20' : 'bg-neutral-950 border-neutral-900'}`}>
-            <p className={`text-[8px] tracking-[0.3em] uppercase mb-1 ${isRefunded ? 'text-red-500/50' : 'text-neutral-600'}`}>Status</p>
+          <div className="flex items-center gap-4">
+            {!isRefunded && (
+              <a 
+                href={`https://chilsandco-com-865405.hostingersite.com/wp-admin/admin-ajax.php?print-order=${signal.id}&print-order-type=invoice&action=print_order`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-6 py-4 border border-neutral-800 bg-neutral-950 hover:border-accent hover:text-accent transition-all text-center rounded-sm"
+              >
+                <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1">Documents</p>
+                <p className="text-[11px] font-bold uppercase tracking-widest flex items-center gap-2">
+                  Download Invoice
+                </p>
+              </a>
+            )}
+            <div className={`px-6 py-4 border rounded-sm ${isRefunded ? 'bg-red-500/5 border-red-500/20' : 'bg-neutral-950 border-neutral-900'}`}>
+              <p className={`text-[8px] tracking-[0.3em] uppercase mb-1 ${isRefunded ? 'text-red-500/50' : 'text-neutral-600'}`}>Status</p>
             <p className={`text-[11px] font-bold uppercase tracking-widest ${isRefunded ? 'text-red-500' : ''}`}>
                {isRefunded ? '✅ Refunded' : signal.status}
             </p>
           </div>
         </div>
-      </header>
+      </div>
+    </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
         <div className="lg:col-span-2 space-y-12">
