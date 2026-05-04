@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import Hero from '../components/Hero';
 import ProductCard from '../components/ProductCard';
 import EcoEngineeredLogo from '../components/EcoEngineeredLogo';
+import PromiseSection from '../components/PromiseSection';
 import { Product } from '../types';
 import { motion } from 'motion/react';
 import { ArrowRight, RefreshCw, Smartphone, Monitor, Watch } from 'lucide-react';
@@ -381,77 +382,7 @@ const Home: React.FC = () => {
 
       <PhilosophySystem />
 
-      {/* Our Promise Section - Progressive Reveal */}
-      <section id="promise" className="py-16 md:py-24 px-6 md:px-12 max-w-[1800px] mx-auto">
-        <motion.div
-           initial={{ opacity: 0, y: 30 }}
-           whileInView={{ opacity: 1, y: 0 }}
-           viewport={{ once: true }}
-           transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
-           className="mb-16"
-        >
-          <span className="text-accent text-[13px] uppercase tracking-[0.6em] mb-4 block font-bold">The Commitment</span>
-          <h2 className="text-4xl md:text-6xl font-display font-medium tracking-tighter uppercase">Our Promise</h2>
-        </motion.div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-start">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, filter: 'blur(20px)' }}
-            whileInView={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-            viewport={{ once: true }}
-            transition={{ duration: 2.5, ease: [0.22, 1, 0.36, 1] }}
-            className="relative aspect-[4/5] overflow-hidden group rounded-sm lg:sticky lg:top-32"
-          >
-            <img 
-              src="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&q=80&w=1000" 
-              alt="Craftsmanship"
-              className="w-full h-full object-cover transition-all duration-2000 group-hover:scale-110"
-              referrerPolicy="no-referrer"
-            />
-            <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors duration-2000" />
-          </motion.div>
-          
-          <div className="space-y-24 md:space-y-32">
-            {[
-              { 
-                title: "Well-Vetted Fabric", 
-                desc: "Sourced from trusted manufacturers with an uncompromising standard for build quality. We exclusively utilize 100% fine premium cotton, engineered for substance, tactile endurance, and structural integrity." 
-              },
-              { 
-                title: "Precision Tailoring", 
-                desc: "Every pattern is digitally mapped and finished with double stitching on the neck and shoulders. This ensures long-term durability and resistance to sagging — maintaining a fit that feels like a second skin, balancing anatomical comfort with geometric precision." 
-              },
-              { 
-                title: "Creative Overflow", 
-                subtext: "Design Philosophy",
-                desc: "Our designs are artifacts of expression—story, satire, and idea. This path leads to the upcoming Co-Creator concept, where our community will be invited to collaborate on future signal drops within our creative ecosystem." 
-              },
-              { 
-                title: "Worn for a reason, not for a season", 
-                desc: "Nothing we give you is meant to be thrown away. From packaging to tags — every element is designed with a second life. Built to stay. Designed to be used — again." 
-              }
-            ].map((item, i) => (
-              <motion.div 
-                key={i}
-                initial={{ opacity: 0, y: 60, filter: 'blur(5px)' }}
-                whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                viewport={{ once: true }}
-                transition={{ duration: 2, delay: i * 0.4, ease: [0.22, 1, 0.36, 1] }}
-                className="group"
-              >
-                <div className="flex items-center gap-4 mb-4">
-                  <span className="text-accent font-mono text-base font-bold opacity-30 group-hover:opacity-100 transition-opacity duration-700">0{i + 1}</span>
-                  {item.subtext && (
-                    <span className="text-[12px] uppercase tracking-widest text-accent font-bold">/ {item.subtext}</span>
-                  )}
-                </div>
-                <h3 className="text-3xl md:text-5xl font-display font-medium mb-4 tracking-tighter leading-none group-hover:text-accent transition-colors duration-700">{item.title}</h3>
-                <p className="text-gray-500 text-lg md:text-xl font-light leading-relaxed max-w-lg">{item.desc}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <PromiseSection />
 
       {/* Second Life Section - Cinematic Reveal with Visual Evidence */}
       <motion.section 
