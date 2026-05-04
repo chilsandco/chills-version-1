@@ -438,7 +438,7 @@ const CoCreator: React.FC = () => {
                   }}
                 >
                   <div className="px-12 py-5 bg-accent text-black text-[11px] font-bold uppercase tracking-[0.4em] transition-all hover:scale-105 active:scale-95 flex items-center gap-3">
-                    Show Interest <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                    become a co creator <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                   </div>
                   <span className="mt-4 text-[9px] text-neutral-600 uppercase tracking-widest italic font-light">Signal your alignment with the system protocol</span>
                 </Link>

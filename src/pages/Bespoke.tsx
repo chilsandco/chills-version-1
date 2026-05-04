@@ -116,11 +116,11 @@ const Bespoke: React.FC = () => {
           refreshUser();
         }, 1000);
       } else {
-        alert(data.message || 'Failed to process signal. Please try again.');
+        alert(data.message || 'Could not join the list. Please try again.');
       }
     } catch (error) {
-      console.error('Bespoke signal error:', error);
-      alert('Network error. Pulse failed.');
+      console.error('Bespoke error:', error);
+      alert('Something went wrong. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -201,18 +201,19 @@ const Bespoke: React.FC = () => {
               >
                 <img 
                   src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1777383461/The_Bespoke_vbsrwn.png" 
-                  alt="The Bespoke Engineering Process" 
+                  alt="The Bespoke Build Process" 
                   className="w-full h-auto rounded-sm shadow-[0_0_100px_rgba(255,255,255,0.05)] border border-white/5"
                   referrerPolicy="no-referrer"
                 />
                 
-                {/* Protocol Labels */}
-                <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-8">
+                {/* Step Labels */}
+                <div className="mt-12 grid grid-cols-2 md:grid-cols-5 gap-8">
                   {[
-                    { p: '01', t: 'Material Selection' },
-                    { p: '02', t: 'Anatomical Capture' },
-                    { p: '03', t: 'Custom Configuration' },
-                    { p: '04', t: 'Iterative Quality' }
+                    { p: '01', t: 'Choose Your Fabric' },
+                    { p: '02', t: 'Take Your Measurements' },
+                    { p: '03', t: 'Customize Your Design' },
+                    { p: '04', t: 'Precision Stitching' },
+                    { p: '05', t: 'Final Check & Delivery' }
                   ].map((item, i) => (
                     <motion.div 
                       key={i}
@@ -221,7 +222,7 @@ const Bespoke: React.FC = () => {
                       transition={{ delay: 1 + i * 0.2 }}
                       className="space-y-1"
                     >
-                      <p className="text-[10px] text-accent uppercase font-bold tracking-widest leading-none">Protocol {item.p}</p>
+                      <p className="text-[10px] text-accent uppercase font-bold tracking-widest leading-none">STEP {item.p}</p>
                       <p className="text-[11px] text-white uppercase tracking-[0.2em]">{item.t}</p>
                     </motion.div>
                   ))}
@@ -246,9 +247,9 @@ const Bespoke: React.FC = () => {
 
                 <div className="space-y-8">
                   {[
-                    { icon: <Zap size={18} className="text-accent" />, title: 'Guided Build System', desc: 'Not a standard product page. A multi-stage construction interface.' },
-                    { icon: <RefreshCw size={18} className="text-accent" />, title: 'Fabric-First Selection', desc: 'Sourcing the finest materials before the first cut is made.' },
-                    { icon: <ShieldCheck size={18} className="text-accent" />, title: 'Measurement-Driven Fit', desc: 'Anatomically mapped to your exact specifications.' }
+                    { icon: <Zap size={18} className="text-accent" />, title: 'Built step-by-step', desc: 'You create the shirt, one step at a time.' },
+                    { icon: <RefreshCw size={18} className="text-accent" />, title: 'Start with the fabric', desc: 'Every build begins with carefully selected material.' },
+                    { icon: <ShieldCheck size={18} className="text-accent" />, title: 'Made to fit you', desc: 'Tailored to your measurements for a clean, comfortable fit.' }
                   ].map((item, i) => (
                     <div key={i} className="flex gap-4">
                       <div className="shrink-0 pt-1">{item.icon}</div>
@@ -280,7 +281,7 @@ const Bespoke: React.FC = () => {
             <div className="absolute bottom-10 left-0 w-full flex justify-center pointer-events-none z-10">
               <div className="px-8 py-4 bg-black/80 backdrop-blur-md border border-accent/30 rounded-sm flex flex-col items-center">
                 <span className="text-[9px] text-accent font-bold uppercase tracking-[0.5em] mb-1">Interactive Blueprint</span>
-                <span className="text-lg text-white font-display uppercase tracking-tighter">V1.0 SHIRT GEOMETRY</span>
+                <span className="text-lg text-white font-display uppercase tracking-tighter">V1.0 SHIRT DESIGN</span>
               </div>
             </div>
           </div>
@@ -288,7 +289,7 @@ const Bespoke: React.FC = () => {
             <div className="space-y-4">
               <h2 className="text-4xl font-display font-bold uppercase tracking-tighter text-white">Rotate. Inspect. <br />Understand the Build.</h2>
               <p className="text-neutral-400 font-light leading-relaxed">
-                This is not a mockup. It is the core structure you will define. Every stitch, every angle, and every parameter is mapped into our system before the first cut is made.
+                This is not a mockup. It is the core structure of your shirt. Every stitch, every angle, and every detail is planned before we make the first cut.
               </p>
             </div>
             
@@ -329,9 +330,14 @@ const Bespoke: React.FC = () => {
             className="space-y-8"
           >
             <h3 className="text-white text-4xl font-display font-bold tracking-tighter uppercase italic leading-none">Fit Guarantee</h3>
-            <p className="text-neutral-400 text-lg leading-relaxed font-light">
-              We understand that precision requires adjustment. If your bespoke artifact doesn’t fit exactly as intended, we refine it until it does. Engineered to fit. Refined if needed.
-            </p>
+            <div className="space-y-4">
+              <p className="text-neutral-400 text-lg leading-relaxed font-light">
+                We understand that precision requires adjustment. If your shirt doesn’t fit right, we’ll fix it.
+              </p>
+              <p className="text-accent text-sm font-bold uppercase tracking-[0.2em]">
+                Engineered to fit. Refined if needed.
+              </p>
+            </div>
           </motion.div>
 
           <motion.div
@@ -375,7 +381,7 @@ const Bespoke: React.FC = () => {
                     Access Unlocked
                   </h2>
                   <p className="text-neutral-400 font-light leading-relaxed mb-8">
-                    Your credentials have been verified for the Bespoke Signal Room. The build interface is currently in pre-alpha deployment.
+                    You have been approved for early bespoke access. We are preparing the build experience.
                   </p>
                   <div className="flex gap-4">
                     <div className="px-6 py-3 bg-accent text-black text-[10px] font-bold uppercase tracking-widest rounded-full">System Active</div>
@@ -394,12 +400,12 @@ const Bespoke: React.FC = () => {
                     Waitlist Verified
                   </h2>
                   <p className="text-neutral-400 font-light leading-relaxed mb-8">
-                    Your existing system profile has been verified and prioritised for Bespoke early access.
+                    You are on the list. We’ve prioritised your access for the bespoke collection.
                   </p>
                   
                   <div className="flex items-center justify-center gap-3 py-4 px-8 border border-accent bg-accent/5 rounded-full">
                     <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-                    <span className="text-[11px] text-accent font-bold uppercase tracking-[0.4em]">STATUS: IN WAITLIST POOL</span>
+                    <span className="text-[11px] text-accent font-bold uppercase tracking-[0.4em]">ON THE LIST</span>
                   </div>
 
                   <p className="mt-8 text-[10px] text-neutral-500 uppercase tracking-widest leading-relaxed">
@@ -418,9 +424,9 @@ const Bespoke: React.FC = () => {
                 </motion.div>
               ) : !user ? (
                 <>
-                  <h2 className="text-4xl md:text-6xl font-display font-bold tracking-tighter uppercase mb-6 text-white">System Verification</h2>
+                  <h2 className="text-4xl md:text-6xl font-display font-bold tracking-tighter uppercase mb-6 text-white">Early Access</h2>
                   <p className="text-neutral-400 mb-12 text-lg font-light leading-relaxed">
-                    Check your build status or secure a new position in the Bespoke queue.
+                    Check your status or join the waitlist for the bespoke collection.
                   </p>
                   
                   <div className="flex flex-col gap-6">
