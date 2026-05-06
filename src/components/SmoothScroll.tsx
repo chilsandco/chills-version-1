@@ -3,7 +3,7 @@ import Lenis from 'lenis';
 import { useLocation } from 'react-router-dom';
 
 const SmoothScroll: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const location = useLocation();
+  const { pathname } = useLocation();
 
   useEffect(() => {
     // Disable browser's default scroll restoration
@@ -22,20 +22,9 @@ const SmoothScroll: React.FC<{ children: React.ReactNode }> = ({ children }) => 
       infinite: false,
     });
 
-    // Handle initial load or route change scroll
-    if (location.hash) {
-      // Small delay to ensure the DOM element is rendered
-      setTimeout(() => {
-        const element = document.querySelector(location.hash);
-        if (element) {
-          lenis.scrollTo(element as HTMLElement);
-        }
-      }, 100);
-    } else {
-      // Reset scroll on pathname change using Lenis
-      lenis.scrollTo(0, { immediate: true });
-      window.scrollTo(0, 0);
-    }
+    // Reset scroll on pathname change using Lenis
+    lenis.scrollTo(0, { immediate: true });
+    window.scrollTo(0, 0);
 
     function raf(time: number) {
       lenis.raf(time);
@@ -47,7 +36,7 @@ const SmoothScroll: React.FC<{ children: React.ReactNode }> = ({ children }) => 
     return () => {
       lenis.destroy();
     };
-  }, [location.pathname, location.hash]); // Watch both for hash jumps
+  }, [pathname]); // Re-initialize or reset on every pathname change
 
   return <>{children}</>;
 };

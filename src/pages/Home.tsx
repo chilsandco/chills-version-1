@@ -2,7 +2,6 @@ import React, { useEffect, useState, useRef } from 'react';
 import Hero from '../components/Hero';
 import ProductCard from '../components/ProductCard';
 import EcoEngineeredLogo from '../components/EcoEngineeredLogo';
-import PromiseSection from '../components/PromiseSection';
 import { Product } from '../types';
 import { motion } from 'motion/react';
 import { ArrowRight, RefreshCw, Smartphone, Monitor, Watch } from 'lucide-react';
@@ -382,7 +381,88 @@ const Home: React.FC = () => {
 
       <PhilosophySystem />
 
-      <PromiseSection />
+      {/* Our Promise Section - Editorial Reveal */}
+      <section id="promise" className="py-24 md:py-40 px-6 md:px-12 max-w-[1800px] mx-auto overflow-hidden">
+        <motion.div
+           initial={{ opacity: 0, y: 30 }}
+           whileInView={{ opacity: 1, y: 0 }}
+           viewport={{ once: true }}
+           transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+           className="mb-24 text-center md:text-left"
+        >
+          <span className="text-accent text-[13px] uppercase tracking-[0.8em] mb-4 block font-bold">The Commitment</span>
+          <h2 className="text-5xl md:text-8xl font-display font-medium tracking-tighter uppercase leading-none">
+            Our <span className="italic font-light opacity-50">Promise</span>
+          </h2>
+        </motion.div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-4">
+          {[
+            { 
+              title: "WELL-VETTED FABRIC", 
+              desc: "Sourced from trusted manufacturers with an uncompromising standard for build quality. We exclusively utilize 100% fine premium cotton, engineered for substance, tactile endurance, and structural integrity.",
+              image: "https://res.cloudinary.com/ddatd5ruz/image/upload/v1778077096/ChatGPT_Image_May_5_2026_09_22_38_PM_ss4wov.png"
+            },
+            { 
+              title: "PRECISION TAILORING", 
+              desc: "Every pattern is digitally mapped and finished with double stitching on the neck and shoulders. This ensures long-term durability and resistance to sagging — maintaining a fit that feels like a second skin, balancing anatomical comfort with geometric precision.",
+              image: "https://res.cloudinary.com/ddatd5ruz/image/upload/v1778077089/ChatGPT_Image_May_5_2026_09_22_35_PM_vihb3r.png"
+            },
+            { 
+              title: "CREATIVE FLOW", 
+              subtext: "Design Philosophy",
+              desc: "Our designs are artifacts of expression—story, satire, and idea. This path leads to the upcoming Co-Creator concept, where our community will be invited to collaborate on future signal drops within our creative ecosystem.",
+              image: "https://res.cloudinary.com/ddatd5ruz/image/upload/v1778077126/ChatGPT_Image_May_5_2026_09_22_26_PM_mhumm0.png"
+            },
+            { 
+              title: "WORN FOR A REASON, NOT FOR A SEASON", 
+              desc: "Nothing we give you is meant to be thrown away. From packaging to tags — every element is designed with a second life. Built to stay. Designed to be used — again.",
+              image: "https://res.cloudinary.com/ddatd5ruz/image/upload/v1778077086/ChatGPT_Image_May_5_2026_09_22_21_PM_ve8mq4.png"
+            }
+          ].map((item, i) => (
+            <motion.div 
+              key={i}
+              initial={{ opacity: 0, y: 100, filter: 'blur(10px)' }}
+              whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              viewport={{ once: true, margin: "-100px" }}
+              transition={{ duration: 1.5, delay: i * 0.2, ease: [0.22, 1, 0.36, 1] }}
+              className="flex flex-col space-y-8 group"
+            >
+              {/* 9:16 Portrait Image */}
+              <div className="relative overflow-hidden aspect-[9/16] rounded-sm bg-neutral-900 border border-white/5">
+                <motion.img 
+                  src={item.image} 
+                  alt={item.title}
+                  className="w-full h-full object-cover transition-transform duration-2000 group-hover:scale-110"
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity duration-1000" />
+                
+                {/* Index Number on Image */}
+                <div className="absolute top-6 left-6 mix-blend-difference">
+                  <span className="text-white/40 font-mono text-sm tracking-widest uppercase">0{i + 1}</span>
+                </div>
+              </div>
+
+              {/* Text Content */}
+              <div className="space-y-4">
+                <div className="flex flex-col gap-2">
+                  {item.subtext && (
+                    <span className="text-[10px] uppercase tracking-[0.4em] text-accent font-bold">{item.subtext}</span>
+                  )}
+                  <h3 className="text-2xl md:text-3xl font-display font-medium tracking-tighter uppercase leading-tight group-hover:text-accent transition-colors duration-700">
+                    {item.title}
+                  </h3>
+                </div>
+                <p className="text-neutral-500 text-sm md:text-base font-light leading-relaxed">
+                  {item.desc}
+                </p>
+                <div className="h-px w-full bg-white/5 group-hover:bg-accent/20 transition-colors duration-700" />
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
 
       {/* Second Life Section - Cinematic Reveal with Visual Evidence */}
       <motion.section 
