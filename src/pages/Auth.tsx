@@ -232,7 +232,7 @@ const Auth: React.FC = () => {
               )}
               {hasWaitlistBadge && (
                 <div className="absolute -bottom-2 -left-2 bg-white text-black text-[8px] font-bold px-2 py-0.5 rounded-full border border-black uppercase tracking-tighter">
-                  BESPOKE POOL
+                  THE BESPOKE POOL
                 </div>
               )}
             </div>
@@ -250,7 +250,7 @@ const Auth: React.FC = () => {
                     onClick={() => navigate('/console/bespoke')}
                     className="w-full bg-accent text-black py-4 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-accent/90 transition-colors flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(212,175,55,0.2)]"
                   >
-                    BESPOKE SIGNALS
+                    THE BESPOKE SIGNALS
                     <ExternalLink size={12} />
                   </button>
                   <button 

@@ -100,11 +100,11 @@ const OrderSignals: React.FC = () => {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-                <p className="text-[9px] tracking-[0.4em] font-bold uppercase text-accent">Active Protocol: Bespoke Waitlist</p>
+                <p className="text-[9px] tracking-[0.4em] font-bold uppercase text-accent">Active Protocol: The Bespoke Waitlist</p>
               </div>
               <h3 className="text-2xl font-display font-bold uppercase tracking-tight text-white italic">Signal Detected</h3>
               <p className="text-neutral-400 text-xs tracking-tight font-light max-w-md">
-                You are currently prioritized in our build list for early access to the Bespoke engineering room. 
+                You are currently prioritized in our build list for early access to The Bespoke engineering room. 
                 We will notify you via encrypted signal when initialization is complete.
               </p>
             </div>

@@ -78,7 +78,7 @@ const BespokeSignals: React.FC = () => {
       <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 flex flex-col items-center justify-center min-h-screen text-center bg-black">
         <Shield className="text-red-500 mb-8" size={48} />
         <h1 className="text-4xl font-display font-bold mb-4 uppercase tracking-tighter text-white">Access Denied</h1>
-        <p className="text-neutral-500 uppercase text-[10px] tracking-widest max-w-sm mb-4">Insufficient clearance level for bespoke signals.</p>
+        <p className="text-neutral-500 uppercase text-[10px] tracking-widest max-w-sm mb-4">Insufficient clearance level for THE BESPOKE SIGNALS.</p>
         <p className="text-neutral-700 font-mono text-[9px] uppercase tracking-widest">Identified as: {user?.email || 'Unknown Entity'}</p>
       </div>
     );
@@ -92,7 +92,7 @@ const BespokeSignals: React.FC = () => {
             <Activity className="text-accent" size={16} />
             <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase">System Intelligence</p>
           </div>
-          <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter uppercase mb-4">Bespoke Signals</h1>
+          <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter uppercase mb-4">The Bespoke Signals</h1>
           <p className="text-neutral-500 uppercase text-[10px] tracking-widest max-w-xl">
             List of engineers who have requested early access to the construction system.
           </p>

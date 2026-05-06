@@ -27,9 +27,26 @@ const Shipping: React.FC = () => {
         className="mb-20 text-center"
       >
         <div className="flex justify-center mb-6">
-          <div className="p-4 bg-accent/10 rounded-full">
-            <Truck className="text-accent" size={40} strokeWidth={1.5} />
-          </div>
+          <motion.div 
+            whileHover="hover"
+            className="p-4 bg-accent/10 rounded-full overflow-hidden w-[72px] h-[72px] flex items-center justify-center relative cursor-pointer"
+          >
+            <motion.div 
+              variants={{
+                hover: {
+                  x: [0, -1, 1, -1, 100, -100, 0],
+                  opacity: [1, 1, 1, 1, 0, 0, 1],
+                  transition: { 
+                    duration: 0.8,
+                    times: [0, 0.05, 0.1, 0.15, 0.5, 0.51, 1],
+                    ease: "easeInOut"
+                  }
+                }
+              }}
+            >
+              <Truck className="text-accent" size={40} strokeWidth={1.5} />
+            </motion.div>
+          </motion.div>
         </div>
         <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter uppercase mb-6">
           Shipping & Delivery
@@ -46,9 +63,26 @@ const Shipping: React.FC = () => {
         viewport={{ once: true }}
         className="mb-24 p-8 md:p-12 border border-neutral-900 bg-black relative overflow-hidden"
       >
-        <div className="absolute top-0 right-0 p-8 opacity-5">
-            <Truck size={120} />
-        </div>
+        <motion.div 
+          whileHover="hover"
+          className="absolute top-0 right-0 p-8 opacity-5 overflow-hidden w-[200px] h-[200px] flex items-center justify-center cursor-pointer"
+        >
+            <motion.div
+              variants={{
+                hover: {
+                  x: [0, -1, 1, -1, 250, -250, 0],
+                  opacity: [1, 1, 1, 1, 0, 0, 1],
+                  transition: { 
+                    duration: 0.8,
+                    times: [0, 0.05, 0.1, 0.15, 0.5, 0.51, 1],
+                    ease: "easeInOut"
+                  }
+                }
+              }}
+            >
+              <Truck size={120} />
+            </motion.div>
+        </motion.div>
         <div className="relative z-10 space-y-6 max-w-2xl leading-relaxed text-neutral-300 italic">
           <p>
             Every Chils & Co order is prepared with the same level of attention that goes into the product itself — carefully packed, verified, and dispatched to reach you exactly as designed.
@@ -191,8 +225,11 @@ const Shipping: React.FC = () => {
                 <p className="text-sm text-neutral-300 leading-relaxed uppercase tracking-wider">
                     Your order arrives in a reusable packaging unit. Designed to go beyond delivery — repurpose it for storage, organization, or everyday use.
                 </p>
-                <p className="text-[10px] text-accent font-bold uppercase tracking-widest italic">
-                    Built for a second life.
+                <p className="text-[10px] uppercase tracking-widest italic font-bold">
+                  <span className="text-white">Built for a </span>
+                  <Link to="/#second-life" className="text-accent hover:underline decoration-accent/30 underline-offset-4 transition-all">
+                    second life
+                  </Link>.
                 </p>
             </div>
         </section>
@@ -217,7 +254,10 @@ const Shipping: React.FC = () => {
                 </div>
                 <div className="p-8 border border-neutral-900 bg-black flex flex-col justify-center items-center text-center">
                     <p className="text-lg font-display italic leading-tight">
-                        "This isn’t just packaging — it’s a system built for a second life."
+                        "This isn’t just packaging — it’s a system <span className="text-white">built for a </span>
+                        <Link to="/#second-life" className="text-accent hover:underline transition-all">
+                          second life
+                        </Link>."
                     </p>
                 </div>
             </div>

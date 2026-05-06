@@ -28,9 +28,13 @@ const Returns: React.FC = () => {
         className="mb-20 text-center"
       >
         <div className="flex justify-center mb-6">
-          <div className="p-4 bg-accent/10 rounded-full">
+          <motion.div 
+            whileHover={{ rotate: 360 }}
+            transition={{ duration: 1, ease: "easeInOut" }}
+            className="p-4 bg-accent/10 rounded-full cursor-pointer"
+          >
             <RotateCcw className="text-accent" size={40} strokeWidth={1.5} />
-          </div>
+          </motion.div>
         </div>
         <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter uppercase mb-6">
           Returns & Refunds
@@ -42,14 +46,32 @@ const Returns: React.FC = () => {
 
       {/* Main Philosophy */}
       <motion.div 
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true }}
+        transition={{ duration: 0.8 }}
         className="mb-24 p-8 md:p-12 border border-neutral-900 bg-black relative overflow-hidden"
       >
-        <div className="absolute top-0 right-0 p-8 opacity-5">
-            <RotateCcw size={120} />
-        </div>
+        <motion.div 
+          whileHover="hover"
+          className="absolute top-0 right-0 p-8 opacity-5 overflow-hidden w-[184px] h-[184px] flex items-center justify-center cursor-pointer"
+        >
+            <motion.div
+              variants={{
+                hover: {
+                  x: [0, -1, 1, -1, 200, -200, 0],
+                  opacity: [1, 1, 1, 1, 0, 0, 1],
+                  transition: { 
+                    duration: 0.8,
+                    times: [0, 0.05, 0.1, 0.15, 0.5, 0.51, 1],
+                    ease: "easeInOut"
+                  }
+                }
+              }}
+            >
+              <RotateCcw size={120} />
+            </motion.div>
+        </motion.div>
         <div className="relative z-10 space-y-6 max-w-2xl leading-relaxed text-neutral-300">
           <p>
             At Chils & Co, every piece is designed beyond just appearance — from fabric behavior and color accuracy to durability and finish.
@@ -70,7 +92,12 @@ const Returns: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-24">
         
         {/* Return Window */}
-        <section className="space-y-6">
+        <motion.section 
+          initial={{ opacity: 0, x: -20 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          className="space-y-6"
+        >
           <div className="flex items-center gap-4">
             <div className="p-2 bg-neutral-900 rounded">
                 <Clock className="text-accent" size={20} />
@@ -83,10 +110,15 @@ const Returns: React.FC = () => {
               You can request a return within 48 hours of delivery. After this window, return requests will no longer be accepted.
             </p>
           </div>
-        </section>
+        </motion.section>
 
         {/* Eligible Reasons */}
-        <section className="space-y-6">
+        <motion.section 
+          initial={{ opacity: 0, x: 20 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          className="space-y-6"
+        >
           <div className="flex items-center gap-4">
             <div className="p-2 bg-neutral-900 rounded">
                 <Package className="text-accent" size={20} />
@@ -94,11 +126,11 @@ const Returns: React.FC = () => {
             <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Eligible Reasons</h2>
           </div>
           <div className="grid grid-cols-1 gap-4">
-            <div className="p-4 border border-neutral-900 bg-black">
+            <div className="p-4 border border-neutral-900 bg-black hover:border-accent/30 transition-colors cursor-default">
                 <p className="text-[10px] text-accent uppercase font-bold tracking-widest mb-2">Primary</p>
                 <p className="text-sm">Size or fit issues</p>
             </div>
-            <div className="p-4 border border-neutral-900 bg-black space-y-2">
+            <div className="p-4 border border-neutral-900 bg-black space-y-2 hover:border-neutral-700 transition-colors cursor-default">
                 <p className="text-[10px] text-neutral-500 uppercase font-bold tracking-widest mb-2">Secondary</p>
                 <ul className="text-sm space-y-1 text-neutral-400 uppercase tracking-wider text-[11px]">
                     <li>• Damaged product</li>
@@ -108,10 +140,15 @@ const Returns: React.FC = () => {
             </div>
             <p className="text-[10px] text-neutral-600 italic uppercase">All non-size-related requests are reviewed individually.</p>
           </div>
-        </section>
+        </motion.section>
 
         {/* Before You Request */}
-        <section className="md:col-span-2 p-8 border border-neutral-900 bg-black space-y-6">
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="md:col-span-2 p-8 border border-neutral-900 bg-black space-y-6 hover:border-neutral-800 transition-colors"
+        >
             <div className="flex items-center gap-4">
                 <div className="p-2 bg-neutral-900 rounded">
                     <Brain className="text-accent" size={20} />
@@ -128,7 +165,7 @@ const Returns: React.FC = () => {
                     "For other reasons, we kindly ask you to consider the intention, time, and care behind the product before proceeding. Your support allows us to keep building with the same level of thought."
                 </div>
             </div>
-        </section>
+        </motion.section>
 
         {/* How to Request */}
         <section className="space-y-6">
@@ -145,16 +182,29 @@ const Returns: React.FC = () => {
               "Click “Initiate Reversal”",
               "Provide: Reason, Description, Images"
             ].map((step, i) => (
-              <li key={i} className="flex gap-4 items-center group">
+              <motion.li 
+                key={i} 
+                initial={{ opacity: 0, x: -10 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                whileHover={{ x: 5 }}
+                className="flex gap-4 items-center group cursor-pointer"
+              >
                 <span className="text-xs font-mono text-accent">0{i+1}</span>
                 <span className="text-sm uppercase tracking-widest text-neutral-400 group-hover:text-white transition-colors">{step}</span>
-              </li>
+              </motion.li>
             ))}
           </ol>
         </section>
 
         {/* Image Requirements */}
-        <section className="space-y-6">
+        <motion.section 
+          initial={{ opacity: 0, x: 10 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          className="space-y-6"
+        >
           <div className="flex items-center gap-4">
             <div className="p-2 bg-neutral-900 rounded">
                 <Camera className="text-accent" size={20} />
@@ -174,11 +224,16 @@ const Returns: React.FC = () => {
                 </li>
             </ul>
           </div>
-        </section>
+        </motion.section>
 
         {/* Review & Process */}
         <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-12 pt-12 border-t border-neutral-900">
-            <section className="space-y-6">
+            <motion.section 
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              className="space-y-6"
+            >
                 <div className="flex items-center gap-4">
                     <div className="p-2 bg-neutral-900 rounded">
                         <Search className="text-accent" size={20} />
@@ -190,16 +245,21 @@ const Returns: React.FC = () => {
                     <li>• Once approved, we will guide you with the next steps</li>
                     <li>• We may reach out if additional details are required</li>
                 </ul>
-            </section>
+            </motion.section>
 
-            <section className="space-y-6">
+            <motion.section 
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              className="space-y-6"
+            >
                 <div className="flex items-center gap-4">
                     <div className="p-2 bg-neutral-900 rounded">
                         <IndianRupee className="text-accent" size={20} />
                     </div>
                     <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Refund Process</h2>
                 </div>
-                <div className="p-6 bg-black border border-neutral-900 space-y-4">
+                <div className="p-6 bg-black border border-neutral-900 space-y-4 hover:border-accent/10 transition-colors">
                     <p className="text-sm">Refunds are initiated after approval and inspection.</p>
                     <div className="flex justify-between items-center border-t border-neutral-900 pt-4">
                         <span className="text-[9px] uppercase tracking-[0.2em] text-neutral-600">Method</span>
@@ -210,7 +270,7 @@ const Returns: React.FC = () => {
                         <span className="text-xs font-bold">3–7 Business Days</span>
                     </div>
                 </div>
-            </section>
+            </motion.section>
         </div>
 
         {/* Conditions */}
@@ -222,21 +282,51 @@ const Returns: React.FC = () => {
             <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Conditions for Return</h2>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {['Unused', 'Original Condition', 'Retain Packaging', 'Tags Intact'].map(cond => (
-                <div key={cond} className="p-4 border border-neutral-900 text-center flex flex-col items-center justify-center gap-2">
+            {['Unused', 'Original Condition', 'Retain Packaging', 'Tags Intact'].map((cond, i) => (
+                <motion.div 
+                  key={cond} 
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: i * 0.1 }}
+                  whileHover={{ y: -5, borderColor: 'rgba(212, 175, 55, 0.3)' }}
+                  className="p-4 border border-neutral-900 text-center flex flex-col items-center justify-center gap-2 cursor-default transition-colors"
+                >
                     <div className="w-1.5 h-1.5 bg-accent rounded-full" />
                     <span className="text-[10px] uppercase font-bold tracking-widest">{cond}</span>
-                </div>
+                </motion.div>
             ))}
           </div>
         </section>
 
         {/* Packaging */}
-        <section className="md:col-span-2 p-12 bg-accent/5 border border-accent/20 flex flex-col md:flex-row gap-12 items-center">
-            <div className="flex-shrink-0">
-                <Package className="text-accent" size={80} strokeWidth={1} />
-            </div>
-            <div className="space-y-4">
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="md:col-span-2 p-12 bg-accent/5 border border-accent/20 flex flex-col md:flex-row gap-12 items-center overflow-hidden relative group"
+        >
+            <motion.div 
+              whileHover="hover"
+              className="flex-shrink-0 cursor-pointer w-[120px] h-[120px] flex items-center justify-center"
+            >
+                <motion.div
+                   variants={{
+                    hover: {
+                      x: [0, -1, 1, -1, 150, -150, 0],
+                      opacity: [1, 1, 1, 1, 0, 0, 1],
+                      transition: { 
+                        duration: 0.8,
+                        times: [0, 0.05, 0.1, 0.15, 0.5, 0.51, 1],
+                        ease: "easeInOut"
+                      }
+                    }
+                  }}
+                >
+                  <Package className="text-accent" size={80} strokeWidth={1} />
+                </motion.div>
+            </motion.div>
+            <div className="space-y-4 relative z-10">
                 <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase">A Note on Packaging</h3>
                 <p className="text-sm text-neutral-300 leading-relaxed uppercase tracking-wider">
                     Your order arrives in a reusable packaging unit. It’s designed for a second life — as a storage module for socks, stationery, or everyday essentials.
@@ -245,7 +335,7 @@ const Returns: React.FC = () => {
                     We encourage you to keep it in use, beyond delivery.
                 </p>
             </div>
-        </section>
+        </motion.section>
 
         {/* Team Note */}
         <section className="md:col-span-2 py-16 flex flex-col items-center text-center space-y-8">
