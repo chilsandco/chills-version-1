@@ -99,12 +99,12 @@ const Shipping: React.FC = () => {
             <div className="p-2 bg-neutral-900 rounded">
                 <MapPin className="text-accent" size={20} />
             </div>
-            <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Where We Ship</h2>
+            <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Coverage & Cost</h2>
           </div>
           <div className="space-y-4">
-            <p className="text-2xl font-display font-bold tracking-tight uppercase">India</p>
+            <p className="text-2xl font-display font-bold tracking-tight uppercase">PAN INDIA</p>
             <p className="text-neutral-500 text-sm leading-relaxed uppercase tracking-widest font-medium">
-              We currently ship across India.
+              We currently offer free shipping across India. No hidden protocols.
             </p>
           </div>
         </section>
@@ -120,9 +120,9 @@ const Shipping: React.FC = () => {
           <div className="space-y-4">
             <ul className="text-sm text-neutral-400 space-y-3 uppercase tracking-widest text-[11px]">
                 <li>• Orders are processed within 24–48 hours</li>
-                <li>• Weekend/Public holiday orders processed on next working day</li>
+                <li>• Business days exclude Sundays and public holidays</li>
             </ul>
-            <p className="text-[10px] text-neutral-600 italic uppercase">Once processed, your order is handed over to our logistics partner.</p>
+            <p className="text-[10px] text-neutral-600 italic uppercase">Once processed, your order is handed over to our verified logistics partners.</p>
           </div>
         </section>
 
@@ -157,18 +157,18 @@ const Shipping: React.FC = () => {
             <div className="p-2 bg-neutral-900 rounded">
                 <Search className="text-accent" size={20} />
             </div>
-            <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Tracking Your Order</h2>
+            <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Transmission & Tracking</h2>
           </div>
           <div className="space-y-4 text-sm text-neutral-400 uppercase tracking-widest text-[11px]">
-            <p>Once your order is shipped:</p>
+            <p>Once dispatched, coordinates will be shared:</p>
             <ul className="space-y-2">
                 <li className="flex items-center gap-2">
                     <div className="w-1 h-1 bg-accent" />
-                    <span>Tracking link via SMS/Email</span>
+                    <span>Tracking details via SMS/Email</span>
                 </li>
                 <li className="flex items-center gap-2">
                     <div className="w-1 h-1 bg-accent" />
-                    <span>Track via <Link to="/console/orders" className="text-white border-b border-white/20">Orders Archive</Link></span>
+                    <span>Accessible via <Link to="/console/orders" className="text-white border-b border-white/20">Customer Order History</Link></span>
                 </li>
             </ul>
           </div>
@@ -264,17 +264,23 @@ const Shipping: React.FC = () => {
         </section>
 
         {/* Delays */}
-        <section className="md:col-span-2 p-8 border border-neutral-900 bg-black flex flex-col md:flex-row justify-between items-center gap-8">
-            <div className="flex items-center gap-4">
-                <RefreshCcw className="text-neutral-700" size={24} />
-                <h3 className="text-[11px] tracking-[0.5em] font-bold uppercase text-neutral-500">Delays (If Any)</h3>
+        <section className="md:col-span-2 p-8 border border-neutral-900 bg-black space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+                <div className="flex items-center gap-4">
+                    <RefreshCcw className="text-neutral-700" size={24} />
+                    <h3 className="text-[11px] tracking-[0.5em] font-bold uppercase text-neutral-500">Operational Exceptions</h3>
+                </div>
+                <div className="flex flex-wrap justify-center gap-6">
+                    {['Weather', 'Logistics', 'Restrictions', 'High Volume'].map(reason => (
+                        <span key={reason} className="text-[9px] px-3 py-1 border border-neutral-800 rounded-full text-neutral-600 uppercase tracking-widest">{reason}</span>
+                    ))}
+                </div>
             </div>
-            <div className="flex flex-wrap justify-center gap-6">
-                {['Weather', 'Logistics', 'High Volume'].map(reason => (
-                    <span key={reason} className="text-[9px] px-3 py-1 border border-neutral-800 rounded-full text-neutral-600 uppercase tracking-widest">{reason}</span>
-                ))}
+            <div className="pt-4 border-t border-neutral-900 text-center">
+                <p className="text-[10px] text-neutral-500 uppercase tracking-[0.2em] leading-relaxed max-w-2xl mx-auto italic">
+                    Delivery timelines are estimates. Dispatch may occasionally be affected by weather conditions, logistics disruptions, public restrictions, or high order volumes. We will keep you updated through every phase.
+                </p>
             </div>
-            <p className="text-[10px] text-neutral-500 italic uppercase">If this happens, we’ll keep you informed.</p>
         </section>
 
         {/* Team Note */}
@@ -303,10 +309,10 @@ const Shipping: React.FC = () => {
                     <p className="text-[10px] text-neutral-500 uppercase tracking-widest">Our support team is here to help root-to-end.</p>
                 </div>
                 <a 
-                    href="mailto:chilsandco@gmail.com" 
+                    href="mailto:hello.chilsandco@gmail.com" 
                     className="whitespace-nowrap flex items-center gap-2 group text-[11px] font-bold uppercase tracking-[0.3em] text-white hover:text-accent transition-colors"
                 >
-                    Contact Support <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                    Contact: hello.chilsandco@gmail.com <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                 </a>
             </div>
         </section>

@@ -102,12 +102,12 @@ const Returns: React.FC = () => {
             <div className="p-2 bg-neutral-900 rounded">
                 <Clock className="text-accent" size={20} />
             </div>
-            <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Return Window</h2>
+            <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Integrity Window</h2>
           </div>
           <div className="space-y-4">
             <p className="text-2xl font-display font-bold tracking-tight">48 HOURS</p>
             <p className="text-neutral-500 text-sm leading-relaxed uppercase tracking-widest font-medium">
-              You can request a return within 48 hours of delivery. After this window, return requests will no longer be accepted.
+              To ensure accurate verification and maintain product integrity standards, return requests must be initiated within 48 hours of delivery. This protocol helps us maintain the quality standards we build by.
             </p>
           </div>
         </motion.section>
@@ -238,13 +238,15 @@ const Returns: React.FC = () => {
                     <div className="p-2 bg-neutral-900 rounded">
                         <Search className="text-accent" size={20} />
                     </div>
-                    <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Review & Approval</h2>
+                    <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Outcome Options</h2>
                 </div>
-                <ul className="text-sm text-neutral-400 space-y-3 uppercase tracking-widest text-[11px]">
-                    <li>• All return requests are reviewed manually</li>
-                    <li>• Once approved, we will guide you with the next steps</li>
-                    <li>• We may reach out if additional details are required</li>
-                </ul>
+                <div className="space-y-4">
+                    <ul className="text-sm text-neutral-400 space-y-3 uppercase tracking-widest text-[11px]">
+                        <li>• Eligible requests may be processed as a Refund, Exchange, or Store Credit.</li>
+                        <li>• Final outcome depends on issue type and product availability.</li>
+                        <li>• All requests are reviewed manually by our quality team.</li>
+                    </ul>
+                </div>
             </motion.section>
 
             <motion.section 
@@ -260,7 +262,7 @@ const Returns: React.FC = () => {
                     <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Refund Process</h2>
                 </div>
                 <div className="p-6 bg-black border border-neutral-900 space-y-4 hover:border-accent/10 transition-colors">
-                    <p className="text-sm">Refunds are initiated after approval and inspection.</p>
+                    <p className="text-sm">Refunds are initiated after the returned item passes rigorous inspection and validation.</p>
                     <div className="flex justify-between items-center border-t border-neutral-900 pt-4">
                         <span className="text-[9px] uppercase tracking-[0.2em] text-neutral-600">Method</span>
                         <span className="text-xs font-bold text-accent">PhonePe / Original Source</span>
@@ -273,30 +275,75 @@ const Returns: React.FC = () => {
             </motion.section>
         </div>
 
-        {/* Conditions */}
-        <section className="md:col-span-2 space-y-8">
-          <div className="flex items-center gap-4">
-            <div className="p-2 bg-neutral-900 rounded">
-                <AlertTriangle className="text-accent" size={20} />
+        {/* Conditions & Non-Returnables */}
+        <section className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-12">
+            <div className="space-y-8">
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-neutral-900 rounded">
+                    <AlertTriangle className="text-accent" size={20} />
+                </div>
+                <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Conditions for Return</h2>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {['Unused', 'Original Condition', 'Retain Packaging', 'Tags Intact'].map((cond, i) => (
+                    <motion.div 
+                      key={cond} 
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: i * 0.1 }}
+                      whileHover={{ y: -5, borderColor: 'rgba(212, 175, 55, 0.3)' }}
+                      className="p-4 border border-neutral-900 text-center flex flex-col items-center justify-center gap-2 cursor-default transition-colors"
+                    >
+                        <div className="w-1.5 h-1.5 bg-accent rounded-full" />
+                        <span className="text-[10px] uppercase font-bold tracking-widest">{cond}</span>
+                    </motion.div>
+                ))}
+              </div>
             </div>
-            <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Conditions for Return</h2>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {['Unused', 'Original Condition', 'Retain Packaging', 'Tags Intact'].map((cond, i) => (
-                <motion.div 
-                  key={cond} 
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1 }}
-                  whileHover={{ y: -5, borderColor: 'rgba(212, 175, 55, 0.3)' }}
-                  className="p-4 border border-neutral-900 text-center flex flex-col items-center justify-center gap-2 cursor-default transition-colors"
-                >
-                    <div className="w-1.5 h-1.5 bg-accent rounded-full" />
-                    <span className="text-[10px] uppercase font-bold tracking-widest">{cond}</span>
-                </motion.div>
-            ))}
-          </div>
+
+            <div className="space-y-8">
+                <div className="flex items-center gap-4">
+                    <div className="p-2 bg-neutral-900 rounded">
+                        <Package className="text-neutral-500" size={20} />
+                    </div>
+                    <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase text-neutral-500">Non-Returnable State</h2>
+                </div>
+                <ul className="text-[10px] text-neutral-500 space-y-3 uppercase tracking-widest font-medium">
+                    <li className="flex items-center gap-3">
+                        <div className="w-1 h-1 bg-red-900" />
+                        <span>Used or washed products</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                        <div className="w-1 h-1 bg-red-900" />
+                        <span>Missing original tags or trims</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                        <div className="w-1 h-1 bg-red-900" />
+                        <span>Damaged after delivery (Physical damage)</span>
+                    </li>
+                    <li className="flex items-center gap-3 text-red-900">
+                        <div className="w-1 h-1 bg-red-900" />
+                        <span>Requests made outside the 48-hour window</span>
+                    </li>
+                </ul>
+            </div>
+        </section>
+
+        {/* Fulfillment & Cancellation */}
+        <section className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-12 py-12 border-y border-neutral-900">
+            <div className="space-y-6">
+                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase">Reverse Logistics</h3>
+                <p className="text-sm text-neutral-400 leading-relaxed uppercase tracking-wider text-[11px]">
+                    If your return request is approved, reverse pickup instructions will be shared via email. Availability for reverse pickup depends on logistics serviceability at your specific coordinates.
+                </p>
+            </div>
+            <div className="space-y-6">
+                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase">Order Cancellation</h3>
+                <p className="text-sm text-neutral-400 leading-relaxed uppercase tracking-wider text-[11px]">
+                    Orders can only be cancelled before dispatch. Once shipped, cancellations are no longer possible. After dispatch, the return policy applies instead.
+                </p>
+            </div>
         </section>
 
         {/* Packaging */}
@@ -369,10 +416,10 @@ const Returns: React.FC = () => {
                       Orders Archive <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                   </Link>
                   <a 
-                      href="mailto:chilsandco@gmail.com" 
+                      href="mailto:hello.chilsandco@gmail.com" 
                       className="whitespace-nowrap flex items-center gap-2 group text-[11px] font-bold uppercase tracking-[0.3em] text-accent hover:text-white transition-colors"
                   >
-                      Contact Support <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                      Contact: hello.chilsandco@gmail.com <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                   </a>
                 </div>
             </div>
