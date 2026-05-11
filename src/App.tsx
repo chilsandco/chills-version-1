@@ -19,6 +19,7 @@ import Returns from './pages/Returns';
 import Shipping from './pages/Shipping';
 import Support from './pages/Support';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsConditions from './pages/TermsConditions';
 import Auth from './pages/Auth';
 import Bespoke from './pages/Bespoke';
 import BespokeSignals from './pages/BespokeSignals';
@@ -53,6 +54,7 @@ export default function App() {
                   <Route path="/shipping-delivery" element={<Shipping />} />
                   <Route path="/support" element={<Support />} />
                   <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                  <Route path="/terms-conditions" element={<TermsConditions />} />
                   <Route path="/wishlist" element={<Wishlist />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/bespoke" element={<Bespoke />} />
