@@ -17,6 +17,7 @@ import Wishlist from './pages/Wishlist';
 import ReturnRequest from './pages/ReturnRequest';
 import Returns from './pages/Returns';
 import Shipping from './pages/Shipping';
+import Support from './pages/Support';
 import Auth from './pages/Auth';
 import Bespoke from './pages/Bespoke';
 import BespokeSignals from './pages/BespokeSignals';
@@ -49,6 +50,7 @@ export default function App() {
                   <Route path="/console/orders/:id/return" element={<ReturnRequest />} />
                   <Route path="/returns-refunds" element={<Returns />} />
                   <Route path="/shipping-delivery" element={<Shipping />} />
+                  <Route path="/support" element={<Support />} />
                   <Route path="/wishlist" element={<Wishlist />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/bespoke" element={<Bespoke />} />

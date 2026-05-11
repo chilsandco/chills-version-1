@@ -7,7 +7,7 @@ const Footer: React.FC = () => {
     <footer className="bg-black border-t border-neutral-900 pt-20 pb-12 px-6 md:px-12">
       <div className="max-w-[1800px] mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-20">
-          <div className="col-span-1 md:col-span-2">
+          <div className="md:col-span-1">
             <div className="flex items-center gap-4 mb-6">
               <motion.img 
                 whileHover={{ rotate: 360 }}
@@ -40,12 +40,33 @@ const Footer: React.FC = () => {
           </div>
 
           <div>
-            <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-6">Support</h3>
+            <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-6">Service</h3>
             <ul className="flex flex-col gap-4">
               <li><Link to="/shipping-delivery" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Shipping</Link></li>
               <li><Link to="/returns-refunds" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Returns</Link></li>
-              <li><a href="mailto:chilsandco@gmail.com" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Need assistance? Support</a></li>
+              <li><Link to="/support" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Support Center</Link></li>
+              <li><a href="mailto:hello.chilsandco@gmail.com" className="text-neutral-500 hover:text-white text-[10px] transition-colors uppercase tracking-widest">hello.chilsandco@gmail.com</a></li>
             </ul>
+          </div>
+
+          <div>
+            <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-6">Contact</h3>
+            <div className="space-y-6">
+              <div className="space-y-1">
+                <p className="text-white text-[11px] font-bold tracking-widest">+91 7842 07 0404</p>
+                <p className="text-neutral-600 text-[9px] uppercase tracking-widest leading-relaxed">
+                  Mon–Sat · 10 AM – 6 PM IST
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-neutral-500 text-[10px] uppercase tracking-widest leading-relaxed font-medium">
+                  3rd Floor, Plot No. 38 & 39<br />
+                  Matrusri Nagar, Miyapur<br />
+                  Hyderabad, Telangana – 500049<br />
+                  India
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
