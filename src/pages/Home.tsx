@@ -253,60 +253,92 @@ const PromiseCarousel: React.FC = () => {
       id="promise" 
       className="bg-black relative h-[400vh]"
     >
-      <div className="sticky top-0 h-screen flex flex-col justify-center overflow-hidden py-12 md:py-0">
-        <div className="max-w-[1800px] mx-auto px-6 w-full">
+      <div className="sticky top-0 h-screen flex flex-col justify-start overflow-hidden pt-12 md:pt-20">
+        <div className="max-w-[1800px] mx-auto px-6 w-full flex flex-col h-full">
           {/* Header - Simple & Premium */}
-          <div className="mb-12 md:mb-20">
-            <span className="text-accent text-[10px] md:text-[12px] uppercase tracking-[1.2rem] mb-4 block font-bold opacity-70">
-              The <span className="italic underline underline-offset-[12px] decoration-accent/40 font-light">Commitment</span>
+          <div className="mb-8 md:mb-12 relative z-30">
+            <span className="text-accent text-[10px] md:text-[12px] uppercase tracking-[1.2rem] mb-2 block font-bold opacity-70">
+              The <span className="italic underline underline-offset-[8px] decoration-accent/40 font-light">Commitment</span>
             </span>
-            <h2 className="text-4xl md:text-[10rem] font-display font-medium uppercase tracking-tighter text-white leading-[0.85]">
-              Our <span className="italic underline underline-offset-[1.5rem] md:underline-offset-[4rem] decoration-accent/30 font-light">Promise</span>
+            <h2 className="text-3xl md:text-6xl lg:text-7xl font-display font-medium uppercase tracking-tighter text-white leading-[0.85]">
+              Our <span className="italic underline underline-offset-[1rem] md:underline-offset-[2rem] decoration-accent/30 font-light">Promise</span>
             </h2>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-8 md:gap-24">
-            {/* LEFT Sidebar: Individual Vertical Progress Indicators */}
-            <div className="lg:w-96 space-y-4 order-2 lg:order-1">
-              {promiseData.map((item, i) => (
-                <PromiseItem 
+          {/* Unified Content Display */}
+          <div className="flex-1 relative flex items-center justify-center mb-12">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 30, filter: "blur(10px)" }}
+                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                exit={{ opacity: 0, y: -30, filter: "blur(10px)" }}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                className="w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center"
+              >
+                {/* Text Content */}
+                <div className="lg:col-span-5 xl:col-span-4 space-y-6 md:space-y-8 order-2 lg:order-1">
+                  <div className="space-y-4">
+                    <span className="font-mono text-[11px] text-accent tracking-[0.5em] block uppercase font-bold">
+                      0{index + 1} // S_{promiseData[index].tag}
+                    </span>
+                    <h3 className="text-3xl md:text-5xl lg:text-6xl font-display uppercase tracking-tighter text-white leading-[0.9]">
+                      {promiseData[index].title}
+                    </h3>
+                  </div>
+                  
+                  <p className="text-neutral-400 text-sm md:text-xl font-light leading-relaxed max-w-xl">
+                    {promiseData[index].desc}
+                  </p>
+
+                  <div className="flex items-center gap-4 pt-6 md:pt-10 border-t border-white/5">
+                    <div className="w-12 h-[1px] bg-accent/40" />
+                    <span className="font-mono text-[10px] text-accent/60 uppercase tracking-[0.4em]">Operational_Standard_V1</span>
+                  </div>
+                </div>
+
+                {/* Image Component */}
+                <div className="lg:col-span-7 xl:col-span-8 order-1 lg:order-2">
+                  <div className="relative w-full bg-[#050505] border border-white/5 overflow-hidden">
+                    <div className="flex items-center justify-center aspect-video lg:aspect-[16/9] p-4 md:p-12 relative overflow-hidden">
+                      {/* Technical Framing Accents */}
+                      <div className="absolute top-8 left-8 w-4 h-4 border-t border-l border-white/20 opacity-40" />
+                      <div className="absolute top-8 right-8 w-4 h-4 border-t border-r border-white/20 opacity-40" />
+                      <div className="absolute bottom-8 left-8 w-4 h-4 border-b border-l border-white/20 opacity-40" />
+                      <div className="absolute bottom-8 right-8 w-4 h-4 border-b border-r border-white/20 opacity-40" />
+
+                      <motion.img
+                        src={promiseData[index].image}
+                        alt={promiseData[index].title}
+                        initial={{ scale: 1.1, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+                        className="w-full h-full object-contain relative z-10 max-h-[40vh] md:max-h-[60vh]"
+                        referrerPolicy="no-referrer"
+                      />
+                      
+                      {/* Depth Gradient */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60 z-20 pointer-events-none" />
+                      <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+          </div>
+
+          {/* Progress Indicator (Bottom) */}
+          <div className="pb-12 md:pb-16 flex items-center justify-between border-t border-white/5 pt-8">
+            <div className="flex gap-4">
+              {promiseData.map((_, i) => (
+                <div 
                   key={i} 
-                  item={item} 
-                  i={i} 
-                  index={index} 
-                  scrollYProgress={scrollYProgress} 
+                  className={`h-1 transition-all duration-700 rounded-full ${index === i ? 'w-12 bg-accent' : 'w-4 bg-white/10'}`} 
                 />
               ))}
             </div>
-
-            {/* RIGHT Stage: Giant Infographic */}
-            <div className="flex-1 order-1 lg:order-2 flex items-center justify-center">
-              <div className="relative w-full bg-[#030303] border border-white/5 overflow-hidden">
-                <div className="flex items-center justify-center min-h-[350px] lg:min-h-[70vh] p-4 md:p-12 relative">
-                  {/* Technical Framing Accents */}
-                  <div className="absolute top-8 left-8 w-4 h-4 border-t border-l border-white/20 opacity-40" />
-                  <div className="absolute top-8 right-8 w-4 h-4 border-t border-r border-white/20 opacity-40" />
-                  <div className="absolute bottom-8 left-8 w-4 h-4 border-b border-l border-white/20 opacity-40" />
-                  <div className="absolute bottom-8 right-8 w-4 h-4 border-b border-r border-white/20 opacity-40" />
-
-                  <AnimatePresence mode="wait">
-                    <motion.img
-                      key={index}
-                      src={promiseData[index].image}
-                      alt={promiseData[index].title}
-                      initial={{ opacity: 0, scale: 0.98, filter: "blur(10px)" }}
-                      animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                      exit={{ opacity: 0, scale: 1.02, filter: "blur(10px)" }}
-                      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                      className="max-w-full max-h-[60vh] md:max-h-full object-contain relative z-10"
-                      referrerPolicy="no-referrer"
-                    />
-                  </AnimatePresence>
-                  
-                  {/* Background Noise for legibility */}
-                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
-                </div>
-              </div>
+            <div className="font-mono text-[9px] text-neutral-600 uppercase tracking-[0.5em]">
+              System_Integrity_Check: OK
             </div>
           </div>
         </div>
@@ -314,66 +346,6 @@ const PromiseCarousel: React.FC = () => {
     </section>
   );
 };
-
-interface PromiseItemProps {
-  item: any;
-  i: number;
-  index: number;
-  scrollYProgress: any;
-}
-
-const PromiseItem: React.FC<PromiseItemProps> = ({ item, i, index, scrollYProgress }) => {
-  const scaleY = useTransform(
-    scrollYProgress,
-    [i * 0.25, (i + 1) * 0.25],
-    [0, 1]
-  );
-
-  return (
-    <div
-      className={`w-full group text-left px-8 py-6 md:py-8 relative transition-all duration-500 border-l border-white/5 ${index === i ? 'opacity-100' : 'opacity-20'}`}
-    >
-      {/* Individual Vertical Progress Bar */}
-      <div className="absolute left-0 top-0 w-[2px] h-full bg-white/5">
-        <motion.div 
-          className="absolute top-0 left-0 w-full bg-accent h-full origin-top"
-          style={{ 
-            scaleY: i <= index ? (i < index ? 1 : scaleY) : 0 
-          }}
-        />
-      </div>
-
-      <div className="space-y-4">
-        <span className={`font-mono text-[10px] tracking-widest block transition-colors duration-500 ${index === i ? 'text-accent' : 'text-neutral-500'}`}>
-          0{i + 1} // SECTION_{item.tag}
-        </span>
-        <h4 className="text-xl md:text-2xl font-display uppercase tracking-tight text-white leading-tight">
-          {item.title}
-        </h4>
-        <AnimatePresence mode="wait">
-          {index === i && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
-              <p className="text-neutral-400 text-sm md:text-base font-light pt-4 leading-relaxed">
-                {item.desc}
-              </p>
-              <div className="flex items-center gap-2 pt-6">
-                <div className="w-8 h-[1px] bg-accent/40" />
-                <span className="font-mono text-[9px] text-accent/60 uppercase tracking-[0.3em]">Technical Specification</span>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </div>
-  );
-};
-
-
 
 const Home: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
