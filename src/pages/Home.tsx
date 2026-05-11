@@ -201,6 +201,12 @@ const PhilosophySystem: React.FC = () => {
 };
 
 const PromiseCarousel: React.FC = () => {
+  const containerRef = useRef<HTMLElement>(null);
+  const { scrollYProgress } = useScroll({
+    target: containerRef,
+    offset: ["start start", "end end"]
+  });
+
   const [index, setIndex] = useState(0);
 
   const promiseData = [
@@ -230,130 +236,140 @@ const PromiseCarousel: React.FC = () => {
     }
   ];
 
-  const next = () => setIndex((prev) => (prev + 1) % promiseData.length);
-  const prev = () => setIndex((prev) => (prev - 1 + promiseData.length) % promiseData.length);
-
-  // Individual progress auto-play logic
+  // Sync index with scroll progress
   useEffect(() => {
-    const timer = setInterval(() => {
-      next();
-    }, 8000); // 8 seconds for deep reading
-    return () => clearInterval(timer);
-  }, [index]);
+    const unsubscribe = scrollYProgress.on("change", (latest) => {
+      if (latest < 0.25) setIndex(0);
+      else if (latest < 0.5) setIndex(1);
+      else if (latest < 0.75) setIndex(2);
+      else setIndex(3);
+    });
+    return () => unsubscribe();
+  }, [scrollYProgress]);
 
   return (
-    <section id="promise" className="bg-black py-24 md:py-32 border-t border-white/5">
-      <div className="max-w-[1800px] mx-auto px-6">
-        {/* Header - Simple & Premium */}
-        <div className="mb-20 md:mb-32">
-          <span className="text-accent text-[10px] md:text-[12px] uppercase tracking-[1.2rem] mb-4 block font-bold opacity-70">
-            The <span className="italic underline underline-offset-[12px] decoration-accent/40 font-light">Commitment</span>
-          </span>
-          <h2 className="text-6xl md:text-[12rem] font-display font-medium uppercase tracking-tighter text-white leading-[0.85]">
-            Our <span className="italic underline underline-offset-[1.5rem] md:underline-offset-[4rem] decoration-accent/30 font-light">Promise</span>
-          </h2>
-        </div>
-
-        <div className="flex flex-col lg:flex-row gap-12 md:gap-24">
-          {/* LEFT Sidebar: Individual Vertical Progress Indicators */}
-          <div className="lg:w-96 space-y-4 order-2 lg:order-1">
-            {promiseData.map((item, i) => (
-              <button
-                key={i}
-                onClick={() => setIndex(i)}
-                className={`w-full group text-left px-8 py-8 relative transition-all duration-500 border-l border-white/5 ${index === i ? 'opacity-100' : 'opacity-20 hover:opacity-100'}`}
-              >
-                {/* Individual Vertical Progress Bar */}
-                <div className="absolute left-0 top-0 w-[2px] h-full bg-white/5">
-                  {index === i && (
-                    <motion.div 
-                      key={i}
-                      initial={{ height: 0 }}
-                      animate={{ height: "100%" }}
-                      transition={{ duration: 8, ease: "linear" }}
-                      className="absolute top-0 left-0 w-full bg-accent"
-                    />
-                  )}
-                </div>
-
-                <div className="space-y-4">
-                  <span className={`font-mono text-[10px] tracking-widest block transition-colors duration-500 ${index === i ? 'text-accent' : 'text-neutral-500'}`}>
-                    0{i + 1} // SECTION_{item.tag}
-                  </span>
-                  <h4 className="text-xl md:text-2xl font-display uppercase tracking-tight text-white leading-tight">
-                    {item.title}
-                  </h4>
-                  <AnimatePresence mode="wait">
-                    {index === i && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
-                      >
-                        <p className="text-neutral-400 text-sm md:text-base font-light pt-4 leading-relaxed">
-                          {item.desc}
-                        </p>
-                        <div className="flex items-center gap-2 pt-6">
-                          <div className="w-8 h-[1px] bg-accent/40" />
-                          <span className="font-mono text-[9px] text-accent/60 uppercase tracking-[0.3em]">Technical Specification</span>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </button>
-            ))}
-
-            {/* Simple Manual Controls */}
-            <div className="pt-12 px-8 flex gap-3">
-              <button 
-                onClick={prev}
-                className="w-14 h-14 border border-white/10 flex items-center justify-center text-white hover:bg-white hover:text-black transition-all group"
-              >
-                <ArrowRight className="rotate-180 w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-              </button>
-              <button 
-                onClick={next}
-                className="w-14 h-14 border border-white/10 flex items-center justify-center text-white hover:bg-white hover:text-black transition-all group"
-              >
-                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-              </button>
-            </div>
+    <section 
+      ref={containerRef} 
+      id="promise" 
+      className="bg-black relative h-[400vh]"
+    >
+      <div className="sticky top-0 h-screen flex flex-col justify-center overflow-hidden py-12 md:py-0">
+        <div className="max-w-[1800px] mx-auto px-6 w-full">
+          {/* Header - Simple & Premium */}
+          <div className="mb-12 md:mb-20">
+            <span className="text-accent text-[10px] md:text-[12px] uppercase tracking-[1.2rem] mb-4 block font-bold opacity-70">
+              The <span className="italic underline underline-offset-[12px] decoration-accent/40 font-light">Commitment</span>
+            </span>
+            <h2 className="text-4xl md:text-[10rem] font-display font-medium uppercase tracking-tighter text-white leading-[0.85]">
+              Our <span className="italic underline underline-offset-[1.5rem] md:underline-offset-[4rem] decoration-accent/30 font-light">Promise</span>
+            </h2>
           </div>
 
-          {/* RIGHT Stage: Giant Infographic */}
-          <div className="flex-1 order-1 lg:order-2">
-            <div className="relative w-full bg-[#030303] border border-white/5 overflow-hidden">
-              <div className="flex items-center justify-center min-h-[450px] md:min-h-[85vh] p-4 md:p-12 relative">
-                {/* Technical Framing Accents */}
-                <div className="absolute top-8 left-8 w-4 h-4 border-t border-l border-white/20 opacity-40" />
-                <div className="absolute top-8 right-8 w-4 h-4 border-t border-r border-white/20 opacity-40" />
-                <div className="absolute bottom-8 left-8 w-4 h-4 border-b border-l border-white/20 opacity-40" />
-                <div className="absolute bottom-8 right-8 w-4 h-4 border-b border-r border-white/20 opacity-40" />
+          <div className="flex flex-col lg:flex-row gap-8 md:gap-24">
+            {/* LEFT Sidebar: Individual Vertical Progress Indicators */}
+            <div className="lg:w-96 space-y-4 order-2 lg:order-1">
+              {promiseData.map((item, i) => (
+                <PromiseItem 
+                  key={i} 
+                  item={item} 
+                  i={i} 
+                  index={index} 
+                  scrollYProgress={scrollYProgress} 
+                />
+              ))}
+            </div>
 
-                <AnimatePresence mode="wait">
-                  <motion.img
-                    key={index}
-                    src={promiseData[index].image}
-                    alt={promiseData[index].title}
-                    initial={{ opacity: 0, scale: 0.98, filter: "blur(10px)" }}
-                    animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                    exit={{ opacity: 0, scale: 1.02, filter: "blur(10px)" }}
-                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                    className="max-w-full max-h-full object-contain relative z-10"
-                    referrerPolicy="no-referrer"
-                  />
-                </AnimatePresence>
-                
-                {/* Background Noise for legibility */}
-                <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+            {/* RIGHT Stage: Giant Infographic */}
+            <div className="flex-1 order-1 lg:order-2 flex items-center justify-center">
+              <div className="relative w-full bg-[#030303] border border-white/5 overflow-hidden">
+                <div className="flex items-center justify-center min-h-[350px] lg:min-h-[70vh] p-4 md:p-12 relative">
+                  {/* Technical Framing Accents */}
+                  <div className="absolute top-8 left-8 w-4 h-4 border-t border-l border-white/20 opacity-40" />
+                  <div className="absolute top-8 right-8 w-4 h-4 border-t border-r border-white/20 opacity-40" />
+                  <div className="absolute bottom-8 left-8 w-4 h-4 border-b border-l border-white/20 opacity-40" />
+                  <div className="absolute bottom-8 right-8 w-4 h-4 border-b border-r border-white/20 opacity-40" />
+
+                  <AnimatePresence mode="wait">
+                    <motion.img
+                      key={index}
+                      src={promiseData[index].image}
+                      alt={promiseData[index].title}
+                      initial={{ opacity: 0, scale: 0.98, filter: "blur(10px)" }}
+                      animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                      exit={{ opacity: 0, scale: 1.02, filter: "blur(10px)" }}
+                      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                      className="max-w-full max-h-[60vh] md:max-h-full object-contain relative z-10"
+                      referrerPolicy="no-referrer"
+                    />
+                  </AnimatePresence>
+                  
+                  {/* Background Noise for legibility */}
+                  <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
     </section>
+  );
+};
+
+interface PromiseItemProps {
+  item: any;
+  i: number;
+  index: number;
+  scrollYProgress: any;
+}
+
+const PromiseItem: React.FC<PromiseItemProps> = ({ item, i, index, scrollYProgress }) => {
+  const scaleY = useTransform(
+    scrollYProgress,
+    [i * 0.25, (i + 1) * 0.25],
+    [0, 1]
+  );
+
+  return (
+    <div
+      className={`w-full group text-left px-8 py-6 md:py-8 relative transition-all duration-500 border-l border-white/5 ${index === i ? 'opacity-100' : 'opacity-20'}`}
+    >
+      {/* Individual Vertical Progress Bar */}
+      <div className="absolute left-0 top-0 w-[2px] h-full bg-white/5">
+        <motion.div 
+          className="absolute top-0 left-0 w-full bg-accent h-full origin-top"
+          style={{ 
+            scaleY: i <= index ? (i < index ? 1 : scaleY) : 0 
+          }}
+        />
+      </div>
+
+      <div className="space-y-4">
+        <span className={`font-mono text-[10px] tracking-widest block transition-colors duration-500 ${index === i ? 'text-accent' : 'text-neutral-500'}`}>
+          0{i + 1} // SECTION_{item.tag}
+        </span>
+        <h4 className="text-xl md:text-2xl font-display uppercase tracking-tight text-white leading-tight">
+          {item.title}
+        </h4>
+        <AnimatePresence mode="wait">
+          {index === i && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <p className="text-neutral-400 text-sm md:text-base font-light pt-4 leading-relaxed">
+                {item.desc}
+              </p>
+              <div className="flex items-center gap-2 pt-6">
+                <div className="w-8 h-[1px] bg-accent/40" />
+                <span className="font-mono text-[9px] text-accent/60 uppercase tracking-[0.3em]">Technical Specification</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
   );
 };
 
