@@ -45,6 +45,7 @@ const Footer: React.FC = () => {
               <li><Link to="/shipping-delivery" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Shipping</Link></li>
               <li><Link to="/returns-refunds" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Returns</Link></li>
               <li><Link to="/support" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Support Center</Link></li>
+              <li><Link to="/privacy-policy" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Privacy Policy</Link></li>
               <li><a href="mailto:hello.chilsandco@gmail.com" className="text-neutral-500 hover:text-white text-[10px] transition-colors uppercase tracking-widest">hello.chilsandco@gmail.com</a></li>
             </ul>
 
@@ -69,7 +70,7 @@ const Footer: React.FC = () => {
 
         <div className="flex flex-col md:flex-row justify-between items-center pt-12 border-t border-neutral-900 gap-6">
           <p className="text-[10px] text-neutral-600 uppercase tracking-widest">
-            © 2026 CHILS & CO. ALL RIGHTS RESERVED.
+            © 2026 CHILS & CO. ALL RIGHTS RESERVED by Chilamkuri Ventures.
           </p>
           <div className="flex gap-8">
             {/* Social links or other footer secondary elements can go here */}
