@@ -6,7 +6,7 @@ const Footer: React.FC = () => {
   return (
     <footer className="bg-black border-t border-neutral-900 pt-20 pb-12 px-6 md:px-12">
       <div className="max-w-[1800px] mx-auto">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-20">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-20">
           <div className="md:col-span-1">
             <div className="flex items-center gap-4 mb-6">
               <motion.img 
@@ -41,17 +41,14 @@ const Footer: React.FC = () => {
 
           <div>
             <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-6">Service</h3>
-            <ul className="flex flex-col gap-4">
+            <ul className="flex flex-col gap-4 mb-8">
               <li><Link to="/shipping-delivery" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Shipping</Link></li>
               <li><Link to="/returns-refunds" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Returns</Link></li>
               <li><Link to="/support" className="text-neutral-500 hover:text-white text-sm transition-colors uppercase tracking-widest">Support Center</Link></li>
               <li><a href="mailto:hello.chilsandco@gmail.com" className="text-neutral-500 hover:text-white text-[10px] transition-colors uppercase tracking-widest">hello.chilsandco@gmail.com</a></li>
             </ul>
-          </div>
 
-          <div>
-            <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-6">Contact</h3>
-            <div className="space-y-6">
+            <div className="space-y-6 pt-6 border-t border-neutral-900">
               <div className="space-y-1">
                 <p className="text-white text-[11px] font-bold tracking-widest">+91 7842 07 0404</p>
                 <p className="text-neutral-600 text-[9px] uppercase tracking-widest leading-relaxed">
@@ -75,9 +72,7 @@ const Footer: React.FC = () => {
             © 2026 CHILS & CO. ALL RIGHTS RESERVED.
           </p>
           <div className="flex gap-8">
-            <a href="#" className="text-[10px] text-neutral-600 hover:text-white uppercase tracking-widest transition-colors">Instagram</a>
-            <a href="#" className="text-[10px] text-neutral-600 hover:text-white uppercase tracking-widest transition-colors">Twitter</a>
-            <a href="#" className="text-[10px] text-neutral-600 hover:text-white uppercase tracking-widest transition-colors">GitHub</a>
+            {/* Social links or other footer secondary elements can go here */}
           </div>
         </div>
       </div>
