@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { ArrowRight, RefreshCw, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
+import SEO from '../components/SEO';
 
 const Bespoke: React.FC = () => {
   const { user, refreshUser, updateUser, isLoading: authLoading } = useAuth();
@@ -140,6 +141,11 @@ const Bespoke: React.FC = () => {
 
   return (
     <div className="bg-black min-h-screen pt-36 md:pt-32 pb-24 overflow-hidden">
+      <SEO 
+        title="Bespoke Luxury | CHILS & CO." 
+        description="The future of fashion is personal. Register for early access to Chils & Co. bespoke tailoring experience. Custom built, handcrafted precision tailored for you."
+        keywords="bespoke tailoring India, custom shirts, high-end tailoring, Chils and Co bespoke, personal fashion system"
+      />
       {/* Hero / Header */}
       <section className="px-6 md:px-12 mb-24 md:mb-40">
         <div className="max-w-5xl mx-auto text-center">

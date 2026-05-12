@@ -32,20 +32,34 @@ export const useCheckout = () => {
         throw new Error(order.message || "Checkout failed");
       }
 
-      // 2. Trigger Razorpay Placeholder Modal
-      // In a real app, you'd load Razorpay script and call window.Razorpay
-      alert(`RAZORPAY MOCK MODAL\n\nOrder ID: ${order.id}\nAmount: ₹${amountToPay}\n\nProceeding with mock payment...`);
-
-      return new Promise<any>((resolve) => {
-        setTimeout(() => {
-          clearCart();
-          setIsProcessing(false);
-          resolve(order);
-        }, 1500);
+      // 2. Initiate PhonePe Payment
+      const phonePeResponse = await fetch('/api/checkout/phonepe/pay', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ 
+          amount: amountToPay,
+          merchantTransactionId: order.id,
+          merchantUserId: localStorage.getItem('chils_user_id') || 'GUEST',
+          mobileNumber: customerDetails.phone
+        })
       });
 
-    } catch (error) {
+      const paymentData = await phonePeResponse.json();
+
+      if (phonePeResponse.ok && paymentData.success && paymentData.url) {
+        // Redirect to PhonePe
+        window.location.href = paymentData.url;
+        return; // Navigation happens via redirect
+      } else {
+        throw new Error(paymentData.message || "Payment initialization failed");
+      }
+
+    } catch (error: any) {
       console.error(error);
+      alert(error.message || "Payment System Offline. Please try again.");
       setIsProcessing(false);
       return false;
     }

@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import Hero from '../components/Hero';
 import ProductCard from '../components/ProductCard';
 import EcoEngineeredLogo from '../components/EcoEngineeredLogo';
+import SEO from '../components/SEO';
 import { Product } from '../types';
 import { motion, AnimatePresence, useInView, useScroll, useTransform } from 'motion/react';
 import { ArrowRight, RefreshCw, Smartphone, Monitor, Watch } from 'lucide-react';
@@ -256,17 +257,17 @@ const PromiseCarousel: React.FC = () => {
       <div className="sticky top-0 h-screen flex flex-col justify-start overflow-hidden pt-12 md:pt-20">
         <div className="max-w-[1800px] mx-auto px-6 w-full flex flex-col h-full">
           {/* Header - Simple & Premium */}
-          <div className="mb-8 md:mb-12 relative z-30">
-            <span className="text-accent text-[10px] md:text-[12px] uppercase tracking-[1.2rem] mb-2 block font-bold opacity-70">
-              The <span className="italic underline underline-offset-[8px] decoration-accent/40 font-light">Commitment</span>
+          <div className="mb-4 md:mb-6 relative z-30">
+            <span className="text-accent text-[9px] md:text-[10px] uppercase tracking-[1.2rem] mb-1 block font-bold opacity-70">
+              The <span className="italic underline underline-offset-[4px] decoration-accent/40 font-light">Commitment</span>
             </span>
-            <h2 className="text-3xl md:text-6xl lg:text-7xl font-display font-medium uppercase tracking-tighter text-white leading-[0.85]">
-              Our <span className="italic underline underline-offset-[1rem] md:underline-offset-[2rem] decoration-accent/30 font-light">Promise</span>
+            <h2 className="text-2xl md:text-5xl lg:text-5xl font-display font-medium uppercase tracking-tighter text-white leading-[0.85]">
+              Our <span className="italic underline underline-offset-[0.5rem] md:underline-offset-[1rem] decoration-accent/30 font-light">Promise</span>
             </h2>
           </div>
 
           {/* Unified Content Display */}
-          <div className="flex-1 relative flex items-center justify-center mb-12">
+          <div className="flex-1 relative flex items-center justify-center mb-6">
             <AnimatePresence mode="wait">
               <motion.div
                 key={index}
@@ -387,6 +388,11 @@ const Home: React.FC = () => {
 
   return (
     <div className="bg-black">
+      <SEO 
+        title="CHILS & CO. | Extraordinary Bespoke Luxury" 
+        description="Experience the pinnacle of luxury with Chils & Co. Bespoke and ready-to-wear garments engineered for the modern tech pioneer. Designed by techies, for those who build."
+        keywords="luxury clothing India, bespoke shirts, custom tailored suits, Chils and Co, premium menswear, techie fashion"
+      />
       <Hero />
 
       {/* Drop Identifier Section */}

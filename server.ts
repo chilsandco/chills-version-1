@@ -6,6 +6,7 @@ import cors from "cors";
 import WooCommerceRestApi from "@woocommerce/woocommerce-rest-api";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
 
 dotenv.config();
 
@@ -328,6 +329,130 @@ async function startServer() {
     } catch (error: any) {
       console.error("Checkout Order Creation Error:", error.response?.data || error);
       res.status(500).json({ message: "Failed to create order in system" });
+    }
+  });
+
+  app.post("/api/checkout/phonepe/pay", async (req, res) => {
+    try {
+      const { amount, merchantTransactionId, merchantUserId, mobileNumber } = req.body;
+      
+      const merchantId = process.env.PHONEPE_MERCHANT_ID;
+      const saltKey = process.env.PHONEPE_SALT_KEY || process.env.PHONEPE_API_KEY;
+      const saltIndex = process.env.PHONEPE_SALT_INDEX || "1";
+      const env = process.env.PHONEPE_ENV || "PRODUCTION";
+      
+      if (!merchantId || !saltKey) {
+        console.error("[CHILS & CO.] PhonePe credentials missing from environment. Require PHONEPE_MERCHANT_ID and PHONEPE_SALT_KEY.");
+        return res.status(400).json({ message: "Payment system not configured correctly. Please enter your PhonePe Merchant ID and Salt Key in the Settings > Environment Variables menu." });
+      }
+
+      console.log(`[CHILS & CO.] Initiating PhonePe payment for Order: ${merchantTransactionId}, Amount: ${amount}`);
+
+      const baseUrl = env === "PRODUCTION" 
+        ? "https://api.phonepe.com/apis/hermes" 
+        : "https://api-preprod.phonepe.com/apis/pg-sandbox";
+
+      const payload = {
+        merchantId,
+        merchantTransactionId: merchantTransactionId.toString(),
+        merchantUserId: merchantUserId || "CHLS_GUEST",
+        amount: Math.round(amount * 100), // Paise
+        redirectUrl: `${req.protocol}://${req.get('host')}/order-success/${merchantTransactionId}?signal=${toSignalId(merchantTransactionId)}`,
+        redirectMode: "REDIRECT",
+        callbackUrl: process.env.PHONEPE_REDIRECT_URL || `${req.protocol}://${req.get('host')}/api/checkout/phonepe/callback`,
+        mobileNumber: mobileNumber || "",
+        paymentInstrument: {
+          type: "PAY_PAGE"
+        }
+      };
+
+      const base64Payload = Buffer.from(JSON.stringify(payload)).toString("base64");
+      const stringToHash = base64Payload + "/pg/v1/pay" + saltKey;
+      const sha256Hash = crypto.createHash("sha256").update(stringToHash).digest("hex");
+      const xVerify = sha256Hash + "###" + saltIndex;
+
+      const response = await fetch(`${baseUrl}/pg/v1/pay`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-VERIFY': xVerify,
+          'accept': 'application/json'
+        },
+        body: JSON.stringify({ request: base64Payload })
+      });
+
+      const data = await response.json();
+      
+      if (data.success && data.data?.instrumentResponse?.redirectInfo?.url) {
+        console.log(`[CHILS & CO.] PhonePe session created. Redirecting user.`);
+        res.json({
+          success: true,
+          url: data.data.instrumentResponse.redirectInfo.url
+        });
+      } else {
+        console.error("[CHILS & CO.] PhonePe Session Failure:", data);
+        res.status(400).json({ success: false, message: data.message || "Failed to initialize payment" });
+      }
+    } catch (err) {
+      console.error("[CHILS & CO.] Critical PhonePe Integration Error:", err);
+      res.status(500).json({ message: "Internal payment server error" });
+    }
+  });
+
+  app.post("/api/checkout/phonepe/callback", async (req, res) => {
+    try {
+      const { response: base64Response } = req.body;
+      const saltKey = process.env.PHONEPE_SALT_KEY || process.env.PHONEPE_API_KEY;
+      const saltIndex = process.env.PHONEPE_SALT_INDEX || "1";
+      const xVerifyHeader = req.headers['x-verify'] as string;
+
+      if (!base64Response || !saltKey) {
+        console.warn("[CHILS & CO.] Incomplete PhonePe callback received.");
+        return res.status(200).send("OK"); // Acknowledge anyway
+      }
+
+      // Verify the callback signature if header is provided
+      if (xVerifyHeader) {
+        const stringToHash = base64Response + saltKey;
+        const sha256Hash = crypto.createHash("sha256").update(stringToHash).digest("hex");
+        const expectedVerify = sha256Hash + "###" + saltIndex;
+        
+        if (xVerifyHeader !== expectedVerify) {
+          console.error("[CHILS & CO.] PhonePe Callback Signature Mismatch!");
+          return res.status(401).send("Invalid Signature");
+        }
+      }
+
+      const decodedResponse = JSON.parse(Buffer.from(base64Response, "base64").toString("utf-8"));
+      console.log("[CHILS & CO.] PhonePe Callback Decoded:", decodedResponse);
+
+      if (decodedResponse.success && decodedResponse.code === "PAYMENT_SUCCESS") {
+        const orderId = decodedResponse.data?.merchantTransactionId;
+        const transactionId = decodedResponse.data?.transactionId;
+        
+        console.log(`[CHILS & CO.] Payment CONFIRMED for Order: ${orderId}. Trans ID: ${transactionId}`);
+        
+        const wc = getWooCommerce();
+        if (wc && orderId) {
+          try {
+            console.log(`[CHILS & CO.] Updating WooCommerce Order ${orderId} to 'processing'`);
+            await wc.put(`orders/${orderId}`, {
+              status: "processing",
+              set_paid: true,
+              transaction_id: transactionId,
+              note: `PhonePe Payment Successful. Transaction ID: ${transactionId}`
+            });
+            console.log(`[CHILS & CO.] WooCommerce Order ${orderId} updated successfully.`);
+          } catch (wcErr) {
+            console.error(`[CHILS & CO.] Failed to update WC Order ${orderId}:`, wcErr);
+          }
+        }
+      }
+      
+      res.status(200).send("OK");
+    } catch (err) {
+      console.error("[CHILS & CO.] PhonePe Callback Error:", err);
+      res.status(500).send("Error");
     }
   });
 

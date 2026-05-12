@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import ProductCard from '../components/ProductCard';
+import SEO from '../components/SEO';
 import { Product } from '../types';
 
 const Collection: React.FC = () => {
@@ -31,6 +32,11 @@ const Collection: React.FC = () => {
 
   return (
     <div className="pt-36 md:pt-40 pb-24 px-6 md:px-12 max-w-[1800px] mx-auto min-h-screen">
+      <SEO 
+        title="Luxury Collection | CHILS & CO." 
+        description="Explore the curated collection of premium shirts and luxury garments by Chils & Co. Handcrafted with 100% fine cotton and digital-mapped tailoring."
+        keywords="premium shirts India, luxury menswear collection, handcrafted fashion, Chils and Co products"
+      />
       <header className="mb-16">
         <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter mb-8 uppercase">Collection</h1>
         <div className="flex gap-8 border-b border-neutral-900 pb-4">
