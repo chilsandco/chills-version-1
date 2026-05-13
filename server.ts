@@ -538,18 +538,26 @@ async function startServer() {
       const possibleAttempts: { url: string, hashPath: string }[] = [];
       
       for (const baseUrl of endpoints) {
-        // Variation 1: Standard path (B2B uses /pg/v1/pay on top of /apis/hermes, Enterprise uses /v1/pay on top of /apis/pg?)
-        // Actually, most common is simply /pg/v1/pay appended to the listed base.
+        // PhonePe has two main patterns:
+        // 1. Standard (B2B): https://api.phonepe.com/apis/hermes/pg/v1/pay
+        // 2. Enterprise: https://api.phonepe.com/apis/pg/v1/pay
+        
         const pathSuffix = "/pg/v1/pay";
         const fullUrl = `${baseUrl}${pathSuffix}`;
         const urlObj = new URL(fullUrl);
         
-        // Strategy A: Full pathname in hash
+        // Pattern 1: Hash the full path (Standard for most new integrations)
         possibleAttempts.push({ url: fullUrl, hashPath: urlObj.pathname });
         
-        // Strategy B: Tail pathname in hash (some older integrations only hash the endpoint tail)
+        // Pattern 2: Hash only the suffix (Common in older or specific standard integrations)
         if (urlObj.pathname !== pathSuffix) {
           possibleAttempts.push({ url: fullUrl, hashPath: pathSuffix });
+        }
+        
+        // Pattern 3: Fallback for some specialized enterprise accounts
+        if (baseUrl.includes('/apis/pg') && !baseUrl.endsWith('/pg')) {
+           const altUrl = baseUrl.replace('/apis/pg', '/apis/hermes') + pathSuffix;
+           possibleAttempts.push({ url: altUrl, hashPath: new URL(altUrl).pathname });
         }
       }
 
