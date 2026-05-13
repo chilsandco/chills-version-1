@@ -6,7 +6,11 @@ RewriteBase /
 # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 # Proxy all requests to the Node.js application
-# Note: Hostinger usually uses a passenger or proxy setup.
-# If your Node app is running on a specific port (like 3000), 
-# this ensures even /api routes are sent to Node.
-RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
+# ---------------------------------------------------------
+# IMPORTANT FOR HOSTINGER USERS:
+# If you are using Hostinger's "Node.js" selector in the panel, 
+# you DO NOT need the RewriteRule below. Hostinger handles the proxying for you.
+# Using this rule might cause 503 errors if the port or module isn't correctly configured.
+
+# Only uncomment if you are NOT using the Node.js Manager:
+# RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]

@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build && npm run build:server",
-    "build:server": "esbuild server.ts --bundle --platform=node --format=esm --outfile=server.js --external:vite --external:express --external:cors --external:@woocommerce/woocommerce-rest-api --external:dotenv --external:razorpay --external:jsonwebtoken",
+    "build:server": "esbuild server.ts --bundle --platform=node --format=esm --outfile=server.js --packages=external",
     "start": "NODE_ENV=production node server.js",
     "preview": "vite preview",
     "clean": "rm -rf dist",

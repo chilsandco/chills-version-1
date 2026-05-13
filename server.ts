@@ -121,11 +121,12 @@ async function wcSafeCall(wc: any, method: string, ...args: any[]) {
 async function startServer() {
   const app = express();
   
-  // Defensive port parsing for Hostinger/Cloud environments
-  const rawPort = process.env.PORT;
-  const PORT = rawPort && !isNaN(parseInt(rawPort, 10)) && parseInt(rawPort, 10) !== 0
-    ? parseInt(rawPort, 10) 
-    : 3000;
+  // Robust port handling for Hostinger (supports numeric ports and Passenger pipes)
+  const PORT = process.env.PORT || 3000;
+
+  console.log(`[CHILS & CO.] Initializing Server...`);
+  console.log(`[CHILS & CO.] NODE_ENV: ${process.env.NODE_ENV}`);
+  console.log(`[CHILS & CO.] Target PORT: ${PORT} (Type: ${typeof PORT})`);
 
   app.use(cors());
   app.set('trust proxy', true);
