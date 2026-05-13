@@ -14,13 +14,14 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
-    "@google/genai": "^1.29.0",
+    "@google/genai": "^1.30.0",
     "@react-google-maps/api": "^2.20.8",
     "@tailwindcss/vite": "^4.1.14",
     "@types/jsonwebtoken": "^9.0.10",
     "@use-gesture/react": "^10.3.1",
     "@vitejs/plugin-react": "^5.0.4",
     "@woocommerce/woocommerce-rest-api": "^1.0.2",
+    "agentkeepalive": "^4.6.0",
     "canvas-confetti": "^1.9.4",
     "clsx": "^2.1.1",
     "cors": "^2.8.6",
@@ -31,6 +32,7 @@
     "lenis": "^1.3.21",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
+    "pg-sdk-node": "^2.0.2",
     "razorpay": "^2.9.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

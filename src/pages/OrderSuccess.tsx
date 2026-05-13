@@ -6,9 +6,13 @@ import ShareSignal from '../components/ShareSignal';
 import { useAuth } from '../AuthContext';
 
 const OrderSuccess: React.FC = () => {
-  const { orderId } = useParams();
+  const { orderId: fullOrderId } = useParams();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  
+  // Extract original order ID if suffix exists (e.g. 123_1715535555 -> 123)
+  const orderId = fullOrderId?.split('_')[0];
+  
   const signalId = searchParams.get('signal') || `#CHLS-${Math.floor(100000 + Math.random() * 900000)}`;
   
   return (

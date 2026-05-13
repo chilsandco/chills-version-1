@@ -1,5 +1,7 @@
 import express from "express";
 import path from "path";
+import http from "http";
+import https from "https";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import cors from "cors";
@@ -7,6 +9,7 @@ import WooCommerceRestApi from "@woocommerce/woocommerce-rest-api";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { StandardCheckoutClient, Env, StandardCheckoutPayRequest, CallbackType } from 'pg-sdk-node';
 
 dotenv.config();
 
@@ -19,21 +22,100 @@ const __dirname = path.dirname(__filename);
 
 // Initialize WooCommerce API helper
 function getWooCommerce() {
-  if (!process.env.WOOCOMMERCE_KEY || !process.env.WOOCOMMERCE_SECRET) {
+  const k = (process.env.WOOCOMMERCE_KEY || "").trim();
+  const s = (process.env.WOOCOMMERCE_SECRET || "").trim();
+  const rawUrl = (process.env.WOOCOMMERCE_URL || "https://www.chilsandco.com").trim();
+  
+  const isMissing = !k || !s;
+  const isPlaceholder = k.includes('ck_xxxxxxxx') || s.includes('cs_xxxxxxxx');
+
+  if (isMissing || isPlaceholder) {
+    console.warn(`[CHILS & CO.] WooCommerce Auth Config Missing:
+      - Has URL: ${!!rawUrl} (${rawUrl})
+      - Has Key: ${k ? (isPlaceholder ? "Placeholder" : "Yes") : "No"}
+      - Has Secret: ${s ? (isPlaceholder ? "Placeholder" : "Yes") : "No"}
+      - ACTION: Please set WOOCOMMERCE_KEY and WOOCOMMERCE_SECRET in AI Studio Settings.`);
     return null;
   }
-  const rawUrl = process.env.WOOCOMMERCE_URL || "https://chilsandco.com";
+
   const apiUrl = rawUrl.endsWith('/') ? rawUrl.slice(0, -1) : rawUrl;
-  
   const WooCommerce = (WooCommerceRestApi as any).default || WooCommerceRestApi;
   
   return new WooCommerce({
     url: apiUrl,
-    consumerKey: process.env.WOOCOMMERCE_KEY,
-    consumerSecret: process.env.WOOCOMMERCE_SECRET,
+    consumerKey: k,
+    consumerSecret: s,
     version: "wc/v3",
-    queryStringAuth: true
+    queryStringAuth: true, // Generally more compatible with WAFs on shared hosting
+    axiosConfig: {
+      timeout: 30000,
+      headers: {
+        'User-Agent': 'ChilsAndCo-Backend-Client/1.4',
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache'
+      },
+      // In case of SSL certificate chain issues on shared host
+      httpsAgent: new https.Agent({ 
+        rejectUnauthorized: false,
+        keepAlive: false 
+      })
+    }
   });
+}
+
+// Helper to create a unique signal ID from order ID
+function toSignalId(orderId: string | number) {
+  const cleanId = String(orderId).replace(/\D/g, '');
+  const numId = parseInt(cleanId, 10) || 123456;
+  const signalNum = (numId % 900000) + 100000;
+  return `CHLS-${signalNum}`;
+}
+
+// Helper to retry WooCommerce calls on transient failures
+async function wcSafeCall(wc: any, method: string, ...args: any[]) {
+  const maxRetries = 6;
+  for (let i = 0; i <= maxRetries; i++) {
+    try {
+      return await wc[method](...args);
+    } catch (error: any) {
+      const isTransient = error.code === 'ECONNRESET' || 
+                          error.code === 'ETIMEDOUT' || 
+                          error.code === 'ECONNABORTED' ||
+                          error.code === 'EAI_AGAIN' ||
+                          error.code === 'ENOTFOUND' ||
+                          error.code === 'EHOSTUNREACH' ||
+                          error.message?.includes('socket hang up') ||
+                          error.message?.includes('timeout') ||
+                          error.message?.includes('read ECONNRESET') ||
+                          error.message?.includes('ERR_BAD_RESPONSE') ||
+                          (error.response && error.response.status >= 500); 
+      
+      if (isTransient && i < maxRetries) {
+        // Exponential backoff: 2s, 4s, 8s, 16s, 32s, 64s
+        const backoff = Math.pow(2, i + 1) * 1000 + Math.floor(Math.random() * 1000);
+        console.warn(`[CHILS & CO.] WooCommerce ${method} transient failure (${error.code || error.message}). Redialing in ${Math.round(backoff/1000)}s... (Attempt ${i + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, backoff));
+        continue;
+      }
+      
+      if (error.response) {
+        if (error.response.status === 401) {
+          console.error(`[CHILS & CO.] WooCommerce 401 ERROR: REST API Authentication failed. 
+            - URL: ${error.config?.url}
+            - Method: ${method}
+            - Check WOOCOMMERCE_KEY and WOOCOMMERCE_SECRET in environment.
+            - Ensure WooCommerce REST API keys have "Read/Write" permissions.
+            - Ensure Pretty Permalinks are enabled in WordPress Settings > Permalinks.
+            - Server response:`, error.response.data);
+        } else {
+          console.error(`[CHILS & CO.] WooCommerce ${method} rejected with status ${error.response.status}:`, error.response.data);
+        }
+      } else {
+        console.error(`[CHILS & CO.] WooCommerce ${method} failed critically after ${i} retries:`, error.message || error);
+      }
+      throw error;
+    }
+  }
 }
 
 async function startServer() {
@@ -46,6 +128,7 @@ async function startServer() {
     : 3000;
 
   app.use(cors());
+  app.set('trust proxy', true);
   app.use(express.json({ limit: '10mb' }));
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
@@ -76,7 +159,7 @@ async function startServer() {
     
     if (wc) {
       try {
-        const test = await wc.get("products", { per_page: 1 });
+        const test = await wcSafeCall(wc, "get", "products", { per_page: 1 });
         connectivity = test.status === 200 ? "Success" : `Failed (Status: ${test.status})`;
       } catch (err: any) {
         connectivity = `Error: ${err.message}`;
@@ -136,14 +219,6 @@ async function startServer() {
       totalSales: parseInt(wcProduct.total_sales || "0", 10),
       stockQuantity: wcProduct.stock_quantity || 0
     };
-  };
-
-  // Helper to generate a Signal ID from a WooCommerce Order ID
-  const toSignalId = (id: string | number) => {
-    const numId = typeof id === 'string' ? parseInt(id, 10) : id;
-    // Simple deterministic mapping for CHLS ecosystem
-    const signalNum = (numId % 900000) + 100000;
-    return `CHLS-${signalNum}`;
   };
 
   // Helper to map WC order to App signal
@@ -222,7 +297,7 @@ async function startServer() {
         ]);
       }
       console.log(`[CHILS & CO.] Fetching products from WooCommerce: ${process.env.WOOCOMMERCE_URL}`);
-      const response = await wc.get("products", { per_page: 20 });
+      const response = await wcSafeCall(wc, "get", "products", { per_page: 20 });
       
       console.log(`[CHILS & CO.] WooCommerce Response Status: ${response.status}`);
       
@@ -248,7 +323,7 @@ async function startServer() {
       if (!wc) {
         return res.status(404).json({ message: "Product not found (Mock Mode)" });
       }
-      const response = await wc.get(`products/${req.params.id}`);
+      const response = await wcSafeCall(wc, "get", `products/${req.params.id}`);
       res.json(mapProduct(response.data));
     } catch (error) {
       console.error("WooCommerce API Error:", error);
@@ -308,7 +383,7 @@ async function startServer() {
         };
 
         console.log("[CHILS & CO.] Creating WooCommerce Order:", orderData);
-        const response = await wc.post("orders", orderData);
+        const response = await wcSafeCall(wc, "post", "orders", orderData);
         
         return res.json({
           id: response.data.id.toString(), // Return WC Order ID
@@ -336,71 +411,208 @@ async function startServer() {
     try {
       const { amount, merchantTransactionId, merchantUserId, mobileNumber } = req.body;
       
-      const merchantId = process.env.PHONEPE_MERCHANT_ID;
-      const saltKey = process.env.PHONEPE_SALT_KEY || process.env.PHONEPE_API_KEY;
-      const saltIndex = process.env.PHONEPE_SALT_INDEX || "1";
-      const env = process.env.PHONEPE_ENV || "PRODUCTION";
+      const phonePeClient = getPhonePeClient();
       
-      if (!merchantId || !saltKey) {
-        console.error("[CHILS & CO.] PhonePe credentials missing from environment. Require PHONEPE_MERCHANT_ID and PHONEPE_SALT_KEY.");
-        return res.status(400).json({ message: "Payment system not configured correctly. Please enter your PhonePe Merchant ID and Salt Key in the Settings > Environment Variables menu." });
+      // IF SDK is configured, use it
+      if (phonePeClient) {
+        console.log(`[CHILS & CO.] Using PhonePe SDK for initiation. Transaction: ${merchantTransactionId}`);
+        try {
+          const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+          const host = req.headers['host'] || req.get('host');
+          
+          // STRICT Production Domain Enforcement: PhonePe requires EXACT match with approved onboarding domain
+          const isStrictProd = process.env.PHONEPE_ENV?.toUpperCase() === "PRODUCTION";
+          const siteUrl = "https://www.chilsandco.com"; // Approved Frontend URL
+          const backendUrl = "https://api.chilsandco.com"; // Approved Backend/API URL
+          
+          const currentOrigin = isStrictProd ? siteUrl : `${protocol}://${host}`;
+          const currentBackend = isStrictProd ? backendUrl : `${protocol}://${host}`;
+          
+          const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?signal=${toSignalId(merchantTransactionId)}`;
+          const callbackUrl = process.env.PHONEPE_CALLBACK_URL || `${currentBackend}/api/checkout/phonepe/callback`;
+          const amountPaise = Math.max(100, Math.round(Number(amount) * 100)); // Minimum ₹1
+
+          console.log(`[CHILS & CO.] PhonePe SDK - Initiating Checkout:
+            - Transaction ID: ${merchantTransactionId}
+            - Base Domain: ${currentOrigin}
+            - Redirect URL: ${redirectUrl}
+            - Callback URL: ${callbackUrl}
+            - Environment: ${isStrictProd ? 'PROD' : 'SANDBOX'}
+          `);
+
+          const request = StandardCheckoutPayRequest.builder()
+            .merchantOrderId(merchantTransactionId.toString())
+            .amount(amountPaise)
+            .redirectUrl(redirectUrl)
+            .message(`Payment for Order #${merchantTransactionId.split('_')[0]}`)
+            .build();
+
+          const response = await phonePeClient.pay(request);
+          console.log(`[CHILS & CO.] PhonePe SDK Success. Redirect URL: ${response.redirectUrl}`);
+          
+          return res.json({
+            success: true,
+            url: response.redirectUrl
+          });
+        } catch (sdkErr: any) {
+          console.error("[CHILS & CO.] PhonePe SDK Pay Error Detail:", {
+            message: sdkErr.message,
+            code: sdkErr.code,
+            httpStatusCode: sdkErr.httpStatusCode,
+            data: sdkErr.data
+          });
+          console.warn("[CHILS & CO.] SDK failed, considering fallback to manual Pay Page...");
+        }
       }
 
-      console.log(`[CHILS & CO.] Initiating PhonePe payment for Order: ${merchantTransactionId}, Amount: ${amount}`);
+      // FALLBACK to Manual Pay Page (Hermes/PG)
+      const merchantId = (process.env.PHONEPE_MERCHANT_ID || process.env.PHONEPE_CLIENT_ID || "").trim();
+      const saltKey = (process.env.PHONEPE_SALT_KEY || process.env.PHONEPE_CLIENT_SECRET || process.env.PHONEPE_API_KEY || "").trim();
+      const saltIndex = (process.env.PHONEPE_SALT_INDEX || "1").trim();
+      const env = (process.env.PHONEPE_ENV || "PRODUCTION").trim().toUpperCase();
+      
+      if (!merchantId || !saltKey) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Payment credentials missing. Provide PHONEPE_MERCHANT_ID and PHONEPE_SALT_KEY." 
+        });
+      }
 
-      const baseUrl = env === "PRODUCTION" 
-        ? "https://api.phonepe.com/apis/hermes" 
-        : "https://api-preprod.phonepe.com/apis/pg-sandbox";
+      let activeEnv = env;
+      if (merchantId.startsWith('PGTEST')) activeEnv = "STAGING";
+
+      // Try multiple endpoints if 404 occurs in Production
+      const endpoints = process.env.PHONEPE_BASE_URL 
+        ? [process.env.PHONEPE_BASE_URL] 
+        : (activeEnv === "PRODUCTION" 
+            ? ["https://api.phonepe.com/apis/hermes", "https://api.phonepe.com/apis/pg"] 
+            : ["https://api-preprod.phonepe.com/apis/pg-sandbox"]);
+
+      const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+      const host = req.headers['host'] || req.get('host');
+      const isStrictProd = activeEnv === "PRODUCTION";
+      const siteUrl = "https://www.chilsandco.com"; // Approved Frontend URL
+      const backendUrl = "https://api.chilsandco.com"; // Approved Backend/API URL
+      
+      const currentOrigin = isStrictProd ? siteUrl : `${protocol}://${host}`;
+      const currentBackend = isStrictProd ? backendUrl : `${protocol}://${host}`;
+      
+      const amountPaise = Math.max(100, Math.round(Number(amount) * 100));
+      const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?signal=${toSignalId(merchantTransactionId)}`;
+      const callbackUrl = process.env.PHONEPE_CALLBACK_URL || `${currentBackend}/api/checkout/phonepe/callback`;
 
       const payload = {
         merchantId,
         merchantTransactionId: merchantTransactionId.toString(),
-        merchantUserId: merchantUserId || "CHLS_GUEST",
-        amount: Math.round(amount * 100), // Paise
-        redirectUrl: `${req.protocol}://${req.get('host')}/order-success/${merchantTransactionId}?signal=${toSignalId(merchantTransactionId)}`,
-        redirectMode: "REDIRECT",
-        callbackUrl: process.env.PHONEPE_REDIRECT_URL || `${req.protocol}://${req.get('host')}/api/checkout/phonepe/callback`,
-        mobileNumber: mobileNumber || "",
-        paymentInstrument: {
-          type: "PAY_PAGE"
-        }
+        merchantUserId: merchantUserId || `U_${merchantTransactionId}`,
+        amount: amountPaise,
+        redirectUrl,
+        redirectMode: "POST",
+        callbackUrl,
+        mobileNumber: mobileNumber || "919999999999",
+        paymentInstrument: { type: "PAY_PAGE" }
       };
 
+      console.log(`[CHILS & CO.] PhonePe Manual - Initiating Payload:
+        - Transaction ID: ${merchantTransactionId}
+        - Base Domain: ${currentOrigin}
+        - Redirect: ${redirectUrl}
+        - Callback: ${callbackUrl}
+        - Env: ${activeEnv}
+      `);
+
       const base64Payload = Buffer.from(JSON.stringify(payload)).toString("base64");
-      const stringToHash = base64Payload + "/pg/v1/pay" + saltKey;
-      const sha256Hash = crypto.createHash("sha256").update(stringToHash).digest("hex");
-      const xVerify = sha256Hash + "###" + saltIndex;
+      const apiPath = "/pg/v1/pay";
+      const stringToHash = base64Payload + apiPath + saltKey;
+      const xVerify = crypto.createHash("sha256").update(stringToHash).digest("hex") + "###" + saltIndex;
 
-      const response = await fetch(`${baseUrl}/pg/v1/pay`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-VERIFY': xVerify,
-          'accept': 'application/json'
-        },
-        body: JSON.stringify({ request: base64Payload })
-      });
+      let lastError = "Unknown error";
+      for (const baseUrl of endpoints) {
+        try {
+          console.log(`[CHILS & CO.] Attempting PhonePe Manual Init | Base: ${baseUrl} | MID: ${merchantId}`);
+          const response = await fetch(`${baseUrl}${apiPath}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-VERIFY': xVerify,
+              'accept': 'application/json',
+              'Referer': currentOrigin,
+              'Origin': currentOrigin
+            },
+            body: JSON.stringify({ request: base64Payload })
+          });
 
-      const data = await response.json();
-      
-      if (data.success && data.data?.instrumentResponse?.redirectInfo?.url) {
-        console.log(`[CHILS & CO.] PhonePe session created. Redirecting user.`);
-        res.json({
-          success: true,
-          url: data.data.instrumentResponse.redirectInfo.url
-        });
-      } else {
-        console.error("[CHILS & CO.] PhonePe Session Failure:", data);
-        res.status(400).json({ success: false, message: data.message || "Failed to initialize payment" });
+          const data = await response.json();
+          if (response.ok && data.success && data.data?.instrumentResponse?.redirectInfo?.url) {
+            console.log(`[CHILS & CO.] PhonePe Manual Success via ${baseUrl}`);
+            return res.json({ success: true, url: data.data.instrumentResponse.redirectInfo.url });
+          }
+          
+          lastError = data.message || `Status: ${response.status}`;
+          console.warn(`[CHILS & CO.] Failed via ${baseUrl}: ${lastError}`);
+          if (response.status !== 404) break; 
+        } catch (err: any) {
+          lastError = err.message;
+          console.error(`[CHILS & CO.] Fetch error via ${baseUrl}:`, err.message);
+        }
       }
+
+      res.status(400).json({ 
+        success: false, 
+        message: `PhonePe Integration Error: ${lastError}. Ensure account type matches your chosen integration.` 
+      });
     } catch (err) {
       console.error("[CHILS & CO.] Critical PhonePe Integration Error:", err);
-      res.status(500).json({ message: "Internal payment server error" });
+      res.status(500).json({ success: false, message: "Internal payment server error. Please try again later." });
     }
   });
 
   app.post("/api/checkout/phonepe/callback", async (req, res) => {
     try {
+      const phonePeClient = getPhonePeClient();
+      const username = process.env.PHONEPE_WEBHOOK_USERNAME;
+      const password = process.env.PHONEPE_WEBHOOK_PASSWORD;
+      const authorization = req.headers['authorization'] as string;
+      const responseBody = JSON.stringify(req.body);
+
+      // IF SDK is configured AND we have basic auth credentials, use SDK validation
+      if (phonePeClient && username && password && authorization) {
+        console.log("[CHILS & CO.] Using PhonePe SDK for Callback Validation.");
+        try {
+          const callbackResponse = phonePeClient.validateCallback(
+            username,
+            password,
+            authorization,
+            responseBody
+          );
+
+          if (callbackResponse.type === CallbackType.CHECKOUT_ORDER_COMPLETED && callbackResponse.payload.state === "COMPLETED") {
+            const fullTransactionId = callbackResponse.payload.originalMerchantOrderId;
+            const transactionId = callbackResponse.payload.orderId; // PhonePe's ID
+            
+            // Extract original Order ID if suffix exists (e.g. 12345_123456789 -> 12345)
+            const orderId = fullTransactionId.split('_')[0];
+            
+            console.log(`[CHILS & CO.] SDK verified COMPLETED for order: ${orderId} (Full: ${fullTransactionId})`);
+            
+            const wc = getWooCommerce();
+            if (wc && orderId) {
+              await wcSafeCall(wc, "put", `orders/${orderId}`, {
+                status: "processing",
+                set_paid: true,
+                transaction_id: transactionId,
+                note: `PhonePe SDK Verified Success. Ref: ${transactionId}`
+              });
+            }
+          }
+          return res.status(200).send("OK");
+        } catch (valErr: any) {
+          console.error("[CHILS & CO.] SDK Callback Validation Failed:", valErr.message);
+          // Fall through to manual check if it fails for some environmental reason
+        }
+      }
+
+      // Manual check fallback for X-VERIFY logic (Pay Page)
       const { response: base64Response } = req.body;
       const saltKey = process.env.PHONEPE_SALT_KEY || process.env.PHONEPE_API_KEY;
       const saltIndex = process.env.PHONEPE_SALT_INDEX || "1";
@@ -427,16 +639,19 @@ async function startServer() {
       console.log("[CHILS & CO.] PhonePe Callback Decoded:", decodedResponse);
 
       if (decodedResponse.success && decodedResponse.code === "PAYMENT_SUCCESS") {
-        const orderId = decodedResponse.data?.merchantTransactionId;
+        const fullTransactionId = decodedResponse.data?.merchantTransactionId;
         const transactionId = decodedResponse.data?.transactionId;
         
-        console.log(`[CHILS & CO.] Payment CONFIRMED for Order: ${orderId}. Trans ID: ${transactionId}`);
+        // Extract original Order ID
+        const orderId = fullTransactionId?.split('_')[0];
+        
+        console.log(`[CHILS & CO.] Payment CONFIRMED for Order: ${orderId}. Full ID: ${fullTransactionId}. Trans ID: ${transactionId}`);
         
         const wc = getWooCommerce();
         if (wc && orderId) {
           try {
             console.log(`[CHILS & CO.] Updating WooCommerce Order ${orderId} to 'processing'`);
-            await wc.put(`orders/${orderId}`, {
+            await wcSafeCall(wc, "put", `orders/${orderId}`, {
               status: "processing",
               set_paid: true,
               transaction_id: transactionId,
@@ -486,7 +701,7 @@ async function startServer() {
         username: email.split('@')[0]
       };
 
-      const response = await wc.post("customers", customerData);
+      const response = await wcSafeCall(wc, "post", "customers", customerData);
       res.status(201).json(response.data);
     } catch (error: any) {
       console.error("WooCommerce Registration Error:", error.response?.data || error);
@@ -543,8 +758,8 @@ async function startServer() {
       if (wc) {
         try {
           console.log(`[CHILS & CO.] Looking up WC customer ID for: ${data.user_email}`);
-          const search = await wc.get("customers", { email: data.user_email });
-          if (Array.isArray(search.data) && search.data.length > 0) {
+          const search = await wcSafeCall(wc, "get", "customers", { email: data.user_email });
+          if (search && Array.isArray(search.data) && search.data.length > 0) {
             const customer = search.data[0];
             customerId = customer.id;
             firstName = customer.first_name || '';
@@ -637,14 +852,14 @@ async function startServer() {
       // Check if user already exists using explicit email search
       let customerId: number | null = null;
       try {
-        const response = await wc.get("customers", { email: email });
-        if (Array.isArray(response.data) && response.data.length > 0) {
+        const response = await wcSafeCall(wc, "get", "customers", { email: email });
+        if (response && Array.isArray(response.data) && response.data.length > 0) {
           customerId = response.data[0].id;
           console.log(`[CHILS & CO.] Found exact customer match: ${customerId}`);
         } else {
           // Try broader search
-          const search = await wc.get("customers", { search: email });
-          if (Array.isArray(search.data) && search.data.length > 0) {
+          const search = await wcSafeCall(wc, "get", "customers", { search: email });
+          if (search && Array.isArray(search.data) && search.data.length > 0) {
             const match = search.data.find((c: any) => c.email?.toLowerCase() === email.toLowerCase());
             if (match) {
               customerId = match.id;
@@ -665,7 +880,7 @@ async function startServer() {
 
       if (customerId) {
         console.log(`[CHILS & CO.] Tagging customer ${customerId} for Bespoke waitlist.`);
-        const response = await wc.put(`customers/${customerId}`, {
+        const response = await wcSafeCall(wc, "put", `customers/${customerId}`, {
           meta_data: metaToUpdate
         });
         
@@ -700,7 +915,7 @@ async function startServer() {
 
       // Try to create new customer
       try {
-        const response = await wc.post("customers", {
+        const response = await wcSafeCall(wc, "post", "customers", {
           email,
           username: email.split('@')[0],
           meta_data: metaToUpdate
@@ -724,13 +939,13 @@ async function startServer() {
           console.log(`[CHILS & CO.] Email exists during create. Final recovery search for: ${email}`);
           
           // One last attempt to find the ID to update them
-          const finalSearch = await wc.get("customers", { search: email });
+          const finalSearch = await wcSafeCall(wc, "get", "customers", { search: email });
           const exactMatch = Array.isArray(finalSearch.data) 
             ? finalSearch.data.find((c: any) => c.email?.toLowerCase() === email.toLowerCase())
             : null;
 
           if (exactMatch) {
-            const response = await wc.put(`customers/${exactMatch.id}`, {
+            const response = await wcSafeCall(wc, "put", `customers/${exactMatch.id}`, {
               meta_data: metaToUpdate
             });
             const updatedCustomer = response.data;
@@ -785,8 +1000,8 @@ async function startServer() {
       let customer = null;
       try {
         // Search specifically for the email
-        const response = await wc.get("customers", { search: email, per_page: 20 });
-        if (Array.isArray(response.data)) {
+        const response = await wcSafeCall(wc, "get", "customers", { search: email, per_page: 20 });
+        if (response && Array.isArray(response.data)) {
           // Find exact match as WooCommerce search can be fuzzy
           customer = response.data.find((c: any) => 
             c.email?.toLowerCase() === email || 
@@ -842,9 +1057,9 @@ async function startServer() {
 
       // Logic: WooCommerce REST API maps to wp_users and wp_usermeta tables.
       // We check x-wp-total for the absolute user count.
-      const response = await wc.get("customers", { per_page: 50 });
-      const totalUsers = parseInt(response.headers['x-wp-total'] || '0', 10);
-      const customers = response.data || [];
+      const response = await wcSafeCall(wc, "get", "customers", { per_page: 50 });
+      const totalUsers = parseInt(response.headers?.['x-wp-total'] || '0', 10);
+      const customers = response?.data || [];
 
       // Calculate real ratios from the last 50 participants
       const waitlistCount = customers.filter((c: any) => 
@@ -890,12 +1105,12 @@ async function startServer() {
       // Check if user already exists
       let customerId: number | null = null;
       try {
-        const response = await wc.get("customers", { email: email });
-        if (Array.isArray(response.data) && response.data.length > 0) {
+        const response = await wcSafeCall(wc, "get", "customers", { email: email });
+        if (response && Array.isArray(response.data) && response.data.length > 0) {
           customerId = response.data[0].id;
         } else {
-          const search = await wc.get("customers", { search: email });
-          if (Array.isArray(search.data) && search.data.length > 0) {
+          const search = await wcSafeCall(wc, "get", "customers", { search: email });
+          if (search && Array.isArray(search.data) && search.data.length > 0) {
             const match = search.data.find((c: any) => c.email?.toLowerCase() === email.toLowerCase());
             if (match) customerId = match.id;
           }
@@ -912,7 +1127,7 @@ async function startServer() {
       }
 
       if (customerId) {
-        const response = await wc.put(`customers/${customerId}`, {
+        const response = await wcSafeCall(wc, "put", `customers/${customerId}`, {
           meta_data: metaToUpdate
         });
         
@@ -944,7 +1159,7 @@ async function startServer() {
 
       // Create new customer
       try {
-        const response = await wc.post("customers", {
+        const response = await wcSafeCall(wc, "post", "customers", {
           email,
           username: email.split('@')[0],
           meta_data: metaToUpdate
@@ -963,13 +1178,13 @@ async function startServer() {
       } catch (createError: any) {
         const errorData = createError.response?.data;
         if (errorData?.code === 'registration-error-email-exists' || errorData?.code === 'customer_invalid_email') {
-          const finalSearch = await wc.get("customers", { search: email });
-          const exactMatch = Array.isArray(finalSearch.data) 
+          const finalSearch = await wcSafeCall(wc, "get", "customers", { search: email });
+          const exactMatch = finalSearch && Array.isArray(finalSearch.data) 
             ? finalSearch.data.find((c: any) => c.email?.toLowerCase() === email.toLowerCase())
             : null;
 
           if (exactMatch) {
-            await wc.put(`customers/${exactMatch.id}`, {
+            await wcSafeCall(wc, "put", `customers/${exactMatch.id}`, {
               meta_data: metaToUpdate
             });
             return res.json({ 
@@ -1019,8 +1234,8 @@ async function startServer() {
       res.setHeader('Expires', '0');
 
       let customer = null;
-      const response = await wc.get("customers", { search: email });
-      if (Array.isArray(response.data)) {
+      const response = await wcSafeCall(wc, "get", "customers", { search: email });
+      if (response && Array.isArray(response.data)) {
         customer = response.data.find((c: any) => c.email?.toLowerCase() === email);
       }
 
@@ -1070,12 +1285,12 @@ async function startServer() {
       if (!wc) return res.json([]);
 
       // Fetch customers and filter for those with bespoke_waitlist tag
-      const response = await wc.get("customers", {
+      const response = await wcSafeCall(wc, "get", "customers", {
         per_page: 100,
         role: "all"
       });
 
-      if (Array.isArray(response.data)) {
+      if (response && Array.isArray(response.data)) {
         const getMetaValue = (metaData: any[], key: string) => {
           const match = metaData?.find((m: any) => {
             const k = String(m.key).toLowerCase();
@@ -1127,19 +1342,19 @@ async function startServer() {
       
       try {
         if (customerIdFromToken) {
-          const idResponse = await wc.get(`customers/${customerIdFromToken}`);
-          if (idResponse.status === 200 && idResponse.data?.id) {
+          const idResponse = await wcSafeCall(wc, "get", `customers/${customerIdFromToken}`);
+          if (idResponse && idResponse.status === 200 && idResponse.data?.id) {
             customer = idResponse.data;
           }
         }
 
         if (!customer && email) {
-          const directResponse = await wc.get("customers", { email });
-          if (Array.isArray(directResponse.data) && directResponse.data.length > 0) {
+          const directResponse = await wcSafeCall(wc, "get", "customers", { email });
+          if (directResponse && Array.isArray(directResponse.data) && directResponse.data.length > 0) {
             customer = directResponse.data[0];
           } else {
-            const searchResponse = await wc.get("customers", { search: email });
-            if (Array.isArray(searchResponse.data)) {
+            const searchResponse = await wcSafeCall(wc, "get", "customers", { search: email });
+            if (searchResponse && Array.isArray(searchResponse.data)) {
               customer = searchResponse.data.find((c: any) => c.email?.toLowerCase() === email.toLowerCase());
             }
           }
@@ -1147,8 +1362,8 @@ async function startServer() {
           // More aggressive search by username if email search is failing
           if (!customer) {
             const username = email.split('@')[0];
-            const usernameResponse = await wc.get("customers", { search: username });
-            if (Array.isArray(usernameResponse.data)) {
+            const usernameResponse = await wcSafeCall(wc, "get", "customers", { search: username });
+            if (usernameResponse && Array.isArray(usernameResponse.data)) {
               customer = usernameResponse.data.find((c: any) => 
                 c.email?.toLowerCase() === email.toLowerCase() || 
                 c.username?.toLowerCase() === username.toLowerCase()
@@ -1237,8 +1452,8 @@ async function startServer() {
         console.log(`[CHILS & CO.] ID missing from token, searching WC by email: ${userEmail}`);
         
         try {
-          const customerSearch = await wc.get("customers", { email: userEmail });
-          if (Array.isArray(customerSearch.data) && customerSearch.data.length > 0) {
+          const customerSearch = await wcSafeCall(wc, "get", "customers", { email: userEmail });
+          if (customerSearch && Array.isArray(customerSearch.data) && customerSearch.data.length > 0) {
             customerId = customerSearch.data[0].id;
             console.log(`[CHILS & CO.] Found customer ID linked to email: ${customerId}`);
           }
@@ -1250,7 +1465,7 @@ async function startServer() {
       let orders;
       if (customerId) {
         console.log(`[CHILS & CO.] Fetching orders for customer ID: ${customerId}`);
-        const response = await wc.get("orders", {
+        const response = await wcSafeCall(wc, "get", "orders", {
           customer: customerId,
           per_page: 50
         });
@@ -1259,7 +1474,7 @@ async function startServer() {
         // Absolute fallback: try to find orders by email directly if WC API supports it
         // Or if customer ID still missing, try to fetch recent orders and filter manually
         console.log(`[CHILS & CO.] No customer ID found, fetching recent orders to filter by email: ${userEmail}`);
-        const response = await wc.get("orders", { per_page: 100 });
+        const response = await wcSafeCall(wc, "get", "orders", { per_page: 100 });
         orders = response.data.filter((o: any) => o.billing?.email?.toLowerCase() === userEmail.toLowerCase());
       } else {
         return res.status(400).json({ message: "Unable to identify customer from token" });
@@ -1295,7 +1510,7 @@ async function startServer() {
         }));
       }
 
-      const response = await wc.get(`orders/${req.params.id}`);
+      const response = await wcSafeCall(wc, "get", `orders/${req.params.id}`);
       res.json(mapOrderToSignal(response.data));
     } catch (error: any) {
       console.error("WooCommerce Order Detail Error:", error);
@@ -1406,6 +1621,21 @@ async function startServer() {
     console.error("[CHILS & CO.] Critical Failure during server startup:", error);
     process.exit(1);
   }
+}
+
+// Helper to get PhonePe Client
+function getPhonePeClient() {
+  const clientId = process.env.PHONEPE_CLIENT_ID;
+  const clientSecret = process.env.PHONEPE_CLIENT_SECRET;
+  if (!clientId || !clientSecret) return null;
+  
+  const mid = (process.env.PHONEPE_MERCHANT_ID || clientId).trim();
+  const version = parseInt(process.env.PHONEPE_CLIENT_VERSION || "1", 10);
+  const isProd = process.env.PHONEPE_ENV?.toUpperCase() === "PRODUCTION" && !mid.startsWith('PGTEST');
+  const env = isProd ? Env.PRODUCTION : Env.SANDBOX;
+  
+  console.log(`[CHILS & CO.] Initializing PhonePe SDK Client. Env: ${isProd ? 'PROD' : 'SANDBOX'}, Version: ${version}`);
+  return StandardCheckoutClient.getInstance(clientId, clientSecret, version, env);
 }
 
 // Global error handlers for production

@@ -4,12 +4,14 @@ import { useCart } from '../CartContext';
 export const useCheckout = () => {
   const { totalPrice, clearCart } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const triggerCheckout = async (customerDetails: any, cartItems: any[], customAmount?: number) => {
     const amountToPay = customAmount || totalPrice;
     if (amountToPay <= 0) return;
 
     setIsProcessing(true);
+    setError(null);
 
     try {
       // 1. Create order on backend
@@ -33,6 +35,9 @@ export const useCheckout = () => {
       }
 
       // 2. Initiate PhonePe Payment
+      // Add a unique suffix to ensure merchantTransactionId is unique even if payment is retried
+      const uniqueTransactionId = `${order.id}_${Date.now()}`;
+      
       const phonePeResponse = await fetch('/api/checkout/phonepe/pay', {
         method: 'POST',
         headers: { 
@@ -41,8 +46,8 @@ export const useCheckout = () => {
         },
         body: JSON.stringify({ 
           amount: amountToPay,
-          merchantTransactionId: order.id,
-          merchantUserId: localStorage.getItem('chils_user_id') || 'GUEST',
+          merchantTransactionId: uniqueTransactionId,
+          merchantUserId: localStorage.getItem('chils_user_id') || `GUEST_${Date.now()}`,
           mobileNumber: customerDetails.phone
         })
       });
@@ -57,13 +62,13 @@ export const useCheckout = () => {
         throw new Error(paymentData.message || "Payment initialization failed");
       }
 
-    } catch (error: any) {
-      console.error(error);
-      alert(error.message || "Payment System Offline. Please try again.");
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Payment System Offline. Please try again.");
       setIsProcessing(false);
       return false;
     }
   };
 
-  return { triggerCheckout, isProcessing };
+  return { triggerCheckout, isProcessing, error, setError };
 };
