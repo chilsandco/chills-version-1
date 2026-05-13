@@ -536,14 +536,21 @@ async function startServer() {
       let lastError = "Unknown error";
       for (const baseUrl of endpoints) {
         try {
-          // Robust URL formulation: B2B uses /hermes/pg/v1/pay, Enterprise uses /pg/v1/pay
-          const apiPath = baseUrl.includes('/pg') ? "/v1/pay" : "/pg/v1/pay";
-          const fullUrl = `${baseUrl}${apiPath}`;
+          // Robust URL formulation
+          // B2B (Standard) uses /apis/hermes/pg/v1/pay
+          // Enterprise uses /apis/pg/v1/pay
+          // Staging uses /apis/pg-sandbox/pg/v1/pay
+          const apiPathSuffix = baseUrl.includes('/pg') ? "/v1/pay" : "/pg/v1/pay";
+          const fullUrl = `${baseUrl}${apiPathSuffix}`;
           
-          const stringToHash = base64Payload + apiPath + saltKey;
+          // CRITICAL: The hash string MUST use the URI path (everything after the hostname)
+          const urlObj = new URL(fullUrl);
+          const fullApiPath = urlObj.pathname;
+          
+          const stringToHash = base64Payload + fullApiPath + saltKey;
           const xVerify = crypto.createHash("sha256").update(stringToHash).digest("hex") + "###" + saltIndex;
 
-          console.log(`[CHILS & CO.] Attempting PhonePe Manual Init | URL: ${fullUrl} | MID: ${merchantId}`);
+          console.log(`[CHILS & CO.] PhonePe Attempt | URL: ${fullUrl} | Path: ${fullApiPath} | MID: ${merchantId}`);
           
           const response = await fetch(fullUrl, {
             method: 'POST',
@@ -566,7 +573,7 @@ async function startServer() {
           lastError = data.message || `Status: ${response.status}`;
           console.warn(`[CHILS & CO.] Failed via ${baseUrl}: ${lastError}`);
           
-          // Retry on 404 (wrong cluster) OR "Api Mapping Not Found" (wrong category/endpoint)
+          // Retry logic: If it's a mapping or cluster error (404), try the next endpoint in the list
           const isMappingError = lastError.toLowerCase().includes("mapping");
           if (response.status !== 404 && !isMappingError) break; 
         } catch (err: any) {
