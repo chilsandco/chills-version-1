@@ -418,20 +418,23 @@ async function startServer() {
       if (phonePeClient) {
         console.log(`[CHILS & CO.] Using PhonePe SDK for initiation. Transaction: ${merchantTransactionId}`);
         try {
+          // Dynamic Origin Detection: Favors the request host but falls back to approved site URL
+          // PhonePe requires matching Origin/Referer for security in production
           const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-          const host = req.headers['host'] || req.get('host');
-          
-          // STRICT Production Domain Enforcement: PhonePe requires EXACT match with approved onboarding domain
+          const host = req.headers['host'] || req.get('host') || "www.chilsandco.com";
           const isStrictProd = process.env.PHONEPE_ENV?.toUpperCase() === "PRODUCTION";
-          const siteUrl = "https://www.chilsandco.com"; // Approved Frontend URL
-          const backendUrl = "https://api.chilsandco.com"; // Approved Backend/API URL
+          const siteUrl = "https://www.chilsandco.com"; 
           
-          const currentOrigin = isStrictProd ? siteUrl : `${protocol}://${host}`;
-          const currentBackend = isStrictProd ? backendUrl : `${protocol}://${host}`;
+          // Use the actual request host if it's chilsandco.com (supports non-www)
+          const currentOrigin = (isStrictProd && host.includes('chilsandco.com')) 
+            ? `${protocol}://${host}` 
+            : (isStrictProd ? siteUrl : `${protocol}://${host}`);
+          
+          const currentBackend = currentOrigin;
           
           const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?signal=${toSignalId(merchantTransactionId)}`;
           const callbackUrl = process.env.PHONEPE_CALLBACK_URL || `${currentBackend}/api/checkout/phonepe/callback`;
-          const amountPaise = Math.max(100, Math.round(Number(amount) * 100)); // Minimum ₹1
+          const amountPaise = Math.max(100, Math.round(Number(amount) * 100)); 
 
           console.log(`[CHILS & CO.] PhonePe SDK - Initiating Checkout:
             - Transaction ID: ${merchantTransactionId}
@@ -482,7 +485,8 @@ async function startServer() {
       let activeEnv = env;
       if (merchantId.startsWith('PGTEST')) activeEnv = "STAGING";
 
-      // Try multiple endpoints if 404 occurs in Production
+      // Try multiple endpoints if Mapping or 404 occurs in Production
+      // Hermes = Standard (B2B) Integration | PG = Direct (Enterprise) Integration
       const endpoints = process.env.PHONEPE_BASE_URL 
         ? [process.env.PHONEPE_BASE_URL] 
         : (activeEnv === "PRODUCTION" 
@@ -490,17 +494,22 @@ async function startServer() {
             : ["https://api-preprod.phonepe.com/apis/pg-sandbox"]);
 
       const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-      const host = req.headers['host'] || req.get('host');
+      const host = req.headers['host'] || req.get('host') || "www.chilsandco.com";
       const isStrictProd = activeEnv === "PRODUCTION";
-      const siteUrl = "https://www.chilsandco.com"; // Approved Frontend URL
-      const backendUrl = "https://api.chilsandco.com"; // Approved Backend/API URL
+      const siteUrl = "https://www.chilsandco.com"; 
+
+      const currentOrigin = (isStrictProd && host.includes('chilsandco.com')) 
+        ? `${protocol}://${host}` 
+        : (isStrictProd ? siteUrl : `${protocol}://${host}`);
       
-      const currentOrigin = isStrictProd ? siteUrl : `${protocol}://${host}`;
-      const currentBackend = isStrictProd ? backendUrl : `${protocol}://${host}`;
+      const currentBackend = currentOrigin;
       
       const amountPaise = Math.max(100, Math.round(Number(amount) * 100));
       const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?signal=${toSignalId(merchantTransactionId)}`;
       const callbackUrl = process.env.PHONEPE_CALLBACK_URL || `${currentBackend}/api/checkout/phonepe/callback`;
+
+      // Clean mobile number (PhonePe expects 10 digits)
+      const cleanMobile = String(mobileNumber || "").replace(/\D/g, '').slice(-10) || "9999999999";
 
       const payload = {
         merchantId,
@@ -508,9 +517,9 @@ async function startServer() {
         merchantUserId: merchantUserId || `U_${merchantTransactionId}`,
         amount: amountPaise,
         redirectUrl,
-        redirectMode: "POST",
+        redirectMode: (process.env.PHONEPE_REDIRECT_MODE || "REDIRECT") as any, // Standard is REDIRECT (GET)
         callbackUrl,
-        mobileNumber: mobileNumber || "919999999999",
+        mobileNumber: cleanMobile,
         paymentInstrument: { type: "PAY_PAGE" }
       };
 
@@ -523,15 +532,20 @@ async function startServer() {
       `);
 
       const base64Payload = Buffer.from(JSON.stringify(payload)).toString("base64");
-      const apiPath = "/pg/v1/pay";
-      const stringToHash = base64Payload + apiPath + saltKey;
-      const xVerify = crypto.createHash("sha256").update(stringToHash).digest("hex") + "###" + saltIndex;
 
       let lastError = "Unknown error";
       for (const baseUrl of endpoints) {
         try {
-          console.log(`[CHILS & CO.] Attempting PhonePe Manual Init | Base: ${baseUrl} | MID: ${merchantId}`);
-          const response = await fetch(`${baseUrl}${apiPath}`, {
+          // Robust URL formulation: B2B uses /hermes/pg/v1/pay, Enterprise uses /pg/v1/pay
+          const apiPath = baseUrl.includes('/pg') ? "/v1/pay" : "/pg/v1/pay";
+          const fullUrl = `${baseUrl}${apiPath}`;
+          
+          const stringToHash = base64Payload + apiPath + saltKey;
+          const xVerify = crypto.createHash("sha256").update(stringToHash).digest("hex") + "###" + saltIndex;
+
+          console.log(`[CHILS & CO.] Attempting PhonePe Manual Init | URL: ${fullUrl} | MID: ${merchantId}`);
+          
+          const response = await fetch(fullUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -551,7 +565,10 @@ async function startServer() {
           
           lastError = data.message || `Status: ${response.status}`;
           console.warn(`[CHILS & CO.] Failed via ${baseUrl}: ${lastError}`);
-          if (response.status !== 404) break; 
+          
+          // Retry on 404 (wrong cluster) OR "Api Mapping Not Found" (wrong category/endpoint)
+          const isMappingError = lastError.toLowerCase().includes("mapping");
+          if (response.status !== 404 && !isMappingError) break; 
         } catch (err: any) {
           lastError = err.message;
           console.error(`[CHILS & CO.] Fetch error via ${baseUrl}:`, err.message);
