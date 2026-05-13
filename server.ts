@@ -534,25 +534,32 @@ async function startServer() {
       const base64Payload = Buffer.from(JSON.stringify(payload)).toString("base64");
 
       let lastError = "Unknown error";
+      const possibleAttempts: { url: string, hashPath: string }[] = [];
+      
       for (const baseUrl of endpoints) {
+        // Variation 1: Standard path (B2B uses /pg/v1/pay on top of /apis/hermes, Enterprise uses /v1/pay on top of /apis/pg?)
+        // Actually, most common is simply /pg/v1/pay appended to the listed base.
+        const pathSuffix = "/pg/v1/pay";
+        const fullUrl = `${baseUrl}${pathSuffix}`;
+        const urlObj = new URL(fullUrl);
+        
+        // Strategy A: Full pathname in hash
+        possibleAttempts.push({ url: fullUrl, hashPath: urlObj.pathname });
+        
+        // Strategy B: Tail pathname in hash (some older integrations only hash the endpoint tail)
+        if (urlObj.pathname !== pathSuffix) {
+          possibleAttempts.push({ url: fullUrl, hashPath: pathSuffix });
+        }
+      }
+
+      for (const attempt of possibleAttempts) {
         try {
-          // Robust URL formulation
-          // B2B (Standard) uses /apis/hermes/pg/v1/pay
-          // Enterprise uses /apis/pg/v1/pay
-          // Staging uses /apis/pg-sandbox/pg/v1/pay
-          const apiPathSuffix = baseUrl.includes('/pg') ? "/v1/pay" : "/pg/v1/pay";
-          const fullUrl = `${baseUrl}${apiPathSuffix}`;
-          
-          // CRITICAL: The hash string MUST use the URI path (everything after the hostname)
-          const urlObj = new URL(fullUrl);
-          const fullApiPath = urlObj.pathname;
-          
-          const stringToHash = base64Payload + fullApiPath + saltKey;
+          const stringToHash = base64Payload + attempt.hashPath + saltKey;
           const xVerify = crypto.createHash("sha256").update(stringToHash).digest("hex") + "###" + saltIndex;
 
-          console.log(`[CHILS & CO.] PhonePe Attempt | URL: ${fullUrl} | Path: ${fullApiPath} | MID: ${merchantId}`);
+          console.log(`[CHILS & CO.] PhonePe Attempt | URL: ${attempt.url} | HashPath: ${attempt.hashPath} | MID: ${merchantId}`);
           
-          const response = await fetch(fullUrl, {
+          const response = await fetch(attempt.url, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -566,19 +573,27 @@ async function startServer() {
 
           const data = await response.json();
           if (response.ok && data.success && data.data?.instrumentResponse?.redirectInfo?.url) {
-            console.log(`[CHILS & CO.] PhonePe Manual Success via ${baseUrl}`);
+            console.log(`[CHILS & CO.] PhonePe Success via ${attempt.url} (${attempt.hashPath})`);
             return res.json({ success: true, url: data.data.instrumentResponse.redirectInfo.url });
           }
           
           lastError = data.message || `Status: ${response.status}`;
-          console.warn(`[CHILS & CO.] Failed via ${baseUrl}: ${lastError}`);
-          
-          // Retry logic: If it's a mapping or cluster error (404), try the next endpoint in the list
           const isMappingError = lastError.toLowerCase().includes("mapping");
-          if (response.status !== 404 && !isMappingError) break; 
+          const isChecksumError = lastError.toLowerCase().includes("checksum") || lastError.toLowerCase().includes("verify");
+          
+          console.warn(`[CHILS & CO.] Failed via ${attempt.url} | Hash: ${attempt.hashPath} | Error: ${lastError}`);
+          
+          // If it's a mapping error or 404, we definitely want to try the next attempt
+          // If it's a checksum error, it means we reached the right endpoint but the hash pattern was wrong - so continue to next attempt
+          if (response.status === 404 || isMappingError || isChecksumError) {
+            continue;
+          } else {
+            // If it's some other error (e.g. invalid amount), maybe don't loop forever
+            break;
+          }
         } catch (err: any) {
           lastError = err.message;
-          console.error(`[CHILS & CO.] Fetch error via ${baseUrl}:`, err.message);
+          console.error(`[CHILS & CO.] PhonePe Request Error:`, err.message);
         }
       }
 
