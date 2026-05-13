@@ -170,7 +170,7 @@ const OrderSignals: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <p className="font-mono text-sm tracking-widest group-hover:text-accent transition-colors">#{signal.signalId}</p>
                       <a 
-                        href={`https://chilsandco-com-865405.hostingersite.com/wp-admin/admin-ajax.php?print-order=${signal.id}&print-order-type=invoice&action=print_order`}
+                        href={`https://api.chilsandco.com/wp-admin/admin-ajax.php?print-order=${signal.id}&print-order-type=invoice&action=print_order`}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => {
