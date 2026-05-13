@@ -491,7 +491,7 @@ async function startServer() {
       const endpoints = process.env.PHONEPE_BASE_URL 
         ? [process.env.PHONEPE_BASE_URL] 
         : (activeEnv === "PRODUCTION" 
-            ? ["https://api.phonepe.com/apis/hermes", "https://api.phonepe.com/apis/pg"] 
+            ? ["https://api.phonepe.com/apis/hermes", "https://api.phonepe.com/apis/pg", "https://api.phonepe.com/apis"] 
             : ["https://api-preprod.phonepe.com/apis/pg-sandbox"]);
 
       const protocol = req.headers['x-forwarded-proto'] || req.protocol;
@@ -512,63 +512,60 @@ async function startServer() {
       // Clean mobile number (PhonePe expects 10 digits)
       const cleanMobile = String(mobileNumber || "").replace(/\D/g, '').slice(-10) || "9999999999";
 
-      const payload = {
-        merchantId,
-        merchantTransactionId: merchantTransactionId.toString(),
-        merchantUserId: merchantUserId || `U_${merchantTransactionId}`,
-        amount: amountPaise,
-        redirectUrl,
-        redirectMode: (process.env.PHONEPE_REDIRECT_MODE || "REDIRECT") as any, // Standard is REDIRECT (GET)
-        callbackUrl,
-        mobileNumber: cleanMobile,
-        paymentInstrument: { type: "PAY_PAGE" }
-      };
-
-      console.log(`[CHILS & CO.] PhonePe Manual - Initiating Payload:
+      console.log(`[CHILS & CO.] PhonePe Manual - Initiating Payload Base:
         - Transaction ID: ${merchantTransactionId}
         - Base Domain: ${currentOrigin}
+        - Amount: ${amountPaise} paise
         - Redirect: ${redirectUrl}
         - Callback: ${callbackUrl}
         - Env: ${activeEnv}
       `);
 
-      const base64Payload = Buffer.from(JSON.stringify(payload)).toString("base64");
-
       let lastError = "Unknown error";
-      const possibleAttempts: { url: string, hashPath: string }[] = [];
+      const possibleAttempts: { url: string, hashPath: string, mode: string }[] = [];
+      
+      const trialRedirectModes = ["REDIRECT", "POST"];
       
       for (const baseUrl of endpoints) {
-        // PhonePe has two main patterns and cluster variations:
-        // 1. Standard (B2B): /apis/hermes/pg/v1/pay
-        // 2. Enterprise / PG: /apis/pg/v1/pay
-        
-        // We will try variations of the path suffix to ensure mapping match
+        // PhonePe has multiple patterns: /apis/hermes/pg/v1/pay, /apis/pg/v1/pay, /apis/v1/pay
         const suffixes = ["/pg/v1/pay", "/v1/pay"];
         
         for (const suffix of suffixes) {
-          const fullUrl = `${baseUrl}${suffix}`;
+          const fullUrl = `${baseUrl}${suffix}`.replace(/\/pg\/pg\//, "/pg/");
+          const urlObj = new URL(fullUrl);
           
-          // Avoid double /pg/pg/ if baseUrl already ends with /pg
-          const cleanedUrl = fullUrl.replace(/\/pg\/pg\//, "/pg/");
-          const urlObj = new URL(cleanedUrl);
-          
-          // Patterns to try for the hash:
+          // Patterns to try for the hash: The full pathname or just the API suffix
           const hashPaths = [urlObj.pathname, suffix];
           
           for (const hp of hashPaths) {
-            // Deduplicate attempts
-            if (possibleAttempts.some(a => a.url === cleanedUrl && a.hashPath === hp)) continue;
-            possibleAttempts.push({ url: cleanedUrl, hashPath: hp });
+            for (const mode of trialRedirectModes) {
+              // Deduplicate attempts
+              if (possibleAttempts.some(a => a.url === fullUrl && a.hashPath === hp && a.mode === mode)) continue;
+              possibleAttempts.push({ url: fullUrl, hashPath: hp, mode });
+            }
           }
         }
       }
 
       for (const attempt of possibleAttempts) {
         try {
+          const payload = {
+            merchantId,
+            merchantTransactionId: merchantTransactionId.toString(),
+            merchantUserId: merchantUserId || `U_${merchantTransactionId}`,
+            amount: amountPaise,
+            redirectUrl,
+            redirectMode: attempt.mode,
+            callbackUrl,
+            mobileNumber: cleanMobile,
+            paymentInstrument: { type: "PAY_PAGE" }
+          };
+
+          const base64Payload = Buffer.from(JSON.stringify(payload)).toString("base64");
           const stringToHash = base64Payload + attempt.hashPath + saltKey;
           const xVerify = crypto.createHash("sha256").update(stringToHash).digest("hex") + "###" + saltIndex;
 
-          console.log(`[CHILS & CO.] PhonePe Attempt | URL: ${attempt.url} | HashPath: ${attempt.hashPath} | MID: ${merchantId}`);
+          console.log(`[CHILS & CO.] PhonePe Attempt | URL: ${attempt.url} | Hash: ${attempt.hashPath} | Mode: ${attempt.mode}`);
           
           const response = await fetch(attempt.url, {
             method: 'POST',
@@ -584,24 +581,22 @@ async function startServer() {
 
           const data = await response.json();
           if (response.ok && data.success && data.data?.instrumentResponse?.redirectInfo?.url) {
-            console.log(`[CHILS & CO.] PhonePe Success via ${attempt.url} (${attempt.hashPath})`);
+            console.log(`[CHILS & CO.] PhonePe Success via ${attempt.url} | Hash: ${attempt.hashPath} | Mode: ${attempt.mode}`);
             return res.json({ success: true, url: data.data.instrumentResponse.redirectInfo.url });
           }
           
-          lastError = data.message || `Status: ${response.status}`;
+          lastError = (data && data.message) ? data.message : `Status: ${response.status}`;
+          console.warn(`[CHILS & CO.] PhonePe Attempt Failed: ${attempt.url} | ${attempt.hashPath} | ${attempt.mode} | Error: ${lastError}`);
+          
           const isMappingError = lastError.toLowerCase().includes("mapping");
           const isChecksumError = lastError.toLowerCase().includes("checksum") || lastError.toLowerCase().includes("verify");
-          
-          console.warn(`[CHILS & CO.] Failed via ${attempt.url} | Hash: ${attempt.hashPath} | Error: ${lastError}`);
-          
-          // If it's a mapping error or 404, we definitely want to try the next attempt
-          // If it's a checksum error, it means we reached the right endpoint but the hash pattern was wrong - so continue to next attempt
+
           if (response.status === 404 || isMappingError || isChecksumError) {
             continue;
-          } else {
-            // If it's some other error (e.g. invalid amount), maybe don't loop forever
-            break;
           }
+          
+          // If it's some other error (e.g. invalid amount), maybe don't loop forever unless they explicitly asked for it
+          break;
         } catch (err: any) {
           lastError = err.message;
           console.error(`[CHILS & CO.] PhonePe Request Error:`, err.message);
