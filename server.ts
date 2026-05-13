@@ -538,26 +538,28 @@ async function startServer() {
       const possibleAttempts: { url: string, hashPath: string }[] = [];
       
       for (const baseUrl of endpoints) {
-        // PhonePe has two main patterns:
-        // 1. Standard (B2B): https://api.phonepe.com/apis/hermes/pg/v1/pay
-        // 2. Enterprise: https://api.phonepe.com/apis/pg/v1/pay
+        // PhonePe has two main patterns and cluster variations:
+        // 1. Standard (B2B): /apis/hermes/pg/v1/pay
+        // 2. Enterprise / PG: /apis/pg/v1/pay
         
-        const pathSuffix = "/pg/v1/pay";
-        const fullUrl = `${baseUrl}${pathSuffix}`;
-        const urlObj = new URL(fullUrl);
+        // We will try variations of the path suffix to ensure mapping match
+        const suffixes = ["/pg/v1/pay", "/v1/pay"];
         
-        // Pattern 1: Hash the full path (Standard for most new integrations)
-        possibleAttempts.push({ url: fullUrl, hashPath: urlObj.pathname });
-        
-        // Pattern 2: Hash only the suffix (Common in older or specific standard integrations)
-        if (urlObj.pathname !== pathSuffix) {
-          possibleAttempts.push({ url: fullUrl, hashPath: pathSuffix });
-        }
-        
-        // Pattern 3: Fallback for some specialized enterprise accounts
-        if (baseUrl.includes('/apis/pg') && !baseUrl.endsWith('/pg')) {
-           const altUrl = baseUrl.replace('/apis/pg', '/apis/hermes') + pathSuffix;
-           possibleAttempts.push({ url: altUrl, hashPath: new URL(altUrl).pathname });
+        for (const suffix of suffixes) {
+          const fullUrl = `${baseUrl}${suffix}`;
+          
+          // Avoid double /pg/pg/ if baseUrl already ends with /pg
+          const cleanedUrl = fullUrl.replace(/\/pg\/pg\//, "/pg/");
+          const urlObj = new URL(cleanedUrl);
+          
+          // Patterns to try for the hash:
+          const hashPaths = [urlObj.pathname, suffix];
+          
+          for (const hp of hashPaths) {
+            // Deduplicate attempts
+            if (possibleAttempts.some(a => a.url === cleanedUrl && a.hashPath === hp)) continue;
+            possibleAttempts.push({ url: cleanedUrl, hashPath: hp });
+          }
         }
       }
 
