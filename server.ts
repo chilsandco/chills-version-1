@@ -415,201 +415,57 @@ async function startServer() {
       
       const phonePeClient = getPhonePeClient();
       
-      // IF SDK is configured, use it
-      if (phonePeClient) {
-        console.log(`[CHILS & CO.] Using PhonePe SDK for initiation. Transaction: ${merchantTransactionId}`);
-        try {
-          // Dynamic Origin Detection: Favors the request host but falls back to approved site URL
-          // PhonePe requires matching Origin/Referer for security in production
-          const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-          const host = req.headers['host'] || req.get('host') || "www.chilsandco.com";
-          const isStrictProd = process.env.PHONEPE_ENV?.toUpperCase() === "PRODUCTION";
-          const siteUrl = "https://www.chilsandco.com"; 
-          
-          // Use the actual request host if it's chilsandco.com (supports non-www)
-          const currentOrigin = (isStrictProd && host.includes('chilsandco.com')) 
-            ? `${protocol}://${host}` 
-            : (isStrictProd ? siteUrl : `${protocol}://${host}`);
-          
-          const currentBackend = currentOrigin;
-          
-          const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?signal=${toSignalId(merchantTransactionId)}`;
-          const callbackUrl = process.env.PHONEPE_CALLBACK_URL || `${currentBackend}/api/checkout/phonepe/callback`;
-          const amountPaise = Math.max(100, Math.round(Number(amount) * 100)); 
-
-          console.log(`[CHILS & CO.] PhonePe SDK - Initiating Checkout:
-            - Transaction ID: ${merchantTransactionId}
-            - Base Domain: ${currentOrigin}
-            - Redirect URL: ${redirectUrl}
-            - Callback URL: ${callbackUrl}
-            - Environment: ${isStrictProd ? 'PROD' : 'SANDBOX'}
-          `);
-
-          const request = StandardCheckoutPayRequest.builder()
-            .merchantOrderId(merchantTransactionId.toString())
-            .amount(amountPaise)
-            .redirectUrl(redirectUrl)
-            .message(`Payment for Order #${merchantTransactionId.split('_')[0]}`)
-            .build();
-
-          const response = await phonePeClient.pay(request);
-          console.log(`[CHILS & CO.] PhonePe SDK Success. Redirect URL: ${response.redirectUrl}`);
-          
-          return res.json({
-            success: true,
-            url: response.redirectUrl
-          });
-        } catch (sdkErr: any) {
-          console.error("[CHILS & CO.] PhonePe SDK Pay Error Detail:", {
-            message: sdkErr.message,
-            code: sdkErr.code,
-            httpStatusCode: sdkErr.httpStatusCode,
-            data: sdkErr.data
-          });
-          console.warn("[CHILS & CO.] SDK failed, considering fallback to manual Pay Page...");
-        }
-      }
-
-      // FALLBACK to Manual Pay Page (Hermes/PG)
-      const merchantId = (process.env.PHONEPE_MERCHANT_ID || process.env.PHONEPE_CLIENT_ID || "").trim();
-      const saltKey = (process.env.PHONEPE_SALT_KEY || process.env.PHONEPE_CLIENT_SECRET || process.env.PHONEPE_API_KEY || "").trim();
-      const saltIndex = (process.env.PHONEPE_SALT_INDEX || "1").trim();
-      const env = (process.env.PHONEPE_ENV || "PRODUCTION").trim().toUpperCase();
-      
-      if (!merchantId || !saltKey) {
+      if (!phonePeClient) {
         return res.status(400).json({ 
           success: false,
-          message: "Payment credentials missing. Provide PHONEPE_MERCHANT_ID and PHONEPE_SALT_KEY." 
+          message: "PhonePe SDK not configured. Please check your environment variables." 
         });
       }
 
-      let activeEnv = env;
-      if (merchantId.startsWith('PGTEST')) activeEnv = "STAGING";
-
-      // Try multiple endpoints if Mapping or 404 occurs in Production
-      // Hermes = Standard (B2B) Integration | PG = Direct (Enterprise) Integration
-      const endpoints = process.env.PHONEPE_BASE_URL 
-        ? [process.env.PHONEPE_BASE_URL] 
-        : (activeEnv === "PRODUCTION" 
-            ? ["https://api.phonepe.com/apis/hermes", "https://api.phonepe.com/apis/pg", "https://api.phonepe.com/apis"] 
-            : ["https://api-preprod.phonepe.com/apis/pg-sandbox"]);
-
+      console.log(`[CHILS & CO.] Using PhonePe SDK for initiation. Transaction: ${merchantTransactionId}`);
+      
+      // Dynamic Origin Detection
       const protocol = req.headers['x-forwarded-proto'] || req.protocol;
       const host = req.headers['host'] || req.get('host') || "www.chilsandco.com";
-      const isStrictProd = activeEnv === "PRODUCTION";
+      const isStrictProd = process.env.PHONEPE_ENV?.toUpperCase() === "PRODUCTION";
       const siteUrl = "https://www.chilsandco.com"; 
-
+      
       const currentOrigin = (isStrictProd && host.includes('chilsandco.com')) 
         ? `${protocol}://${host}` 
         : (isStrictProd ? siteUrl : `${protocol}://${host}`);
       
-      const currentBackend = currentOrigin;
-      
-      const amountPaise = Math.max(100, Math.round(Number(amount) * 100));
       const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?signal=${toSignalId(merchantTransactionId)}`;
-      const callbackUrl = process.env.PHONEPE_CALLBACK_URL || `${currentBackend}/api/checkout/phonepe/callback`;
+      const callbackUrl = process.env.PHONEPE_CALLBACK_URL || `${currentOrigin}/api/checkout/phonepe/callback`;
+      const amountPaise = Math.max(100, Math.round(Number(amount) * 100)); 
 
-      // Clean mobile number (PhonePe expects 10 digits)
-      const cleanMobile = String(mobileNumber || "").replace(/\D/g, '').slice(-10) || "9999999999";
-
-      console.log(`[CHILS & CO.] PhonePe Manual - Initiating Payload Base:
+      console.log(`[CHILS & CO.] PhonePe SDK - Initiating Checkout:
         - Transaction ID: ${merchantTransactionId}
         - Base Domain: ${currentOrigin}
-        - Amount: ${amountPaise} paise
-        - Redirect: ${redirectUrl}
-        - Callback: ${callbackUrl}
-        - Env: ${activeEnv}
+        - Redirect URL: ${redirectUrl}
+        - Callback URL: ${callbackUrl}
+        - Environment: ${isStrictProd ? 'PROD' : 'SANDBOX'}
       `);
 
-      let lastError = "Unknown error";
-      const possibleAttempts: { url: string, hashPath: string, mode: string }[] = [];
+      const request = StandardCheckoutPayRequest.builder()
+        .merchantOrderId(merchantTransactionId.toString())
+        .amount(amountPaise)
+        .redirectUrl(redirectUrl)
+        .message(`Payment for Order #${merchantTransactionId.split('_')[0]}`)
+        .build();
+
+      const response = await phonePeClient.pay(request);
+      console.log(`[CHILS & CO.] PhonePe SDK Success. Redirect URL: ${response.redirectUrl}`);
       
-      const trialRedirectModes = ["REDIRECT", "POST"];
-      
-      for (const baseUrl of endpoints) {
-        // PhonePe has multiple patterns: /apis/hermes/pg/v1/pay, /apis/pg/v1/pay, /apis/v1/pay
-        const suffixes = ["/pg/v1/pay", "/v1/pay"];
-        
-        for (const suffix of suffixes) {
-          const fullUrl = `${baseUrl}${suffix}`.replace(/\/pg\/pg\//, "/pg/");
-          const urlObj = new URL(fullUrl);
-          
-          // Patterns to try for the hash: The full pathname or just the API suffix
-          const hashPaths = [urlObj.pathname, suffix];
-          
-          for (const hp of hashPaths) {
-            for (const mode of trialRedirectModes) {
-              // Deduplicate attempts
-              if (possibleAttempts.some(a => a.url === fullUrl && a.hashPath === hp && a.mode === mode)) continue;
-              possibleAttempts.push({ url: fullUrl, hashPath: hp, mode });
-            }
-          }
-        }
-      }
-
-      for (const attempt of possibleAttempts) {
-        try {
-          const payload = {
-            merchantId,
-            merchantTransactionId: merchantTransactionId.toString(),
-            merchantUserId: merchantUserId || `U_${merchantTransactionId}`,
-            amount: amountPaise,
-            redirectUrl,
-            redirectMode: attempt.mode,
-            callbackUrl,
-            mobileNumber: cleanMobile,
-            paymentInstrument: { type: "PAY_PAGE" }
-          };
-
-          const base64Payload = Buffer.from(JSON.stringify(payload)).toString("base64");
-          const stringToHash = base64Payload + attempt.hashPath + saltKey;
-          const xVerify = crypto.createHash("sha256").update(stringToHash).digest("hex") + "###" + saltIndex;
-
-          console.log(`[CHILS & CO.] PhonePe Attempt | URL: ${attempt.url} | Hash: ${attempt.hashPath} | Mode: ${attempt.mode}`);
-          
-          const response = await fetch(attempt.url, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-VERIFY': xVerify,
-              'accept': 'application/json',
-              'Referer': currentOrigin,
-              'Origin': currentOrigin
-            },
-            body: JSON.stringify({ request: base64Payload })
-          });
-
-          const data = await response.json();
-          if (response.ok && data.success && data.data?.instrumentResponse?.redirectInfo?.url) {
-            console.log(`[CHILS & CO.] PhonePe Success via ${attempt.url} | Hash: ${attempt.hashPath} | Mode: ${attempt.mode}`);
-            return res.json({ success: true, url: data.data.instrumentResponse.redirectInfo.url });
-          }
-          
-          lastError = (data && data.message) ? data.message : `Status: ${response.status}`;
-          console.warn(`[CHILS & CO.] PhonePe Attempt Failed: ${attempt.url} | ${attempt.hashPath} | ${attempt.mode} | Error: ${lastError}`);
-          
-          const isMappingError = lastError.toLowerCase().includes("mapping");
-          const isChecksumError = lastError.toLowerCase().includes("checksum") || lastError.toLowerCase().includes("verify");
-
-          if (response.status === 404 || isMappingError || isChecksumError) {
-            continue;
-          }
-          
-          // If it's some other error (e.g. invalid amount), maybe don't loop forever unless they explicitly asked for it
-          break;
-        } catch (err: any) {
-          lastError = err.message;
-          console.error(`[CHILS & CO.] PhonePe Request Error:`, err.message);
-        }
-      }
-
-      res.status(400).json({ 
-        success: false, 
-        message: `PhonePe Integration Error: ${lastError}. Ensure account type matches your chosen integration.` 
+      return res.json({
+        success: true,
+        url: response.redirectUrl
       });
-    } catch (err) {
-      console.error("[CHILS & CO.] Critical PhonePe Integration Error:", err);
-      res.status(500).json({ success: false, message: "Internal payment server error. Please try again later." });
+    } catch (err: any) {
+      console.error("[CHILS & CO.] PhonePe SDK Pay Error:", err);
+      res.status(500).json({ 
+        success: false, 
+        message: err.message || "Payment initiation failed. Please try again." 
+      });
     }
   });
 
@@ -1687,17 +1543,24 @@ async function startServer() {
 
 // Helper to get PhonePe Client
 function getPhonePeClient() {
-  const clientId = process.env.PHONEPE_CLIENT_ID;
-  const clientSecret = process.env.PHONEPE_CLIENT_SECRET;
-  if (!clientId || !clientSecret) return null;
-  
-  const mid = (process.env.PHONEPE_MERCHANT_ID || clientId).trim();
-  const version = parseInt(process.env.PHONEPE_CLIENT_VERSION || "1", 10);
-  const isProd = process.env.PHONEPE_ENV?.toUpperCase() === "PRODUCTION" && !mid.startsWith('PGTEST');
-  const env = isProd ? Env.PRODUCTION : Env.SANDBOX;
-  
-  console.log(`[CHILS & CO.] Initializing PhonePe SDK Client. Env: ${isProd ? 'PROD' : 'SANDBOX'}, Version: ${version}`);
-  return StandardCheckoutClient.getInstance(clientId, clientSecret, version, env);
+  const merchantId = process.env.PHONEPE_MERCHANT_ID?.trim();
+  const clientSecret = process.env.PHONEPE_CLIENT_SECRET?.trim();
+  const clientVersion = parseInt(process.env.PHONEPE_CLIENT_VERSION || "1", 10);
+  const env = process.env.PHONEPE_ENV?.toUpperCase() === "PRODUCTION"
+    ? Env.PRODUCTION
+    : Env.SANDBOX;
+
+  if (!merchantId || !clientSecret) {
+    console.warn("[CHILS & CO.] PhonePe credentials missing.");
+    return null;
+  }
+
+  return StandardCheckoutClient.getInstance(
+    merchantId,
+    clientSecret,
+    clientVersion,
+    env
+  );
 }
 
 // Global error handlers for production
