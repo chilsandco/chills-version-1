@@ -52,6 +52,7 @@ function getWooCommerce() {
       headers: {
         'User-Agent': 'ChilsAndCo-Backend-Client/1.4',
         'Accept': 'application/json',
+        'Content-Type': 'application/json',
         'Cache-Control': 'no-cache'
       },
       // In case of SSL certificate chain issues on shared host
@@ -715,14 +716,17 @@ async function startServer() {
     try {
       const { email, first_name, last_name, password } = req.body;
       
+      console.log(`[CHILS & CO.] Registration Attempt for: ${email}`);
+      console.log(`[CHILS & CO.] Registration Body Keys:`, Object.keys(req.body));
+
       if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
+        return res.status(400).json({ message: "Email and password are required for identity creation." });
       }
 
       const wc = getWooCommerce();
       if (!wc) {
         // Mock success in development if no WC keys
-        console.log("[CHILS & CO.] Registering mock customer:", email);
+        console.log("[CHILS & CO.] No WooCommerce credentials. Registering mock customer:", email);
         return res.json({
           id: Math.floor(Math.random() * 1000),
           email,
@@ -733,20 +737,32 @@ async function startServer() {
         });
       }
 
+      // Stronger parameter validation and mapping
       const customerData = {
-        email,
-        first_name: first_name || "",
-        last_name: last_name || "",
-        password,
-        username: email.split('@')[0]
+        email: email.trim().toLowerCase(),
+        first_name: (first_name || "").trim(),
+        last_name: (last_name || "").trim(),
+        password: password,
+        username: email.split('@')[0].trim().toLowerCase()
       };
 
+      console.log(`[CHILS & CO.] Transmitting customer data to WooCommerce...`);
       const response = await wcSafeCall(wc, "post", "customers", customerData);
+      
+      console.log(`[CHILS & CO.] WooCommerce Registration Successful: ${response.data.id}`);
       res.status(201).json(response.data);
     } catch (error: any) {
-      console.error("WooCommerce Registration Error:", error.response?.data || error);
-      const errorMessage = error.response?.data?.message || "Failed to register user";
-      res.status(error.response?.status || 400).json({ message: errorMessage });
+      const errorData = error.response?.data;
+      console.error("[CHILS & CO.] WooCommerce Registration Failed:", errorData || error.message);
+      
+      // Extract the most helpful error message
+      const errorMessage = errorData?.message || error.message || "Failed to register user";
+      const statusCode = error.response?.status || 400;
+      
+      res.status(statusCode).json({ 
+        message: errorMessage,
+        code: errorData?.code 
+      });
     }
   });
 
@@ -1652,9 +1668,10 @@ async function startServer() {
   }
 
   try {
-    app.listen(PORT, "0.0.0.0", () => {
+    const numericPort = typeof PORT === 'string' ? parseInt(PORT, 10) : Number(PORT);
+    app.listen(numericPort, "0.0.0.0", () => {
       console.log(`[CHILS & CO.] Server started successfully`);
-      console.log(`[CHILS & CO.] Listening on port: ${PORT}`);
+      console.log(`[CHILS & CO.] Listening on port: ${numericPort}`);
       console.log(`[CHILS & CO.] Mode: ${IS_PROD ? 'Production' : 'Development'}`);
     });
   } catch (error) {
