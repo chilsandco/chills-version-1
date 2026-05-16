@@ -133,7 +133,17 @@ async function verifyPhonePeTransaction(merchantTransactionId: string) {
   const saltKey = process.env.PHONEPE_SALT_KEY?.trim();
   const saltIndex = process.env.PHONEPE_SALT_INDEX || "1";
 
-  if (!merchantId || !saltKey || !merchantTransactionId) {
+  if (!merchantTransactionId) {
+    return null;
+  }
+
+  const phonePeClient = getPhonePeClient();
+  if (phonePeClient && typeof (phonePeClient as any).getOrderStatus === "function") {
+    const sdkStatus = await (phonePeClient as any).getOrderStatus(merchantTransactionId);
+    return normalizePhonePeStatus(sdkStatus);
+  }
+
+  if (!merchantId || !saltKey) {
     return null;
   }
 
@@ -149,7 +159,51 @@ async function verifyPhonePeTransaction(merchantTransactionId: string) {
     }
   });
 
-  return verifyRes.data;
+  return normalizePhonePeStatus(verifyRes.data);
+}
+
+function normalizePhonePeStatus(statusData: any) {
+  if (!statusData) return null;
+
+  const state = statusData.state || statusData.data?.state;
+  const code = statusData.code || statusData.data?.code;
+  const paymentDetail = statusData.paymentDetails?.[0] || statusData.data?.paymentDetails?.[0];
+  const merchantTransactionId =
+    statusData.merchantOrderId ||
+    statusData.originalMerchantOrderId ||
+    statusData.data?.merchantOrderId ||
+    statusData.data?.merchantTransactionId;
+  const transactionId =
+    statusData.transactionId ||
+    paymentDetail?.transactionId ||
+    statusData.orderId ||
+    statusData.data?.orderId ||
+    statusData.data?.transactionId;
+
+  if (state === "COMPLETED" || (statusData.success && code === "PAYMENT_SUCCESS")) {
+    return {
+      success: true,
+      code: "PAYMENT_SUCCESS",
+      message: statusData.message,
+      data: { merchantTransactionId, transactionId }
+    };
+  }
+
+  if (["FAILED", "CANCELLED", "EXPIRED"].includes(state) || ["PAYMENT_ERROR", "PAYMENT_DECLINED", "TIMED_OUT", "PAYMENT_FAILED"].includes(code)) {
+    return {
+      success: false,
+      code: code || `PAYMENT_${state}`,
+      message: statusData.message || state,
+      data: { merchantTransactionId, transactionId }
+    };
+  }
+
+  return {
+    success: false,
+    code: code || state || "PAYMENT_PENDING",
+    message: statusData.message || state || "Payment is still pending",
+    data: { merchantTransactionId, transactionId }
+  };
 }
 
 async function reconcilePendingPhonePeOrder(wc: any, order: any, fallbackTransactionId?: string) {
@@ -627,12 +681,13 @@ async function startServer() {
           );
 
           if (callbackResponse.type === CallbackType.CHECKOUT_ORDER_COMPLETED) {
-            const fullTransactionId = callbackResponse.payload.originalMerchantOrderId;
-            const transactionId = callbackResponse.payload.orderId;
-            const orderId = fullTransactionId.split('_')[0];
+            const payload = callbackResponse.payload as any;
+            const fullTransactionId = payload.originalMerchantOrderId || payload.merchantOrderId;
+            const transactionId = payload.paymentDetails?.[0]?.transactionId || payload.transactionId || payload.orderId;
+            const orderId = fullTransactionId?.split('_')[0];
             const wc = getWooCommerce();
 
-            if (callbackResponse.payload.state === "COMPLETED") {
+            if (payload.state === "COMPLETED") {
               console.log(`[CHILS & CO.] SDK verified COMPLETED for order: ${orderId}`);
               if (wc && orderId) {
                 await wcSafeCall(wc, "put", `orders/${orderId}`, {
@@ -643,7 +698,7 @@ async function startServer() {
                 });
               }
             } else {
-              const state = callbackResponse.payload.state;
+              const state = payload.state;
               console.log(`[CHILS & CO.] SDK verified ${state} for order: ${orderId}`);
               if (wc && orderId) {
                 await wcSafeCall(wc, "put", `orders/${orderId}`, {
