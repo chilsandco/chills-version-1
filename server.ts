@@ -120,6 +120,81 @@ async function wcSafeCall(wc: any, method: string, ...args: any[]) {
   }
 }
 
+const isPayableOrderStatus = (status?: string) => ['pending', 'on-hold'].includes(status || '');
+
+function getPhonePeTransactionId(order: any, fallback?: string) {
+  if (fallback) return fallback;
+  const metaField = order.meta_data?.find((m: any) => m.key === "_phonepe_transaction_id");
+  return metaField?.value || (order.id && order.date_created ? `${order.id}_${new Date(order.date_created).getTime()}` : null);
+}
+
+async function verifyPhonePeTransaction(merchantTransactionId: string) {
+  const merchantId = process.env.PHONEPE_MERCHANT_ID?.trim();
+  const saltKey = process.env.PHONEPE_SALT_KEY?.trim();
+  const saltIndex = process.env.PHONEPE_SALT_INDEX || "1";
+
+  if (!merchantId || !saltKey || !merchantTransactionId) {
+    return null;
+  }
+
+  const endpoint = `/pg/v1/status/${merchantId}/${merchantTransactionId}`;
+  const checksum = crypto.createHash('sha256').update(endpoint + saltKey).digest('hex') + "###" + saltIndex;
+
+  const verifyRes = await axios.get(`https://api.phonepe.com/apis/hermes${endpoint}`, {
+    timeout: 3000,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-VERIFY': checksum,
+      'X-MERCHANT-ID': merchantId
+    }
+  });
+
+  return verifyRes.data;
+}
+
+async function reconcilePendingPhonePeOrder(wc: any, order: any, fallbackTransactionId?: string) {
+  if (!wc || !order?.id || !isPayableOrderStatus(order.status)) {
+    return order;
+  }
+
+  const merchantTransactionId = getPhonePeTransactionId(order, fallbackTransactionId);
+  if (!merchantTransactionId) {
+    return order;
+  }
+
+  try {
+    const statusData = await verifyPhonePeTransaction(merchantTransactionId);
+    if (!statusData) return order;
+
+    if (statusData.success && statusData.code === "PAYMENT_SUCCESS") {
+      const transactionId = statusData.data?.transactionId;
+      console.log(`[CHILS & CO.] Public status reconciled Order ${order.id} as PAID.`);
+      const update = await wcSafeCall(wc, "put", `orders/${order.id}`, {
+        status: "processing",
+        set_paid: true,
+        transaction_id: transactionId,
+        customer_note: "Payment verified during customer return status check."
+      });
+      return update.data;
+    }
+
+    if (["PAYMENT_ERROR", "PAYMENT_DECLINED", "TIMED_OUT", "PAYMENT_FAILED"].includes(statusData.code)) {
+      console.log(`[CHILS & CO.] Public status reconciled Order ${order.id} as FAILED (${statusData.code}).`);
+      const update = await wcSafeCall(wc, "put", `orders/${order.id}`, {
+        status: "failed",
+        customer_note: `Payment resolution: ${statusData.message || statusData.code}`
+      });
+      return update.data;
+    }
+  } catch (err: any) {
+    if (err.response?.status !== 404) {
+      console.warn(`[CHILS & CO.] Public PhonePe reconciliation skipped for Order ${order.id}:`, err.message || err);
+    }
+  }
+
+  return order;
+}
+
 async function startServer() {
   const app = express();
   
@@ -504,12 +579,17 @@ async function startServer() {
         - Environment: ${isStrictProd ? 'PROD' : 'SANDBOX'}
       `);
 
-      const request = StandardCheckoutPayRequest.builder()
+      const requestBuilder = StandardCheckoutPayRequest.builder()
         .merchantOrderId(merchantTransactionId.toString())
         .amount(amountPaise)
         .redirectUrl(redirectUrl)
-        .message(`Payment for Order #${merchantTransactionId.split('_')[0]}`)
-        .build();
+        .message(`Payment for Order #${merchantTransactionId.split('_')[0]}`);
+
+      if (typeof (requestBuilder as any).callbackUrl === "function") {
+        (requestBuilder as any).callbackUrl(callbackUrl);
+      }
+
+      const request = requestBuilder.build();
 
       const response = await phonePeClient.pay(request);
       console.log(`[CHILS & CO.] PhonePe SDK Success. Redirect URL: ${response.redirectUrl}`);
@@ -1528,6 +1608,7 @@ async function startServer() {
     try {
       const { id } = req.params;
       const signal = req.query.signal as string;
+      const merchantTransactionId = req.query.transaction as string | undefined;
 
       if (!signal) {
         return res.status(400).json({ message: "Signal hash required for verification." });
@@ -1552,7 +1633,7 @@ async function startServer() {
       }
 
       const response = await wcSafeCall(wc, "get", `orders/${id}`);
-      const order = response.data;
+      const order = await reconcilePendingPhonePeOrder(wc, response.data, merchantTransactionId);
 
       res.json({
         id: order.id,
@@ -1729,29 +1810,13 @@ async function startServer() {
         const ageInMins = (Date.now() - new Date(order.date_created).getTime()) / 60000;
         if (ageInMins < 5) continue;
 
-        // Get merchantTransactionId from meta_data
-        const metaField = order.meta_data?.find((m: any) => m.key === "_phonepe_transaction_id");
-        const merchantTransactionId = metaField ? metaField.value : `${order.id}_${new Date(order.date_created).getTime()}`;
+        const merchantTransactionId = getPhonePeTransactionId(order);
         
         try {
-          const PHONEPE_MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID?.trim();
-          const PHONEPE_SALT_KEY = process.env.PHONEPE_SALT_KEY?.trim();
-          const PHONEPE_SALT_INDEX = process.env.PHONEPE_SALT_INDEX || "1";
+          if (!merchantTransactionId) continue;
+          const statusData = await verifyPhonePeTransaction(merchantTransactionId);
+          if (!statusData) continue;
 
-          if (!PHONEPE_MERCHANT_ID || !PHONEPE_SALT_KEY) continue;
-
-          const endpoint = `/pg/v1/status/${PHONEPE_MERCHANT_ID}/${merchantTransactionId}`;
-          const checksum = crypto.createHash('sha256').update(endpoint + PHONEPE_SALT_KEY).digest('hex') + "###" + PHONEPE_SALT_INDEX;
-
-          const verifyRes = await axios.get(`https://api.phonepe.com/apis/hermes${endpoint}`, {
-            headers: {
-              'Content-Type': 'application/json',
-              'X-VERIFY': checksum,
-              'X-MERCHANT-ID': PHONEPE_MERCHANT_ID
-            }
-          });
-
-          const statusData = verifyRes.data;
           if (statusData.success && statusData.code === "PAYMENT_SUCCESS") {
             console.log(`[CHILS RECON] Order ${order.id} verified as SUCCESS. Updating WC...`);
             await wcSafeCall(wc, "put", `orders/${order.id}`, {

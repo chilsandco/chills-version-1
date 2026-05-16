@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { CheckCircle2, Activity, ArrowRight, UserPlus, XCircle, Clock, AlertCircle } from 'lucide-react';
 import ShareSignal from '../components/ShareSignal';
 import { useAuth } from '../AuthContext';
+import { useCart } from '../CartContext';
 
 interface OrderStatus {
   id: string;
@@ -16,9 +17,11 @@ const OrderSuccess: React.FC = () => {
   const { orderId: fullOrderId } = useParams();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const { clearCart } = useCart();
   const [loading, setLoading] = useState(true);
   const [orderInfo, setOrderInfo] = useState<OrderStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const cartCleared = useRef(false);
   
   // Extract original order ID if suffix exists (e.g. 123_1715535555 -> 123)
   const orderId = fullOrderId?.split('_')[0];
@@ -32,9 +35,15 @@ const OrderSuccess: React.FC = () => {
     const startTime = Date.now();
 
     if (orderId && signalId) {
+      const resolvedOrderId = orderId;
+      const resolvedSignalId = signalId;
+      const resolvedTransactionId = fullOrderId;
+
       const verifyOrder = async () => {
         try {
-          const response = await fetch(`/api/orders/status/${orderId}?signal=${signalId}`);
+          const params = new URLSearchParams({ signal: resolvedSignalId });
+          if (resolvedTransactionId) params.set('transaction', resolvedTransactionId);
+          const response = await fetch(`/api/orders/status/${resolvedOrderId}?${params.toString()}`);
           if (!response.ok) throw new Error("Signal verification failed");
           
           const data = await response.json();
@@ -79,7 +88,14 @@ const OrderSuccess: React.FC = () => {
     return () => {
       if (pollTimer) clearTimeout(pollTimer);
     };
-  }, [orderId, signalId]);
+  }, [orderId, signalId, fullOrderId]);
+
+  useEffect(() => {
+    if (!cartCleared.current && orderInfo && ['processing', 'completed'].includes(orderInfo.status)) {
+      cartCleared.current = true;
+      clearCart();
+    }
+  }, [orderInfo?.status, clearCart]);
 
   if (loading) {
     return (

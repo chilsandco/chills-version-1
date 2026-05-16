@@ -75,6 +75,7 @@ const OrderSignals: React.FC = () => {
 
   const hasWaitlistBadge = isFlagActive(user?.onWaitlist);
   const hasCoCreatorBadge = isFlagActive(user?.coCreatorInterest, 'chils_cocreator_interest');
+  const paidStatuses = ['processing', 'completed', 'shipping', 'delivered'];
 
   return (
     <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen">
@@ -196,7 +197,7 @@ const OrderSignals: React.FC = () => {
                   <div className="w-24">
                     <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Status</p>
                     <div className="flex items-center gap-2">
-                      <div className={`w-1.5 h-1.5 rounded-full ${signal.status === 'completed' ? 'bg-green-500' : 'bg-accent animate-pulse'}`} />
+                      <div className={`w-1.5 h-1.5 rounded-full ${paidStatuses.includes(signal.status) ? 'bg-green-500' : 'bg-accent animate-pulse'}`} />
                       <p className="text-[10px] uppercase font-bold tracking-widest">{signal.status}</p>
                     </div>
                   </div>
