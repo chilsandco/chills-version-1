@@ -57,9 +57,10 @@ const Checkout: React.FC = () => {
     pincode: ''
   });
 
-  // Load addresses from local storage on mount
+  // Load addresses and persisted form info from local storage on mount
   useEffect(() => {
-    const stored = localStorage.getItem(`chils_addresses_${user?.id || 'anon'}`);
+    const userSuffix = user?.id || 'anon';
+    const stored = localStorage.getItem(`chils_addresses_${userSuffix}`);
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
@@ -71,7 +72,27 @@ const Checkout: React.FC = () => {
         console.error("Failed to parse addresses", e);
       }
     }
+
+    const storedForm = localStorage.getItem(`chils_checkout_form_${userSuffix}`);
+    if (storedForm) {
+      try {
+        const parsed = JSON.parse(storedForm);
+        setFormData(prev => ({ ...prev, ...parsed }));
+      } catch (e) {
+        console.error("Failed to parse persisted form", e);
+      }
+    }
   }, [user?.id]);
+
+  // Persist form data changes
+  useEffect(() => {
+    const userSuffix = user?.id || 'anon';
+    const timeout = setTimeout(() => {
+      const { address, city, state, pincode, ...persistentInfo } = formData;
+      localStorage.setItem(`chils_checkout_form_${userSuffix}`, JSON.stringify(persistentInfo));
+    }, 1000);
+    return () => clearTimeout(timeout);
+  }, [formData.firstName, formData.lastName, formData.email, formData.phone, user?.id]);
 
   // Pre-fill user data
   useEffect(() => {

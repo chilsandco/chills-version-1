@@ -1,20 +1,71 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { CheckCircle2, Activity, ArrowRight, UserPlus } from 'lucide-react';
+import { CheckCircle2, Activity, ArrowRight, UserPlus, XCircle, Clock, AlertCircle } from 'lucide-react';
 import ShareSignal from '../components/ShareSignal';
 import { useAuth } from '../AuthContext';
+
+interface OrderStatus {
+  id: string;
+  status: string;
+  total: string;
+  currency: string;
+}
 
 const OrderSuccess: React.FC = () => {
   const { orderId: fullOrderId } = useParams();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [orderInfo, setOrderInfo] = useState<OrderStatus | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   // Extract original order ID if suffix exists (e.g. 123_1715535555 -> 123)
   const orderId = fullOrderId?.split('_')[0];
-  
-  const signalId = searchParams.get('signal') || `#CHLS-${Math.floor(100000 + Math.random() * 900000)}`;
-  
+  const signalId = searchParams.get('signal');
+
+  useEffect(() => {
+    if (orderId && signalId) {
+      const verifyOrder = async () => {
+        try {
+          const response = await fetch(`/api/orders/status/${orderId}?signal=${signalId}`);
+          if (!response.ok) throw new Error("Signal verification failed");
+          const data = await response.json();
+          setOrderInfo(data);
+        } catch (err) {
+          console.error("Verification error:", err);
+          setError("This transmission could not be verified in our archives.");
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      verifyOrder();
+    } else {
+      setLoading(false);
+      setError("Incomplete transmission data.");
+    }
+  }, [orderId, signalId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black">
+        <div className="text-center space-y-6">
+          <motion.div 
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="w-12 h-12 border-2 border-accent border-t-transparent rounded-full mx-auto"
+          />
+          <p className="text-[10px] tracking-[0.5em] text-accent uppercase animate-pulse">Verifying Transmission...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const isSuccessful = orderInfo && ['processing', 'completed', 'completed'].includes(orderInfo.status);
+  const isPending = orderInfo && ['pending', 'on-hold'].includes(orderInfo.status);
+  const isFailed = orderInfo && ['failed', 'cancelled'].includes(orderInfo.status);
+
   return (
     <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[800px] mx-auto min-h-screen flex flex-col items-center">
       <motion.div
@@ -28,13 +79,17 @@ const OrderSuccess: React.FC = () => {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-            className="text-accent"
+            className={isFailed ? "text-red-500" : isPending ? "text-amber-500" : "text-accent"}
           >
-            <CheckCircle2 size={64} strokeWidth={1} />
+            {isFailed ? <XCircle size={64} strokeWidth={1} /> : isPending ? <Clock size={64} strokeWidth={1} /> : <CheckCircle2 size={64} strokeWidth={1} />}
           </motion.div>
           <div className="space-y-1">
-            <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase">Transmission Confirmed</p>
-            <h1 className="text-5xl md:text-6xl font-display font-bold tracking-tighter uppercase">Order Confirmed</h1>
+            <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase">
+              {isFailed ? "Transmission Interrupted" : isPending ? "Awaiting Verification" : "Transmission Confirmed"}
+            </p>
+            <h1 className="text-5xl md:text-6xl font-display font-bold tracking-tighter uppercase">
+              {isFailed ? "Payment Failed" : isPending ? "Payment Pending" : "Order Confirmed"}
+            </h1>
           </div>
         </div>
 
@@ -46,27 +101,57 @@ const OrderSuccess: React.FC = () => {
           <div className="flex flex-col md:flex-row justify-between items-start gap-8 border-b border-neutral-900 pb-12">
             <div>
               <p className="text-[9px] tracking-[0.3em] text-accent uppercase font-bold mb-2">Signal Generated</p>
-              <p className="font-mono text-3xl tracking-tighter uppercase">{signalId}</p>
+              <p className="font-mono text-3xl tracking-tighter uppercase">{signalId || 'UNKNOWN'}</p>
               <p className="text-[10px] text-neutral-500 uppercase tracking-widest mt-2 italic">
-                "This signal represents your order within the system."
+                {isFailed 
+                  ? "\"This transmission encountered a critical failure.\"" 
+                  : isPending 
+                    ? "\"This signal is awaiting payment confirmation.\""
+                    : "\"This signal represents your order within the system.\""}
               </p>
             </div>
             <div className="text-right">
               <p className="text-[9px] tracking-[0.2em] text-neutral-600 uppercase mb-2">System Status</p>
-              <div className="flex items-center gap-3 text-accent justify-end">
-                <span className="w-2 h-2 bg-accent rounded-full animate-pulse shadow-[0_0_10px_rgba(255,255,255,0.5)]" />
-                <p className="text-[11px] font-bold uppercase tracking-widest">Active Pulse</p>
+              <div className={`flex items-center gap-3 justify-end ${isFailed ? "text-red-500" : isPending ? "text-amber-500" : "text-accent"}`}>
+                <span className={`w-2 h-2 rounded-full animate-pulse shadow-[0_0_10px_rgba(255,255,255,0.5)] ${isFailed ? "bg-red-500" : isPending ? "bg-amber-500" : "bg-accent"}`} />
+                <p className="text-[11px] font-bold uppercase tracking-widest">
+                  {isFailed ? "Critical Error" : isPending ? "Paused Pulse" : "Active Pulse"}
+                </p>
               </div>
             </div>
           </div>
 
           <div className="space-y-6">
             <p className="text-[11px] text-neutral-400 uppercase tracking-widest leading-relaxed">
-              Your build is in progress. The archive is now processing the physical manifestation of this transmission.
+              {isFailed 
+                ? "The payment for your order could not be processed. Please check your bank details or try again."
+                : isPending
+                  ? "We are currently awaiting confirmation from the payment gateway. Your order will process once verified."
+                  : "Your build is in progress. The archive is now processing the physical manifestation of this transmission."}
             </p>
           </div>
 
-          {!user && (
+          {isFailed && (
+            <div className="pt-8 border-t border-neutral-900">
+               <div className="bg-red-500/5 border border-red-500/20 p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex gap-4">
+                  <AlertCircle className="text-red-500" size={24} />
+                  <div>
+                    <h3 className="text-[11px] font-bold uppercase tracking-widest mb-1 text-red-500">Action Required</h3>
+                    <p className="text-[10px] text-white/40 uppercase tracking-widest">Return to checkout to try another payment method.</p>
+                  </div>
+                </div>
+                <Link 
+                  to="/checkout" 
+                  className="bg-red-500 text-white px-8 py-3 text-[10px] tracking-[0.2em] font-bold uppercase hover:bg-red-600 transition-colors flex items-center gap-2"
+                >
+                  Retry Payment <ArrowRight size={12} />
+                </Link>
+              </div>
+            </div>
+          )}
+
+          {!user && isSuccessful && (
             <div className="pt-8 border-t border-neutral-900">
               <div className="bg-white/5 border border-white/10 p-6 flex flex-col md:flex-row items-center justify-between gap-6">
                 <div className="flex gap-4">
@@ -86,17 +171,20 @@ const OrderSuccess: React.FC = () => {
             </div>
           )}
 
-          <div className="pt-8 border-t border-neutral-900">
-            <p className="text-[10px] text-neutral-500 text-center uppercase tracking-[0.3em] mb-8">Share Signal Origin</p>
-            <ShareSignal 
-              productName="Chils & Co Signal"
-              productUrl={window.location.origin}
-              isOrderSuccess={true}
-            />
-          </div>
+          {isSuccessful && (
+            <div className="pt-8 border-t border-neutral-900">
+              <p className="text-[10px] text-neutral-500 text-center uppercase tracking-[0.3em] mb-8">Share Signal Origin</p>
+              <ShareSignal 
+                productName="Chils & Co Signal"
+                productUrl={window.location.origin}
+                isOrderSuccess={true}
+              />
+            </div>
+          )}
         </div>
 
-          <div className="flex flex-col md:flex-row gap-6 justify-center">
+        <div className="flex flex-col md:flex-row gap-6 justify-center">
+          {isSuccessful && (
             <a 
               href={`https://api.chilsandco.com/wp-admin/admin-ajax.php?print-order=${orderId}&print-order-type=invoice&action=print_order`}
               target="_blank"
@@ -106,14 +194,15 @@ const OrderSuccess: React.FC = () => {
               Download Invoice
               <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform" />
             </a>
-            <Link 
-              to="/console/orders" 
-              className="group flex items-center justify-center gap-3 px-12 py-5 border border-white text-[11px] tracking-[0.3em] font-bold uppercase bg-white text-black hover:bg-accent hover:border-accent transition-all"
-            >
-              Monitor Signals
-              <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform" />
-            </Link>
-          </div>
+          )}
+          <Link 
+            to={isSuccessful ? "/console/orders" : "/"} 
+            className="group flex items-center justify-center gap-3 px-12 py-5 border border-white text-[11px] tracking-[0.3em] font-bold uppercase bg-white text-black hover:bg-accent hover:border-accent transition-all"
+          >
+            {isSuccessful ? "Monitor Signals" : "Return Home"}
+            <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform" />
+          </Link>
+        </div>
       </motion.div>
     </div>
   );

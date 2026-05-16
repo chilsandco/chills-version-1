@@ -18,6 +18,19 @@ import {
 import { Link } from 'react-router-dom';
 
 const Returns: React.FC = () => {
+  const [settings, setSettings] = React.useState({
+    email: "hello.chilsandco@gmail.com"
+  });
+
+  React.useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.email) setSettings(data);
+      })
+      .catch(err => console.error("Failed to sync global nodes:", err));
+  }, []);
+
   return (
     <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen bg-black">
       {/* Header */}
@@ -416,10 +429,10 @@ const Returns: React.FC = () => {
                       Orders Archive <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                   </Link>
                   <a 
-                      href="mailto:hello.chilsandco@gmail.com" 
+                      href={`mailto:${settings.email}`} 
                       className="whitespace-nowrap flex items-center gap-2 group text-[11px] font-bold uppercase tracking-[0.3em] text-accent hover:text-white transition-colors"
                   >
-                      Contact: hello.chilsandco@gmail.com <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                      Contact: {settings.email} <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                   </a>
                 </div>
             </div>

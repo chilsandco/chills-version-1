@@ -4,6 +4,22 @@ import { Mail, Phone, Clock, MapPin, ArrowRight, ShieldCheck, Headphones } from 
 import { Link } from 'react-router-dom';
 
 const Support: React.FC = () => {
+  const [settings, setSettings] = React.useState({
+    mobileLink: "+91 7842 07 0404",
+    address: "3rd Floor, Plot No. 38 & 39\nMatrusri Nagar, Miyapur\nHyderabad, Telangana – 500049\nIndia",
+    coordinates: "17.4948, 78.3444",
+    email: "hello.chilsandco@gmail.com"
+  });
+
+  React.useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.mobileLink) setSettings(data);
+      })
+      .catch(err => console.error("Failed to sync global nodes:", err));
+  }, []);
+
   return (
     <div className="bg-black text-white min-h-screen pt-32 pb-24 px-6 md:px-12 selection:bg-accent selection:text-black">
       <div className="max-w-[1400px] mx-auto">
@@ -40,13 +56,13 @@ const Support: React.FC = () => {
               <div className="mb-12">
                 <Mail className="text-accent mb-6" size={32} strokeWidth={1} />
                 <h3 className="text-[11px] tracking-[0.3em] font-bold uppercase mb-4 text-neutral-400">Electronic Mail</h3>
-                <p className="text-2xl font-display font-bold tracking-tight mb-2">hello.chilsandco@gmail.com</p>
+                <p className="text-2xl font-display font-bold tracking-tight mb-2">{settings.email}</p>
                 <p className="text-[10px] text-neutral-600 uppercase tracking-widest leading-relaxed">
                   For order queries, technical support, and partnership requests.
                 </p>
               </div>
               <a 
-                href="mailto:hello.chilsandco@gmail.com"
+                href={`mailto:${settings.email}`}
                 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.3em] text-white hover:text-accent transition-colors group"
               >
                 Initiate Transmission <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -58,7 +74,7 @@ const Support: React.FC = () => {
               <div className="mb-12">
                 <Phone className="text-accent mb-6" size={32} strokeWidth={1} />
                 <h3 className="text-[11px] tracking-[0.3em] font-bold uppercase mb-4 text-neutral-400">Voice Link</h3>
-                <p className="text-2xl font-display font-bold tracking-tight mb-2">+91 7842 07 0404</p>
+                <p className="text-2xl font-display font-bold tracking-tight mb-2">{settings.mobileLink}</p>
                 <div className="flex items-center gap-2 mt-4">
                   <Clock className="text-neutral-700" size={14} />
                   <p className="text-[10px] text-neutral-500 uppercase tracking-widest">
@@ -67,7 +83,7 @@ const Support: React.FC = () => {
                 </div>
               </div>
               <a 
-                href="tel:+917842070404"
+                href={`tel:${settings.mobileLink.replace(/\s+/g, '')}`}
                 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.3em] text-white hover:text-accent transition-colors group"
               >
                 Open Connection <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
@@ -80,11 +96,8 @@ const Support: React.FC = () => {
                 <div className="max-w-md">
                   <MapPin className="text-accent mb-6" size={32} strokeWidth={1} />
                   <h3 className="text-[11px] tracking-[0.3em] font-bold uppercase mb-4 text-neutral-400">Physical Coordinates</h3>
-                  <p className="text-xl font-display font-bold tracking-tight uppercase leading-relaxed mb-4">
-                    3rd Floor, Plot No. 38 & 39<br />
-                    Matrusri Nagar, Miyapur<br />
-                    Hyderabad, Telangana – 500049<br />
-                    India
+                  <p className="text-xl font-display font-bold tracking-tight uppercase leading-relaxed mb-4 whitespace-pre-line">
+                    {settings.address}
                   </p>
                 </div>
                 <div className="flex-shrink-0 flex items-end">

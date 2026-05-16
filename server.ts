@@ -353,9 +353,9 @@ async function startServer() {
       if (wc) {
         // Create order in WooCommerce
         const orderData = {
-          payment_method: "razorpay",
-          payment_method_title: "Razorpay",
-          set_paid: true,
+          payment_method: "phonepe",
+          payment_method_title: "PhonePe",
+          set_paid: false, // Set to false initially, let the webhook confirm payment
           customer_id: customerId,
           billing: {
             first_name: customerDetails.firstName,
@@ -1435,6 +1435,49 @@ async function startServer() {
     }
   });
 
+  app.get("/api/orders/status/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const signal = req.query.signal as string;
+
+      if (!signal) {
+        return res.status(400).json({ message: "Signal hash required for verification." });
+      }
+
+      // Verify the signal matches the ID to prevent scraping
+      // Note: This is a weak verification but sufficient for the success page
+      const expectedSignal = toSignalId(id);
+      if (signal !== expectedSignal) {
+        return res.status(403).json({ message: "Signal mismatch. Verification failed." });
+      }
+
+      const wc = getWooCommerce();
+      if (!wc) {
+        // Mock success for dev/preview
+        return res.json({ 
+          id, 
+          status: "processing", 
+          total: "4500.00",
+          currency: "INR"
+        });
+      }
+
+      const response = await wcSafeCall(wc, "get", `orders/${id}`);
+      const order = response.data;
+
+      res.json({
+        id: order.id,
+        status: order.status,
+        total: order.total,
+        currency: order.currency,
+        date_created: order.date_created
+      });
+    } catch (error) {
+      console.error("[CHILS & CO.] Public Status Error:", error);
+      res.status(404).json({ message: "Signal not found in system archives." });
+    }
+  });
+
   app.post("/api/orders/:id/return", authenticateToken, async (req: any, res) => {
     try {
       const { id } = req.params;
@@ -1498,6 +1541,54 @@ async function startServer() {
     } catch (error: any) {
       console.error("[CHILS & CO.] Return Request Error:", error);
       res.status(500).json({ message: error.message || "Failed to process return request" });
+    }
+  });
+
+  // Settings API support for global address and mobile link
+  const SETTINGS_FILE = path.join(process.cwd(), "settings.json");
+  const DEFAULT_SETTINGS = {
+    mobileLink: "+91 7842 07 0404",
+    address: "3rd Floor, Plot No. 38 & 39\nMatrusri Nagar, Miyapur\nHyderabad, Telangana – 500049\nIndia",
+    coordinates: "17.4948, 78.3444",
+    email: "hello.chilsandco@gmail.com"
+  };
+
+  app.get("/api/settings", (req, res) => {
+    try {
+      if (!fs.existsSync(SETTINGS_FILE)) {
+        fs.writeFileSync(SETTINGS_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2));
+        return res.json(DEFAULT_SETTINGS);
+      }
+      const nodeContent = fs.readFileSync(SETTINGS_FILE, "utf-8");
+      const settings = JSON.parse(nodeContent);
+      res.json({ ...DEFAULT_SETTINGS, ...settings });
+    } catch (error) {
+      console.error("[CHILS & CO.] Settings Fetch Error:", error);
+      res.json(DEFAULT_SETTINGS);
+    }
+  });
+
+  app.post("/api/settings", authenticateToken, async (req: any, res) => {
+    try {
+      const adminEmails = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
+      const isAdmin = adminEmails.some(email => email.toLowerCase() === req.user.email.toLowerCase());
+      
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Higher clearance required for core reconfiguration." });
+      }
+
+      const currentSettings = fs.existsSync(SETTINGS_FILE) 
+        ? JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf-8")) 
+        : DEFAULT_SETTINGS;
+
+      const newSettings = { ...currentSettings, ...req.body };
+      fs.writeFileSync(SETTINGS_FILE, JSON.stringify(newSettings, null, 2));
+      
+      console.log("[CHILS & CO.] Global settings recalibrated successfully.");
+      res.json({ success: true, settings: newSettings });
+    } catch (error) {
+      console.error("[CHILS & CO.] Settings Update Error:", error);
+      res.status(500).json({ message: "Failed to calibrate settings nodes." });
     }
   });
 

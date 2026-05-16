@@ -5,14 +5,24 @@ import { CheckCircle2, Cpu, Database, Network, ShieldCheck, Activity } from 'luc
 
 const Onboarding: React.FC = () => {
   const [step, setStep] = useState(0);
+  const [coords, setCoords] = useState("17.4948, 78.3444");
   const navigate = useNavigate();
+
+  useEffect(() => {
+    fetch('/api/settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.coordinates) setCoords(data.coordinates);
+      })
+      .catch(err => console.error("Failed to sync coords:", err));
+  }, []);
 
   const steps = [
     {
       title: "System Initialization",
       subtitle: "Parsing identity protocols",
       icon: <Database className="text-accent" size={32} />,
-      content: "Registering origin coordinates and establishing secure channel."
+      content: `Registering origin coordinates [${coords}] and establishing secure channel.`
     },
     {
       title: "Signal Tuning",

@@ -102,7 +102,7 @@ const Orders: React.FC = () => {
 };
 
 const Auth: React.FC = () => {
-  const { login: authLogin, user, logout, isAuthenticated } = useAuth();
+  const { login: authLogin, user, logout, isAuthenticated, token } = useAuth();
   const [isRegister, setIsRegister] = useState(true);
   const [formData, setFormData] = useState({
     email: '',
@@ -209,6 +209,48 @@ const Auth: React.FC = () => {
     const hasWaitlistBadge = isFlagActive(user.onWaitlist, 'chils_bespoke_waitlist');
     const adminEmails = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
     const isAdmin = adminEmails.some(email => email.toLowerCase() === user.email.toLowerCase());
+    const [showSettingsEditor, setShowSettingsEditor] = useState(false);
+    const [globalSettings, setGlobalSettings] = useState({
+        mobileLink: '',
+        address: '',
+        coordinates: '',
+        email: ''
+    });
+    const [saveLoading, setSaveLoading] = useState(false);
+
+    useEffect(() => {
+        if (isAdmin) {
+            fetch('/api/settings')
+                .then(res => res.json())
+                .then(data => setGlobalSettings(data))
+                .catch(err => console.error("Failed to load settings:", err));
+        }
+    }, [isAdmin]);
+
+    const handleSaveSettings = async () => {
+        setSaveLoading(true);
+        try {
+            const response = await fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(globalSettings)
+            });
+            if (response.ok) {
+                alert("Global nodes successfully recalibrated.");
+                setShowSettingsEditor(false);
+            } else {
+                const data = await response.json();
+                alert(`Calibration Fault: ${data.message}`);
+            }
+        } catch (err) {
+            alert("Terminal connection error during calibration.");
+        } finally {
+            setSaveLoading(false);
+        }
+    };
 
     return (
       <div className="min-h-screen pt-36 md:pt-32 pb-24 px-6">
@@ -260,6 +302,13 @@ const Auth: React.FC = () => {
                     ORDER SIGNALS
                     <ExternalLink size={12} />
                   </button>
+                  <button 
+                    onClick={() => setShowSettingsEditor(true)}
+                    className="w-full border border-white/10 text-white/60 py-4 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
+                  >
+                    CORE SETTINGS
+                    <ExternalLink size={12} />
+                  </button>
                 </div>
               )}
 
@@ -284,12 +333,94 @@ const Auth: React.FC = () => {
 
           {/* Orders Section */}
           <div className="lg:col-span-2">
-            <div className="mb-10">
-              <h4 className="text-3xl font-display font-bold tracking-tighter mb-2">ORDERS ARCHIVE</h4>
-              <p className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-medium">Historical logs and status of your active transmissions.</p>
-            </div>
-            
-            <Orders />
+            {showSettingsEditor ? (
+               <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-neutral-950 border border-white/10 p-12 rounded-sm"
+               >
+                 <div className="flex justify-between items-center mb-10">
+                   <div>
+                     <h4 className="text-3xl font-display font-bold tracking-tighter mb-2">CORE CALIBRATION</h4>
+                     <p className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-medium">Update global site identity nodes and transmission links.</p>
+                   </div>
+                   <button onClick={() => setShowSettingsEditor(false)} className="text-white/40 hover:text-white transition-colors">
+                     <AlertCircle size={20} />
+                   </button>
+                 </div>
+
+                 <div className="space-y-8">
+                   <div className="space-y-2">
+                     <label className="text-[10px] tracking-widest text-white/40 uppercase font-bold">Mobile Link (System Phone)</label>
+                     <input 
+                       type="text" 
+                       value={globalSettings.mobileLink}
+                       onChange={e => setGlobalSettings({...globalSettings, mobileLink: e.target.value})}
+                       className="w-full bg-white/5 border border-white/10 px-4 py-4 text-sm font-mono focus:border-accent outline-none transition-colors"
+                       placeholder="+91 1234 56 7890"
+                     />
+                   </div>
+
+                   <div className="space-y-2">
+                     <label className="text-[10px] tracking-widest text-white/40 uppercase font-bold">Support Email Interface</label>
+                     <input 
+                       type="email" 
+                       value={globalSettings.email}
+                       onChange={e => setGlobalSettings({...globalSettings, email: e.target.value})}
+                       className="w-full bg-white/5 border border-white/10 px-4 py-4 text-sm font-mono focus:border-accent outline-none transition-colors"
+                       placeholder="hello@chilsandco.com"
+                     />
+                   </div>
+
+                   <div className="space-y-2">
+                     <label className="text-[10px] tracking-widest text-white/40 uppercase font-bold">Global Address Coordinates (Physical)</label>
+                     <textarea 
+                       rows={4}
+                       value={globalSettings.address}
+                       onChange={e => setGlobalSettings({...globalSettings, address: e.target.value})}
+                       className="w-full bg-white/5 border border-white/10 px-4 py-4 text-sm font-mono focus:border-accent outline-none transition-colors resize-none"
+                       placeholder="Enter full physical address..."
+                     />
+                   </div>
+
+                   <div className="space-y-2">
+                     <label className="text-[10px] tracking-widest text-white/40 uppercase font-bold">Registration Lat/Long</label>
+                     <input 
+                       type="text" 
+                       value={globalSettings.coordinates}
+                       onChange={e => setGlobalSettings({...globalSettings, coordinates: e.target.value})}
+                       className="w-full bg-white/5 border border-white/10 px-4 py-4 text-sm font-mono focus:border-accent outline-none transition-colors"
+                       placeholder="17.4948, 78.3444"
+                     />
+                   </div>
+
+                   <div className="pt-6 flex gap-4">
+                     <button 
+                       onClick={handleSaveSettings}
+                       disabled={saveLoading}
+                       className="flex-1 bg-white text-black py-5 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-accent transition-colors disabled:opacity-50"
+                     >
+                       {saveLoading ? 'CALIBRATING...' : 'SYNC GLOBAL NODES'}
+                     </button>
+                     <button 
+                       onClick={() => setShowSettingsEditor(false)}
+                       className="px-8 border border-white/10 text-white/40 py-5 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-white/5 transition-colors"
+                     >
+                       ABORT
+                     </button>
+                   </div>
+                 </div>
+               </motion.div>
+            ) : (
+              <>
+                <div className="mb-10">
+                  <h4 className="text-3xl font-display font-bold tracking-tighter mb-2">ORDERS ARCHIVE</h4>
+                  <p className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-medium">Historical logs and status of your active transmissions.</p>
+                </div>
+                
+                <Orders />
+              </>
+            )}
           </div>
         </div>
       </div>

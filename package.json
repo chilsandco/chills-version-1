@@ -33,7 +33,6 @@
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
     "pg-sdk-node": "^2.0.2",
-    "razorpay": "^2.9.6",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-helmet-async": "^3.0.0",
