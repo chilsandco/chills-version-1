@@ -35,8 +35,7 @@ export const useCheckout = () => {
       }
 
       // 2. Initiate PhonePe Payment
-      // Add a unique suffix to ensure merchantTransactionId is unique even if payment is retried
-      const uniqueTransactionId = `${order.id}_${Date.now()}`;
+      const merchantTransactionId = order.merchantTransactionId || `${order.id}_${Date.now()}`;
       
       const phonePeResponse = await fetch('/api/checkout/phonepe/pay', {
         method: 'POST',
@@ -46,7 +45,7 @@ export const useCheckout = () => {
         },
         body: JSON.stringify({ 
           amount: amountToPay,
-          merchantTransactionId: uniqueTransactionId,
+          merchantTransactionId: merchantTransactionId,
           merchantUserId: localStorage.getItem('chils_user_id') || `GUEST_${Date.now()}`,
           mobileNumber: customerDetails.phone
         })

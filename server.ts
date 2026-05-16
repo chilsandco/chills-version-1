@@ -429,8 +429,23 @@ async function startServer() {
         console.log("[CHILS & CO.] Creating WooCommerce Order:", orderData);
         const response = await wcSafeCall(wc, "post", "orders", orderData);
         
+        // Generate a unique transaction ID for PhonePe here
+        const merchantTransactionId = `${response.data.id}_${Date.now()}`;
+        
+        // Update order with the transaction ID in meta data for later reconciliation
+        try {
+          await wcSafeCall(wc, "put", `orders/${response.data.id}`, {
+            meta_data: [
+              { key: "_phonepe_transaction_id", value: merchantTransactionId }
+            ]
+          });
+        } catch (metaErr) {
+          console.error("[CHILS & CO.] Failed to store merchantTransactionId in WC:", metaErr);
+        }
+
         return res.json({
           id: response.data.id.toString(), // Return WC Order ID
+          merchantTransactionId: merchantTransactionId, // Also return the unique ID
           amount: amount * 100,
           currency: currency || "INR",
           receipt: `receipt_${response.data.id}`
@@ -476,7 +491,8 @@ async function startServer() {
         ? `${protocol}://${host}` 
         : (isStrictProd ? siteUrl : `${protocol}://${host}`);
       
-      const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?signal=${toSignalId(merchantTransactionId)}`;
+      const orderId = merchantTransactionId.split('_')[0];
+      const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?signal=${toSignalId(orderId)}`;
       const callbackUrl = process.env.PHONEPE_CALLBACK_URL || `${currentOrigin}/api/checkout/phonepe/callback`;
       const amountPaise = Math.max(100, Math.round(Number(amount) * 100)); 
 
@@ -530,23 +546,31 @@ async function startServer() {
             responseBody
           );
 
-          if (callbackResponse.type === CallbackType.CHECKOUT_ORDER_COMPLETED && callbackResponse.payload.state === "COMPLETED") {
+          if (callbackResponse.type === CallbackType.CHECKOUT_ORDER_COMPLETED) {
             const fullTransactionId = callbackResponse.payload.originalMerchantOrderId;
-            const transactionId = callbackResponse.payload.orderId; // PhonePe's ID
-            
-            // Extract original Order ID if suffix exists (e.g. 12345_123456789 -> 12345)
+            const transactionId = callbackResponse.payload.orderId;
             const orderId = fullTransactionId.split('_')[0];
-            
-            console.log(`[CHILS & CO.] SDK verified COMPLETED for order: ${orderId} (Full: ${fullTransactionId})`);
-            
             const wc = getWooCommerce();
-            if (wc && orderId) {
-              await wcSafeCall(wc, "put", `orders/${orderId}`, {
-                status: "processing",
-                set_paid: true,
-                transaction_id: transactionId,
-                note: `PhonePe SDK Verified Success. Ref: ${transactionId}`
-              });
+
+            if (callbackResponse.payload.state === "COMPLETED") {
+              console.log(`[CHILS & CO.] SDK verified COMPLETED for order: ${orderId}`);
+              if (wc && orderId) {
+                await wcSafeCall(wc, "put", `orders/${orderId}`, {
+                  status: "processing",
+                  set_paid: true,
+                  transaction_id: transactionId,
+                  note: `PhonePe SDK Verified Success. Ref: ${transactionId}`
+                });
+              }
+            } else {
+              const state = callbackResponse.payload.state;
+              console.log(`[CHILS & CO.] SDK verified ${state} for order: ${orderId}`);
+              if (wc && orderId) {
+                await wcSafeCall(wc, "put", `orders/${orderId}`, {
+                  status: "failed",
+                  note: `PhonePe SDK Verified ${state}. Ref: ${transactionId}`
+                });
+              }
             }
           }
           return res.status(200).send("OK");
@@ -1705,7 +1729,9 @@ async function startServer() {
         const ageInMins = (Date.now() - new Date(order.date_created).getTime()) / 60000;
         if (ageInMins < 5) continue;
 
-        const merchantTransactionId = `${order.id}_${new Date(order.date_created).getTime()}`;
+        // Get merchantTransactionId from meta_data
+        const metaField = order.meta_data?.find((m: any) => m.key === "_phonepe_transaction_id");
+        const merchantTransactionId = metaField ? metaField.value : `${order.id}_${new Date(order.date_created).getTime()}`;
         
         try {
           const PHONEPE_MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID?.trim();
