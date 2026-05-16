@@ -25,26 +25,60 @@ const OrderSuccess: React.FC = () => {
   const signalId = searchParams.get('signal');
 
   useEffect(() => {
+    let pollTimer: any;
+    let timeoutTimer: any;
+    let currentInterval = 5000; // Start with 5 seconds
+    const maxPollTime = 300000; // Stop after 5 minutes (300 seconds)
+    const startTime = Date.now();
+
     if (orderId && signalId) {
       const verifyOrder = async () => {
         try {
           const response = await fetch(`/api/orders/status/${orderId}?signal=${signalId}`);
           if (!response.ok) throw new Error("Signal verification failed");
+          
           const data = await response.json();
           setOrderInfo(data);
+          
+          // Terminal states - stop polling
+          const terminalStates = ['processing', 'completed', 'failed', 'cancelled', 'refunded'];
+          if (terminalStates.includes(data.status)) {
+            return true; // Stop
+          }
+          return false; // Continue
         } catch (err) {
           console.error("Verification error:", err);
-          setError("This transmission could not be verified in our archives.");
-        } finally {
-          setLoading(false);
+          return true; // Stop on error to prevent infinite loops
         }
       };
 
-      verifyOrder();
+      const poll = async () => {
+        const elapsed = Date.now() - startTime;
+        if (elapsed >= maxPollTime) {
+          console.log("[CHILS & CO.] Polling timed out after 5 minutes.");
+          setLoading(false);
+          return;
+        }
+
+        const shouldStop = await verifyOrder();
+        setLoading(false);
+
+        if (!shouldStop) {
+          // Exponential backoff: increase interval by 1.5x until max 30s
+          currentInterval = Math.min(currentInterval * 1.5, 30000);
+          pollTimer = setTimeout(poll, currentInterval);
+        }
+      };
+
+      poll();
     } else {
       setLoading(false);
       setError("Incomplete transmission data.");
     }
+
+    return () => {
+      if (pollTimer) clearTimeout(pollTimer);
+    };
   }, [orderId, signalId]);
 
   if (loading) {
@@ -62,9 +96,9 @@ const OrderSuccess: React.FC = () => {
     );
   }
 
-  const isSuccessful = orderInfo && ['processing', 'completed', 'completed'].includes(orderInfo.status);
-  const isPending = orderInfo && ['pending', 'on-hold'].includes(orderInfo.status);
-  const isFailed = orderInfo && ['failed', 'cancelled'].includes(orderInfo.status);
+  const isSuccessful = orderInfo ? ['processing', 'completed'].includes(orderInfo.status) : false;
+  const isPending = orderInfo ? ['pending', 'on-hold'].includes(orderInfo.status) : false;
+  const isFailed = orderInfo ? ['failed', 'cancelled', 'refunded'].includes(orderInfo.status) : false;
 
   return (
     <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[800px] mx-auto min-h-screen flex flex-col items-center">
@@ -83,14 +117,14 @@ const OrderSuccess: React.FC = () => {
           >
             {isFailed ? <XCircle size={64} strokeWidth={1} /> : isPending ? <Clock size={64} strokeWidth={1} /> : <CheckCircle2 size={64} strokeWidth={1} />}
           </motion.div>
-          <div className="space-y-1">
-            <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase">
-              {isFailed ? "Transmission Interrupted" : isPending ? "Awaiting Verification" : "Transmission Confirmed"}
-            </p>
-            <h1 className="text-5xl md:text-6xl font-display font-bold tracking-tighter uppercase">
-              {isFailed ? "Payment Failed" : isPending ? "Payment Pending" : "Order Confirmed"}
-            </h1>
-          </div>
+            <div className="space-y-1">
+              <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase">
+                {isFailed ? "Transmission Interrupted" : isPending ? "Awaiting Verification" : isSuccessful ? "Transmission Confirmed" : "Signal Synchronizing"}
+              </p>
+              <h1 className="text-5xl md:text-6xl font-display font-bold tracking-tighter uppercase">
+                {isFailed ? "Payment Failed" : isPending ? "Payment Pending" : isSuccessful ? "Order Confirmed" : "Processing..."}
+              </h1>
+            </div>
         </div>
 
         <div className="bg-neutral-950 border border-neutral-900 p-8 md:p-12 space-y-12 text-left relative overflow-hidden">

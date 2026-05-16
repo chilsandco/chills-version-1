@@ -127,7 +127,8 @@ const Navbar: React.FC = () => {
   ];
 
   const adminLinks = isAdmin ? [
-    { name: 'SIGNALS', path: '/console/bespoke' }
+    { name: 'SIGNALS', path: '/console/bespoke' },
+    { name: 'CONFIG', path: '/admin/config' }
   ] : [];
 
   const allLinks = [...navLinks, ...adminLinks];

@@ -23,6 +23,7 @@ import TermsConditions from './pages/TermsConditions';
 import Auth from './pages/Auth';
 import Bespoke from './pages/Bespoke';
 import BespokeSignals from './pages/BespokeSignals';
+import AdminConfig from './pages/AdminConfig';
 import CoCreator from './pages/CoCreator';
 import SmoothScroll from './components/SmoothScroll';
 import ScrollProgress from './components/ScrollProgress';
@@ -60,6 +61,7 @@ export default function App() {
                   <Route path="/bespoke" element={<Bespoke />} />
                   <Route path="/co-creator" element={<CoCreator />} />
                   <Route path="/console/bespoke" element={<BespokeSignals />} />
+                  <Route path="/admin/config" element={<AdminConfig />} />
                 </Routes>
               </main>
               <Footer />

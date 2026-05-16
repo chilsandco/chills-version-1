@@ -5,6 +5,7 @@ import https from "https";
 import fs from "fs";
 import { fileURLToPath } from "url";
 import cors from "cors";
+import axios from "axios";
 import WooCommerceRestApi from "@woocommerce/woocommerce-rest-api";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
@@ -122,6 +123,42 @@ async function wcSafeCall(wc: any, method: string, ...args: any[]) {
 async function startServer() {
   const app = express();
   
+  // Debug logger - must be first
+  app.use((req, res, next) => {
+    if (req.url.startsWith('/api')) {
+      console.log(`[CHILS DEBUG] API Requested: ${req.method} ${req.url}`);
+    }
+    next();
+  });
+
+  app.get("/api/ping", (req, res) => {
+    res.json({ status: "alive", timestamp: new Date().toISOString() });
+  });
+
+  // Settings API support for global address and mobile link
+  const SETTINGS_FILE = path.join(process.cwd(), "settings.json");
+  const DEFAULT_SETTINGS = {
+    mobileLink: "+91 7842 07 0404",
+    address: "3rd Floor, Plot No. 38 & 39\nMatrusri Nagar, Miyapur\nHyderabad, Telangana – 500049\nIndia",
+    coordinates: "17.4948, 78.3444",
+    email: "hello.chilsandco@gmail.com"
+  };
+
+  app.get("/api/settings", (req, res) => {
+    try {
+      if (!fs.existsSync(SETTINGS_FILE)) {
+        fs.writeFileSync(SETTINGS_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2));
+        return res.json(DEFAULT_SETTINGS);
+      }
+      const nodeContent = fs.readFileSync(SETTINGS_FILE, "utf-8");
+      const settings = JSON.parse(nodeContent);
+      res.json({ ...DEFAULT_SETTINGS, ...settings });
+    } catch (error) {
+      console.error("[CHILS & CO.] Settings Fetch Error:", error);
+      res.json(DEFAULT_SETTINGS);
+    }
+  });
+
   // Robust port handling for Hostinger (supports numeric ports and Passenger pipes)
   const PORT = process.env.PORT || 3000;
 
@@ -156,29 +193,34 @@ async function startServer() {
 
   // Health check with active WooCommerce connectivity test
   app.get("/api/health", async (req, res) => {
-    const wc = getWooCommerce();
-    let connectivity = "Not tested";
-    
-    if (wc) {
-      try {
-        const test = await wcSafeCall(wc, "get", "products", { per_page: 1 });
-        connectivity = test.status === 200 ? "Success" : `Failed (Status: ${test.status})`;
-      } catch (err: any) {
-        connectivity = `Error: ${err.message}`;
+    try {
+      const wc = getWooCommerce();
+      let connectivity = "Not tested";
+      
+      if (wc) {
+        try {
+          const test = await wcSafeCall(wc, "get", "products", { per_page: 1 });
+          connectivity = test.status === 200 ? "Success" : `Failed (Status: ${test.status})`;
+        } catch (err: any) {
+          connectivity = `Error: ${err.message}`;
+        }
       }
-    }
 
-    res.json({ 
-      status: "ok", 
-      env: process.env.NODE_ENV,
-      woocommerce: {
-        configured: !!wc,
-        url: process.env.WOOCOMMERCE_URL,
-        hasKey: !!process.env.WOOCOMMERCE_KEY,
-        hasSecret: !!process.env.WOOCOMMERCE_SECRET,
-        connectivity
-      }
-    });
+      res.json({ 
+        status: "ok", 
+        env: process.env.NODE_ENV,
+        woocommerce: {
+          configured: !!wc,
+          url: process.env.WOOCOMMERCE_URL,
+          hasKey: !!process.env.WOOCOMMERCE_KEY,
+          hasSecret: !!process.env.WOOCOMMERCE_SECRET,
+          connectivity
+        }
+      });
+    } catch (error: any) {
+      console.error("[CHILS & CO.] Health Check Failure:", error);
+      res.status(500).json({ status: "error", error: error.message });
+    }
   });
 
   // Helper to map WC product to App product
@@ -562,6 +604,29 @@ async function startServer() {
             console.log(`[CHILS & CO.] WooCommerce Order ${orderId} updated successfully.`);
           } catch (wcErr) {
             console.error(`[CHILS & CO.] Failed to update WC Order ${orderId}:`, wcErr);
+          }
+        }
+      } else {
+        // Handle failure or cancellation
+        const fullTransactionId = decodedResponse.data?.merchantTransactionId || decodedResponse.merchantTransactionId;
+        const orderId = fullTransactionId?.split('_')[0];
+        const reason = decodedResponse.message || decodedResponse.code || "Unknown Error";
+
+        console.log(`[CHILS & CO.] Payment FAILED/CANCELLED for Order: ${orderId}. Reason: ${reason}`);
+
+        if (orderId) {
+          const wc = getWooCommerce();
+          if (wc) {
+            try {
+              // Map to 'failed' in WooCommerce
+              await wcSafeCall(wc, "put", `orders/${orderId}`, {
+                status: "failed",
+                note: `PhonePe Payment Failed/Cancelled. Reason: ${reason}`
+              });
+              console.log(`[CHILS & CO.] WooCommerce Order ${orderId} updated to 'failed'.`);
+            } catch (wcErr) {
+              console.error(`[CHILS & CO.] Failed to mark WC Order ${orderId} as failed:`, wcErr);
+            }
           }
         }
       }
@@ -1544,30 +1609,6 @@ async function startServer() {
     }
   });
 
-  // Settings API support for global address and mobile link
-  const SETTINGS_FILE = path.join(process.cwd(), "settings.json");
-  const DEFAULT_SETTINGS = {
-    mobileLink: "+91 7842 07 0404",
-    address: "3rd Floor, Plot No. 38 & 39\nMatrusri Nagar, Miyapur\nHyderabad, Telangana – 500049\nIndia",
-    coordinates: "17.4948, 78.3444",
-    email: "hello.chilsandco@gmail.com"
-  };
-
-  app.get("/api/settings", (req, res) => {
-    try {
-      if (!fs.existsSync(SETTINGS_FILE)) {
-        fs.writeFileSync(SETTINGS_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2));
-        return res.json(DEFAULT_SETTINGS);
-      }
-      const nodeContent = fs.readFileSync(SETTINGS_FILE, "utf-8");
-      const settings = JSON.parse(nodeContent);
-      res.json({ ...DEFAULT_SETTINGS, ...settings });
-    } catch (error) {
-      console.error("[CHILS & CO.] Settings Fetch Error:", error);
-      res.json(DEFAULT_SETTINGS);
-    }
-  });
-
   app.post("/api/settings", authenticateToken, async (req: any, res) => {
     try {
       const adminEmails = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
@@ -1590,6 +1631,26 @@ async function startServer() {
       console.error("[CHILS & CO.] Settings Update Error:", error);
       res.status(500).json({ message: "Failed to calibrate settings nodes." });
     }
+  });
+  
+  // API Fallback - Catches any unmatched /api routes and returns JSON instead of HTML
+  app.all("/api/*", (req, res) => {
+    console.warn(`[CHILS DEBUG] Unmatched API path: ${req.method} ${req.url}`);
+    res.status(404).json({ 
+      error: "Route not found", 
+      message: `The endpoint ${req.url} does not exist on this server.`,
+      path: req.url 
+    });
+  });
+
+  // Global Error Handler
+  app.use((err: any, req: any, res: any, next: any) => {
+    console.error(`[CHILS DEBUG] Global Error Handler:`, err);
+    res.status(err.status || 500).json({
+      error: "Internal Server Error",
+      message: err.message || "An unexpected error occurred.",
+      path: req.url
+    });
   });
 
   // Vite middleware for development
@@ -1618,6 +1679,81 @@ async function startServer() {
       });
     }
   }
+
+  // Background Reconciliation Service
+  // Checks for pending orders every 10 minutes and verifies status with PhonePe
+  setInterval(async () => {
+    console.log("[CHILS RECON] Triggering routine synchronization...");
+    const wc = getWooCommerce();
+    if (!wc) return;
+
+    try {
+      // Find orders that are 'pending' or 'on-hold'
+      const response = await wcSafeCall(wc, "get", "orders", { 
+        status: "pending,on-hold",
+        per_page: 50,
+        after: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() // Last 24 hours
+      });
+
+      const orders = response.data;
+      if (!Array.isArray(orders) || orders.length === 0) return;
+
+      console.log(`[CHILS RECON] Found ${orders.length} potential signals to reconcile.`);
+
+      for (const order of orders) {
+        // Skip if order is very fresh (less than 5 mins old) to let webhook/polling handle it first
+        const ageInMins = (Date.now() - new Date(order.date_created).getTime()) / 60000;
+        if (ageInMins < 5) continue;
+
+        const merchantTransactionId = `${order.id}_${new Date(order.date_created).getTime()}`;
+        
+        try {
+          const PHONEPE_MERCHANT_ID = process.env.PHONEPE_MERCHANT_ID?.trim();
+          const PHONEPE_SALT_KEY = process.env.PHONEPE_SALT_KEY?.trim();
+          const PHONEPE_SALT_INDEX = process.env.PHONEPE_SALT_INDEX || "1";
+
+          if (!PHONEPE_MERCHANT_ID || !PHONEPE_SALT_KEY) continue;
+
+          const endpoint = `/pg/v1/status/${PHONEPE_MERCHANT_ID}/${merchantTransactionId}`;
+          const checksum = crypto.createHash('sha256').update(endpoint + PHONEPE_SALT_KEY).digest('hex') + "###" + PHONEPE_SALT_INDEX;
+
+          const verifyRes = await axios.get(`https://api.phonepe.com/apis/hermes${endpoint}`, {
+            headers: {
+              'Content-Type': 'application/json',
+              'X-VERIFY': checksum,
+              'X-MERCHANT-ID': PHONEPE_MERCHANT_ID
+            }
+          });
+
+          const statusData = verifyRes.data;
+          if (statusData.success && statusData.code === "PAYMENT_SUCCESS") {
+            console.log(`[CHILS RECON] Order ${order.id} verified as SUCCESS. Updating WC...`);
+            await wcSafeCall(wc, "put", `orders/${order.id}`, {
+              status: "processing",
+              set_paid: true,
+              customer_note: "Payment verified via system reconciliation job."
+            });
+          } else if (statusData.code === "PAYMENT_ERROR" || statusData.code === "PAYMENT_DECLINED" || statusData.code === "TIMED_OUT") {
+            console.log(`[CHILS RECON] Order ${order.id} verified as FAILED (${statusData.code}). Updating WC...`);
+            await wcSafeCall(wc, "put", `orders/${order.id}`, {
+              status: "failed",
+              customer_note: `Payment resolution: ${statusData.message}`
+            });
+          }
+        } catch (err: any) {
+          // If 404 from PhonePe, it might not even have been initiated or failed very early
+          if (err.response?.status === 404) {
+            console.warn(`[CHILS RECON] Order ${order.id} not found in PhonePe records. Marking as failed after 30 mins.`);
+            if (ageInMins > 30) {
+              await wcSafeCall(wc, "put", `orders/${order.id}`, { status: "failed", customer_note: "Archived due to payment abandonment." });
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("[CHILS RECON] Job Failure:", error);
+    }
+  }, 600000); // 10 minutes
 
   try {
     const numericPort = typeof PORT === 'string' ? parseInt(PORT, 10) : Number(PORT);
