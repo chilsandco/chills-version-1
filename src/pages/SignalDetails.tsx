@@ -10,8 +10,10 @@ const SignalDetails: React.FC = () => {
   const [signal, setSignal] = useState<Signal | null>(null);
   const [loading, setLoading] = useState(true);
   const { token } = useAuth();
+  const pollStart = React.useRef(Date.now());
 
   useEffect(() => {
+    let pollTimer: any;
     const fetchSignal = async () => {
       if (!token) {
         setLoading(false);
@@ -25,6 +27,14 @@ const SignalDetails: React.FC = () => {
         });
         const data = await res.json();
         setSignal(data);
+
+        // Polling logic: if pending or on-hold, poll again in 10s
+        if (data.status === 'pending' || data.status === 'on-hold') {
+          const elapsed = Date.now() - pollStart.current;
+          if (elapsed < 300000) { // 5 minutes
+            pollTimer = setTimeout(fetchSignal, 10000);
+          }
+        }
       } catch (err) {
         console.error("Failed to fetch signal details:", err);
       } finally {
@@ -33,6 +43,9 @@ const SignalDetails: React.FC = () => {
     };
 
     fetchSignal();
+    return () => {
+      if (pollTimer) clearTimeout(pollTimer);
+    };
   }, [id, token]);
 
   if (loading) {
@@ -46,6 +59,9 @@ const SignalDetails: React.FC = () => {
   if (!signal) return null;
 
   const isRefunded = signal.status === 'refunded';
+  const isFailed = ['failed', 'cancelled', 'refunded'].includes(signal.status);
+  const isPending = ['pending', 'on-hold'].includes(signal.status);
+  const isSuccessful = ['processing', 'completed', 'shipping', 'delivered'].includes(signal.status);
 
   const steps = [
     { label: "Order Received", status: "completed" },
@@ -67,9 +83,11 @@ const SignalDetails: React.FC = () => {
       <header className="mb-16">
         <div className="flex justify-between items-end gap-8 flex-wrap">
           <div>
-            <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase mb-3">Order Confirmation</p>
+            <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase mb-3">
+              {isFailed ? 'Transmission Interrupted' : isPending ? 'Transmission Pending' : 'Order Confirmation'}
+            </p>
             <h1 className="text-5xl font-display font-bold tracking-tighter uppercase mb-4">
-              {isRefunded ? 'Refund Complete' : 'Order Details'}
+              {isRefunded ? 'Refund Complete' : isFailed ? 'Order Terminated' : 'Order Details'}
             </h1>
             <div className="flex items-center gap-4">
               <p className={`font-mono text-xl tracking-tighter ${isRefunded ? 'text-red-500' : 'text-accent'}`}>#{signal.signalId}</p>
@@ -287,11 +305,17 @@ const SignalDetails: React.FC = () => {
               <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase">Payment</h3>
             </div>
             <div className="flex items-center gap-2 mb-4">
-              <div className="w-2 h-2 rounded-full bg-green-500" />
-              <p className="text-[11px] font-bold uppercase tracking-widest">Authenticated</p>
+              <div className={`w-2 h-2 rounded-full ${isSuccessful ? 'bg-green-500' : isFailed ? 'bg-red-500' : 'bg-amber-500 animate-pulse'}`} />
+              <p className="text-[11px] font-bold uppercase tracking-widest">
+                {isSuccessful ? 'Authenticated' : isFailed ? 'Failed' : 'Pending'}
+              </p>
             </div>
             <p className="text-[10px] text-neutral-500 uppercase tracking-widest leading-relaxed italic">
-              Payment was registered successfully.
+              {isSuccessful 
+                ? 'Payment was registered successfully.' 
+                : isFailed 
+                  ? 'Payment was unsuccessful or cancelled.' 
+                  : 'Awaiting payment confirmation from gateway.'}
             </p>
           </section>
 
