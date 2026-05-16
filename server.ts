@@ -371,18 +371,30 @@ async function startServer() {
         .replace(/&ndash;/g, '–');
     };
 
-    // Strip HTML tags for clean text display
+    // Strip HTML tags while preserving useful spacing from WordPress content.
     const cleanHtml = (html: string) => {
-      return (html || "").replace(/<[^>]*>?/gm, "").trim();
+      return (html || "")
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<\/p>/gi, "\n\n")
+        .replace(/<li[^>]*>/gi, "- ")
+        .replace(/<\/li>/gi, "\n")
+        .replace(/<\/h[1-6]>/gi, "\n")
+        .replace(/<[^>]*>?/gm, "")
+        .replace(/[ \t]+\n/g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
     };
+
+    const longDescription = decodeEntities(cleanHtml(wcProduct.description || ""));
+    const shortDescription = decodeEntities(cleanHtml(wcProduct.short_description || ""));
 
     return {
       id: (wcProduct.id || "").toString(),
       name: decodeEntities(wcProduct.name || "Unknown Product"),
       category: decodeEntities(categories[0]?.name || "Uncategorized"),
       price: parseFloat(wcProduct.price || "0"),
-      // Prefer long description if available, otherwise short description
-      description: decodeEntities(cleanHtml(wcProduct.description || wcProduct.short_description || "")),
+      description: longDescription || shortDescription,
+      shortDescription: shortDescription || longDescription,
       concept: attributes.find((a: any) => a.name?.toLowerCase() === "concept")?.options?.[0] || "A precise exploration of form and function.",
       material: attributes.find((a: any) => a.name?.toLowerCase() === "material")?.options?.[0] || "Premium technical fabric.",
       fit: attributes.find((a: any) => a.name?.toLowerCase() === "fit")?.options?.[0] || "Regular fit.",
@@ -393,6 +405,26 @@ async function startServer() {
       stockQuantity: wcProduct.stock_quantity || 0
     };
   };
+
+  const mockProducts = [
+    {
+      id: "t1",
+      name: "SYNTAX OVERLOAD TEE",
+      category: "T-Shirts",
+      price: 1899,
+      description: "Heavyweight 240GSM cotton with a smooth, structured hand-feel.\n\nDesigned with an oversized shoulder line, high-definition screen printed graphics, and a breathable finish for regular wear.\n\n- 240GSM cotton construction\n- Oversized fit with dropped shoulders\n- Soft-touch breathable finish\n- Machine wash cold, inside out\n- Do not iron directly on print",
+      shortDescription: "A tribute to the late-night refactoring sessions where logic becomes art.\n\nThe graphic captures the moment when clean code, chaos, and momentum begin to look like the same thing.",
+      concept: "A tribute to the late-night refactoring sessions where logic becomes art.",
+      material: "100% Organic Cotton, 240 GSM.",
+      fit: "Oversized, dropped shoulders.",
+      care: "Machine wash cold, inside out. Do not iron on print.",
+      images: [
+        "https://picsum.photos/seed/syntax1/1200/1600",
+        "https://picsum.photos/seed/syntax2/1200/1600"
+      ],
+      status: "Available"
+    }
+  ];
 
   // Helper to map WC order to App signal
   const mapOrderToSignal = (order: any) => {
@@ -449,25 +481,7 @@ async function startServer() {
       const wc = getWooCommerce();
       if (!wc) {
         console.log("[CHILS & CO.] No WooCommerce credentials found. Serving mock data.");
-        // Fallback to mock data if credentials are missing
-        return res.json([
-          {
-            id: "t1",
-            name: "SYNTAX OVERLOAD TEE",
-            category: "T-Shirts",
-            price: 1899,
-            description: "Heavyweight 240GSM cotton. Oversized fit. Screen printed graphics.",
-            concept: "A tribute to the late-night refactoring sessions where logic becomes art.",
-            material: "100% Organic Cotton, 240 GSM.",
-            fit: "Oversized, dropped shoulders.",
-            care: "Machine wash cold, inside out. Do not iron on print.",
-            images: [
-              "https://picsum.photos/seed/syntax1/1200/1600",
-              "https://picsum.photos/seed/syntax2/1200/1600"
-            ],
-            status: "Available"
-          }
-        ]);
+        return res.json(mockProducts);
       }
       console.log(`[CHILS & CO.] Fetching products from WooCommerce: ${process.env.WOOCOMMERCE_URL}`);
       const response = await wcSafeCall(wc, "get", "products", { per_page: 20 });
@@ -494,7 +508,10 @@ async function startServer() {
     try {
       const wc = getWooCommerce();
       if (!wc) {
-        return res.status(404).json({ message: "Product not found (Mock Mode)" });
+        const mockProduct = mockProducts.find(product => product.id === req.params.id);
+        return mockProduct
+          ? res.json(mockProduct)
+          : res.status(404).json({ message: "Product not found (Mock Mode)" });
       }
       const response = await wcSafeCall(wc, "get", `products/${req.params.id}`);
       res.json(mapProduct(response.data));

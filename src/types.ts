@@ -4,6 +4,7 @@ export interface Product {
   category: string;
   price: number;
   description: string;
+  shortDescription: string;
   concept: string;
   material: string;
   fit: string;

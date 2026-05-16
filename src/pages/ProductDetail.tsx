@@ -5,7 +5,7 @@ import { useCart } from '../CartContext';
 import { useWishlist } from '../WishlistContext';
 import ShareSignal from '../components/ShareSignal';
 import { motion, AnimatePresence, useSpring } from 'motion/react';
-import { CreditCard, ZoomIn, ZoomOut, X, Heart, Ruler, ChevronLeft } from 'lucide-react';
+import { BookOpen, Check, CreditCard, Droplets, Heart, Ruler, Shirt, Sparkles, X, ZoomIn, ZoomOut, ChevronLeft } from 'lucide-react';
 import { useGesture } from '@use-gesture/react';
 import { Link } from 'react-router-dom';
 import SizeGuide from '../components/SizeGuide';
@@ -209,6 +209,13 @@ const ProductDetail: React.FC = () => {
 
   if (loading || !product) return <div className="h-screen flex items-center justify-center font-display tracking-widest text-neutral-500 uppercase text-xs">Awaiting Precision...</div>;
 
+  const productStory = product.shortDescription || product.concept || product.description;
+  const productDetails = product.description || product.shortDescription || "";
+  const storyParagraphs = productStory.split(/\n{2,}|\r\n{2,}/).map(line => line.trim()).filter(Boolean);
+  const detailLines = productDetails.split(/\n+/).map(line => line.trim()).filter(Boolean);
+  const detailBullets = detailLines.filter(line => line.startsWith('-')).map(line => line.replace(/^-\s*/, ''));
+  const detailParagraphs = detailLines.filter(line => !line.startsWith('-'));
+
   return (
     <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1800px] mx-auto">
       {/* Navigation Breadcrumb */}
@@ -277,23 +284,46 @@ const ProductDetail: React.FC = () => {
             </div>
           </div>
 
-          {/* Product Intel (Brief Description) */}
-          <div className="mb-8">
-            <div className="relative group">
-              <p className="text-neutral-400 text-[12px] leading-relaxed tracking-wide font-light whitespace-pre-line border-l border-accent/20 pl-4 py-1 line-clamp-4">
-                {product.description}
-              </p>
-              {product.description.length > 150 && (
-                <button 
-                  onClick={() => setIsDescOpen(true)}
-                  className="mt-3 text-[9px] uppercase tracking-[0.3em] font-bold text-accent hover:text-white transition-colors cursor-pointer flex items-center gap-2 group/btn"
-                >
-                  <div className="w-1 h-3 bg-accent group-hover/btn:bg-white transition-colors" />
-                  Read Full Intel
-                </button>
-              )}
+          {/* Story Behind the Design */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.25 }}
+            className="relative mb-8 overflow-hidden border border-accent/20 bg-[linear-gradient(135deg,rgba(212,175,55,0.12),rgba(255,255,255,0.025)_38%,rgba(0,0,0,0)_100%)] p-6 md:p-7"
+          >
+            <div className="absolute left-0 top-0 h-full w-[2px] bg-accent" />
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center border border-accent/30 bg-black/40 text-accent">
+                  <BookOpen size={16} />
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-accent">Story Behind The Design</p>
+              </div>
+              <Sparkles size={15} className="text-accent/60" />
             </div>
-          </div>
+            <div className="space-y-4">
+              {storyParagraphs.slice(0, 2).map((paragraph, index) => (
+                <p
+                  key={index}
+                  className={index === 0
+                    ? "font-display text-xl leading-snug tracking-normal text-white md:text-2xl"
+                    : "text-sm font-light leading-relaxed tracking-wide text-neutral-300"
+                  }
+                >
+                  {paragraph}
+                </p>
+              ))}
+            </div>
+            {productStory.length > 260 && (
+              <button
+                onClick={() => setIsDescOpen(true)}
+                className="group/btn mt-5 flex cursor-pointer items-center gap-3 text-[9px] font-bold uppercase tracking-[0.3em] text-accent transition-colors hover:text-white"
+              >
+                <span className="h-3 w-1 bg-accent transition-colors group-hover/btn:bg-white" />
+                Read Story And Details
+              </button>
+            )}
+          </motion.div>
 
           <div className="space-y-6 mb-10">
             <div>
@@ -368,26 +398,52 @@ const ProductDetail: React.FC = () => {
               </motion.div>
             </div>
 
-            <div className="py-6 space-y-6">
-              <div>
-                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-2 text-neutral-500">Concept</h3>
-                <p className="text-neutral-400 text-sm leading-relaxed">{product.concept}</p>
+            <div className="py-6 space-y-5">
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-neutral-900" />
+                <h3 className="text-[10px] font-bold uppercase tracking-[0.32em] text-neutral-500">Garment Intelligence</h3>
+                <div className="h-px flex-1 bg-neutral-900" />
               </div>
 
-              <div className="grid grid-cols-2 gap-8">
-                <div>
-                  <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-2 text-neutral-500">Material</h3>
-                  <p className="text-neutral-400 text-sm">{product.material}</p>
-                </div>
-                <div>
-                  <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-2 text-neutral-500">Fit</h3>
-                  <p className="text-neutral-400 text-sm">{product.fit}</p>
-                </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {[
+                  { label: "Material", value: product.material, icon: Shirt },
+                  { label: "Fit", value: product.fit, icon: Ruler },
+                  { label: "Care", value: product.care, icon: Droplets }
+                ].map(({ label, value, icon: Icon }) => (
+                  <div key={label} className="border border-neutral-900 bg-neutral-950/70 p-4">
+                    <Icon size={16} className="mb-4 text-accent" />
+                    <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-600">{label}</p>
+                    <p className="text-[12px] leading-relaxed text-neutral-300">{value}</p>
+                  </div>
+                ))}
               </div>
 
-              <div>
-                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-2 text-neutral-500">Care</h3>
-                <p className="text-neutral-400 text-sm">{product.care}</p>
+              <div className="border border-neutral-900 bg-black p-5">
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <h3 className="text-[11px] font-bold uppercase tracking-[0.3em] text-accent">Product Details</h3>
+                  <button
+                    onClick={() => setIsDescOpen(true)}
+                    className="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-500 transition-colors hover:text-white"
+                  >
+                    Full Intel
+                  </button>
+                </div>
+                <div className="space-y-3 text-[12px] font-light leading-relaxed tracking-wide text-neutral-400">
+                  {detailParagraphs.slice(0, 2).map((paragraph, index) => (
+                    <p key={index} className="line-clamp-3">{paragraph}</p>
+                  ))}
+                </div>
+                {detailBullets.length > 0 && (
+                  <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {detailBullets.slice(0, 6).map((item) => (
+                      <div key={item} className="flex items-start gap-2 text-[11px] leading-relaxed text-neutral-400">
+                        <Check size={12} className="mt-0.5 shrink-0 text-accent" />
+                        <span>{item}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -516,12 +572,26 @@ const ProductDetail: React.FC = () => {
               
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
-                <h2 className="text-[11px] tracking-[0.5em] font-bold uppercase text-accent">Full Product Intelligence</h2>
+                <h2 className="text-[11px] tracking-[0.5em] font-bold uppercase text-accent">Story And Product Intelligence</h2>
               </div>
               
-              <p className="text-white text-lg md:text-xl font-light leading-relaxed tracking-tight whitespace-pre-line mb-12">
-                {product.description}
-              </p>
+              <div className="mb-10 border-l border-accent/30 pl-5">
+                <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-600">Story Behind The Design</p>
+                <div className="space-y-4">
+                  {storyParagraphs.map((paragraph, index) => (
+                    <p key={index} className="text-white text-lg md:text-xl font-light leading-relaxed tracking-tight">
+                      {paragraph}
+                    </p>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mb-12">
+                <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-600">Product Details</p>
+                <div className="space-y-4 text-neutral-300 text-sm leading-relaxed tracking-wide whitespace-pre-line">
+                  {productDetails}
+                </div>
+              </div>
 
               <div className="grid grid-cols-2 gap-8 pt-8 border-t border-neutral-900 text-[10px] tracking-[0.2em] font-bold uppercase text-neutral-500">
                 <div>
