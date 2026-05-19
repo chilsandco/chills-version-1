@@ -34,26 +34,14 @@ const Checkout: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Second Life modal state — shown once per session when 1 item in cart
+  // Second Life modal state — shown when 1 item in cart
   const [showSecondLifeModal, setShowSecondLifeModal] = useState(false);
-  const [secondLifeDismissed, setSecondLifeDismissed] = useState(() => {
-    return sessionStorage.getItem('chils_secondlife_dismissed') === 'true';
-  });
+  const [secondLifeDismissed, setSecondLifeDismissed] = useState(false);
 
   const dismissSecondLife = () => {
     setSecondLifeDismissed(true);
-    sessionStorage.setItem('chils_secondlife_dismissed', 'true');
     setShowSecondLifeModal(false);
   };
-
-  // Reset the dismissed state if the user adds more items to the cart,
-  // so the pitch will show again if they go back down to 1 item.
-  useEffect(() => {
-    if (totalItemCount > 1 && secondLifeDismissed) {
-      setSecondLifeDismissed(false);
-      sessionStorage.removeItem('chils_secondlife_dismissed');
-    }
-  }, [totalItemCount, secondLifeDismissed]);
 
   // Addresses state
   const [addresses, setAddresses] = useState<Address[]>([]);
