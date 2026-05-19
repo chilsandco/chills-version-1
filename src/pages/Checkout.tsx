@@ -12,7 +12,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import CheckoutInterstitial from '../components/CheckoutInterstitial';
-import PackagingUpsellBanner from '../components/PackagingUpsellBanner';
+import SecondLifeModal from '../components/SecondLifeModal';
 
 interface Address {
   id: string;
@@ -33,6 +33,18 @@ const Checkout: React.FC = () => {
   const { triggerCheckout, isProcessing, error, setError } = useCheckout();
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+
+  // Second Life modal state — shown once per session when 1 item in cart
+  const [showSecondLifeModal, setShowSecondLifeModal] = useState(false);
+  const [secondLifeDismissed, setSecondLifeDismissed] = useState(() => {
+    return sessionStorage.getItem('chils_secondlife_dismissed') === 'true';
+  });
+
+  const dismissSecondLife = () => {
+    setSecondLifeDismissed(true);
+    sessionStorage.setItem('chils_secondlife_dismissed', 'true');
+    setShowSecondLifeModal(false);
+  };
 
   // Addresses state
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -187,6 +199,12 @@ const Checkout: React.FC = () => {
     setShowAddressForm(true);
   };
 
+  // Core payment logic (extracted so modal can also trigger it)
+  const proceedToPayment = async () => {
+    await triggerCheckout(formData, cart);
+    // triggerCheckout handles navigation logic via PhonePe redirect
+  };
+
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -209,8 +227,13 @@ const Checkout: React.FC = () => {
       return;
     }
 
-    await triggerCheckout(formData, cart);
-    // triggerCheckout handles navigation logic via PhonePe redirect
+    // Second Life gate: intercept when 1 item and not yet dismissed
+    if (totalItemCount === 1 && !secondLifeDismissed) {
+      setShowSecondLifeModal(true);
+      return;
+    }
+
+    await proceedToPayment();
   };
 
   if (cart.length === 0) {
@@ -552,8 +575,16 @@ const Checkout: React.FC = () => {
             </AnimatePresence>
           </section>
 
-          {/* Packaging Intelligence Banner */}
-          <PackagingUpsellBanner itemCount={totalItemCount} />
+          {/* Second Life Modal — triggered on pay with 1 item */}
+          <SecondLifeModal
+            isOpen={showSecondLifeModal}
+            onClose={() => setShowSecondLifeModal(false)}
+            onContinueWithEcoBag={() => {
+              dismissSecondLife();
+              proceedToPayment();
+            }}
+            cartProductIds={cart.map(item => item.id)}
+          />
 
           {/* Cart Section */}
           <section className="space-y-10">
