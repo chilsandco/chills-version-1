@@ -4,10 +4,10 @@ import { Recycle, Leaf, ChevronRight, X, Package, Sparkles } from 'lucide-react'
 import { useNavigate } from 'react-router-dom';
 
 interface PackagingUpsellBannerProps {
-  teeCount: number;
+  itemCount: number;
 }
 
-const PackagingUpsellBanner: React.FC<PackagingUpsellBannerProps> = ({ teeCount }) => {
+const PackagingUpsellBanner: React.FC<PackagingUpsellBannerProps> = ({ itemCount }) => {
   const navigate = useNavigate();
   const [dismissed, setDismissed] = useState(() => {
     return sessionStorage.getItem('chils_packaging_upsell_dismissed') === 'true';
@@ -23,7 +23,8 @@ const PackagingUpsellBanner: React.FC<PackagingUpsellBannerProps> = ({ teeCount 
   };
 
   // Only show when exactly 1 tee and not dismissed
-  const isVisible = teeCount === 1 && !dismissed;
+  // Only show when exactly 1 item in cart and not dismissed
+  const isVisible = itemCount === 1 && !dismissed;
 
   return (
     <AnimatePresence>
