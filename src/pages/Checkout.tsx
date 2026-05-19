@@ -12,6 +12,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import CheckoutInterstitial from '../components/CheckoutInterstitial';
+import PackagingUpsellBanner from '../components/PackagingUpsellBanner';
 
 interface Address {
   id: string;
@@ -26,6 +27,12 @@ interface Address {
 
 const Checkout: React.FC = () => {
   const { cart, updateQuantity, removeFromCart, totalPrice } = useCart();
+
+  // Count total tees in cart for packaging intelligence
+  const teeCount = cart.reduce((count, item) => {
+    const isTee = item.category?.toLowerCase().includes('t-shirt') || item.category?.toLowerCase().includes('tee');
+    return isTee ? count + item.quantity : count;
+  }, 0);
   const { triggerCheckout, isProcessing, error, setError } = useCheckout();
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -547,6 +554,9 @@ const Checkout: React.FC = () => {
                 )}
             </AnimatePresence>
           </section>
+
+          {/* Packaging Intelligence Banner */}
+          <PackagingUpsellBanner teeCount={teeCount} />
 
           {/* Cart Section */}
           <section className="space-y-10">
