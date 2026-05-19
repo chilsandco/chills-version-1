@@ -46,6 +46,15 @@ const Checkout: React.FC = () => {
     setShowSecondLifeModal(false);
   };
 
+  // Reset the dismissed state if the user adds more items to the cart,
+  // so the pitch will show again if they go back down to 1 item.
+  useEffect(() => {
+    if (totalItemCount > 1 && secondLifeDismissed) {
+      setSecondLifeDismissed(false);
+      sessionStorage.removeItem('chils_secondlife_dismissed');
+    }
+  }, [totalItemCount, secondLifeDismissed]);
+
   // Addresses state
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
