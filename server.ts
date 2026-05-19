@@ -569,7 +569,15 @@ async function startServer() {
             product_id: parseInt(item.id),
             quantity: item.quantity,
             meta_data: item.selectedSize ? [{ key: "pa_size", value: item.selectedSize }] : []
-          }))
+          })),
+          meta_data: [
+            {
+              key: "Packaging Selection",
+              value: lineItems.reduce((sum: number, item: any) => sum + item.quantity, 0) === 1 
+                ? "Biodegradable Eco Bag" 
+                : "Second Life Box"
+            }
+          ]
         };
 
         console.log("[CHILS & CO.] Creating WooCommerce Order:", orderData);

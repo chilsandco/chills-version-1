@@ -61,14 +61,37 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
     setSelectedSizes(prev => ({ ...prev, [productId]: size }));
   };
 
-  // Lock body scroll when modal is open
+  // Lock body scroll when modal is open — target both body and html
   useEffect(() => {
     if (isOpen) {
+      const scrollY = window.scrollY;
       document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.documentElement.style.overflow = 'hidden';
     } else {
+      const scrollY = document.body.style.top;
       document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.documentElement.style.overflow = '';
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
     }
-    return () => { document.body.style.overflow = ''; };
+    return () => {
+      const scrollY = document.body.style.top;
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      document.documentElement.style.overflow = '';
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
+    };
   }, [isOpen]);
 
   const sizes = ['S', 'M', 'L', 'XL', 'XXL'];
@@ -81,7 +104,8 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-[200] flex items-center justify-center px-4"
+          className="fixed inset-0 z-[200] flex items-center justify-center px-4 overscroll-contain"
+          onWheel={(e) => e.stopPropagation()}
           onClick={onClose}
         >
           {/* Backdrop */}
@@ -100,6 +124,7 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             onClick={(e) => e.stopPropagation()}
             className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-neutral-950 border border-neutral-800"
+            style={{ overscrollBehavior: 'contain' }}
           >
             {/* Top Accent Line */}
             <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-accent to-transparent" />
@@ -158,6 +183,16 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
                   <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-accent">Upgrade: Second Life Box</span>
                 </div>
               </div>
+
+              {/* Top Eco Bag CTA — quick exit for users who don't want to browse */}
+              <button
+                type="button"
+                onClick={onContinueWithEcoBag}
+                className="w-full mt-6 py-3 text-[10px] tracking-[0.25em] font-bold uppercase text-neutral-500 hover:text-white transition-colors flex items-center justify-center gap-2 border border-neutral-900 hover:border-neutral-600"
+              >
+                <Leaf size={11} />
+                <span>Continue with Biodegradable Eco Bag</span>
+              </button>
             </div>
 
             {/* Divider */}
