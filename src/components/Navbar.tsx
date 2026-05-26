@@ -123,6 +123,7 @@ const Navbar: React.FC = () => {
     { name: 'COLLECTION', path: '/collection' },
     { name: 'THE BESPOKE', path: '/bespoke' },
     { name: 'CO-CREATOR', path: '/co-creator' },
+    // { name: 'SIGNAL NETWORK', path: '/signal-network' }, // removed from navbar, kept in footer
     { name: 'PHILOSOPHY', path: '/#philosophy' },
   ];
 

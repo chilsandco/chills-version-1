@@ -6,6 +6,17 @@
   --font-display: "Space Grotesk", sans-serif;
   --color-accent: #d4af37; /* Gold accent */
   --color-brand-navy: #001e3c;
+  
+  --animate-scan: scan 4s linear infinite;
+  
+  @keyframes scan {
+    0% {
+      transform: translateY(-100%);
+    }
+    100% {
+      transform: translateY(100%);
+    }
+  }
 }
 
 @layer utilities {
