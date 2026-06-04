@@ -143,18 +143,12 @@ const Navbar: React.FC = () => {
       transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
       className={`fixed top-0 left-0 w-full z-50 transition-all duration-500
         ${
-          // Mobile & tablet: always solid glossy black with gold border
+          // Mobile & tablet: always solid glossy black
           // Desktop (md+): transparent at home top, solid when scrolled or on other pages
           isScrolled || !isHome
-            ? 'bg-black/98 backdrop-blur-xl border-b border-white/10 py-2 md:py-4'
-            : 'bg-black/90 backdrop-blur-lg border-b border-[#D4AF37]/20 py-4 md:py-8 md:bg-transparent md:border-transparent md:backdrop-blur-none'
+            ? 'bg-black/98 backdrop-blur-xl py-2 md:py-4 shadow-lg'
+            : 'bg-black/90 backdrop-blur-lg py-4 md:py-8 md:bg-transparent md:backdrop-blur-none md:shadow-none'
         }`}
-      style={{
-        // Glossy gold shimmer line at bottom on mobile/tablet
-        boxShadow: (isScrolled || !isHome)
-          ? '0 1px 0 0 rgba(212,175,55,0.08), 0 4px 24px 0 rgba(0,0,0,0.6)'
-          : '0 1px 0 0 rgba(212,175,55,0.15), 0 4px 32px 0 rgba(0,0,0,0.5)'
-      }}
     >
       <div className="max-w-[1800px] mx-auto px-4 md:px-12 flex justify-between items-center h-14 md:h-auto">
         <motion.button 
