@@ -37,7 +37,7 @@ export default function App() {
         <WishlistProvider>
           <Router>
             <SmoothScroll>
-            <div className="min-h-screen flex flex-col bg-black text-white selection:bg-white selection:text-black custom-cursor-enabled">
+            <div className="min-h-screen flex flex-col bg-black text-white selection:bg-white selection:text-black">
               <CustomCursor />
               <ScrollProgress />
               <Navbar />

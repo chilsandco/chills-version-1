@@ -68,15 +68,14 @@
   animation: fade-in 0.8s ease-out forwards;
 }
 
-/* Responsive Custom Cursor Controls */
-.custom-cursor-enabled {
-  cursor: none !important;
-}
-.custom-cursor-enabled * {
-  cursor: none !important;
-}
-
-.custom-cursor {
-  display: block !important;
+/* Custom Hardware Cursor (Zero Lag, Hardware-Accelerated) */
+@media (hover: hover) and (pointer: fine) {
+  html, body {
+    cursor: url('https://res.cloudinary.com/ddatd5ruz/image/upload/w_20,h_20,c_scale,co_rgb:D4AF37,e_colorize:100/v1774668881/chils_simple_logo_transparent_kdfrfk.png') 10 10, auto !important;
+  }
+  
+  a, button, [data-cursor], .interactive, select, input, textarea {
+    cursor: url('https://res.cloudinary.com/ddatd5ruz/image/upload/w_20,h_20,c_scale,co_rgb:D4AF37,e_colorize:100/v1774668881/chils_simple_logo_transparent_kdfrfk.png') 10 10, pointer !important;
+  }
 }
 
