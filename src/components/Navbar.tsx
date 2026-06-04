@@ -174,10 +174,21 @@ const Navbar: React.FC = () => {
         <motion.button 
           whileHover={{ scale: 1.1, y: -2 }}
           whileTap={{ scale: 0.9 }}
-          className="md:hidden text-accent" 
-          onClick={() => setIsMenuOpen(true)}
+          className="md:hidden text-accent relative z-50" 
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
         >
-          <Menu size={24} />
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={isMenuOpen ? 'close' : 'menu'}
+              initial={{ opacity: 0, rotate: -90 }}
+              animate={{ opacity: 1, rotate: 0 }}
+              exit={{ opacity: 0, rotate: 90 }}
+              transition={{ duration: 0.2 }}
+              className="flex items-center justify-center"
+            >
+              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </motion.div>
+          </AnimatePresence>
         </motion.button>
 
         {/* Left: Desktop Links */}
@@ -269,109 +280,95 @@ const Navbar: React.FC = () => {
       {/* Mobile Menu Overlay */}
       <AnimatePresence>
         {isMenuOpen && (
-          <motion.div
-            initial={{ x: '-100%' }}
-            animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
-            transition={{ type: 'tween', duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="fixed inset-0 z-[60] flex flex-col"
-            style={{
-              background: 'linear-gradient(135deg, #0a0a0a 0%, #111008 50%, #0d0b02 100%)',
-              boxShadow: 'inset -1px 0 0 rgba(212,175,55,0.15)'
-            }}
-          >
-            {/* Gold top accent bar */}
-            <div
-              className="w-full h-[2px] flex-shrink-0"
-              style={{ background: 'linear-gradient(90deg, transparent, #D4AF37 40%, #f5d97a 60%, transparent)' }}
+          <>
+            {/* Backdrop overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              onClick={() => setIsMenuOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-md z-40 md:hidden"
             />
 
-            {/* Header row */}
-            <div className="flex justify-between items-center px-8 pt-6 pb-4">
-              <Link to="/" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3">
-                <img
-                  src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png"
-                  alt="CHILS & CO."
-                  className="h-7 w-auto gold-icon"
-                  referrerPolicy="no-referrer"
-                />
-                <span className="text-base font-display font-bold tracking-[0.25em]">CHILS & CO.</span>
-              </Link>
-              <button onClick={() => setIsMenuOpen(false)} className="p-2">
-                <motion.div
-                  whileHover={{ scale: 1.2, rotate: 90 }}
-                  whileTap={{ scale: 0.8 }}
-                >
-                  <X size={28} className="text-white/80" />
-                </motion.div>
-              </button>
-            </div>
+            {/* Dropdown Card */}
+            <motion.div
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute top-full left-4 right-4 mt-3 bg-black/90 border border-accent/20 backdrop-blur-2xl rounded-2xl shadow-[0_20px_50px_rgba(212,175,55,0.15)] overflow-hidden z-50 md:hidden flex flex-col"
+            >
+              {/* Gold Top Accent Line inside Card */}
+              <div 
+                className="w-full h-[2px] flex-shrink-0"
+                style={{ background: 'linear-gradient(90deg, transparent, #D4AF37 30%, #f5d97a 70%, transparent)' }}
+              />
 
-            {/* Divider */}
-            <div className="mx-8 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(212,175,55,0.3), transparent)' }} />
-
-            {/* Nav Links */}
-            <div className="flex flex-col gap-1 mt-8 px-8 flex-1">
-              {allLinks.map((link, i) => (
-                <motion.div
-                  key={link.name}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.05 * i, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                >
-                  <Link
-                    to={link.path}
-                    onClick={() => setIsMenuOpen(false)}
-                    className={`block py-3 text-3xl font-display font-bold tracking-tighter transition-colors ${
-                      link.name === 'SIGNALS' ? 'text-accent' : 'text-white/90 hover:text-[#D4AF37]'
-                    }`}
+              {/* Links Container */}
+              <div className="flex flex-col gap-1 p-6">
+                {allLinks.map((link, i) => (
+                  <motion.div
+                    key={link.name}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.03 * i, duration: 0.3 }}
                   >
-                    {link.name}
-                  </Link>
-                </motion.div>
-              ))}
+                    <Link
+                      to={link.path}
+                      onClick={() => setIsMenuOpen(false)}
+                      className={`block py-3 text-lg font-display font-semibold tracking-[0.2em] transition-all hover:pl-2 ${
+                        link.name === 'SIGNALS' ? 'text-accent font-bold' : 'text-neutral-300 hover:text-accent'
+                      }`}
+                    >
+                      {link.name}
+                    </Link>
+                  </motion.div>
+                ))}
 
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.05 * allLinks.length, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              >
-                <Link
-                  to="/wishlist"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block py-3 text-3xl font-display font-bold tracking-tighter text-white/90 hover:text-[#D4AF37] transition-colors"
-                >
-                  WISHLIST
-                </Link>
-              </motion.div>
+                <div className="h-px bg-white/10 my-3" />
 
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.05 * (allLinks.length + 1), duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              >
-                <Link
-                  to="/auth"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="block py-3 text-3xl font-display font-bold tracking-tighter text-white/90 hover:text-[#D4AF37] transition-colors"
-                >
-                  {isAuthenticated ? 'ACCOUNT' : 'LOG IN'}
-                </Link>
-              </motion.div>
-            </div>
+                {/* Wishlist & Account Links */}
+                <div className="flex flex-col gap-4 mt-1">
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.03 * (allLinks.length), duration: 0.3 }}
+                  >
+                    <Link
+                      to="/wishlist"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center gap-3 py-2 text-sm font-medium tracking-[0.15em] text-neutral-300 hover:text-accent transition-colors"
+                    >
+                      <Heart size={18} className="text-accent" fill={wishlist.length > 0 ? "currentColor" : "none"} />
+                      <span>WISHLIST ({wishlist.length})</span>
+                    </Link>
+                  </motion.div>
 
-            {/* Bottom gold accent */}
-            <div className="px-8 pb-10 pt-6">
-              <div className="h-px mb-6" style={{ background: 'linear-gradient(90deg, transparent, rgba(212,175,55,0.25), transparent)' }} />
-              <p className="text-[9px] text-white/20 tracking-[0.3em] uppercase text-center">CHILS & CO. — ELEVATED IDENTITY</p>
-            </div>
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.03 * (allLinks.length + 1), duration: 0.3 }}
+                  >
+                    <Link
+                      to="/auth"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center gap-3 py-2 text-sm font-medium tracking-[0.15em] text-neutral-300 hover:text-accent transition-colors"
+                    >
+                      <ProfileIcon />
+                      <span>{isAuthenticated ? 'ACCOUNT' : 'LOG IN'}</span>
+                    </Link>
+                  </motion.div>
+                </div>
+              </div>
 
-            {/* Gold bottom accent bar */}
-            <div
-              className="w-full h-[2px] flex-shrink-0"
-              style={{ background: 'linear-gradient(90deg, transparent, #D4AF37 40%, #f5d97a 60%, transparent)' }}
-            />
-          </motion.div>
+              {/* Card Footer */}
+              <div className="bg-white/[0.02] px-6 py-4 border-t border-white/5 flex justify-between items-center">
+                <span className="text-[9px] text-neutral-500 tracking-[0.25em]">CHILS & CO.</span>
+                <span className="text-[8px] text-accent/60 tracking-[0.15em] font-medium">ELEVATED IDENTITY</span>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </motion.nav>
