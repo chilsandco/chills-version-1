@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ShoppingBag, Menu, X, Heart } from 'lucide-react';
 import { useCart } from '../CartContext';
@@ -94,6 +94,8 @@ const ProfileIcon = () => (
 const Navbar: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const lastScrollY = useRef(0);
   const { totalItems } = useCart();
   const { wishlist } = useWishlist();
   const { user, isAuthenticated } = useAuth();
@@ -110,10 +112,25 @@ const Navbar: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 50);
-    window.addEventListener('scroll', handleScroll);
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Update scrolled state
+      setIsScrolled(currentScrollY > 50);
+
+      // Hide navbar when scrolling down, show when scrolling up
+      if (currentScrollY > lastScrollY.current && currentScrollY > 80 && !isMenuOpen) {
+        setIsVisible(false);
+      } else {
+        setIsVisible(true);
+      }
+
+      lastScrollY.current = currentScrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [isMenuOpen]);
 
   const adminEmails = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
   const userEmail = user?.email || "";
@@ -138,9 +155,12 @@ const Navbar: React.FC = () => {
 
   return (
     <motion.nav 
-      initial={{ opacity: 0, y: -20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
+      initial={{ opacity: 0, y: -100 }}
+      animate={{ 
+        opacity: isVisible ? 1 : 0,
+        y: isVisible ? 0 : -100
+      }}
+      transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       className={`fixed top-0 left-0 w-full z-50 transition-all duration-500
         ${
           // Mobile & tablet: always solid glossy black

@@ -381,7 +381,7 @@ const OdometerDigit: React.FC<{
 
   return (
     <span
-      className={`inline-block overflow-hidden align-bottom ${className}`}
+      className={`inline-block overflow-hidden align-baseline ${className}`}
       style={{ height: '1em', lineHeight: '1em' }}
     >
       <span
@@ -417,72 +417,7 @@ const OdometerDigit: React.FC<{
   );
 };
 
-// --- Simple 0→1 Odometer for the "1" in 1NCEPTION ---
-// Only a two-digit strip [0, 1], so the roll is a direct, clean 0→1.
-const InceptionOdometerDigit: React.FC<{
-  isInView: boolean;
-  delay?: number;
-  duration?: number;
-}> = ({ isInView, delay = 0, duration = 1.8 }) => {
-  const [translateY, setTranslateY] = useState(0);
-
-  // Strip is just [0, 1] — exactly two entries, no intermediate numbers.
-  const digits = [0, 1];
-
-  useEffect(() => {
-    if (!isInView) return;
-    const timeout = setTimeout(() => {
-      setTranslateY(1); // scroll to index 1 (the '1')
-    }, delay * 1000);
-    return () => clearTimeout(timeout);
-  }, [isInView, delay]);
-
-  return (
-    <>
-      <style>{`
-        @keyframes inception-glow {
-          0%   { text-shadow: none; }
-          30%  { text-shadow: 0 0 24px rgba(212,175,55,0.7), 0 0 48px rgba(212,175,55,0.3); }
-          100% { text-shadow: none; }
-        }
-        .inception-digit-wrapper {
-          animation: none;
-        }
-        .inception-digit-wrapper.glowing {
-          animation: inception-glow 1.4s ease-out forwards;
-        }
-      `}</style>
-      <span
-        className={`inline-block overflow-hidden align-bottom inception-digit-wrapper${isInView && translateY === 1 ? ' glowing' : ''}`}
-        style={{ height: '1em', lineHeight: '1em' }}
-      >
-        <span
-          className="inline-flex flex-col items-center"
-          style={{
-            transition: isInView
-              ? `transform ${duration}s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`
-              : 'none',
-            transform: `translateY(-${translateY}em)`,
-            willChange: 'transform',
-          }}
-        >
-          {digits.map((d, i) => (
-            <span
-              key={i}
-              className="block"
-              style={{ height: '1em', lineHeight: '1em' }}
-              aria-hidden={i !== 1}
-            >
-              {d}
-            </span>
-          ))}
-        </span>
-      </span>
-    </>
-  );
-};
-
-// --- Drop Identifier Section with Odometer ---
+// --- Drop Identifier Section ---
 const DropIdentifierSection: React.FC = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(sectionRef, { once: true, margin: '-100px' });
@@ -503,16 +438,9 @@ const DropIdentifierSection: React.FC = () => {
           <OdometerDigit target={1} isInView={isInView} delay={0.6} duration={1.4} />
         </span>
 
-        {/* "1NCEPTION" with clean 0→1 odometer on the "1" */}
+        {/* "1NCEPTION" */}
         <h2 className="text-5xl sm:text-6xl md:text-[12vw] font-display font-bold tracking-tighter uppercase leading-none mb-8">
-          <span className="text-accent inline-block">
-            <InceptionOdometerDigit
-              isInView={isInView}
-              delay={0.3}
-              duration={1.8}
-            />
-          </span>
-          NCEPTION
+          <span className="text-accent inline-block">1</span>NCEPTION
         </h2>
 
         <div className="flex items-center justify-center gap-4">
