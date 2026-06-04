@@ -37,12 +37,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (res.ok) {
             return res.json();
           } else {
-            // Token invalid — clear session inline (no stale closure)
-            if (isMounted) {
-              setToken(null);
-              setUser(null);
-              localStorage.removeItem('chils_auth_token');
-              localStorage.removeItem('chils_auth_user');
+            // Token invalid — clear session inline only if it is an auth error (401 or 403)
+            // Transient 5xx server loads or timeouts should not clear local session
+            if (res.status === 401 || res.status === 403) {
+              if (isMounted) {
+                setToken(null);
+                setUser(null);
+                localStorage.removeItem('chils_auth_token');
+                localStorage.removeItem('chils_auth_user');
+              }
             }
             return null;
           }

@@ -278,7 +278,7 @@ const Auth: React.FC = () => {
             </div>
             
             <h3 className="text-2xl font-display font-bold tracking-tight mb-1 flex items-center justify-center gap-2">
-              {(user.pseudoName || user.username).toUpperCase()}
+              {(user.pseudoName || user.username || '').toUpperCase()}
             </h3>
             <p className="text-[10px] text-white/40 tracking-widest uppercase mb-10">{user.email}</p>
             
