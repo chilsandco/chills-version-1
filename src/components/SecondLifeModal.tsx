@@ -164,27 +164,43 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
               </div>
 
               <h2 className="text-2xl md:text-3xl font-display font-medium tracking-tight text-white leading-snug mt-6">
-                Unlock <span className="text-accent">Second Life</span> Packaging
+                Sustain Our <span className="text-accent">Unboxing Experience</span>
               </h2>
               <p className="text-[12px] leading-relaxed text-neutral-400 tracking-wide max-w-lg mt-3">
-                Add one more tee and your order ships in our reusable <span className="text-white font-medium">Second Life Box</span> — 
-                a premium, handcrafted box designed for a life beyond delivery. Better for the planet, better for you.
+                We have put a lot of effort and care into creating a unique unboxing experience. To help us sustain these packaging standards and offset high individual shipping charges, we kindly request you to order at least 2 T-shirts. This enables us to send them in our premium, handcrafted <span className="text-white font-medium">Second Life Box</span>. The single-tee biodegradable bag shipping option is temporarily paused.
               </p>
 
-              {/* Current vs Upgrade */}
+              {/* Visual Progress Element */}
+              <div className="mt-6 border border-[#D4AF37]/20 bg-[linear-gradient(135deg,rgba(212,175,55,0.04),rgba(0,0,0,0)_60%)] p-4 relative overflow-hidden">
+                <div className="flex justify-between items-center text-[9px] uppercase tracking-[0.2em] font-bold text-neutral-400 mb-2">
+                  <span>Unboxing Unlock Progress</span>
+                  <span className="text-accent font-bold">1 / 2 Tees</span>
+                </div>
+                <div className="h-1.5 w-full bg-neutral-900 border border-white/5 rounded-full overflow-hidden mb-2">
+                  <div className="h-full w-1/2 bg-gradient-to-r from-[#D4AF37] to-[#f5d97a]" />
+                </div>
+                <p className="text-[9.5px] text-neutral-500 font-light tracking-wide uppercase">
+                  Add <strong className="text-white">1 more tee</strong> to unlock the premium <strong className="text-accent">Second Life Box</strong>
+                </p>
+              </div>
+
+              {/* Current vs Upgrade — Updated for MOQ */}
               <div className="flex items-center gap-4 mt-5 mb-2">
+                {/* 
                 <div className="flex items-center gap-2 px-3 py-2 bg-neutral-900/60 border border-neutral-800">
                   <Leaf size={12} className="text-green-500/70" />
                   <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-neutral-500">Current: Eco Bag</span>
                 </div>
                 <ChevronRight size={14} className="text-neutral-700" />
+                */}
                 <div className="flex items-center gap-2 px-3 py-2 border border-accent/30 bg-accent/5">
                   <Package size={12} className="text-accent" />
-                  <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-accent">Upgrade: Second Life Box</span>
+                  <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-accent">Active Shipping: Second Life Box Only</span>
                 </div>
               </div>
 
-              {/* Top Eco Bag CTA — quick exit for users who don't want to browse */}
+              {/* Top Eco Bag CTA — commented out for MOQ enforcement */}
+              {/* 
               <button
                 type="button"
                 onClick={onContinueWithEcoBag}
@@ -193,6 +209,7 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
                 <Leaf size={11} />
                 <span>Continue with Biodegradable Eco Bag</span>
               </button>
+              */}
             </div>
 
             {/* Divider */}
@@ -305,6 +322,8 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
             <div className="p-8 md:p-10 pt-6">
               <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-neutral-800 to-transparent mb-6" />
 
+              {/* Bottom Eco Bag CTA — commented out for MOQ enforcement */}
+              {/* 
               <button
                 type="button"
                 onClick={onContinueWithEcoBag}
@@ -313,9 +332,10 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
                 <Leaf size={12} />
                 <span>Continue with Biodegradable Eco Bag</span>
               </button>
+              */}
 
               <p className="text-[8px] uppercase tracking-[0.2em] text-neutral-800 text-center leading-relaxed mt-4">
-                Both options are 100% sustainable. Your choice. Your signal.
+                Second Life Box packaging is 100% sustainable. Your choice. Your signal.
               </p>
             </div>
 

@@ -84,21 +84,21 @@ const PackagingUpsellBanner: React.FC<PackagingUpsellBannerProps> = ({ itemCount
                     Unlock <span className="text-accent">Second Life</span> Packaging
                   </h3>
                   <p className="text-[12px] leading-relaxed text-neutral-400 tracking-wide max-w-md">
-                    Add one more tee and your order ships in our reusable <span className="text-white font-medium">Second Life Box</span> — a premium, 
-                    handcrafted box designed for a life beyond delivery. Better for the planet, better for you.
+                    To preserve our carbon-neutral handcrafting standards, all orders ship exclusively in our reusable <span className="text-white font-medium">Second Life Box</span>. A minimum of 2 items is required to complete checkout. (The single-item biodegradable bag option is currently paused).
                   </p>
 
-                  {/* Current vs Upgrade comparison */}
-                  <div className="flex items-center gap-4 pt-2">
-                    <div className="flex items-center gap-2 px-3 py-2 bg-neutral-900/60 border border-neutral-800">
-                      <Leaf size={12} className="text-green-500/70" />
-                      <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-neutral-500">Current: Eco Bag</span>
+                  {/* Visual Progress Element */}
+                  <div className="mt-4 border border-[#D4AF37]/20 bg-[linear-gradient(135deg,rgba(212,175,55,0.04),rgba(0,0,0,0)_60%)] p-4 max-w-md relative overflow-hidden">
+                    <div className="flex justify-between items-center text-[9px] uppercase tracking-[0.2em] font-bold text-neutral-400 mb-2">
+                      <span>Unboxing Unlock Progress</span>
+                      <span className="text-accent font-bold">1 / 2 Tees</span>
                     </div>
-                    <ChevronRight size={14} className="text-neutral-700" />
-                    <div className="flex items-center gap-2 px-3 py-2 border border-accent/30 bg-accent/5">
-                      <Package size={12} className="text-accent" />
-                      <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-accent">Upgrade: Second Life Box</span>
+                    <div className="h-1.5 w-full bg-neutral-900 border border-white/5 rounded-full overflow-hidden mb-2">
+                      <div className="h-full w-1/2 bg-gradient-to-r from-[#D4AF37] to-[#f5d97a]" />
                     </div>
+                    <p className="text-[9.5px] text-neutral-500 font-light tracking-wide uppercase">
+                      Add <strong className="text-white">1 more tee</strong> to unlock the premium <strong className="text-accent">Second Life Box</strong>
+                    </p>
                   </div>
                 </div>
 
@@ -114,6 +114,7 @@ const PackagingUpsellBanner: React.FC<PackagingUpsellBannerProps> = ({ itemCount
                     <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
                   </motion.button>
 
+                  {/* Commented out for MOQ enforcement
                   <button
                     onClick={handleDismiss}
                     className="w-full py-3 text-[10px] tracking-[0.25em] font-bold uppercase text-neutral-600 hover:text-neutral-300 transition-colors flex items-center justify-center gap-2"
@@ -121,9 +122,10 @@ const PackagingUpsellBanner: React.FC<PackagingUpsellBannerProps> = ({ itemCount
                     <Leaf size={10} />
                     <span>Continue with Eco Bag</span>
                   </button>
+                  */}
 
                   <p className="text-[8px] uppercase tracking-[0.2em] text-neutral-800 text-center leading-relaxed mt-1">
-                    Both options are 100% sustainable. <br />
+                    Second Life Box packaging is 100% sustainable. <br />
                     Your choice. Your signal.
                   </p>
                 </div>

@@ -101,15 +101,27 @@ const Navbar: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const location = useLocation();
   const [pulse, setPulse] = useState(false);
+  const isProductPage = location.pathname.startsWith('/product/');
 
   useEffect(() => {
     const handlePulse = () => {
       setPulse(true);
       setTimeout(() => setPulse(false), 500);
     };
+    const handleShowNavbar = () => {
+      setIsVisible(true);
+    };
     window.addEventListener('pulse-cart', handlePulse);
-    return () => window.removeEventListener('pulse-cart', handlePulse);
+    window.addEventListener('show-navbar', handleShowNavbar);
+    return () => {
+      window.removeEventListener('pulse-cart', handlePulse);
+      window.removeEventListener('show-navbar', handleShowNavbar);
+    };
   }, []);
+
+  useEffect(() => {
+    setIsVisible(true);
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -119,7 +131,7 @@ const Navbar: React.FC = () => {
       setIsScrolled(currentScrollY > 50);
 
       // Hide navbar when scrolling down, show when scrolling up
-      if (currentScrollY > lastScrollY.current && currentScrollY > 80 && !isMenuOpen) {
+      if (currentScrollY > lastScrollY.current && currentScrollY > 80 && !isMenuOpen && !isProductPage) {
         setIsVisible(false);
       } else {
         setIsVisible(true);
@@ -130,7 +142,7 @@ const Navbar: React.FC = () => {
 
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [isMenuOpen]);
+  }, [isMenuOpen, isProductPage]);
 
   const adminEmails = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
   const userEmail = user?.email || "";

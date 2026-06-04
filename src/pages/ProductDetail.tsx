@@ -95,177 +95,18 @@ const ProductDetail: React.FC = () => {
     if (!product) return;
     if (!selectedSize) {
       setSizeError(true);
-      // Soft glow effect on size options is handled by sizeError state in render
       return;
     }
 
     setButtonText("Adding...");
     setIsAddingToCart(true);
     addToCart(product, selectedSize);
-    
+
     const cartIcon = document.getElementById('cart-icon');
-    const productImg = productImgRef.current;
-    
-    if (cartIcon && productImg) {
-      const imgRect = productImg.getBoundingClientRect();
-      const cartRect = cartIcon.getBoundingClientRect();
+    const addToCartBtn = addToCartBtnRef.current;
 
-      // --- Inject keyframes (once) ---
-      const styleId = 'fly-to-cart-keyframes';
-      if (!document.getElementById(styleId)) {
-        const styleEl = document.createElement('style');
-        styleEl.id = styleId;
-        styleEl.textContent = `
-          @keyframes flyToCartArc {
-            0% {
-              offset-distance: 0%;
-              opacity: 1;
-              width: 80px;
-              height: 80px;
-            }
-            30% {
-              opacity: 1;
-              width: 60px;
-              height: 60px;
-            }
-            100% {
-              offset-distance: 100%;
-              opacity: 0.7;
-              width: 20px;
-              height: 20px;
-            }
-          }
-          @keyframes sparkle {
-            0% { transform: scale(0) rotate(0deg); opacity: 1; }
-            50% { transform: scale(1) rotate(180deg); opacity: 0.8; }
-            100% { transform: scale(0.5) rotate(360deg); opacity: 0; }
-          }
-          @keyframes trailFade {
-            0% { opacity: 0.7; transform: scale(1); }
-            100% { opacity: 0; transform: scale(0.3); }
-          }
-          @keyframes cartGoldPulse {
-            0% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.6); }
-            50% { box-shadow: 0 0 18px 8px rgba(212, 175, 55, 0.3); }
-            100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
-          }
-        `;
-        document.head.appendChild(styleEl);
-      }
-
-      // --- Start position (center of product image) ---
-      const startX = imgRect.left + imgRect.width / 2;
-      const startY = imgRect.top + imgRect.height / 2;
-      const endX = cartRect.left + cartRect.width / 2;
-      const endY = cartRect.top + cartRect.height / 2;
-
-      // --- Gold sparkle burst at start ---
-      const sparkleCount = 7;
-      for (let i = 0; i < sparkleCount; i++) {
-        const spark = document.createElement('div');
-        const angle = (i / sparkleCount) * 360;
-        const dist = 25 + Math.random() * 30;
-        const dx = Math.cos((angle * Math.PI) / 180) * dist;
-        const dy = Math.sin((angle * Math.PI) / 180) * dist;
-        const size = 3 + Math.random() * 5;
-        spark.style.cssText = `
-          position: fixed;
-          left: ${startX - size / 2 + dx}px;
-          top: ${startY - size / 2 + dy}px;
-          width: ${size}px;
-          height: ${size}px;
-          background: radial-gradient(circle, #d4af37, #fff8dc);
-          border-radius: 50%;
-          pointer-events: none;
-          z-index: 10000;
-          animation: sparkle ${0.4 + Math.random() * 0.3}s ease-out forwards;
-        `;
-        document.body.appendChild(spark);
-        setTimeout(() => spark.remove(), 800);
-      }
-
-      // --- Compute arc path ---
-      const midX = (startX + endX) / 2;
-      const midY = Math.min(startY, endY) - 120; // arc peaks 120px above
-      const path = `path("M ${startX} ${startY} Q ${midX} ${midY} ${endX} ${endY}")`;
-
-      // --- Cloned product thumbnail ---
-      const thumb = document.createElement('div');
-      thumb.style.cssText = `
-        position: fixed;
-        width: 80px;
-        height: 80px;
-        border-radius: 6px;
-        overflow: hidden;
-        z-index: 9999;
-        pointer-events: none;
-        offset-path: ${path};
-        offset-rotate: 0deg;
-        animation: flyToCartArc 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-        box-shadow: 0 0 20px 6px rgba(212, 175, 55, 0.35), 0 0 40px 12px rgba(212, 175, 55, 0.15);
-        transform-origin: center center;
-      `;
-
-      const img = document.createElement('img');
-      img.src = product.images[0];
-      img.referrerPolicy = 'no-referrer';
-      img.style.cssText = `
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        border-radius: 6px;
-        transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
-      `;
-      thumb.appendChild(img);
-      document.body.appendChild(thumb);
-
-      // Apply rotation during flight
-      requestAnimationFrame(() => {
-        img.style.transform = 'rotate(18deg)';
-      });
-
-      // --- Golden glow trail ---
-      const trailInterval = setInterval(() => {
-        const thumbRect = thumb.getBoundingClientRect();
-        if (thumbRect.width < 1) return;
-        const trail = document.createElement('div');
-        const trailSize = thumbRect.width * 0.7;
-        trail.style.cssText = `
-          position: fixed;
-          left: ${thumbRect.left + thumbRect.width / 2 - trailSize / 2}px;
-          top: ${thumbRect.top + thumbRect.height / 2 - trailSize / 2}px;
-          width: ${trailSize}px;
-          height: ${trailSize}px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(212,175,55,0.4), rgba(212,175,55,0) 70%);
-          pointer-events: none;
-          z-index: 9998;
-          animation: trailFade 0.4s ease-out forwards;
-        `;
-        document.body.appendChild(trail);
-        setTimeout(() => trail.remove(), 450);
-      }, 45);
-
-      // --- Cleanup & completion ---
-      setTimeout(() => {
-        clearInterval(trailInterval);
-        thumb.remove();
-
-        // Gold pulse on cart icon
-        window.dispatchEvent(new CustomEvent('pulse-cart'));
-        cartIcon.style.animation = 'cartGoldPulse 0.5s ease-out';
-        setTimeout(() => { cartIcon.style.animation = ''; }, 550);
-
-        setIsAddingToCart(false);
-        setButtonText("Added ✓");
-        setShowConfirmation(true);
-        
-        setTimeout(() => {
-          setButtonText("Add to Cart");
-          setShowConfirmation(false);
-        }, 3000);
-      }, 820);
-    } else {
+    // Fallback if elements not found
+    const fallback = () => {
       setIsAddingToCart(false);
       setButtonText("Added ✓");
       setShowConfirmation(true);
@@ -273,7 +114,152 @@ const ProductDetail: React.FC = () => {
         setButtonText("Add to Cart");
         setShowConfirmation(false);
       }, 3000);
+    };
+
+    if (!cartIcon || !addToCartBtn) {
+      console.warn('[Chils] fly-to-cart: missing element', { cartIcon, addToCartBtn });
+      fallback();
+      return;
     }
+
+    const btnRect = addToCartBtn.getBoundingClientRect();
+    const cartRect = cartIcon.getBoundingClientRect();
+
+    const startX = btnRect.left + btnRect.width / 2;
+    const startY = btnRect.top + btnRect.height / 2;
+    const endX = cartRect.left + cartRect.width / 2;
+    const endY = cartRect.top + cartRect.height / 2;
+
+    // Inject keyframes once
+    const styleId = 'fly-to-cart-keyframes';
+    if (!document.getElementById(styleId)) {
+      const styleEl = document.createElement('style');
+      styleEl.id = styleId;
+      styleEl.textContent = `
+        @keyframes sparkle {
+          0%   { transform: scale(0) rotate(0deg);   opacity: 1; }
+          50%  { transform: scale(1) rotate(180deg); opacity: 0.8; }
+          100% { transform: scale(0.5) rotate(360deg); opacity: 0; }
+        }
+        @keyframes trailFade {
+          0%   { opacity: 0.7; transform: scale(1); }
+          100% { opacity: 0;   transform: scale(0.3); }
+        }
+        @keyframes cartGoldPulse {
+          0%   { box-shadow: 0 0 0 0 rgba(212,175,55,0.7); }
+          50%  { box-shadow: 0 0 20px 10px rgba(212,175,55,0.4); }
+          100% { box-shadow: 0 0 0 0 rgba(212,175,55,0); }
+        }
+      `;
+      document.head.appendChild(styleEl);
+    }
+
+    // Gold sparkle burst at click target (Add to Cart button)
+    for (let i = 0; i < 10; i++) {
+      const spark = document.createElement('div');
+      const angle = (i / 10) * 360;
+      const dist = 15 + Math.random() * 35;
+      const dx = Math.cos((angle * Math.PI) / 180) * dist;
+      const dy = Math.sin((angle * Math.PI) / 180) * dist;
+      const size = 4 + Math.random() * 5;
+      spark.style.cssText = `
+        position: fixed;
+        left: ${startX - size / 2 + dx}px;
+        top: ${startY - size / 2 + dy}px;
+        width: ${size}px;
+        height: ${size}px;
+        background: radial-gradient(circle, #d4af37, #fff8dc);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 10000;
+        animation: sparkle ${0.4 + Math.random() * 0.3}s ease-out forwards;
+      `;
+      document.body.appendChild(spark);
+      setTimeout(() => spark.remove(), 800);
+    }
+
+    // Thumbnail that flies to cart via JS-driven bezier arc
+    const thumbSize = 80;
+    const thumb = document.createElement('div');
+    thumb.style.cssText = `
+      position: fixed;
+      left: ${startX - thumbSize / 2}px;
+      top: ${startY - thumbSize / 2}px;
+      width: ${thumbSize}px;
+      height: ${thumbSize}px;
+      border-radius: 8px;
+      overflow: hidden;
+      z-index: 9999;
+      pointer-events: none;
+      box-shadow: 0 0 25px 8px rgba(212,175,55,0.6);
+    `;
+    const thumbImg = document.createElement('img');
+    thumbImg.src = product.images[0];
+    thumbImg.referrerPolicy = 'no-referrer';
+    thumbImg.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+    thumb.appendChild(thumbImg);
+    document.body.appendChild(thumb);
+
+    const duration = 850; // Slightly longer for the scale-up/scale-down drama
+    const startTime = performance.now();
+    // Arc control point peaks above both elements
+    const cpX = (startX + endX) / 2;
+    const cpY = Math.min(startY, endY) - 180; // High arc
+
+    const animateFrame = (now: number) => {
+      const t = Math.min((now - startTime) / duration, 1);
+      // Ease out cubic / smooth curve
+      const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+      // Quadratic bezier calculation
+      const bx = (1 - ease) * (1 - ease) * startX + 2 * (1 - ease) * ease * cpX + ease * ease * endX;
+      const by = (1 - ease) * (1 - ease) * startY + 2 * (1 - ease) * ease * cpY + ease * ease * endY;
+
+      // Premium scaling curve: starts small (0.2), scales up to 1.1 near mid-flight, shrinks to 0.2 at landing
+      const scaleVal = ease < 0.5 
+        ? 0.2 + (1.1 - 0.2) * (ease / 0.5) 
+        : 1.1 - (1.1 - 0.2) * ((ease - 0.5) / 0.5);
+
+      const currentSize = thumbSize * scaleVal;
+      thumb.style.left = `${bx - currentSize / 2}px`;
+      thumb.style.top  = `${by - currentSize / 2}px`;
+      thumb.style.width  = `${currentSize}px`;
+      thumb.style.height = `${currentSize}px`;
+      thumb.style.opacity = `${1 - ease * 0.25}`;
+      thumb.style.transform = `rotate(${ease * 360}deg)`; // Dynamic spin
+
+      // Trail dots
+      if (t > 0.03 && t < 0.95 && Math.random() > 0.45) {
+        const trail = document.createElement('div');
+        const ts = currentSize * 0.4;
+        trail.style.cssText = `
+          position:fixed;left:${bx - ts / 2}px;top:${by - ts / 2}px;
+          width:${ts}px;height:${ts}px;border-radius:50%;pointer-events:none;z-index:9998;
+          background:radial-gradient(circle,rgba(212,175,55,0.6),rgba(212,175,55,0) 70%);
+          animation:trailFade 0.4s ease-out forwards;
+        `;
+        document.body.appendChild(trail);
+        setTimeout(() => trail.remove(), 450);
+      }
+
+      if (t < 1) {
+        requestAnimationFrame(animateFrame);
+      } else {
+        thumb.remove();
+        window.dispatchEvent(new CustomEvent('pulse-cart'));
+        cartIcon.style.animation = 'cartGoldPulse 0.6s ease-out';
+        setTimeout(() => { cartIcon.style.animation = ''; }, 700);
+        setIsAddingToCart(false);
+        setButtonText("Added ✓");
+        setShowConfirmation(true);
+        setTimeout(() => {
+          setButtonText("Add to Cart");
+          setShowConfirmation(false);
+        }, 3000);
+      }
+    };
+
+    requestAnimationFrame(animateFrame);
   };
 
   const handleBuyNow = async () => {

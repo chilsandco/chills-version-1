@@ -13,6 +13,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import CheckoutInterstitial from '../components/CheckoutInterstitial';
 import SecondLifeModal from '../components/SecondLifeModal';
+import PackagingUpsellBanner from '../components/PackagingUpsellBanner';
 
 interface Address {
   id: string;
@@ -37,6 +38,7 @@ const Checkout: React.FC = () => {
   // Second Life modal state — shown when 1 item in cart
   const [showSecondLifeModal, setShowSecondLifeModal] = useState(false);
   const [secondLifeDismissed, setSecondLifeDismissed] = useState(false);
+  const [coordinatesFlash, setCoordinatesFlash] = useState(false);
 
   const dismissSecondLife = () => {
     setSecondLifeDismissed(true);
@@ -205,27 +207,54 @@ const Checkout: React.FC = () => {
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!selectedAddressId && addresses.length > 0) {
-        alert("Please select a shipping address");
-        return;
-    }
-
-    if (addresses.length === 0 && !showAddressForm) {
+    // Check if coordinates (shipping address) are selected/filled
+    if (!selectedAddressId) {
+      // Flash the coordinates section to draw attention
+      setCoordinatesFlash(true);
+      setTimeout(() => setCoordinatesFlash(false), 2000);
+      
+      // Auto-open address form if they have no addresses registered
+      if (addresses.length === 0 && !showAddressForm) {
         setShowAddressForm(true);
-        return;
-    }
-
-    // Basic validation
-    const requiredFields = ['firstName', 'email', 'phone', 'address', 'city', 'pincode'];
-    const missingFields = requiredFields.filter(f => !formData[f as keyof typeof formData]);
-    
-    if (missingFields.length > 0) {
-      alert(`Please fill in all required fields: ${missingFields.join(', ')}`);
+      }
+      
+      // Smooth scroll to the coordinates section
+      const coordSection = document.getElementById('coordinates-section');
+      if (coordSection) {
+        coordSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        // Wait for scroll and auto-focus coordinates field
+        setTimeout(() => {
+          if (showAddressForm || addresses.length === 0) {
+            const firstInput = document.querySelector('input[name="address"]') || 
+                               document.querySelector('input[name="city"]') ||
+                               document.querySelector('input[name="pincode"]');
+            if (firstInput) (firstInput as HTMLInputElement).focus();
+          }
+        }, 600);
+      }
       return;
     }
 
-    // Second Life gate: intercept when 1 item and not yet dismissed
-    if (totalItemCount === 1 && !secondLifeDismissed) {
+    // Basic identity validation
+    const requiredIdentityFields = ['firstName', 'email', 'phone'];
+    const missingIdentityFields = requiredIdentityFields.filter(f => !formData[f as keyof typeof formData]);
+    
+    if (missingIdentityFields.length > 0) {
+      // Smooth scroll back to identity section
+      const identitySection = document.getElementById('identity-section');
+      if (identitySection) {
+        identitySection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => {
+          const emptyInput = identitySection.querySelector(`input[name="${missingIdentityFields[0]}"]`) as HTMLInputElement;
+          if (emptyInput) emptyInput.focus();
+        }, 600);
+      }
+      return;
+    }
+
+    // Second Life gate: force at least 2 items. Single items cannot checkout.
+    if (totalItemCount < 2) {
       setShowSecondLifeModal(true);
       return;
     }
@@ -318,7 +347,7 @@ const Checkout: React.FC = () => {
         <div className="lg:col-span-7 space-y-20">
           
           {/* Identity Section */}
-          <section className="space-y-10">
+          <section id="identity-section" className="space-y-10">
             <div className="flex items-center gap-4">
               <span className="text-accent font-mono text-xs font-bold leading-none">01</span>
               <h2 className="text-[12px] tracking-[0.3em] font-bold uppercase text-white">Identity Access</h2>
@@ -386,11 +415,36 @@ const Checkout: React.FC = () => {
           </section>
 
           {/* Shipping Section */}
-          <section className="space-y-10">
+          <section 
+            id="coordinates-section" 
+            className={`space-y-10 transition-all duration-700 p-6 -mx-6 rounded-md ${
+              coordinatesFlash 
+                ? 'border border-red-500/30 bg-red-500/[0.015] shadow-[0_0_25px_rgba(239,68,68,0.08)]' 
+                : 'border border-transparent bg-transparent'
+            }`}
+          >
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4 flex-grow">
                 <span className="text-accent font-mono text-xs font-bold leading-none">02</span>
                 <h2 className="text-[12px] tracking-[0.3em] font-bold uppercase text-white whitespace-nowrap">Global Coordinates</h2>
+                
+                {/* Live Radar/GPS Status Badge */}
+                <div className="flex items-center gap-2 px-3 py-1 bg-neutral-900/60 border border-white/5 rounded-sm">
+                  <span className={`w-1.5 h-1.5 rounded-full ${
+                    selectedAddressId 
+                      ? 'bg-accent' 
+                      : 'bg-red-500 animate-pulse'
+                  }`} />
+                  <span className={`text-[8px] uppercase tracking-[0.15em] font-mono font-bold ${
+                    selectedAddressId ? 'text-accent' : 'text-red-500/80'
+                  }`}>
+                    {selectedAddressId 
+                      ? 'RESOLVED ✓' 
+                      : 'UNRESOLVED • HOLD'
+                    }
+                  </span>
+                </div>
+
                 <div className="flex-grow h-[1px] bg-neutral-900" />
               </div>
               {addresses.length > 0 && !showAddressForm && (
@@ -583,6 +637,9 @@ const Checkout: React.FC = () => {
             cartProductIds={cart.map(item => item.id)}
           />
 
+          {/* Packaging Intelligence Banner */}
+          <PackagingUpsellBanner itemCount={totalItemCount} />
+
           {/* Cart Section */}
           <section className="space-y-10">
             <div className="flex items-center gap-4">
@@ -665,6 +722,45 @@ const Checkout: React.FC = () => {
                 </div>
               </div>
 
+              {/* Progress Tracker replacing the warning banner */}
+              <div className="mb-6 border border-[#D4AF37]/20 bg-[linear-gradient(135deg,rgba(212,175,55,0.06),rgba(0,0,0,0)_60%)] p-5 relative overflow-hidden">
+                {/* Corner Accents */}
+                <div className="absolute top-0 right-0 w-6 h-6 border-t border-r border-[#D4AF37]/20" />
+                <div className="absolute bottom-0 left-0 w-6 h-6 border-b border-l border-[#D4AF37]/20" />
+                
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Package size={14} className={totalItemCount >= 2 ? "text-accent" : "text-neutral-500"} />
+                    <span className="text-[10px] uppercase tracking-[0.25em] font-bold text-white">Unboxing Unlock</span>
+                  </div>
+                  <span className="text-[9px] font-mono text-accent uppercase font-bold">
+                    {totalItemCount >= 2 ? "UNLOCKED ✓" : `${totalItemCount} / 2 ITEMS`}
+                  </span>
+                </div>
+
+                {/* Progress Bar */}
+                <div className="h-1.5 w-full bg-neutral-900 border border-white/5 rounded-full overflow-hidden mb-3 relative">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: totalItemCount >= 2 ? '100%' : '50%' }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                    className="h-full bg-gradient-to-r from-[#D4AF37] via-[#f5d97a] to-[#D4AF37] relative"
+                  >
+                    {totalItemCount < 2 && (
+                      <span className="absolute top-0 right-0 h-full w-4 bg-white/30 blur-[2px] animate-pulse" />
+                    )}
+                  </motion.div>
+                </div>
+
+                <p className="text-[10.5px] leading-relaxed text-neutral-400 font-light tracking-wide">
+                  {totalItemCount >= 2 ? (
+                    <span className="text-accent font-medium">Congratulations! Your premium, handcrafted Second Life Box is unlocked and will ship with your order.</span>
+                  ) : (
+                    <span>Add <strong className="text-white">one more tee</strong> to unlock your premium, handcrafted Second Life Box! (MOQ: 2 tees)</span>
+                  )}
+                </p>
+              </div>
+
               <div className="space-y-4">
                 <button
                   type="submit"
@@ -683,7 +779,9 @@ const Checkout: React.FC = () => {
                     <span>Initiate Extraction</span>
                   </div>
                   {!isProcessing && (
-                    <span className="relative z-10 text-[8px] opacity-40 font-bold group-hover:opacity-100 transition-opacity">Redirect to secure portal</span>
+                    <span className="relative z-10 text-[8px] opacity-40 font-bold group-hover:opacity-100 transition-opacity">
+                      {totalItemCount < 2 ? "2 T-shirts requested for unboxing" : "Redirect to secure portal"}
+                    </span>
                   )}
                 </button>
 
