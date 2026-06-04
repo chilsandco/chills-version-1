@@ -67,3 +67,16 @@
 .animate-fade-in {
   animation: fade-in 0.8s ease-out forwards;
 }
+
+/* Responsive Custom Cursor Controls */
+.custom-cursor-enabled {
+  cursor: none !important;
+}
+.custom-cursor-enabled * {
+  cursor: none !important;
+}
+
+.custom-cursor {
+  display: block !important;
+}
+

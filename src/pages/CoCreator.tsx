@@ -569,7 +569,7 @@ const CoCreator: React.FC = () => {
         </section>
 
         {/* Signal Alignment (Handshake) */}
-        <section className="mb-40 text-center py-40 bg-white/[0.01] rounded-sm border border-white/5 relative overflow-hidden">
+        <section className="mb-20 md:mb-40 text-center py-20 md:py-40 bg-white/[0.01] rounded-sm border border-white/5 relative overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(212,175,55,0.03)_0%,transparent_70%)]" />
           <HandshakeScene />
           <motion.div 
@@ -610,7 +610,7 @@ const CoCreator: React.FC = () => {
               { title: "Define Philosophy", desc: "Articulate the intent behind the artifact.", status: "REQUIRED" },
               { title: "Upload Artifact", desc: "Initial blueprint or high-fidelity renders.", status: "AWAITING SOURCE" }
             ].map((box, i) => (
-              <div key={i} className="bg-black p-10 space-y-6 hover:bg-neutral-900/40 transition-colors group relative overflow-hidden">
+              <div key={i} className="bg-black p-6 sm:p-10 space-y-4 sm:space-y-6 hover:bg-neutral-900/40 transition-colors group relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-[1px] h-0 bg-accent group-hover:h-full transition-all duration-700" />
                 <div className="flex justify-between items-start">
                   <span className="text-[10px] font-mono text-neutral-700">0{i + 1}</span>
@@ -642,7 +642,7 @@ const CoCreator: React.FC = () => {
         </section>
 
         {/* Final Hook / Waitlist */}
-        <section id="interest" className="text-center py-24 pb-60">
+        <section id="interest" className="text-center py-16 md:py-24 pb-32 md:pb-60">
           <AnimatePresence mode="wait">
             {!coCreatorInterest ? (
               <motion.div

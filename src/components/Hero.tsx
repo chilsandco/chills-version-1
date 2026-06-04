@@ -1,5 +1,121 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion, useScroll, useTransform } from 'motion/react';
+
+const SCRAMBLE_CHARS = '▓░▒█╗╔═║▐▌●◆◇■□';
+
+function useScrambleText(
+  finalText: string,
+  delay: number = 400,
+  scrambleIterations: number = 10,
+  charStagger: number = 80
+) {
+  const [displayText, setDisplayText] = useState('');
+  const [started, setStarted] = useState(false);
+
+  useEffect(() => {
+    const delayTimer = setTimeout(() => setStarted(true), delay);
+    return () => clearTimeout(delayTimer);
+  }, [delay]);
+
+  useEffect(() => {
+    if (!started) return;
+
+    const length = finalText.length;
+    // Track how many scramble cycles each character has completed
+    const iterationsCompleted = new Array(length).fill(0);
+    const resolved = new Array(length).fill(false);
+    const currentChars = new Array(length).fill('');
+
+    // Initialize all characters with random scramble chars
+    for (let i = 0; i < length; i++) {
+      if (finalText[i] === ' ') {
+        resolved[i] = true;
+        currentChars[i] = ' ';
+        iterationsCompleted[i] = scrambleIterations;
+      } else {
+        currentChars[i] = SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+      }
+    }
+
+    setDisplayText(currentChars.join(''));
+
+    const intervalMs = 50;
+    let elapsed = 0;
+
+    const interval = setInterval(() => {
+      elapsed += intervalMs;
+      let allResolved = true;
+
+      for (let i = 0; i < length; i++) {
+        if (resolved[i]) continue;
+
+        // Each character starts scrambling after its stagger delay
+        const charStartTime = i * charStagger;
+        if (elapsed < charStartTime) {
+          allResolved = false;
+          continue;
+        }
+
+        // Count how many ticks since this char started
+        const ticksSinceStart = Math.floor((elapsed - charStartTime) / intervalMs);
+
+        if (ticksSinceStart >= scrambleIterations) {
+          // Resolve to final character
+          resolved[i] = true;
+          currentChars[i] = finalText[i];
+        } else {
+          // Still scrambling
+          allResolved = false;
+          currentChars[i] = SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+        }
+      }
+
+      setDisplayText(currentChars.join(''));
+
+      if (allResolved) {
+        clearInterval(interval);
+      }
+    }, intervalMs);
+
+    return () => clearInterval(interval);
+  }, [started, finalText, scrambleIterations, charStagger]);
+
+  return started ? displayText : '';
+}
+
+function useRevealText(
+  finalText: string,
+  delay: number = 1000,
+  charInterval: number = 40
+) {
+  const [visibleCount, setVisibleCount] = useState(0);
+  const [started, setStarted] = useState(false);
+
+  useEffect(() => {
+    const delayTimer = setTimeout(() => setStarted(true), delay);
+    return () => clearTimeout(delayTimer);
+  }, [delay]);
+
+  useEffect(() => {
+    if (!started) return;
+
+    const length = finalText.length;
+    let current = 0;
+
+    const interval = setInterval(() => {
+      current++;
+      setVisibleCount(current);
+      if (current >= length) {
+        clearInterval(interval);
+      }
+    }, charInterval);
+
+    return () => clearInterval(interval);
+  }, [started, finalText, charInterval]);
+
+  if (!started) return '';
+  return finalText.slice(0, visibleCount);
+}
 
 const Hero: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -7,6 +123,9 @@ const Hero: React.FC = () => {
     target: containerRef,
     offset: ["start start", "end start"]
   });
+
+  const scrambledTitle = 'CHILS & CO.';
+  const revealedTagline = useRevealText('Essential by Design. Elevated by Intent.', 1200, 35);
 
   // Anchored parallax: Text moves slower than the background
   const videoY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
@@ -75,7 +194,7 @@ const Hero: React.FC = () => {
           transition={{ duration: 2, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
           className="text-6xl md:text-[14vw] font-display font-bold tracking-[-0.06em] leading-none mb-6 text-white drop-shadow-[0_0_40px_rgba(0,0,0,0.9)]"
         >
-          CHILS & CO.
+          {scrambledTitle || '\u00A0'}
         </motion.h1>
         <motion.p
           initial={{ opacity: 0, letterSpacing: '0.2em' }}
@@ -83,7 +202,7 @@ const Hero: React.FC = () => {
           transition={{ duration: 2.5, delay: 1, ease: [0.22, 1, 0.36, 1] }}
           className="text-xs md:text-sm uppercase font-medium text-white/80 drop-shadow-md"
         >
-          Essential by Design. Elevated by Intent.
+          {revealedTagline || '\u00A0'}
         </motion.p>
       </motion.div>
 

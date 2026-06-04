@@ -254,10 +254,10 @@ const PromiseCarousel: React.FC = () => {
       id="promise" 
       className="bg-black relative h-[400vh]"
     >
-      <div className="sticky top-0 h-screen flex flex-col justify-start overflow-hidden pt-12 md:pt-20">
+      <div className="sticky top-0 h-[100dvh] flex flex-col justify-start overflow-hidden pt-4 sm:pt-10 lg:pt-20">
         <div className="max-w-[1800px] mx-auto px-6 w-full flex flex-col h-full">
           {/* Header - Simple & Premium */}
-          <div className="mb-4 md:mb-6 relative z-30">
+          <div className="mb-2 sm:mb-4 lg:mb-6 relative z-30">
             <span className="text-accent text-[9px] md:text-[10px] uppercase tracking-[1.2rem] mb-1 block font-bold opacity-70">
               The <span className="italic underline underline-offset-[4px] decoration-accent/40 font-light">Commitment</span>
             </span>
@@ -267,7 +267,7 @@ const PromiseCarousel: React.FC = () => {
           </div>
 
           {/* Unified Content Display */}
-          <div className="flex-1 relative flex items-center justify-center mb-6">
+          <div className="flex-1 relative flex items-center justify-center mb-4 lg:mb-6">
             <AnimatePresence mode="wait">
               <motion.div
                 key={index}
@@ -278,21 +278,21 @@ const PromiseCarousel: React.FC = () => {
                 className="w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center"
               >
                 {/* Text Content */}
-                <div className="lg:col-span-5 xl:col-span-4 space-y-6 md:space-y-8 order-2 lg:order-1">
+                <div className="lg:col-span-5 xl:col-span-4 space-y-4 lg:space-y-8 order-2 lg:order-1">
                   <div className="space-y-4">
                     <span className="font-mono text-[11px] text-accent tracking-[0.5em] block uppercase font-bold">
                       0{index + 1} // S_{promiseData[index].tag}
                     </span>
-                    <h3 className="text-3xl md:text-5xl lg:text-6xl font-display uppercase tracking-tighter text-white leading-[0.9]">
+                    <h3 className="text-2xl sm:text-4xl lg:text-6xl font-display uppercase tracking-tighter text-white leading-[0.9]">
                       {promiseData[index].title}
                     </h3>
                   </div>
                   
-                  <p className="text-neutral-400 text-sm md:text-xl font-light leading-relaxed max-w-xl">
+                  <p className="text-neutral-400 text-xs sm:text-sm lg:text-lg xl:text-xl font-light leading-relaxed max-w-xl">
                     {promiseData[index].desc}
                   </p>
 
-                  <div className="flex items-center gap-4 pt-6 md:pt-10 border-t border-white/5">
+                  <div className="flex items-center gap-4 pt-4 lg:pt-10 border-t border-white/5">
                     <div className="w-12 h-[1px] bg-accent/40" />
                     <span className="font-mono text-[10px] text-accent/60 uppercase tracking-[0.4em]">Operational_Standard_V1</span>
                   </div>
@@ -301,7 +301,7 @@ const PromiseCarousel: React.FC = () => {
                 {/* Image Component */}
                 <div className="lg:col-span-7 xl:col-span-8 order-1 lg:order-2">
                   <div className="relative w-full bg-[#050505] border border-white/5 overflow-hidden">
-                    <div className="flex items-center justify-center aspect-video lg:aspect-[16/9] p-4 md:p-12 relative overflow-hidden">
+                    <div className="flex items-center justify-center aspect-video lg:aspect-[16/9] p-2 sm:p-6 lg:p-12 relative overflow-hidden">
                       {/* Technical Framing Accents */}
                       <div className="absolute top-8 left-8 w-4 h-4 border-t border-l border-white/20 opacity-40" />
                       <div className="absolute top-8 right-8 w-4 h-4 border-t border-r border-white/20 opacity-40" />
@@ -314,7 +314,7 @@ const PromiseCarousel: React.FC = () => {
                         initial={{ scale: 1.1, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
                         transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
-                        className="w-full h-full object-contain relative z-10 max-h-[40vh] md:max-h-[60vh]"
+                        className="w-full h-full object-contain relative z-10 max-h-[25vh] sm:max-h-[35vh] lg:max-h-[55vh]"
                         referrerPolicy="no-referrer"
                       />
                       
@@ -329,7 +329,7 @@ const PromiseCarousel: React.FC = () => {
           </div>
 
           {/* Progress Indicator (Bottom) */}
-          <div className="pb-12 md:pb-16 flex items-center justify-between border-t border-white/5 pt-8">
+          <div className="pb-4 sm:pb-8 lg:pb-16 flex items-center justify-between border-t border-white/5 pt-3 sm:pt-4 lg:pt-8">
             <div className="flex gap-4">
               {promiseData.map((_, i) => (
                 <div 
@@ -344,6 +344,185 @@ const PromiseCarousel: React.FC = () => {
           </div>
         </div>
       </div>
+    </section>
+  );
+};
+
+// --- Odometer Digit Component (inline) ---
+const OdometerDigit: React.FC<{
+  target: number;
+  isInView: boolean;
+  delay?: number;
+  duration?: number;
+  className?: string;
+  glow?: boolean;
+}> = ({ target, isInView, delay = 0, duration = 1.8, className = '', glow = false }) => {
+  const [settled, setSettled] = useState(false);
+  const [translateY, setTranslateY] = useState(0);
+
+  // Build the strip: 0-9 repeated twice + digits 0..target for final settle
+  const digits = [
+    ...Array.from({ length: 10 }, (_, i) => i),
+    ...Array.from({ length: 10 }, (_, i) => i),
+    ...Array.from({ length: target + 1 }, (_, i) => i),
+  ];
+  const totalStops = digits.length;
+  const targetIndex = totalStops - 1; // last digit in the strip is the target
+
+  useEffect(() => {
+    if (!isInView) return;
+    const timeout = setTimeout(() => {
+      setTranslateY(targetIndex);
+      const settleTimeout = setTimeout(() => setSettled(true), duration * 1000 + 100);
+      return () => clearTimeout(settleTimeout);
+    }, delay * 1000);
+    return () => clearTimeout(timeout);
+  }, [isInView, delay, duration, targetIndex]);
+
+  return (
+    <span
+      className={`inline-block overflow-hidden align-bottom ${className}`}
+      style={{ height: '1em', lineHeight: '1em' }}
+    >
+      <span
+        className="inline-flex flex-col items-center"
+        style={{
+          transition: isInView ? `transform ${duration}s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s` : 'none',
+          transform: `translateY(-${translateY}em)`,
+          willChange: 'transform',
+        }}
+      >
+        {digits.map((d, i) => (
+          <span
+            key={i}
+            className="block"
+            style={{ height: '1em', lineHeight: '1em' }}
+            aria-hidden={i !== targetIndex}
+          >
+            {d}
+          </span>
+        ))}
+      </span>
+      {/* Glow overlay on settle */}
+      {glow && (
+        <style>{`
+          @keyframes odometer-glow {
+            0% { text-shadow: 0 0 0px transparent; }
+            30% { text-shadow: 0 0 20px rgba(212, 175, 55, 0.6), 0 0 40px rgba(212, 175, 55, 0.3); }
+            100% { text-shadow: 0 0 0px transparent; }
+          }
+        `}</style>
+      )}
+    </span>
+  );
+};
+
+// --- Simple 0→1 Odometer for the "1" in 1NCEPTION ---
+// Only a two-digit strip [0, 1], so the roll is a direct, clean 0→1.
+const InceptionOdometerDigit: React.FC<{
+  isInView: boolean;
+  delay?: number;
+  duration?: number;
+}> = ({ isInView, delay = 0, duration = 1.8 }) => {
+  const [translateY, setTranslateY] = useState(0);
+
+  // Strip is just [0, 1] — exactly two entries, no intermediate numbers.
+  const digits = [0, 1];
+
+  useEffect(() => {
+    if (!isInView) return;
+    const timeout = setTimeout(() => {
+      setTranslateY(1); // scroll to index 1 (the '1')
+    }, delay * 1000);
+    return () => clearTimeout(timeout);
+  }, [isInView, delay]);
+
+  return (
+    <>
+      <style>{`
+        @keyframes inception-glow {
+          0%   { text-shadow: none; }
+          30%  { text-shadow: 0 0 24px rgba(212,175,55,0.7), 0 0 48px rgba(212,175,55,0.3); }
+          100% { text-shadow: none; }
+        }
+        .inception-digit-wrapper {
+          animation: none;
+        }
+        .inception-digit-wrapper.glowing {
+          animation: inception-glow 1.4s ease-out forwards;
+        }
+      `}</style>
+      <span
+        className={`inline-block overflow-hidden align-bottom inception-digit-wrapper${isInView && translateY === 1 ? ' glowing' : ''}`}
+        style={{ height: '1em', lineHeight: '1em' }}
+      >
+        <span
+          className="inline-flex flex-col items-center"
+          style={{
+            transition: isInView
+              ? `transform ${duration}s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`
+              : 'none',
+            transform: `translateY(-${translateY}em)`,
+            willChange: 'transform',
+          }}
+        >
+          {digits.map((d, i) => (
+            <span
+              key={i}
+              className="block"
+              style={{ height: '1em', lineHeight: '1em' }}
+              aria-hidden={i !== 1}
+            >
+              {d}
+            </span>
+          ))}
+        </span>
+      </span>
+    </>
+  );
+};
+
+// --- Drop Identifier Section with Odometer ---
+const DropIdentifierSection: React.FC = () => {
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const isInView = useInView(sectionRef, { once: true, margin: '-100px' });
+
+  return (
+    <section className="py-20 md:py-24 px-6 text-center overflow-hidden" ref={sectionRef}>
+      <motion.div
+        initial={{ opacity: 0, y: 40, filter: 'blur(10px)' }}
+        whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+        viewport={{ once: true, margin: '-100px' }}
+        transition={{ duration: 2, ease: [0.22, 1, 0.36, 1] }}
+      >
+        {/* "Drop 001" with odometer digits */}
+        <span className="text-accent text-[13px] uppercase tracking-[0.8em] mb-6 block font-bold">
+          Drop{' '}
+          <OdometerDigit target={0} isInView={isInView} delay={0.2} duration={1.0} />
+          <OdometerDigit target={0} isInView={isInView} delay={0.4} duration={1.2} />
+          <OdometerDigit target={1} isInView={isInView} delay={0.6} duration={1.4} />
+        </span>
+
+        {/* "1NCEPTION" with clean 0→1 odometer on the "1" */}
+        <h2 className="text-5xl sm:text-6xl md:text-[12vw] font-display font-bold tracking-tighter uppercase leading-none mb-8">
+          <span className="text-accent inline-block">
+            <InceptionOdometerDigit
+              isInView={isInView}
+              delay={0.3}
+              duration={1.8}
+            />
+          </span>
+          NCEPTION
+        </h2>
+
+        <div className="flex items-center justify-center gap-4">
+          <span className="h-px w-8 bg-white/10" />
+          <p className="text-neutral-500 text-[10px] md:text-xs uppercase tracking-[0.5em] font-medium italic">
+            The beginning of the system.
+          </p>
+          <span className="h-px w-8 bg-white/10" />
+        </div>
+      </motion.div>
     </section>
   );
 };
@@ -396,26 +575,7 @@ const Home: React.FC = () => {
       <Hero />
 
       {/* Drop Identifier Section */}
-      <section className="py-20 md:py-24 px-6 text-center overflow-hidden">
-        <motion.div
-           initial={{ opacity: 0, y: 40, filter: 'blur(10px)' }}
-           whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-           viewport={{ once: true, margin: "-100px" }}
-           transition={{ duration: 2, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <span className="text-accent text-[13px] uppercase tracking-[0.8em] mb-6 block font-bold">Drop 001</span>
-          <h2 className="text-6xl md:text-[12vw] font-display font-bold tracking-tighter uppercase leading-none mb-8">
-            <span className="text-accent">1</span>NCEPTION
-          </h2>
-          <div className="flex items-center justify-center gap-4">
-            <span className="h-px w-8 bg-white/10" />
-            <p className="text-neutral-500 text-[10px] md:text-xs uppercase tracking-[0.5em] font-medium italic">
-              The beginning of the system.
-            </p>
-            <span className="h-px w-8 bg-white/10" />
-          </div>
-        </motion.div>
-      </section>
+      <DropIdentifierSection />
 
       {/* Collection Preview - Cinematic Reveal */}
       <section className="py-16 md:py-20 px-6 md:px-12 max-w-[1800px] mx-auto overflow-hidden">
@@ -647,7 +807,7 @@ const Home: React.FC = () => {
             whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
             viewport={{ once: true, margin: "-20%" }}
             transition={{ duration: 2.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="text-5xl sm:text-6xl md:text-[8vw] font-display font-bold tracking-tighter mb-12 leading-none uppercase text-[#5CA904] whitespace-nowrap"
+            className="text-3xl sm:text-6xl md:text-[8vw] font-display font-bold tracking-tighter mb-12 leading-none uppercase text-[#5CA904] whitespace-normal sm:whitespace-nowrap"
           >
              ECO ENGINEERED
           </motion.h2>

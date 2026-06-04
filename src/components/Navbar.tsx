@@ -141,7 +141,20 @@ const Navbar: React.FC = () => {
       initial={{ opacity: 0, y: -20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
-      className={`fixed top-0 left-0 w-full z-50 transition-all duration-500 ${isScrolled || !isHome ? 'bg-black/98 backdrop-blur-xl py-2 md:py-4' : 'bg-transparent py-4 md:py-8'}`}
+      className={`fixed top-0 left-0 w-full z-50 transition-all duration-500
+        ${
+          // Mobile & tablet: always solid glossy black with gold border
+          // Desktop (md+): transparent at home top, solid when scrolled or on other pages
+          isScrolled || !isHome
+            ? 'bg-black/98 backdrop-blur-xl border-b border-white/10 py-2 md:py-4'
+            : 'bg-black/90 backdrop-blur-lg border-b border-[#D4AF37]/20 py-4 md:py-8 md:bg-transparent md:border-transparent md:backdrop-blur-none'
+        }`}
+      style={{
+        // Glossy gold shimmer line at bottom on mobile/tablet
+        boxShadow: (isScrolled || !isHome)
+          ? '0 1px 0 0 rgba(212,175,55,0.08), 0 4px 24px 0 rgba(0,0,0,0.6)'
+          : '0 1px 0 0 rgba(212,175,55,0.15), 0 4px 32px 0 rgba(0,0,0,0.5)'
+      }}
     >
       <div className="max-w-[1800px] mx-auto px-4 md:px-12 flex justify-between items-center h-14 md:h-auto">
         <motion.button 
@@ -246,45 +259,104 @@ const Navbar: React.FC = () => {
             initial={{ x: '-100%' }}
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
-            transition={{ type: 'tween', duration: 0.4 }}
-            className="fixed inset-0 bg-black z-[60] p-8 flex flex-col"
+            transition={{ type: 'tween', duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed inset-0 z-[60] flex flex-col"
+            style={{
+              background: 'linear-gradient(135deg, #0a0a0a 0%, #111008 50%, #0d0b02 100%)',
+              boxShadow: 'inset -1px 0 0 rgba(212,175,55,0.15)'
+            }}
           >
-            <div className="flex justify-end">
-              <button onClick={() => setIsMenuOpen(false)}>
+            {/* Gold top accent bar */}
+            <div
+              className="w-full h-[2px] flex-shrink-0"
+              style={{ background: 'linear-gradient(90deg, transparent, #D4AF37 40%, #f5d97a 60%, transparent)' }}
+            />
+
+            {/* Header row */}
+            <div className="flex justify-between items-center px-8 pt-6 pb-4">
+              <Link to="/" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3">
+                <img
+                  src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png"
+                  alt="CHILS & CO."
+                  className="h-7 w-auto gold-icon"
+                  referrerPolicy="no-referrer"
+                />
+                <span className="text-base font-display font-bold tracking-[0.25em]">CHILS & CO.</span>
+              </Link>
+              <button onClick={() => setIsMenuOpen(false)} className="p-2">
                 <motion.div
                   whileHover={{ scale: 1.2, rotate: 90 }}
                   whileTap={{ scale: 0.8 }}
                 >
-                  <X size={32} />
+                  <X size={28} className="text-white/80" />
                 </motion.div>
               </button>
             </div>
-            <div className="flex flex-col gap-8 mt-12">
-              {allLinks.map(link => (
-                <Link
+
+            {/* Divider */}
+            <div className="mx-8 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(212,175,55,0.3), transparent)' }} />
+
+            {/* Nav Links */}
+            <div className="flex flex-col gap-1 mt-8 px-8 flex-1">
+              {allLinks.map((link, i) => (
+                <motion.div
                   key={link.name}
-                  to={link.path}
-                  onClick={() => setIsMenuOpen(false)}
-                  className={`text-4xl font-display font-bold tracking-tighter ${link.name === 'SIGNALS' ? 'text-accent' : 'text-white'}`}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.05 * i, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  {link.name}
-                </Link>
+                  <Link
+                    to={link.path}
+                    onClick={() => setIsMenuOpen(false)}
+                    className={`block py-3 text-3xl font-display font-bold tracking-tighter transition-colors ${
+                      link.name === 'SIGNALS' ? 'text-accent' : 'text-white/90 hover:text-[#D4AF37]'
+                    }`}
+                  >
+                    {link.name}
+                  </Link>
+                </motion.div>
               ))}
-              <Link
-                to="/wishlist"
-                onClick={() => setIsMenuOpen(false)}
-                className="text-4xl font-display font-bold tracking-tighter"
+
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.05 * allLinks.length, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               >
-                WISHLIST
-              </Link>
-              <Link
-                to="/auth"
-                onClick={() => setIsMenuOpen(false)}
-                className="text-4xl font-display font-bold tracking-tighter"
+                <Link
+                  to="/wishlist"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block py-3 text-3xl font-display font-bold tracking-tighter text-white/90 hover:text-[#D4AF37] transition-colors"
+                >
+                  WISHLIST
+                </Link>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.05 * (allLinks.length + 1), duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               >
-                {isAuthenticated ? 'ACCOUNT' : 'LOG IN'}
-              </Link>
+                <Link
+                  to="/auth"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="block py-3 text-3xl font-display font-bold tracking-tighter text-white/90 hover:text-[#D4AF37] transition-colors"
+                >
+                  {isAuthenticated ? 'ACCOUNT' : 'LOG IN'}
+                </Link>
+              </motion.div>
             </div>
+
+            {/* Bottom gold accent */}
+            <div className="px-8 pb-10 pt-6">
+              <div className="h-px mb-6" style={{ background: 'linear-gradient(90deg, transparent, rgba(212,175,55,0.25), transparent)' }} />
+              <p className="text-[9px] text-white/20 tracking-[0.3em] uppercase text-center">CHILS & CO. — ELEVATED IDENTITY</p>
+            </div>
+
+            {/* Gold bottom accent bar */}
+            <div
+              className="w-full h-[2px] flex-shrink-0"
+              style={{ background: 'linear-gradient(90deg, transparent, #D4AF37 40%, #f5d97a 60%, transparent)' }}
+            />
           </motion.div>
         )}
       </AnimatePresence>

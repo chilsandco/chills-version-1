@@ -13,7 +13,7 @@ const CustomCursor: React.FC = () => {
   const cursorY = useSpring(mouseY, { stiffness: 1200, damping: 65, restDelta: 0.001 });
 
   useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+    const handlePointerMove = (e: PointerEvent) => {
       mouseX.set(e.clientX);
       mouseY.set(e.clientY);
       setIsVisible(true);
@@ -24,19 +24,23 @@ const CustomCursor: React.FC = () => {
       setIsHovering(!!isClickable);
     };
 
-    const handleMouseLeave = () => setIsVisible(false);
+    const handlePointerDown = (e: PointerEvent) => {
+      mouseX.set(e.clientX);
+      mouseY.set(e.clientY);
+      setIsVisible(true);
+    };
 
-    window.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseleave', handleMouseLeave);
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerdown', handlePointerDown);
 
     return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseleave', handleMouseLeave);
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerdown', handlePointerDown);
     };
   }, [mouseX, mouseY]);
 
   return (
-    <div className="fixed inset-0 pointer-events-none z-[9999] overflow-hidden hidden lg:block">
+    <div className="custom-cursor fixed inset-0 pointer-events-none z-[9999] overflow-hidden hidden">
       <AnimatePresence>
         {isVisible && (
           <motion.div

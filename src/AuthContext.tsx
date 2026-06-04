@@ -20,7 +20,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Load from localStorage on mount
+    let isMounted = true;
     const storedToken = localStorage.getItem('chils_auth_token');
     const storedUser = localStorage.getItem('chils_auth_user');
 
@@ -29,31 +29,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       try {
         const parsedUser = JSON.parse(storedUser);
         setUser(parsedUser);
-        
-        // Background verify/refresh - keep loading until complete
+
+        // Background verify — inline clear to avoid stale closure on logout ref
         fetch('/api/auth/me', {
           headers: { 'Authorization': `Bearer ${storedToken}` }
         }).then(res => {
           if (res.ok) {
             return res.json();
           } else {
-            logout();
+            // Token invalid — clear session inline (no stale closure)
+            if (isMounted) {
+              setToken(null);
+              setUser(null);
+              localStorage.removeItem('chils_auth_token');
+              localStorage.removeItem('chils_auth_user');
+            }
+            return null;
           }
         }).then(data => {
+          if (!isMounted) return;
           if (data) {
             setUser(data);
             localStorage.setItem('chils_auth_user', JSON.stringify(data));
           }
           setIsLoading(false);
         }).catch(() => {
-          setIsLoading(false);
+          if (isMounted) setIsLoading(false);
         });
-        return; // Don't fall through to setIsLoading(false)
+        return () => { isMounted = false; };
       } catch (e) {
         console.error("Failed to parse stored user", e);
       }
     }
     setIsLoading(false);
+    return () => { isMounted = false; };
   }, []);
 
   const login = (newToken: string, newUser: Customer) => {

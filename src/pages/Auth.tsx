@@ -115,6 +115,39 @@ const Auth: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const navigate = useNavigate();
 
+  // --- Admin panel state (always declared at top level — React Rules of Hooks) ---
+  const [showSettingsEditor, setShowSettingsEditor] = useState(false);
+  const [globalSettings, setGlobalSettings] = useState({
+    mobileLink: '',
+    address: '',
+    coordinates: '',
+    email: ''
+  });
+  const [saveLoading, setSaveLoading] = useState(false);
+
+  const adminEmails = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
+  const isAdmin = user ? adminEmails.some(email => email.toLowerCase() === user.email.toLowerCase()) : false;
+
+  // Load admin settings when the authenticated admin views the page
+  useEffect(() => {
+    if (isAdmin && isAuthenticated) {
+      fetch('/api/settings')
+        .then(res => res.json())
+        .then(data => setGlobalSettings(data))
+        .catch(err => console.error("Failed to load settings:", err));
+    }
+  }, [isAdmin, isAuthenticated]);
+
+  const isFlagActive = (val: any, sessionKey?: string) => {
+    if (val === true || val === 1 || val === '1') return true;
+    if (typeof val === 'string') {
+      const v = val.trim().toLowerCase();
+      if (v === 'true' || v === 'yes' || v === 'active' || v === 'on') return true;
+    }
+    if (sessionKey && sessionStorage.getItem(sessionKey) === 'true') return true;
+    return false;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -137,7 +170,6 @@ const Auth: React.FC = () => {
       }
 
       if (!response.ok) {
-        // Specific handling for known error codes or patterns
         if (data.message?.toLowerCase().includes('password') && data.message?.toLowerCase().includes('incorrect')) {
           throw new Error('Verification failed: The password provided is incorrect for this system identity.');
         }
@@ -149,7 +181,6 @@ const Auth: React.FC = () => {
 
       if (isRegister) {
         setSuccess(true);
-        // Automatically log in after registration
         try {
           const loginResponse = await fetch('/api/auth/login', {
             method: 'POST',
@@ -158,7 +189,6 @@ const Auth: React.FC = () => {
           });
           const loginData = await loginResponse.json();
           if (loginResponse.ok && loginData.token && loginData.user) {
-            // Ensure first and last names from registration form are preserved if server didn't have them yet
             const userWithNames = {
               ...loginData.user,
               first_name: loginData.user.first_name || formData.first_name,
@@ -169,7 +199,6 @@ const Auth: React.FC = () => {
             authLogin(loginData.token, userWithNames);
             setTimeout(() => navigate('/onboarding'), 1500);
           } else {
-            // If auto-login fails, just go to login mode
             setTimeout(() => {
               setIsRegister(false);
               setSuccess(false);
@@ -179,10 +208,8 @@ const Auth: React.FC = () => {
           setTimeout(() => setIsRegister(false), 2000);
         }
       } else {
-        // Handle login success
         if (data.token && data.user) {
           authLogin(data.token, data.user);
-          // Don't auto-navigate, stay on account page
         } else {
           throw new Error('Invalid login response');
         }
@@ -194,63 +221,34 @@ const Auth: React.FC = () => {
     }
   };
 
-  const isFlagActive = (val: any, sessionKey?: string) => {
-    if (val === true || val === 1 || val === '1') return true;
-    if (typeof val === 'string') {
-      const v = val.trim().toLowerCase();
-      if (v === 'true' || v === 'yes' || v === 'active' || v === 'on') return true;
+  const handleSaveSettings = async () => {
+    setSaveLoading(true);
+    try {
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(globalSettings)
+      });
+      if (response.ok) {
+        alert("Global nodes successfully recalibrated.");
+        setShowSettingsEditor(false);
+      } else {
+        const data = await response.json();
+        alert(`Calibration Fault: ${data.message}`);
+      }
+    } catch (err) {
+      alert("Terminal connection error during calibration.");
+    } finally {
+      setSaveLoading(false);
     }
-    if (sessionKey && sessionStorage.getItem(sessionKey) === 'true') return true;
-    return false;
   };
 
   if (isAuthenticated && user) {
     const hasCoCreatorBadge = isFlagActive(user.coCreatorInterest, 'chils_cocreator_interest');
     const hasWaitlistBadge = isFlagActive(user.onWaitlist, 'chils_bespoke_waitlist');
-    const adminEmails = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
-    const isAdmin = adminEmails.some(email => email.toLowerCase() === user.email.toLowerCase());
-    const [showSettingsEditor, setShowSettingsEditor] = useState(false);
-    const [globalSettings, setGlobalSettings] = useState({
-        mobileLink: '',
-        address: '',
-        coordinates: '',
-        email: ''
-    });
-    const [saveLoading, setSaveLoading] = useState(false);
-
-    useEffect(() => {
-        if (isAdmin) {
-            fetch('/api/settings')
-                .then(res => res.json())
-                .then(data => setGlobalSettings(data))
-                .catch(err => console.error("Failed to load settings:", err));
-        }
-    }, [isAdmin]);
-
-    const handleSaveSettings = async () => {
-        setSaveLoading(true);
-        try {
-            const response = await fetch('/api/settings', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(globalSettings)
-            });
-            if (response.ok) {
-                alert("Global nodes successfully recalibrated.");
-                setShowSettingsEditor(false);
-            } else {
-                const data = await response.json();
-                alert(`Calibration Fault: ${data.message}`);
-            }
-        } catch (err) {
-            alert("Terminal connection error during calibration.");
-        } finally {
-            setSaveLoading(false);
-        }
-    };
 
     return (
       <div className="min-h-screen pt-36 md:pt-32 pb-24 px-6">

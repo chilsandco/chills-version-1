@@ -140,7 +140,7 @@ const Bespoke: React.FC = () => {
   };
 
   return (
-    <div className="bg-black min-h-screen pt-36 md:pt-32 pb-24 overflow-hidden">
+    <div className="bg-black min-h-screen pt-28 md:pt-32 pb-24 overflow-hidden">
       <SEO 
         title="Bespoke Luxury | CHILS & CO." 
         description="The future of fashion is personal. Register for early access to Chils & Co. bespoke tailoring experience. Custom built, handcrafted precision tailored for you."
@@ -282,7 +282,7 @@ const Bespoke: React.FC = () => {
       {/* 3D Blueprint Interactive Section */}
       <section className="px-6 md:px-12 mb-40 relative">
         <div className="max-w-[1400px] mx-auto bg-white/5 border border-white/10 rounded-sm overflow-hidden min-h-[600px] flex flex-col md:flex-row">
-          <div className="w-full md:w-3/5 h-[400px] md:h-[600px] relative bg-black">
+          <div className="w-full md:w-3/5 h-[300px] md:h-[600px] relative bg-black">
             <iframe 
               title="Chils & Co. Bespoke Blueprint"
               className="w-full h-full border-0"
@@ -298,7 +298,7 @@ const Bespoke: React.FC = () => {
               </div>
             </div>
           </div>
-          <div className="w-full md:w-2/5 p-12 flex flex-col justify-center space-y-8 bg-neutral-900/50">
+          <div className="w-full md:w-2/5 p-6 sm:p-12 flex flex-col justify-center space-y-6 sm:space-y-8 bg-neutral-900/50">
             <div className="space-y-4">
               <h2 className="text-4xl font-display font-bold uppercase tracking-tighter text-white">Rotate. Inspect. <br />Understand the Build.</h2>
               <p className="text-neutral-400 font-light leading-relaxed">
@@ -335,7 +335,7 @@ const Bespoke: React.FC = () => {
 
       {/* Trust & Guarantee Section */}
       <section className="px-6 md:px-12 py-24 bg-white/5 border-y border-white/5 relative">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-24">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-24">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
