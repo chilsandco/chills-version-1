@@ -10,6 +10,138 @@ import { useGesture } from '@use-gesture/react';
 import { Link } from 'react-router-dom';
 import SizeGuide from '../components/SizeGuide';
 
+interface MagnifiedImageCardProps {
+  img: string;
+  index: number;
+  total: number;
+  productName: string;
+  onClick: () => void;
+  productImgRef?: React.RefObject<HTMLImageElement | null>;
+}
+
+const MagnifiedImageCard: React.FC<MagnifiedImageCardProps> = ({
+  img,
+  index,
+  total,
+  productName,
+  onClick,
+  productImgRef
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+  const [isHovered, setIsHovered] = useState(false);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setMousePos({ x, y });
+  };
+
+  const getColSpan = (i: number, tot: number) => {
+    if (tot <= 2) return "md:col-span-1";
+    if (tot === 3) {
+      return i === 0 ? "md:col-span-2" : "md:col-span-1";
+    }
+    if (tot === 4) {
+      return (i === 0 || i === 3) ? "md:col-span-2" : "md:col-span-1";
+    }
+    if (tot === 5) {
+      return (i === 0 || i === 3 || i === 4) ? "md:col-span-2" : "md:col-span-1";
+    }
+    return i % 3 === 0 ? "md:col-span-2" : "md:col-span-1";
+  };
+
+  const zoomFactor = 2.2;
+  const magnifierSize = 180; // 180px circular loupe
+
+  const containerWidth = containerRef.current ? containerRef.current.clientWidth : 0;
+  const containerHeight = containerRef.current ? containerRef.current.clientHeight : 0;
+  
+  const px = containerWidth > 0 ? mousePos.x / containerWidth : 0;
+  const py = containerHeight > 0 ? mousePos.y / containerHeight : 0;
+
+  const zoomX = -px * containerWidth * zoomFactor + magnifierSize / 2;
+  const zoomY = -py * containerHeight * zoomFactor + magnifierSize / 2;
+
+  return (
+    <motion.div
+      ref={containerRef}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      className={`relative aspect-[3/4] bg-neutral-950 overflow-hidden border border-white/5 cursor-zoom-in ${getColSpan(index, total)}`}
+      whileHover={{ scale: 1.015 }}
+      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+      onClick={onClick}
+      data-cursor="inspect"
+    >
+      <motion.img
+        ref={productImgRef as any}
+        src={img}
+        alt={`${productName} ${index + 1}`}
+        className="w-full h-full object-cover origin-center transition-transform duration-700"
+        referrerPolicy="no-referrer"
+      />
+
+      {/* Futuristic Gold Scan HUD corners appearing on hover */}
+      <div className={`absolute inset-0 border border-accent/20 transition-opacity duration-500 pointer-events-none ${isHovered ? 'opacity-100' : 'opacity-0'}`} />
+      
+      {/* Reticle corner markings */}
+      <div className={`absolute top-3 left-3 w-3 h-3 border-t border-l border-accent/60 transition-all duration-500 pointer-events-none ${isHovered ? 'translate-x-0 translate-y-0 opacity-100' : '-translate-x-2 -translate-y-2 opacity-0'}`} />
+      <div className={`absolute top-3 right-3 w-3 h-3 border-t border-r border-accent/60 transition-all duration-500 pointer-events-none ${isHovered ? 'translate-x-0 translate-y-0 opacity-100' : 'translate-x-2 -translate-y-2 opacity-0'}`} />
+      <div className={`absolute bottom-3 left-3 w-3 h-3 border-b border-l border-accent/60 transition-all duration-500 pointer-events-none ${isHovered ? 'translate-x-0 translate-y-0 opacity-100' : '-translate-x-2 translate-y-2 opacity-0'}`} />
+      <div className={`absolute bottom-3 right-3 w-3 h-3 border-b border-r border-accent/60 transition-all duration-500 pointer-events-none ${isHovered ? 'translate-x-0 translate-y-0 opacity-100' : 'translate-x-2 translate-y-2 opacity-0'}`} />
+
+      {/* Detail Scan Loupe Overlay */}
+      {isHovered && containerWidth > 0 && (
+        <div
+          className="absolute rounded-full border border-accent bg-black pointer-events-none overflow-hidden shadow-[0_0_35px_rgba(212,175,55,0.25)] flex items-center justify-center"
+          style={{
+            width: magnifierSize,
+            height: magnifierSize,
+            left: mousePos.x - magnifierSize / 2,
+            top: mousePos.y - magnifierSize / 2,
+            transform: 'translate3d(0, 0, 0)',
+            zIndex: 10,
+          }}
+        >
+          <img
+            src={img}
+            alt="Magnified View"
+            className="absolute max-w-none origin-top-left pointer-events-none"
+            referrerPolicy="no-referrer"
+            style={{
+              width: containerWidth * zoomFactor,
+              height: containerHeight * zoomFactor,
+              transform: `translate3d(${zoomX}px, ${zoomY}px, 0)`,
+            }}
+          />
+
+          {/* Micro HUD scanning grid inside loupe */}
+          <div 
+            className="absolute inset-0 opacity-15 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_40%,rgba(212,175,55,0.3)_100%)]"
+            style={{
+              backgroundImage: `
+                linear-gradient(rgba(212, 175, 55, 0.15) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(212, 175, 55, 0.15) 1px, transparent 1px)
+              `,
+              backgroundSize: '12px 12px',
+            }}
+          />
+          
+          {/* Lens center crosshair */}
+          <div className="absolute w-2 h-2 flex items-center justify-center opacity-30">
+            <div className="absolute w-[8px] h-[1px] bg-accent" />
+            <div className="absolute h-[8px] w-[1px] bg-accent" />
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+};
+
 const ProductDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -346,28 +478,22 @@ const ProductDetail: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
         {/* Image Gallery */}
-        <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-4 h-fit">
           {product.images.map((img, i) => (
-            <motion.div 
-              key={i} 
-              className="aspect-[3/4] bg-neutral-900 overflow-hidden cursor-zoom-in"
-              whileHover={{ scale: 1.02 }}
+            <MagnifiedImageCard
+              key={i}
+              img={img}
+              index={i}
+              total={product.images.length}
+              productName={product.name}
+              productImgRef={i === 0 ? productImgRef : undefined}
               onClick={() => {
                 setSelectedImage(img);
                 scale.set(1);
                 positionX.set(0);
                 positionY.set(0);
               }}
-              data-cursor="inspect"
-            >
-              <motion.img
-                ref={i === 0 ? productImgRef : null}
-                src={img}
-                alt={`${product.name} ${i + 1}`}
-                className="w-full h-full object-cover origin-center transition-transform duration-700 hover:scale-110"
-                referrerPolicy="no-referrer"
-              />
-            </motion.div>
+            />
           ))}
         </div>
 
