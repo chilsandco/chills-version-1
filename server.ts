@@ -389,8 +389,12 @@ async function startServer() {
     const shortDescription = decodeEntities(cleanHtml(wcProduct.short_description || ""));
 
     const coCreatorAttr = attributes.find((a: any) => {
-      const name = a.name?.toLowerCase();
-      return name === "co-creator" || name === "co_creator" || name === "co creator" || name === "designer";
+      const name = (a.name || "").toLowerCase();
+      return name.includes("co-creator") || 
+             name.includes("co_creator") || 
+             name.includes("co creator") || 
+             name.includes("cocreator") || 
+             name.includes("designer");
     })?.options?.[0];
 
     const coCreatorMeta = wcProduct.meta_data?.find((m: any) => m.key === "_co_creator" || m.key === "co_creator")?.value;
