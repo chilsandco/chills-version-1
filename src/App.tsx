@@ -29,6 +29,7 @@ import SocialVault from './pages/SignalNetwork';
 import SmoothScroll from './components/SmoothScroll';
 import ScrollProgress from './components/ScrollProgress';
 import CustomCursor from './components/CustomCursor';
+import UdaySignature from './components/UdaySignature';
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
             <div className="min-h-screen flex flex-col bg-black text-white selection:bg-white selection:text-black">
               <CustomCursor />
               <ScrollProgress />
+              <UdaySignature />
               <Navbar />
               <main className="flex-grow">
                 <Routes>
