@@ -600,7 +600,7 @@ const Home: React.FC = () => {
             <Link to="/bespoke">
               <div className="relative overflow-hidden rounded-sm border border-white/5 shadow-2lx">
                 <img 
-                  src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1777383461/The_Bespoke_vbsrwn.png" 
+                  src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1780123415/the_bespoke_2_eypwhw.png" 
                   alt="The Next System" 
                   className="w-full h-auto opacity-40 group-hover:opacity-60 group-hover:scale-105 transition-all duration-1000"
                 />

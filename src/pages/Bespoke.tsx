@@ -213,7 +213,7 @@ const Bespoke: React.FC = () => {
                 className="relative z-10"
               >
                 <img 
-                  src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1777383461/The_Bespoke_vbsrwn.png" 
+                  src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1780123415/the_bespoke_2_eypwhw.png" 
                   alt="The Bespoke Build Process" 
                   className="w-full h-auto rounded-sm shadow-[0_0_100px_rgba(255,255,255,0.05)] border border-white/5"
                   referrerPolicy="no-referrer"
