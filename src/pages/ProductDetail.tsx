@@ -378,7 +378,7 @@ const ProductDetail: React.FC = () => {
               <p className="text-[12px] tracking-[0.3em] uppercase text-neutral-500">{product.category}</p>
               {product.coCreator && (
                 <div className="text-[9px] tracking-[0.25em] font-bold text-accent uppercase bg-accent/5 px-3.5 py-1.5 border border-accent/20 rounded-[2px] backdrop-blur-md">
-                  DESIGNED BY {product.coCreator}
+                  CO-CREATED BY {product.coCreator}
                 </div>
               )}
             </div>

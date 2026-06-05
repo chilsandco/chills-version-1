@@ -132,7 +132,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
             <p className="text-[12px] text-neutral-600 uppercase tracking-widest">{product.category}</p>
             {product.coCreator && (
               <p className="text-[9px] text-accent/85 font-mono tracking-[0.2em] uppercase mt-2">
-                DESIGNED BY {product.coCreator}
+                CO-CREATED BY {product.coCreator}
               </p>
             )}
           </div>
