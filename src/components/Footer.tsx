@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
+import UdaySignature from './UdaySignature';
 
 const Footer: React.FC = () => {
   const [settings, setSettings] = React.useState({
@@ -87,9 +88,7 @@ const Footer: React.FC = () => {
           <p className="text-[10px] text-neutral-600 uppercase tracking-widest">
             © 2026 CHILS & CO. ALL RIGHTS RESERVED by Chilamkuri Ventures.
           </p>
-          <div className="flex gap-8">
-            {/* Social links or other footer secondary elements can go here */}
-          </div>
+          <UdaySignature />
         </div>
       </div>
     </footer>
