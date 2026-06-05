@@ -11,6 +11,7 @@ export interface Product {
   care: string;
   images: string[];
   status: "Available" | "Coming Soon";
+  coCreator?: string;
   totalSales?: number;
   stockQuantity?: number;
 }

@@ -374,7 +374,14 @@ const ProductDetail: React.FC = () => {
         {/* Product Info */}
         <div className="lg:col-span-5 lg:sticky lg:top-32 h-fit">
           <div className="mb-12">
-            <p className="text-[12px] tracking-[0.3em] uppercase text-neutral-500 mb-4">{product.category}</p>
+            <div className="flex items-center justify-between gap-4 mb-4">
+              <p className="text-[12px] tracking-[0.3em] uppercase text-neutral-500">{product.category}</p>
+              {product.coCreator && (
+                <div className="text-[9px] tracking-[0.25em] font-bold text-accent uppercase bg-accent/5 px-3.5 py-1.5 border border-accent/20 rounded-[2px] backdrop-blur-md">
+                  DESIGNED BY {product.coCreator}
+                </div>
+              )}
+            </div>
             <div className="flex items-center gap-3 mb-4">
               <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tighter uppercase">{product.name}</h1>
             </div>

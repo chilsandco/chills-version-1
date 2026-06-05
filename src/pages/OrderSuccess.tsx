@@ -5,6 +5,45 @@ import { CheckCircle2, Activity, ArrowRight, UserPlus, XCircle, Clock, AlertCirc
 import ShareSignal from '../components/ShareSignal';
 import { useAuth } from '../AuthContext';
 import { useCart } from '../CartContext';
+import confetti from 'canvas-confetti';
+
+interface GoldConfettiProps {
+  trigger: boolean;
+}
+
+const GoldConfetti: React.FC<GoldConfettiProps> = ({ trigger }) => {
+  useEffect(() => {
+    if (trigger) {
+      const duration = 3 * 1000;
+      const end = Date.now() + duration;
+
+      const frame = () => {
+        confetti({
+          particleCount: 3,
+          angle: 60,
+          spread: 55,
+          origin: { x: 0, y: 0.8 },
+          colors: ['#D4AF37', '#F3E5AB', '#AA771C']
+        });
+        confetti({
+          particleCount: 3,
+          angle: 120,
+          spread: 55,
+          origin: { x: 1, y: 0.8 },
+          colors: ['#D4AF37', '#F3E5AB', '#AA771C']
+        });
+
+        if (Date.now() < end) {
+          requestAnimationFrame(frame);
+        }
+      };
+
+      frame();
+    }
+  }, [trigger]);
+
+  return null;
+};
 
 interface OrderStatus {
   id: string;

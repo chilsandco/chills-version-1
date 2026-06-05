@@ -388,6 +388,15 @@ async function startServer() {
     const longDescription = decodeEntities(cleanHtml(wcProduct.description || ""));
     const shortDescription = decodeEntities(cleanHtml(wcProduct.short_description || ""));
 
+    const coCreatorAttr = attributes.find((a: any) => {
+      const name = a.name?.toLowerCase();
+      return name === "co-creator" || name === "co_creator" || name === "co creator" || name === "designer";
+    })?.options?.[0];
+
+    const coCreatorMeta = wcProduct.meta_data?.find((m: any) => m.key === "_co_creator" || m.key === "co_creator")?.value;
+
+    const coCreator = coCreatorAttr || coCreatorMeta || "";
+
     return {
       id: (wcProduct.id || "").toString(),
       name: decodeEntities(wcProduct.name || "Unknown Product"),
@@ -402,7 +411,8 @@ async function startServer() {
       images: images.map((img: any) => img.src).filter(Boolean),
       status: wcProduct.stock_status === "instock" ? "Available" : "Coming Soon",
       totalSales: parseInt(wcProduct.total_sales || "0", 10),
-      stockQuantity: wcProduct.stock_quantity || 0
+      stockQuantity: wcProduct.stock_quantity || 0,
+      coCreator: coCreator
     };
   };
 
@@ -422,7 +432,8 @@ async function startServer() {
         "https://picsum.photos/seed/syntax1/1200/1600",
         "https://picsum.photos/seed/syntax2/1200/1600"
       ],
-      status: "Available"
+      status: "Available",
+      coCreator: "Uday Boya"
     }
   ];
 
