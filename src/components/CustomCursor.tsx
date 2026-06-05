@@ -96,6 +96,27 @@ const CustomCursor: React.FC = () => {
 
   return (
     <>
+      <style>{`
+        @keyframes tap-burst {
+          0%   { transform: scale(0.2) rotate(0deg);   opacity: 0.9; }
+          60%  { transform: scale(1.3) rotate(180deg); opacity: 0.7; }
+          100% { transform: scale(1.8) rotate(300deg); opacity: 0;   }
+        }
+        .tap-snowflake {
+          width: 36px;
+          height: 36px;
+          animation: tap-burst 0.7s cubic-bezier(.22,1,.36,1) forwards;
+          filter: brightness(0) saturate(100%) invert(85%) sepia(13%) saturate(1229%)
+                  hue-rotate(356deg) brightness(98%) contrast(90%)
+                  drop-shadow(0 0 6px rgba(212,175,55,0.8));
+        }
+        .gold-icon {
+          filter: brightness(0) saturate(100%) invert(85%) sepia(13%) saturate(1229%)
+                  hue-rotate(356deg) brightness(98%) contrast(90%)
+                  drop-shadow(0 0 8px rgba(212, 175, 55, 0.4)) !important;
+        }
+      `}</style>
+
       {/* Touch ripples — snowflake logo tap burst for mobile/tablet */}
       {ripples.map(r => (
         <div
@@ -109,21 +130,6 @@ const CustomCursor: React.FC = () => {
             transform: 'translate(-50%, -50%)',
           }}
         >
-          <style>{`
-            @keyframes tap-burst {
-              0%   { transform: scale(0.2) rotate(0deg);   opacity: 0.9; }
-              60%  { transform: scale(1.3) rotate(180deg); opacity: 0.7; }
-              100% { transform: scale(1.8) rotate(300deg); opacity: 0;   }
-            }
-            .tap-snowflake {
-              width: 36px;
-              height: 36px;
-              animation: tap-burst 0.7s cubic-bezier(.22,1,.36,1) forwards;
-              filter: brightness(0) saturate(100%) invert(85%) sepia(13%) saturate(1229%)
-                      hue-rotate(356deg) brightness(98%) contrast(90%)
-                      drop-shadow(0 0 6px rgba(212,175,55,0.8));
-            }
-          `}</style>
           <img
             src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png"
             alt=""
