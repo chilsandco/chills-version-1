@@ -6,109 +6,193 @@ const UdaySignature: React.FC = () => {
   return (
     <>
       <style>{`
-        /* ── PEN→KEYBOARD ICON ANIMATION ── */
-        @keyframes ub-pen-bob {
-          0%, 100% { transform: translateY(0) rotate(-15deg); }
-          50%       { transform: translateY(-4px) rotate(-10deg); }
-        }
-        @keyframes ub-key-tap {
-          0%, 100% { transform: scaleY(1); }
-          50%       { transform: scaleY(0.82); }
-        }
-        @keyframes ub-dot-blink {
-          0%, 100% { opacity: 1; }
-          50%       { opacity: 0; }
-        }
-        @keyframes ub-step-slide {
-          from { opacity: 0; transform: translateX(-8px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes ub-card-in {
-          from { opacity: 0; transform: translateY(10px) scale(0.97); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
+
+        /* ══════════════════════════════════════
+           ORBIT SYSTEM
+        ══════════════════════════════════════ */
+
+        .ub-orbit-system {
+          position: relative;
+          width: 28px;
+          height: 28px;
+          flex-shrink: 0;
         }
 
-        .ub-pen {
-          display: inline-block;
-          animation: ub-pen-bob 1s ease-in-out infinite;
-          transform-origin: bottom right;
-          font-size: 14px;
+        /* Centre sphere */
+        .ub-orbit-core {
+          position: absolute;
+          top: 50%; left: 50%;
+          transform: translate(-50%, -50%);
+          width: 12px;
+          height: 12px;
+          border-radius: 50%;
+          background: radial-gradient(circle at 35% 35%, #f5d97a, #b8860b);
+          box-shadow:
+            0 0 8px rgba(212,175,55,.7),
+            0 0 20px rgba(212,175,55,.3);
         }
-        .ub-key {
-          display: inline-block;
-          animation: ub-key-tap 0.45s ease-in-out infinite alternate;
-          font-size: 14px;
+
+        /* Monogram */
+        .ub-orbit-core span {
+          position: absolute;
+          inset: 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 7px;
+          font-weight: 900;
+          color: #000;
+          letter-spacing: 0;
+          line-height: 1;
+          font-family: Inter, sans-serif;
         }
-        .ub-cursor-dot {
-          display: inline-block;
-          width: 2px;
-          height: 13px;
+
+        /* Orbit ring — tilted like Saturn */
+        .ub-orbit-ring {
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+          border: 1px solid rgba(212,175,55,.20);
+          transform: rotateX(58deg) rotateZ(-20deg);
+        }
+
+        /* Spinning arm */
+        .ub-orbit-arm {
+          position: absolute;
+          inset: 0;
+          border-radius: 50%;
+          animation: ub-spin 1.8s linear infinite;
+        }
+
+        /* Comet dot */
+        .ub-orbit-dot {
+          position: absolute;
+          top: -3px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
           background: #D4AF37;
-          border-radius: 1px;
-          margin-left: 1px;
-          vertical-align: middle;
-          animation: ub-dot-blink 0.9s ease-in-out infinite;
+          box-shadow:
+            0 0 4px #D4AF37,
+            0 0 10px rgba(212,175,55,.8),
+            0 0 20px rgba(212,175,55,.4);
         }
+
+        /* Comet tail */
+        .ub-orbit-dot::after {
+          content: '';
+          position: absolute;
+          top: 50%; left: 50%;
+          transform: translate(-50%, -50%) rotate(90deg);
+          width: 2px;
+          height: 12px;
+          background: linear-gradient(to bottom, rgba(212,175,55,.6), transparent);
+          border-radius: 2px;
+        }
+
+        @keyframes ub-spin {
+          from { transform: rotate(0deg); }
+          to   { transform: rotate(360deg); }
+        }
+
+        /* Pulse ring on hover */
+        .ub-orbit-system::after {
+          content: '';
+          position: absolute;
+          inset: -4px;
+          border-radius: 50%;
+          border: 1px solid rgba(212,175,55,.0);
+          transition: border-color .3s, box-shadow .3s;
+        }
+        .ub-badge-wrap:hover .ub-orbit-system::after {
+          border-color: rgba(212,175,55,.15);
+          box-shadow: 0 0 14px rgba(212,175,55,.15);
+        }
+
+        /* ══════════════════════════════════════
+           BADGE PILL
+        ══════════════════════════════════════ */
+
         .ub-badge-wrap {
           position: relative;
           display: inline-flex;
           align-items: center;
         }
+
         .ub-badge {
           display: inline-flex;
           align-items: center;
-          gap: 7px;
-          padding: 7px 14px;
+          gap: 9px;
+          padding: 7px 15px 7px 10px;
           border-radius: 999px;
           background: #0c0c0c;
           border: 1px solid rgba(212,175,55,.22);
-          color: #D4AF37;
-          font-size: 11px;
+          color: #C9A84C;
+          font-size: 10px;
           font-weight: 700;
-          letter-spacing: 0.13em;
+          letter-spacing: 0.16em;
           text-transform: uppercase;
           cursor: default;
           user-select: none;
-          transition: border-color .3s, box-shadow .3s;
+          transition: border-color .35s, box-shadow .35s, color .35s;
           white-space: nowrap;
-        }
-        .ub-badge-wrap:hover .ub-badge {
-          border-color: rgba(212,175,55,.5);
-          box-shadow: 0 0 18px rgba(212,175,55,.12);
+          font-family: Inter, sans-serif;
         }
 
-        /* ── HOVER CARD ── */
+        .ub-badge-wrap:hover .ub-badge {
+          border-color: rgba(212,175,55,.45);
+          box-shadow: 0 0 22px rgba(212,175,55,.12);
+          color: #D4AF37;
+        }
+
+        /* ══════════════════════════════════════
+           HOVER CARD
+        ══════════════════════════════════════ */
+
+        @keyframes ub-card-rise {
+          from { opacity: 0; transform: translateY(12px) scale(0.96); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes ub-step-in {
+          from { opacity: 0; transform: translateX(-10px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+
         .ub-card {
           position: absolute;
-          bottom: calc(100% + 12px);
+          bottom: calc(100% + 14px);
           right: 0;
-          width: 300px;
-          background: linear-gradient(145deg, #0c0c0c, #141414);
+          width: 290px;
+          background: linear-gradient(145deg, #0d0d0d 0%, #161616 100%);
           border: 1px solid rgba(212,175,55,.18);
           border-radius: 20px;
           padding: 20px;
           box-shadow:
-            0 28px 55px rgba(0,0,0,.7),
-            0 0 30px rgba(212,175,55,.07);
-          animation: ub-card-in .28s ease forwards;
-          backdrop-filter: blur(20px);
+            0 32px 60px rgba(0,0,0,.75),
+            0 0 35px rgba(212,175,55,.07),
+            inset 0 1px 0 rgba(212,175,55,.06);
+          animation: ub-card-rise .28s cubic-bezier(.22,1,.36,1) forwards;
           z-index: 99999;
+          font-family: Inter, sans-serif;
         }
 
-        /* arrow pointing down */
+        /* Down-arrow caret */
         .ub-card::after {
           content: '';
           position: absolute;
           bottom: -7px;
-          right: 22px;
+          right: 20px;
           width: 13px;
           height: 13px;
-          background: #141414;
+          background: #161616;
           border-right: 1px solid rgba(212,175,55,.18);
           border-bottom: 1px solid rgba(212,175,55,.18);
           transform: rotate(45deg);
         }
 
+        /* Profile row */
         .ub-profile {
           display: flex;
           align-items: center;
@@ -118,63 +202,60 @@ const UdaySignature: React.FC = () => {
           border-bottom: 1px solid rgba(212,175,55,.08);
         }
         .ub-profile img {
-          width: 52px;
-          height: 52px;
-          object-fit: cover;
+          width: 50px;
+          height: 50px;
           border-radius: 50%;
-          border: 2px solid rgba(212,175,55,.45);
+          object-fit: cover;
+          border: 2px solid rgba(212,175,55,.4);
           flex-shrink: 0;
         }
         .ub-profile-name {
           color: #F5E6A8;
-          font-size: 16px;
+          font-size: 15px;
           font-weight: 700;
           margin: 0;
-          letter-spacing: 0.02em;
         }
         .ub-profile-role {
-          color: #BFA76A;
+          color: #9A7E4A;
           font-size: 11px;
           margin-top: 3px;
-          letter-spacing: 0.08em;
+          letter-spacing: .07em;
         }
 
-        .ub-steps {
-          margin-bottom: 14px;
-        }
+        /* Steps */
         .ub-step {
           display: flex;
           justify-content: space-between;
           align-items: center;
           padding: 9px 0;
-          border-bottom: 1px solid rgba(212,175,55,.07);
-          color: #F0EAD6;
+          border-bottom: 1px solid rgba(212,175,55,.06);
+          color: #E8DFC8;
           font-size: 13px;
-          letter-spacing: 0.04em;
+          opacity: 0;
         }
         .ub-step:last-child { border-bottom: none; }
-        .ub-step span:last-child { font-size: 16px; }
+        .ub-step:nth-child(1) { animation: ub-step-in .22s .04s ease forwards; }
+        .ub-step:nth-child(2) { animation: ub-step-in .22s .11s ease forwards; }
+        .ub-step:nth-child(3) { animation: ub-step-in .22s .18s ease forwards; }
+        .ub-step-plane { font-size: 15px; }
 
-        .ub-step:nth-child(1) { animation: ub-step-slide .25s .05s ease both; }
-        .ub-step:nth-child(2) { animation: ub-step-slide .25s .12s ease both; }
-        .ub-step:nth-child(3) { animation: ub-step-slide .25s .19s ease both; }
-
-        .ub-footer-credit {
+        /* Footer credit */
+        .ub-credit {
+          margin-top: 16px;
           padding-top: 14px;
-          border-top: 1px solid rgba(212,175,55,.09);
+          border-top: 1px solid rgba(212,175,55,.08);
           text-align: center;
-          color: #A0906A;
+          color: #7A6A44;
           font-size: 11px;
           line-height: 1.8;
-          letter-spacing: 0.06em;
+          letter-spacing: .07em;
         }
-        .ub-footer-credit strong {
+        .ub-credit strong {
           display: block;
           color: #D4AF37;
-          font-size: 15px;
+          font-size: 14px;
           font-weight: 700;
-          letter-spacing: 0.04em;
-          margin-top: 2px;
+          margin-top: 1px;
         }
 
         .ub-links {
@@ -182,19 +263,18 @@ const UdaySignature: React.FC = () => {
           justify-content: center;
           gap: 8px;
           margin-top: 12px;
-          flex-wrap: wrap;
         }
         .ub-links a {
           text-decoration: none;
           color: #D4AF37;
-          border: 1px solid rgba(212,175,55,.20);
-          padding: 6px 14px;
+          border: 1px solid rgba(212,175,55,.22);
+          padding: 5px 13px;
           border-radius: 999px;
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 700;
-          letter-spacing: 0.12em;
+          letter-spacing: .14em;
           text-transform: uppercase;
-          transition: background .25s, transform .2s;
+          transition: background .22s, transform .2s;
         }
         .ub-links a:hover {
           background: rgba(212,175,55,.12);
@@ -207,10 +287,11 @@ const UdaySignature: React.FC = () => {
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
       >
+
         {/* ── HOVER CARD ── */}
         {hovered && (
           <div className="ub-card">
-            {/* Profile */}
+
             <div className="ub-profile">
               <img
                 src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1778488005/uday_close_up_vswnbv.jpg"
@@ -222,39 +303,38 @@ const UdaySignature: React.FC = () => {
               </div>
             </div>
 
-            {/* Steps */}
-            <div className="ub-steps">
-              <div className="ub-step"><span>Idea</span><span>✈</span></div>
-              <div className="ub-step"><span>Code</span><span>✈</span></div>
-              <div className="ub-step"><span>Launch</span><span>✈</span></div>
+            <div>
+              <div className="ub-step"><span>Idea</span><span className="ub-step-plane">✈</span></div>
+              <div className="ub-step"><span>Code</span><span className="ub-step-plane">✈</span></div>
+              <div className="ub-step"><span>Launch</span><span className="ub-step-plane">✈</span></div>
             </div>
 
-            {/* Footer credit */}
-            <div className="ub-footer-credit">
+            <div className="ub-credit">
               Designed &amp; Developed by
               <strong>Uday Boya</strong>
               <div className="ub-links">
-                <a
-                  href="https://in.linkedin.com/in/uday-kumar-boya-ai-innovator"
-                  target="_blank"
-                  rel="noreferrer"
-                >LinkedIn</a>
-                <a
-                  href="https://wa.me/919392837729"
-                  target="_blank"
-                  rel="noreferrer"
-                >WhatsApp</a>
+                <a href="https://in.linkedin.com/in/uday-kumar-boya-ai-innovator" target="_blank" rel="noreferrer">LinkedIn</a>
+                <a href="https://wa.me/919392837729" target="_blank" rel="noreferrer">WhatsApp</a>
               </div>
             </div>
+
           </div>
         )}
 
         {/* ── BADGE ── */}
         <div className="ub-badge">
-          <span className="ub-pen">✒</span>
-          <span className="ub-key">⌨</span>
-          <span className="ub-cursor-dot" />
+
+          {/* Orbit system */}
+          <div className="ub-orbit-system">
+            <div className="ub-orbit-ring" />
+            <div className="ub-orbit-core"><span>U</span></div>
+            <div className="ub-orbit-arm">
+              <div className="ub-orbit-dot" />
+            </div>
+          </div>
+
           Crafted by Uday
+
         </div>
       </div>
     </>
