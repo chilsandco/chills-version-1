@@ -419,7 +419,7 @@ const Checkout: React.FC = () => {
             id="coordinates-section" 
             className={`space-y-10 transition-all duration-700 p-6 -mx-6 rounded-md ${
               coordinatesFlash 
-                ? 'border border-red-500/30 bg-red-500/[0.015] shadow-[0_0_25px_rgba(239,68,68,0.08)]' 
+                ? 'border border-red-500/30 bg-red-500/[0.015] shadow-[0_0_25px_rgba(239,68,68,0.08)] coordinates-flash' 
                 : 'border border-transparent bg-transparent'
             }`}
           >
