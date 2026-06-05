@@ -1,7 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 const UdaySignature: React.FC = () => {
-  const [hovered, setHovered] = useState(false);
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside tap (mobile)
+  useEffect(() => {
+    const handler = (e: MouseEvent | TouchEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    document.addEventListener('touchstart', handler);
+    return () => {
+      document.removeEventListener('mousedown', handler);
+      document.removeEventListener('touchstart', handler);
+    };
+  }, []);
 
   return (
     <>
@@ -134,7 +150,7 @@ const UdaySignature: React.FC = () => {
           font-weight: 700;
           letter-spacing: 0.16em;
           text-transform: uppercase;
-          cursor: default;
+          cursor: pointer;
           user-select: none;
           transition: border-color .35s, box-shadow .35s, color .35s;
           white-space: nowrap;
@@ -280,16 +296,32 @@ const UdaySignature: React.FC = () => {
           background: rgba(212,175,55,.12);
           transform: translateY(-2px);
         }
+        /* Mobile: card opens upward, shifts left to avoid overflow */
+        @media (max-width: 640px) {
+          .ub-card {
+            width: 260px;
+            right: auto;
+            left: 50%;
+            transform: translateX(-50%);
+          }
+          .ub-card::after {
+            right: auto;
+            left: 50%;
+            transform: translateX(-50%) rotate(45deg);
+          }
+        }
       `}</style>
 
       <div
+        ref={wrapRef}
         className="ub-badge-wrap"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onClick={() => setOpen(prev => !prev)}
       >
 
         {/* ── HOVER CARD ── */}
-        {hovered && (
+        {open && (
           <div className="ub-card">
 
             <div className="ub-profile">
