@@ -97,7 +97,7 @@ const MagnifiedImageCard: React.FC<MagnifiedImageCardProps> = ({
       {/* Detail Scan Loupe Overlay */}
       {isHovered && containerWidth > 0 && (
         <div
-          className="absolute rounded-full border border-accent bg-black pointer-events-none overflow-hidden shadow-[0_0_35px_rgba(212,175,55,0.25)] flex items-center justify-center"
+          className="absolute rounded-full border border-accent bg-black pointer-events-none overflow-hidden shadow-[0_0_35px_rgba(212,175,55,0.25)]"
           style={{
             width: magnifierSize,
             height: magnifierSize,
@@ -110,7 +110,7 @@ const MagnifiedImageCard: React.FC<MagnifiedImageCardProps> = ({
           <img
             src={img}
             alt="Magnified View"
-            className="absolute max-w-none origin-top-left pointer-events-none"
+            className="absolute max-w-none origin-top-left pointer-events-none top-0 left-0"
             referrerPolicy="no-referrer"
             style={{
               width: containerWidth * zoomFactor,
