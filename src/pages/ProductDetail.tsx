@@ -30,6 +30,11 @@ const MagnifiedImageCard: React.FC<MagnifiedImageCardProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const [isHovered, setIsHovered] = useState(false);
+  const [hasHover, setHasHover] = useState(false);
+
+  useEffect(() => {
+    setHasHover(window.matchMedia('(hover: hover)').matches);
+  }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!containerRef.current) return;
@@ -95,7 +100,7 @@ const MagnifiedImageCard: React.FC<MagnifiedImageCardProps> = ({
       <div className={`absolute bottom-3 right-3 w-3 h-3 border-b border-r border-accent/60 transition-all duration-500 pointer-events-none ${isHovered ? 'translate-x-0 translate-y-0 opacity-100' : 'translate-x-2 translate-y-2 opacity-0'}`} />
 
       {/* Detail Scan Loupe Overlay */}
-      {isHovered && containerWidth > 0 && (
+      {isHovered && hasHover && containerWidth > 0 && (
         <div
           className="absolute rounded-full border border-accent bg-black pointer-events-none overflow-hidden shadow-[0_0_35px_rgba(212,175,55,0.25)]"
           style={{
