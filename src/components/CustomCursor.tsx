@@ -96,11 +96,10 @@ const CustomCursor: React.FC = () => {
 
   return (
     <>
-      {/* Touch ripples — mobile/tablet tap feedback */}
+      {/* Touch ripples — snowflake logo tap burst for mobile/tablet */}
       {ripples.map(r => (
         <div
           key={r.id}
-          className="touch-ripple"
           style={{
             position: 'fixed',
             left: r.x,
@@ -111,18 +110,26 @@ const CustomCursor: React.FC = () => {
           }}
         >
           <style>{`
-            @keyframes ripple-expand {
-              0%   { width: 0px; height: 0px; opacity: 0.7; }
-              100% { width: 60px; height: 60px; opacity: 0; }
+            @keyframes tap-burst {
+              0%   { transform: scale(0.2) rotate(0deg);   opacity: 0.9; }
+              60%  { transform: scale(1.3) rotate(180deg); opacity: 0.7; }
+              100% { transform: scale(1.8) rotate(300deg); opacity: 0;   }
             }
-            .touch-ripple-ring {
-              border-radius: 50%;
-              border: 1.5px solid #D4AF37;
-              box-shadow: 0 0 10px rgba(212,175,55,0.4);
-              animation: ripple-expand 0.65s cubic-bezier(.22,1,.36,1) forwards;
+            .tap-snowflake {
+              width: 36px;
+              height: 36px;
+              animation: tap-burst 0.7s cubic-bezier(.22,1,.36,1) forwards;
+              filter: brightness(0) saturate(100%) invert(85%) sepia(13%) saturate(1229%)
+                      hue-rotate(356deg) brightness(98%) contrast(90%)
+                      drop-shadow(0 0 6px rgba(212,175,55,0.8));
             }
           `}</style>
-          <div className="touch-ripple-ring" />
+          <img
+            src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png"
+            alt=""
+            className="tap-snowflake"
+            referrerPolicy="no-referrer"
+          />
         </div>
       ))}
 
