@@ -461,7 +461,7 @@ const Checkout: React.FC = () => {
           })()}
 
           {/* Step connector line */}
-          <div className="flex items-center gap-4 -my-4 ml-4">
+          <div className="flex items-center gap-4 my-2 ml-4">
             <div className="w-[1px] h-8 bg-gradient-to-b from-neutral-800 to-neutral-900" />
           </div>
 
