@@ -1948,7 +1948,13 @@ async function startServer() {
         return res.status(400).send('Invalid order ID');
       }
       const wcUrl = `${process.env.WOOCOMMERCE_URL || 'https://www.chilsandco.com'}/wp-admin/admin-ajax.php`;
-      const redirect = `${wcUrl}?action=print_invoice&order_id=${orderId}&order_key=${order_key}`;
+      const params = new URLSearchParams({
+        'action': 'print_order',
+        'print-order': orderId,
+        'print-order-type': printType,
+        'order_key': order_key
+      });
+      const redirect = `${wcUrl}?${params.toString()}`;
       console.log(`[CHILS & CO.] Redirecting invoice request → ${redirect}`);
       return res.redirect(302, redirect);
     }
