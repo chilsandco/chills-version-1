@@ -229,6 +229,11 @@ async function reconcilePendingPhonePeOrder(wc: any, order: any, fallbackTransac
         transaction_id: transactionId,
         customer_note: "Payment verified during customer return status check."
       });
+      
+      triggerOrderConfirmationEmails(update.data).catch(err => {
+        console.error("[CHILS & CO. EMAIL] Reconcile order confirmation email failed:", err);
+      });
+
       return update.data;
     }
 
@@ -736,11 +741,14 @@ async function startServer() {
             if (payload.state === "COMPLETED") {
               console.log(`[CHILS & CO.] SDK verified COMPLETED for order: ${orderId}`);
               if (wc && orderId) {
-                await wcSafeCall(wc, "put", `orders/${orderId}`, {
+                const updateRes = await wcSafeCall(wc, "put", `orders/${orderId}`, {
                   status: "processing",
                   set_paid: true,
                   transaction_id: transactionId,
                   note: `PhonePe SDK Verified Success. Ref: ${transactionId}`
+                });
+                triggerOrderConfirmationEmails(updateRes.data).catch(err => {
+                  console.error("[CHILS & CO. EMAIL] SDK callback order confirmation email failed:", err);
                 });
               }
             } else {
@@ -800,13 +808,17 @@ async function startServer() {
         if (wc && orderId) {
           try {
             console.log(`[CHILS & CO.] Updating WooCommerce Order ${orderId} to 'processing'`);
-            await wcSafeCall(wc, "put", `orders/${orderId}`, {
+            const updateRes = await wcSafeCall(wc, "put", `orders/${orderId}`, {
               status: "processing",
               set_paid: true,
               transaction_id: transactionId,
               note: `PhonePe Payment Successful. Transaction ID: ${transactionId}`
             });
             console.log(`[CHILS & CO.] WooCommerce Order ${orderId} updated successfully.`);
+            
+            triggerOrderConfirmationEmails(updateRes.data).catch(err => {
+              console.error("[CHILS & CO. EMAIL] Manual callback order confirmation email failed:", err);
+            });
           } catch (wcErr) {
             console.error(`[CHILS & CO.] Failed to update WC Order ${orderId}:`, wcErr);
           }
@@ -881,6 +893,12 @@ async function startServer() {
       const response = await wcSafeCall(wc, "post", "customers", customerData);
       
       console.log(`[CHILS & CO.] WooCommerce Registration Successful: ${response.data.id}`);
+      
+      // Asynchronously trigger Welcome Email (non-blocking)
+      triggerWelcomeEmail(response.data.email, response.data.first_name).catch(err => {
+        console.error("[CHILS & CO. EMAIL] Welcome email failed:", err);
+      });
+
       res.status(201).json(response.data);
     } catch (error: any) {
       const errorData = error.response?.data;
@@ -1808,6 +1826,11 @@ async function startServer() {
         throw new Error(rmaData.message || `RMA API failed with status ${rmaResponse.status}`);
       }
 
+      // Asynchronously trigger Return Request Emails (non-blocking)
+      triggerReturnRequestEmails(id, reason, description, products).catch(err => {
+        console.error("[CHILS & CO. EMAIL] Return request emails failed:", err);
+      });
+
       res.json({ success: true, message: "Transmission verified. Return request logged.", data: rmaData });
     } catch (error: any) {
       console.error("[CHILS & CO.] Return Request Error:", error);
@@ -1836,6 +1859,80 @@ async function startServer() {
     } catch (error) {
       console.error("[CHILS & CO.] Settings Update Error:", error);
       res.status(500).json({ message: "Failed to calibrate settings nodes." });
+    }
+  });
+
+  // WooCommerce Webhooks Integration
+  app.post("/api/webhooks/woocommerce", async (req, res) => {
+    try {
+      const payload = req.body;
+      const topic = req.headers['x-wc-webhook-topic'] as string;
+      const orderId = payload?.id;
+
+      console.log(`[CHILS & CO. WEBHOOK] Received WooCommerce webhook: ${topic} for Order ${orderId}`);
+
+      if (topic === 'order.updated' || topic === 'order.refunded') {
+        const status = payload?.status;
+        console.log(`[CHILS & CO. WEBHOOK] Order ${orderId} status updated to: ${status}`);
+
+        if (status === 'refunded') {
+          await triggerRefundEmail(payload).catch(err => {
+            console.error("[CHILS & CO. EMAIL] Refund email failed:", err);
+          });
+        } else if (status === 'completed') {
+          // Send build dispatched/completed email
+          const customerEmail = payload.billing?.email;
+          const customerName = `${payload.billing?.first_name || ''} ${payload.billing?.last_name || ''}`.trim() || "Customer";
+          const signalId = toSignalId(orderId);
+          
+          if (customerEmail) {
+            const html = `
+<!DOCTYPE html>
+<html>
+<body style="background-color: #000000; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px;">
+  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #050505; border: 1px solid #1a1a1a; padding: 40px;">
+    <tr>
+      <td align="center" style="padding-bottom: 40px; border-bottom: 1px solid #111;">
+        <img src="${LOGO_URL}" alt="Chils & Co." style="width: 120px; height: auto;" />
+        <p style="color: #666; font-family: monospace; font-size: 8px; letter-spacing: 0.4em; text-transform: uppercase; margin: 20px 0 0 0;">Build Dispatched</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 40px 0 20px 0;">
+        <p style="font-family: monospace; font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.2em; margin: 0 0 5px 0;">Status Update</p>
+        <h2 style="font-family: monospace; font-size: 24px; font-weight: normal; letter-spacing: 0.05em; color: #D4AF37; text-transform: uppercase; margin: 0 0 20px 0;">Transmission Complete</h2>
+        <p style="font-size: 13px; line-height: 1.6; color: #ccc; font-weight: 300;">
+          The physical manifestation of your order signal has been fully assembled, authenticated, and dispatched from our build archives.
+        </p>
+        <div style="background-color: #0d0d0d; border: 1px solid #1a1a1a; padding: 20px; margin: 30px 0; font-family: monospace; font-size: 12px; line-height: 1.8;">
+          <span style="color: #666;">Signal ID:</span> <span style="color: #fff;">#${signalId}</span><br/>
+          <span style="color: #666;">Status:</span> <span style="color: #D4AF37;">Dispatched</span>
+        </div>
+        <p style="font-size: 12px; line-height: 1.6; color: #888; font-weight: 300;">
+          You can track your shipment and monitor logistics logs directly within your Chils & Co. Console.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding-top: 40px; border-top: 1px solid #111; color: #444; font-family: monospace; font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; line-height: 1.6;">
+        CHILS & CO. &copy; ${new Date().getFullYear()}<br/>
+        This is an automated transmission from the logistics terminal.<br/>
+        Contact: hello.chilsandco@gmail.com
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+            `;
+            await sendEmailViaBrevo(customerEmail, customerName, `Build Dispatched // Signal #${signalId}`, html);
+          }
+        }
+      }
+
+      res.status(200).send("OK");
+    } catch (error: any) {
+      console.error("[CHILS & CO. WEBHOOK] Webhook processing failed:", error.message);
+      res.status(200).send("OK");
     }
   });
   
@@ -1920,10 +2017,13 @@ async function startServer() {
 
           if (statusData.success && statusData.code === "PAYMENT_SUCCESS") {
             console.log(`[CHILS RECON] Order ${order.id} verified as SUCCESS. Updating WC...`);
-            await wcSafeCall(wc, "put", `orders/${order.id}`, {
+            const updateRes = await wcSafeCall(wc, "put", `orders/${order.id}`, {
               status: "processing",
               set_paid: true,
               customer_note: "Payment verified via system reconciliation job."
+            });
+            triggerOrderConfirmationEmails(updateRes.data).catch(err => {
+              console.error("[CHILS & CO. EMAIL] Recon order confirmation email failed:", err);
             });
           } else if (statusData.code === "PAYMENT_ERROR" || statusData.code === "PAYMENT_DECLINED" || statusData.code === "TIMED_OUT") {
             console.log(`[CHILS RECON] Order ${order.id} verified as FAILED (${statusData.code}). Updating WC...`);
@@ -1980,6 +2080,365 @@ function getPhonePeClient() {
     clientVersion,
     env
   );
+}
+
+// ==========================================
+// CHILS & CO. - BREVO EMAIL NOTIFICATION SYSTEM
+// ==========================================
+
+const BREVO_API_KEY = process.env.BREVO_API_KEY || "";
+const SENDER_EMAIL = "hello@chilsandco.com";
+const LOGO_URL = "https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png";
+
+async function sendEmailViaBrevo(toEmail: string, toName: string, subject: string, htmlContent: string) {
+  if (!BREVO_API_KEY) {
+    console.warn("[CHILS & CO. EMAIL] Brevo API Key missing. Skipping transmission.");
+    return null;
+  }
+  try {
+    const data = {
+      sender: { name: "Chils & Co.", email: SENDER_EMAIL },
+      to: [{ email: toEmail, name: toName }],
+      subject: subject,
+      htmlContent: htmlContent
+    };
+    const response = await axios.post("https://api.brevo.com/v3/smtp/email", data, {
+      headers: {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json"
+      }
+    });
+    console.log(`[CHILS & CO. EMAIL] Transmission successful to ${toEmail}. ID: ${response.data?.messageId}`);
+    return response.data;
+  } catch (err: any) {
+    console.error("[CHILS & CO. EMAIL] Transmission failed:", err.response?.data || err.message);
+    return null;
+  }
+}
+
+// 1. Welcome Email (Identity Initialized)
+function compileWelcomeHtml(email: string, firstName: string) {
+  return `
+<!DOCTYPE html>
+<html>
+<body style="background-color: #000000; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px;">
+  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #050505; border: 1px solid #1a1a1a; padding: 40px;">
+    <tr>
+      <td align="center" style="padding-bottom: 40px; border-bottom: 1px solid #111;">
+        <img src="${LOGO_URL}" alt="Chils & Co." style="width: 120px; height: auto;" />
+        <p style="color: #666; font-family: monospace; font-size: 8px; letter-spacing: 0.4em; text-transform: uppercase; margin: 20px 0 0 0;">Identity Synchronization</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 40px 0 20px 0;">
+        <h2 style="font-family: monospace; font-size: 20px; font-weight: normal; letter-spacing: 0.1em; color: #D4AF37; text-transform: uppercase; margin: 0 0 20px 0; text-align: center;">Identity Initialized</h2>
+        <p style="font-size: 14px; line-height: 1.6; color: #ccc; font-weight: 300;">
+          Salutations ${firstName || 'User'},<br/><br/>
+          Your access protocol has been successfully verified and registered in the system archives.
+        </p>
+        <div style="background-color: #0d0d0d; border: 1px solid #1a1a1a; padding: 20px; margin: 30px 0; font-family: monospace; font-size: 12px; line-height: 1.8;">
+          <span style="color: #666;">Identity Node:</span> <span style="color: #fff;">${email}</span><br/>
+          <span style="color: #666;">Clearance Level:</span> <span style="color: #D4AF37;">Customer 01</span><br/>
+          <span style="color: #666;">Status:</span> <span style="color: #00ff00;">Active</span>
+        </div>
+        <p style="font-size: 13px; line-height: 1.6; color: #999; font-weight: 300;">
+          You are now cleared to generate transaction signals and monitor custom build cycles. Welcome to the collective.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding-top: 40px; border-top: 1px solid #111; color: #444; font-family: monospace; font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; line-height: 1.6;">
+        CHILS & CO. &copy; ${new Date().getFullYear()}<br/>
+        This is an automated transmission from the identity database.<br/>
+        Contact: hello.chilsandco@gmail.com
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+}
+
+// 2. Order Confirmation (Transmission Confirmed)
+function compileOrderConfirmationHtml(order: any) {
+  const signalId = toSignalId(order.id);
+  const itemsList = order.line_items.map((item: any) => {
+    const size = item.meta_data?.find((m: any) => m.key === "pa_size" || m.key === "size")?.value || "";
+    return `
+    <tr style="border-bottom: 1px solid #111;">
+      <td style="padding: 15px 0; font-family: monospace; font-size: 12px; color: #fff;">
+        ${item.name} ${size ? `<span style="color: #D4AF37;">[${size}]</span>` : ''}
+      </td>
+      <td style="padding: 15px 0; font-family: monospace; font-size: 12px; color: #666; text-align: center;">
+        x${item.quantity}
+      </td>
+      <td style="padding: 15px 0; font-family: monospace; font-size: 12px; color: #fff; text-align: right;">
+        ₹${parseFloat(item.total).toLocaleString()}
+      </td>
+    </tr>
+  `;
+  }).join('');
+
+  const address = order.shipping
+    ? `${order.shipping.first_name || ''} ${order.shipping.last_name || ''}<br/>${order.shipping.address_1 || ''}<br/>${order.shipping.city || ''}, ${order.shipping.state || ''} ${order.shipping.postcode || ''}<br/>IN`
+    : 'No address provided';
+
+  const buyer = order.billing
+    ? `${order.billing.first_name || ''} ${order.billing.last_name || ''}<br/>${order.billing.phone || ''}`
+    : 'Guest';
+
+  return `
+<!DOCTYPE html>
+<html>
+<body style="background-color: #000000; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px;">
+  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #050505; border: 1px solid #1a1a1a; padding: 40px;">
+    <tr>
+      <td align="center" style="padding-bottom: 40px; border-bottom: 1px solid #111;">
+        <img src="${LOGO_URL}" alt="Chils & Co." style="width: 120px; height: auto;" />
+        <p style="color: #666; font-family: monospace; font-size: 8px; letter-spacing: 0.4em; text-transform: uppercase; margin: 20px 0 0 0;">Transmission Confirmed</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 40px 0 20px 0;">
+        <p style="font-family: monospace; font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.2em; margin: 0 0 5px 0;">Order Signal</p>
+        <h2 style="font-family: monospace; font-size: 26px; font-weight: normal; letter-spacing: -0.02em; color: #D4AF37; margin: 0 0 20px 0;">#${signalId}</h2>
+        <p style="font-size: 13px; line-height: 1.6; color: #ccc; font-weight: 300; margin-bottom: 30px;">
+          We have received payment verification and initialized the build protocol for your order signal. The archive is now processing the physical manifestation of this transmission.
+        </p>
+        
+        <h3 style="font-family: monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: #666; border-bottom: 1px solid #111; padding-bottom: 10px; margin: 40px 0 10px 0;">Build Contents</h3>
+        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+          ${itemsList}
+          <tr>
+            <td style="padding: 20px 0; font-family: monospace; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.1em;">Output Value</td>
+            <td></td>
+            <td align="right" style="padding: 20px 0; font-family: monospace; font-size: 16px; font-weight: bold; color: #D4AF37;">₹${parseFloat(order.total).toLocaleString()}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 30px 0; border-top: 1px solid #111; border-bottom: 1px solid #111;">
+        <table width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td width="50%" valign="top" style="padding-right: 15px; font-size: 12px; line-height: 1.6;">
+              <h4 style="font-family: monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.15em; color: #666; margin: 0 0 10px 0;">Destination Grid</h4>
+              <p style="color: #aaa; font-weight: 300; margin: 0;">${address}</p>
+            </td>
+            <td width="50%" valign="top" style="padding-left: 15px; font-size: 12px; line-height: 1.6;">
+              <h4 style="font-family: monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.15em; color: #666; margin: 0 0 10px 0;">Identified Owner</h4>
+              <p style="color: #aaa; font-weight: 300; margin: 0;">${buyer}</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding-top: 40px; color: #444; font-family: monospace; font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; line-height: 1.6;">
+        CHILS & CO. &copy; ${new Date().getFullYear()}<br/>
+        This is an automated transmission from the build terminal.<br/>
+        Contact: hello.chilsandco@gmail.com
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+}
+
+// 3. Admin Notification (New Sale)
+function compileAdminNotificationHtml(order: any) {
+  const signalId = toSignalId(order.id);
+  const itemsList = order.line_items.map((item: any) => `
+    <li>${item.name} (Qty: ${item.quantity}) - ₹${parseFloat(item.total).toLocaleString()}</li>
+  `).join('');
+
+  return `
+<!DOCTYPE html>
+<html>
+<body style="font-family: monospace; background-color: #000000; color: #ffffff; padding: 45px;">
+  <h2 style="color: #D4AF37; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 10px;">[ALERT] New Signal Generated</h2>
+  <p><strong style="color:#666;">Signal ID:</strong> #${signalId}</p>
+  <p><strong style="color:#666;">WC Order ID:</strong> ${order.id}</p>
+  <p><strong style="color:#666;">Customer Name:</strong> ${order.billing?.first_name} ${order.billing?.last_name}</p>
+  <p><strong style="color:#666;">Customer Email:</strong> ${order.billing?.email}</p>
+  <p><strong style="color:#666;">Customer Phone:</strong> ${order.billing?.phone}</p>
+  <p><strong style="color:#666;">Total Value:</strong> ₹${parseFloat(order.total).toLocaleString()}</p>
+  
+  <h3 style="color: #D4AF37; text-transform: uppercase; margin-top: 30px;">Build items:</h3>
+  <ul>${itemsList}</ul>
+  
+  <h3 style="color: #D4AF37; text-transform: uppercase; margin-top: 30px;">Shipping address:</h3>
+  <p>
+    ${order.shipping?.first_name} ${order.shipping?.last_name}<br/>
+    ${order.shipping?.address_1}<br/>
+    ${order.shipping?.city}, ${order.shipping?.state} ${order.shipping?.postcode}
+  </p>
+  <p style="margin-top: 40px;"><a href="https://api.chilsandco.com/wp-admin/post.php?post=${order.id}&action=edit" style="color: #D4AF37; text-decoration: none; border: 1px solid #D4AF37; padding: 10px 20px;">Process in WooCommerce</a></p>
+</body>
+</html>
+  `;
+}
+
+// 4. Return Requested (Reversal Protocol Initialized)
+function compileReturnRequestHtml(orderId: string, reason: string, description: string, products: any) {
+  const signalId = toSignalId(orderId);
+  return `
+<!DOCTYPE html>
+<html>
+<body style="background-color: #000000; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px;">
+  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #050505; border: 1px solid #1a1a1a; padding: 40px;">
+    <tr>
+      <td align="center" style="padding-bottom: 40px; border-bottom: 1px solid #111;">
+        <img src="${LOGO_URL}" alt="Chils & Co." style="width: 120px; height: auto;" />
+        <p style="color: #666; font-family: monospace; font-size: 8px; letter-spacing: 0.4em; text-transform: uppercase; margin: 20px 0 0 0;">Protocol Reversal</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 40px 0 20px 0;">
+        <p style="font-family: monospace; font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.2em; margin: 0 0 5px 0;">Reversal Request</p>
+        <h2 style="font-family: monospace; font-size: 24px; font-weight: normal; letter-spacing: 0.05em; color: #ff3b30; text-transform: uppercase; margin: 0 0 20px 0;">Reversal Initialized</h2>
+        <p style="font-size: 13px; line-height: 1.6; color: #ccc; font-weight: 300;">
+          A reversal protocol has been initiated for your order signal. The transaction request has been transmitted to administrative archives for verification.
+        </p>
+        <div style="background-color: #0d0d0d; border: 1px solid #1a1a1a; padding: 20px; margin: 30px 0; font-family: monospace; font-size: 12px; line-height: 1.8;">
+          <span style="color: #666;">Signal ID:</span> <span style="color: #fff;">#${signalId}</span><br/>
+          <span style="color: #666;">Status:</span> <span style="color: #ffcc00;">Under Review</span><br/>
+          <span style="color: #666;">Reason:</span> <span style="color: #fff;">${reason}</span><br/>
+          <span style="color: #666;">Details:</span> <span style="color: #aaa;">${description || 'None'}</span>
+        </div>
+        <p style="font-size: 12px; line-height: 1.6; color: #666;">
+          Your request is currently being audited. We will verify the status within 24-48 business hours.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding-top: 40px; border-top: 1px solid #111; color: #444; font-family: monospace; font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; line-height: 1.6;">
+        CHILS & CO. &copy; ${new Date().getFullYear()}<br/>
+        This is an automated transmission from the audit terminal.<br/>
+        Contact: hello.chilsandco@gmail.com
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+}
+
+// 5. Refund Confirmed (Recoupment Complete)
+function compileRefundHtml(order: any) {
+  const signalId = toSignalId(order.id);
+  return `
+<!DOCTYPE html>
+<html>
+<body style="background-color: #000000; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px;">
+  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #050505; border: 1px solid #1a1a1a; padding: 40px;">
+    <tr>
+      <td align="center" style="padding-bottom: 40px; border-bottom: 1px solid #111;">
+        <img src="${LOGO_URL}" alt="Chils & Co." style="width: 120px; height: auto;" />
+        <p style="color: #666; font-family: monospace; font-size: 8px; letter-spacing: 0.4em; text-transform: uppercase; margin: 20px 0 0 0;">Recoupment Complete</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 40px 0 20px 0;">
+        <p style="font-family: monospace; font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.2em; margin: 0 0 5px 0;">Refund Resolved</p>
+        <h2 style="font-family: monospace; font-size: 24px; font-weight: normal; letter-spacing: 0.05em; color: #D4AF37; text-transform: uppercase; margin: 0 0 20px 0;">Reversal Confirmed</h2>
+        <p style="font-size: 13px; line-height: 1.6; color: #ccc; font-weight: 300;">
+          The reversal protocol for your order signal has been authorized and resolved.
+        </p>
+        <div style="background-color: #0d0d0d; border: 1px solid #1a1a1a; padding: 20px; margin: 30px 0; font-family: monospace; font-size: 12px; line-height: 1.8;">
+          <span style="color: #666;">Signal ID:</span> <span style="color: #fff;">#${signalId}</span><br/>
+          <span style="color: #666;">Protocol:</span> <span style="color: #D4AF37;">Refunded</span><br/>
+          <span style="color: #666;">Refunding Value:</span> <span style="color: #fff;">₹${parseFloat(order.total).toLocaleString()}</span>
+        </div>
+        <p style="font-size: 12px; line-height: 1.6; color: #888; font-weight: 300;">
+          Financial recoupment has been routed back to your original source node. Funds will manifest in your account within 3-7 business cycles.
+        </p>
+      </td>
+    </tr>
+    <tr>
+      <td align="center" style="padding-top: 40px; border-top: 1px solid #111; color: #444; font-family: monospace; font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; line-height: 1.6;">
+        CHILS & CO. &copy; ${new Date().getFullYear()}<br/>
+        This is an automated transmission from the financial terminal.<br/>
+        Contact: hello.chilsandco@gmail.com
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+}
+
+// Trigger handlers
+async function triggerWelcomeEmail(email: string, firstName: string) {
+  const html = compileWelcomeHtml(email, firstName);
+  await sendEmailViaBrevo(email, firstName || "Customer", "Identity Initialized // Chils & Co.", html);
+}
+
+async function triggerOrderConfirmationEmails(order: any) {
+  if (!order) return;
+  const customerEmail = order.billing?.email;
+  const customerName = `${order.billing?.first_name || ''} ${order.billing?.last_name || ''}`.trim() || "Customer";
+  const signalId = toSignalId(order.id);
+  
+  console.log(`[CHILS & CO. EMAIL] Preparing order emails for Signal #${signalId}`);
+  
+  // 1. Send Customer Receipt
+  if (customerEmail) {
+    const customerHtml = compileOrderConfirmationHtml(order);
+    await sendEmailViaBrevo(customerEmail, customerName, `Transmission Confirmed // Signal #${signalId}`, customerHtml);
+  }
+  
+  // 2. Send Admin Sale Alert
+  const adminHtml = compileAdminNotificationHtml(order);
+  await sendEmailViaBrevo("chilsandco@gmail.com", "Chils & Co. Admin", `[ALERT] New Signal Generated // #${signalId}`, adminHtml);
+}
+
+async function triggerReturnRequestEmails(orderId: string, reason: string, description: string, products: any) {
+  console.log(`[CHILS & CO. EMAIL] Preparing return request emails for Order ${orderId}`);
+  const html = compileReturnRequestHtml(orderId, reason, description, products);
+  const signalId = toSignalId(orderId);
+  
+  // Send customer confirmation
+  const wc = getWooCommerce();
+  if (wc) {
+    try {
+      const response = await wcSafeCall(wc, "get", `orders/${orderId}`);
+      const order = response.data;
+      const customerEmail = order.billing?.email;
+      const customerName = `${order.billing?.first_name || ''} ${order.billing?.last_name || ''}`.trim() || "Customer";
+      
+      if (customerEmail) {
+        await sendEmailViaBrevo(customerEmail, customerName, `Reversal Protocol Initialized // Signal #${signalId}`, html);
+      }
+    } catch (e: any) {
+      console.error("[CHILS & CO. EMAIL] Failed to load order billing for return email:", e.message);
+    }
+  }
+
+  // Send admin alert
+  const adminSubject = `[ALERT] Reversal Requested // Signal #${signalId}`;
+  const adminHtml = `
+    <h3>Return Request Submitted</h3>
+    <p><strong>Order ID:</strong> ${orderId}</p>
+    <p><strong>Signal ID:</strong> #${signalId}</p>
+    <p><strong>Reason:</strong> ${reason}</p>
+    <p><strong>Description:</strong> ${description || 'None'}</p>
+  `;
+  await sendEmailViaBrevo("chilsandco@gmail.com", "Chils & Co. Admin", adminSubject, adminHtml);
+}
+
+async function triggerRefundEmail(order: any) {
+  if (!order) return;
+  const customerEmail = order.billing?.email;
+  const customerName = `${order.billing?.first_name || ''} ${order.billing?.last_name || ''}`.trim() || "Customer";
+  const signalId = toSignalId(order.id);
+  
+  if (customerEmail) {
+    const html = compileRefundHtml(order);
+    await sendEmailViaBrevo(customerEmail, customerName, `Reversal Confirmed // Recoupment Complete`, html);
+  }
 }
 
 // Global error handlers for production
