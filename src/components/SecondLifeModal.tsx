@@ -167,7 +167,7 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
                 Sustain Our <span className="text-accent">Unboxing Experience</span>
               </h2>
               <p className="text-[12px] leading-relaxed text-neutral-400 tracking-wide max-w-lg mt-3">
-                We have put a lot of effort and care into creating a unique unboxing experience. To help us sustain these packaging standards and offset high individual shipping charges, we kindly request you to order at least 2 T-shirts. This enables us to send them in our premium, handcrafted <span className="text-white font-medium">Second Life Box</span>. The single-tee biodegradable bag shipping option is temporarily paused.
+                We have put a lot of effort and care into creating a unique unboxing experience. To help us sustain these packaging standards and offset high individual shipping charges, we kindly request you to order at least 2 T-shirts. This enables us to send them in our premium, handcrafted <span className="text-white font-medium">Second Life Box</span>.
               </p>
 
               {/* Visual Progress Element */}
