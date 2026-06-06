@@ -57,4 +57,5 @@ export interface Signal {
     address: string;
     method: string;
   };
+  orderKey?: string;
 }
