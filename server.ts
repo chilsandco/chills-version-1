@@ -541,16 +541,22 @@ async function startServer() {
       const { amount, currency, customerDetails, lineItems } = req.body;
       const wc = getWooCommerce();
       
+      if (!req.headers.authorization) {
+        return res.status(401).json({ message: "Authentication required: Please sign in or register to place an order." });
+      }
+      
       let customerId = 0;
-      if (req.headers.authorization) {
-        // If logged in, get user ID from token
-        const token = req.headers.authorization.split(' ')[1];
-        try {
-          const decoded: any = jwt.verify(token, JWT_SECRET);
-          customerId = decoded.data?.user?.id || decoded.id || 0;
-        } catch (e) {
-          console.error("JWT verification failed for checkout:", e);
-        }
+      const token = req.headers.authorization.split(' ')[1];
+      try {
+        const decoded: any = jwt.verify(token, JWT_SECRET);
+        customerId = decoded.data?.user?.id || decoded.id || 0;
+      } catch (e) {
+        console.error("JWT verification failed for checkout:", e);
+        return res.status(401).json({ message: "Session expired: Please sign in again to place an order." });
+      }
+
+      if (customerId === 0) {
+        return res.status(401).json({ message: "Identity validation failed: A registered profile is required to check out." });
       }
 
       if (wc) {

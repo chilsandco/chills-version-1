@@ -72,6 +72,13 @@ const Checkout: React.FC = () => {
     pincode: ''
   });
 
+  // Redirect to login if not authenticated (Guest checkout disabled)
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/auth?redirect=/checkout');
+    }
+  }, [isAuthenticated, navigate]);
+
   // Load addresses and persisted form info from local storage on mount
   useEffect(() => {
     const userSuffix = user?.id || 'anon';

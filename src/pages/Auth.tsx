@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ArrowRight, CheckCircle2, AlertCircle, LogOut, Package, ExternalLink } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 
 import { Signal } from '../types';
@@ -103,6 +103,8 @@ const Orders: React.FC = () => {
 
 const Auth: React.FC = () => {
   const { login: authLogin, user, logout, isAuthenticated, token } = useAuth();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect');
   const [isRegister, setIsRegister] = useState(true);
   const [formData, setFormData] = useState({
     email: '',
@@ -197,7 +199,7 @@ const Auth: React.FC = () => {
               lastName: loginData.user.lastName || formData.last_name
             };
             authLogin(loginData.token, userWithNames);
-            setTimeout(() => navigate('/onboarding'), 1500);
+            setTimeout(() => navigate(redirectTo || '/onboarding'), 1500);
           } else {
             setTimeout(() => {
               setIsRegister(false);
@@ -210,6 +212,9 @@ const Auth: React.FC = () => {
       } else {
         if (data.token && data.user) {
           authLogin(data.token, data.user);
+          if (redirectTo) {
+            navigate(redirectTo);
+          }
         } else {
           throw new Error('Invalid login response');
         }
