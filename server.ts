@@ -11,6 +11,7 @@ import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest, CallbackType } from 'pg-sdk-node';
+import { NextFunction } from 'express';
 
 dotenv.config();
 
@@ -1938,6 +1939,21 @@ async function startServer() {
     }
   });
   
+  // Invoice Print Redirect – handles WooCommerce PDF generation
+  app.get('/', async (req, res, next) => {
+    const { "print-order": printOrder, "print-order-type": printType, order_key } = req.query as any;
+    if (printOrder && printType && order_key) {
+      const orderId = String(printOrder);
+      if (!/^\d+$/.test(orderId)) {
+        return res.status(400).send('Invalid order ID');
+      }
+      const wcUrl = `${process.env.WOOCOMMERCE_URL || 'https://www.chilsandco.com'}/wp-admin/admin-ajax.php`;
+      const redirect = `${wcUrl}?action=print_invoice&order_id=${orderId}&order_key=${order_key}`;
+      console.log(`[CHILS & CO.] Redirecting invoice request → ${redirect}`);
+      return res.redirect(302, redirect);
+    }
+    next();
+  });
   // API Fallback - Catches any unmatched /api routes and returns JSON instead of HTML
   app.all("/api/*", (req, res) => {
     console.warn(`[CHILS DEBUG] Unmatched API path: ${req.method} ${req.url}`);
