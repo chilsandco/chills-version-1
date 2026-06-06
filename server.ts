@@ -467,8 +467,7 @@ async function startServer() {
         shipping: {
           address: order.shipping ? `${order.shipping.address_1 || ""}${order.shipping.address_1 && order.shipping.city ? ", " : ""}${order.shipping.city || ""}` : "No address provided",
           method: shippingLines[0]?.method_title || "Standard Delivery"
-        },
-        orderKey: order.order_key
+        }
       };
     } catch (err) {
       console.error("[CHILS & CO.] Error mapping order to signal:", err);
@@ -1742,8 +1741,7 @@ async function startServer() {
         status: order.status,
         total: order.total,
         currency: order.currency,
-        date_created: order.date_created,
-        orderKey: order.order_key
+        date_created: order.date_created
       });
     } catch (error) {
       console.error("[CHILS & CO.] Public Status Error:", error);
