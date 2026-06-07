@@ -52,7 +52,7 @@ const SEO: React.FC<SEOProps> = ({
           "url": "https://chilsandco.com",
           "logo": "https://chilsandco.com/logo.png",
           "sameAs": [
-            "https://instagram.com/chilsandco",
+            "https://www.instagram.com/chils_and_co/",
             "https://facebook.com/chilsandco"
           ]
         })}

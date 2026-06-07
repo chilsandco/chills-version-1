@@ -13,11 +13,11 @@ interface SocialNode {
 }
 
 const socialNodes: SocialNode[] = [
-  { id: 'instagram', name: 'Instagram', icon: Instagram, link: 'https://instagram.com/chilsandco' },
+  { id: 'instagram', name: 'Instagram', icon: Instagram, link: 'https://www.instagram.com/chils_and_co/' },
   { id: 'twitter', name: 'Twitter', icon: Twitter, link: 'https://twitter.com/chilsandco' },
   { id: 'discord', name: 'Discord', icon: MessageSquare, link: 'https://discord.gg/chils' },
   { id: 'facebook', name: 'Facebook', icon: Facebook, link: 'https://facebook.com/chilsandco' },
-  { id: 'youtube', name: 'YouTube', icon: Youtube, link: 'https://youtube.com/@chilsandco' },
+  { id: 'youtube', name: 'YouTube', icon: Youtube, link: 'https://www.youtube.com/@chils_and_co' },
   { id: 'spotify', name: 'Spotify', icon: Music, link: 'https://spotify.com' },
   { id: 'pinterest', name: 'Pinterest', icon: Compass, link: 'https://pinterest.com/chilsandco' },
   { id: 'email', name: 'Email', icon: Mail, link: 'mailto:hello.chilsandco@gmail.com' },
