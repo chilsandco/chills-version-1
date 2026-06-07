@@ -374,7 +374,9 @@ async function startServer() {
         .replace(/&#039;/g, "'")
         .replace(/&nbsp;/g, ' ')
         .replace(/&mdash;/g, '—')
-        .replace(/&ndash;/g, '–');
+        .replace(/&ndash;/g, '–')
+        .replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(parseInt(dec, 10)))
+        .replace(/&#x([0-9a-fA-F]+);/g, (match, hex) => String.fromCharCode(parseInt(hex, 16)));
     };
 
     // Strip HTML tags while preserving useful spacing from WordPress content.
