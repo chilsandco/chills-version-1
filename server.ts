@@ -424,7 +424,8 @@ async function startServer() {
       status: wcProduct.stock_status === "instock" ? "Available" : "Coming Soon",
       totalSales: parseInt(wcProduct.total_sales || "0", 10),
       stockQuantity: wcProduct.stock_quantity || 0,
-      coCreator: coCreator
+      coCreator: coCreator,
+      featured: !!wcProduct.featured
     };
   };
 

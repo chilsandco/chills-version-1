@@ -14,6 +14,7 @@ export interface Product {
   coCreator?: string;
   totalSales?: number;
   stockQuantity?: number;
+  featured?: boolean;
 }
 
 export interface CartItem extends Product {

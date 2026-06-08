@@ -513,21 +513,27 @@ const Home: React.FC = () => {
               <div key={i} className="aspect-[3/4] bg-white/5 animate-pulse" />
             ))
           ) : (
-            products.slice(0, 4).map((product, i) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 80, scale: 0.98, filter: 'blur(5px)' }}
-                whileInView={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ 
-                  duration: 2, 
-                  delay: i * 0.2, 
-                  ease: [0.22, 1, 0.36, 1] 
-                }}
-              >
-                <ProductCard product={product} />
-              </motion.div>
-            ))
+            (() => {
+              const featured = products.filter(p => p.featured);
+              const regular = products.filter(p => !p.featured);
+              const displayProducts = [...featured, ...regular].slice(0, 4);
+              
+              return displayProducts.map((product, i) => (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 80, scale: 0.98, filter: 'blur(5px)' }}
+                  whileInView={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
+                  viewport={{ once: true, margin: "-50px" }}
+                  transition={{ 
+                    duration: 2, 
+                    delay: i * 0.2, 
+                    ease: [0.22, 1, 0.36, 1] 
+                  }}
+                >
+                  <ProductCard product={product} />
+                </motion.div>
+              ));
+            })()
           )}
         </div>
 
