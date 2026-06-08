@@ -45,17 +45,34 @@ const MagnifiedImageCard: React.FC<MagnifiedImageCardProps> = ({
   };
 
   const getColSpan = (i: number, tot: number) => {
-    if (tot <= 2) return "md:col-span-1";
-    if (tot === 3) {
-      return i === 0 ? "md:col-span-2" : "md:col-span-1";
+    if (tot <= 1) return "md:col-span-2";
+    if (tot === 2) return "md:col-span-1";
+    
+    const layouts: string[] = [];
+    let remaining = tot;
+    let nextType = 'full';
+    
+    while (remaining > 0) {
+      if (remaining === 1) {
+        layouts.push('full');
+        remaining -= 1;
+      } else if (remaining === 2) {
+        layouts.push('half', 'half');
+        remaining -= 2;
+      } else {
+        if (nextType === 'full') {
+          layouts.push('full');
+          remaining -= 1;
+          nextType = 'half';
+        } else {
+          layouts.push('half', 'half');
+          remaining -= 2;
+          nextType = 'full';
+        }
+      }
     }
-    if (tot === 4) {
-      return (i === 0 || i === 3) ? "md:col-span-2" : "md:col-span-1";
-    }
-    if (tot === 5) {
-      return (i === 0 || i === 3 || i === 4) ? "md:col-span-2" : "md:col-span-1";
-    }
-    return i % 3 === 0 ? "md:col-span-2" : "md:col-span-1";
+    
+    return layouts[i] === 'full' ? "md:col-span-2" : "md:col-span-1";
   };
 
   const zoomFactor = 2.2;
