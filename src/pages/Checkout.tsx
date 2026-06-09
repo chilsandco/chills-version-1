@@ -889,15 +889,18 @@ const Checkout: React.FC = () => {
                   className="w-full bg-white text-black py-6 text-[12px] tracking-[0.4em] font-bold uppercase hover:bg-accent transition-all duration-500 flex flex-col items-center justify-center gap-2 relative overflow-hidden group disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <div className="absolute inset-0 bg-accent translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
-                  <div className="relative z-10 flex items-center gap-3">
+                  <div className="relative z-10 flex items-center gap-4">
                     {isProcessing ? (
                       <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
                         <Share2 size={16} />
                       </motion.div>
                     ) : (
-                      <CreditCard size={18} />
+                      <CreditCard size={18} className="text-black" />
                     )}
-                    <span>Initiate Extraction</span>
+                    <div className="flex flex-col items-start text-left">
+                      <span className="text-[8px] uppercase tracking-[0.25em] text-neutral-500 group-hover:text-black/50 transition-colors block mb-0.5 font-bold font-sans leading-none">Initiate Extraction</span>
+                      <span className="text-[16px] uppercase tracking-[0.3em] font-extrabold text-black leading-none">CHECK OUT</span>
+                    </div>
                   </div>
                   {!isProcessing && (
                     <span className="relative z-10 text-[8px] opacity-40 font-bold group-hover:opacity-100 transition-opacity">
