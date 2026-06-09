@@ -1,8 +1,64 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import { motion, useAnimation } from 'motion/react';
 import { ArrowRight, CheckCircle2, AlertCircle, LogOut, Package, ExternalLink } from 'lucide-react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
+
+const WinkingEye: React.FC<{ isVisible: boolean; onClick: () => void }> = ({ isVisible, onClick }) => {
+  const controls = useAnimation();
+
+  useEffect(() => {
+    if (isVisible) return;
+
+    const interval = setInterval(async () => {
+      // Winking blink sequence
+      await controls.start({
+        d: "M2 11C6 16 18 16 22 11",
+        transition: { duration: 0.12, ease: "easeInOut" }
+      });
+      await controls.start({
+        d: "M2 12C5 6 19 6 22 12C19 18 5 18 2 12Z",
+        transition: { duration: 0.12, ease: "easeInOut" }
+      });
+    }, 4500);
+
+    return () => clearInterval(interval);
+  }, [isVisible, controls]);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors focus:outline-none p-1.5 z-10 cursor-pointer"
+      aria-label={isVisible ? "Hide password" : "Show password"}
+    >
+      <svg
+        width="18"
+        height="18"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <motion.circle
+          cx="12"
+          cy="12"
+          r="3"
+          fill="currentColor"
+          animate={isVisible ? { scale: 0, opacity: 0 } : { scale: 1, opacity: 1 }}
+          transition={{ duration: 0.15 }}
+        />
+        <motion.path
+          animate={isVisible ? { d: "M2 11C6 16 18 16 22 11" } : controls}
+          initial={{ d: "M2 12C5 6 19 6 22 12C19 18 5 18 2 12Z" }}
+          transition={{ duration: 0.2, ease: "easeInOut" }}
+        />
+      </svg>
+    </button>
+  );
+};
 
 import { Signal } from '../types';
 
@@ -115,6 +171,7 @@ const Auth: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   // --- Admin panel state (always declared at top level — React Rules of Hooks) ---
@@ -532,13 +589,16 @@ const Auth: React.FC = () => {
 
                 <div className="space-y-2">
                   <label className="text-[10px] tracking-widest text-white/40 uppercase">Password</label>
-                  <input 
-                    type="password" 
-                    required
-                    className="w-full bg-white/5 border border-white/10 px-4 py-3 text-sm focus:border-white outline-none transition-colors"
-                    value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                  />
+                  <div className="relative">
+                    <input 
+                      type={showPassword ? "text" : "password"} 
+                      required
+                      className="w-full bg-white/5 border border-white/10 pl-4 pr-10 py-3 text-sm focus:border-white outline-none transition-colors"
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                    />
+                    <WinkingEye isVisible={showPassword} onClick={() => setShowPassword(!showPassword)} />
+                  </div>
                 </div>
               </div>
 
