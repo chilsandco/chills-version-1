@@ -600,6 +600,19 @@ const Auth: React.FC = () => {
                     <WinkingEye isVisible={showPassword} onClick={() => setShowPassword(!showPassword)} />
                   </div>
                 </div>
+
+                {!isRegister && (
+                  <div className="text-right">
+                    <a 
+                      href="https://api.chilsandco.com/wp-login.php?action=lostpassword"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[10px] tracking-widest text-white/40 uppercase hover:text-white transition-colors"
+                    >
+                      Forgot Password?
+                    </a>
+                  </div>
+                )}
               </div>
 
               <button 
