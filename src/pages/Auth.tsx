@@ -174,6 +174,67 @@ const Auth: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
+  const handleGoogleCallback = async (response: any) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const googleResponse = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: response.credential })
+      });
+      const data = await googleResponse.json();
+      if (!googleResponse.ok) {
+        throw new Error(data.message || 'Google authentication failed.');
+      }
+
+      if (data.token && data.user) {
+        authLogin(data.token, data.user);
+        if (redirectTo) {
+          navigate(redirectTo);
+        } else {
+          navigate('/');
+        }
+      } else {
+        throw new Error('Invalid login response from system.');
+      }
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    const initializeGoogle = () => {
+      if ((window as any).google?.accounts?.id) {
+        (window as any).google.accounts.id.initialize({
+          client_id: '162390818288-j2fcothougcpmok54mojqmn7fq2i5goc.apps.googleusercontent.com',
+          callback: handleGoogleCallback,
+        });
+        
+        const btnContainer = document.getElementById('google-btn-container');
+        if (btnContainer) {
+          (window as any).google.accounts.id.renderButton(btnContainer, {
+            theme: 'outline',
+            size: 'large',
+            width: btnContainer.clientWidth || 384,
+            text: isRegister ? 'signup_with' : 'signin_with',
+          });
+        }
+      }
+    };
+
+    if ((window as any).google?.accounts?.id) {
+      initializeGoogle();
+    } else {
+      const script = document.querySelector('script[src*="gsi/client"]');
+      if (script) {
+        script.addEventListener('load', initializeGoogle);
+      }
+    }
+  }, [isRegister]);
+
   // --- Admin panel state (always declared at top level — React Rules of Hooks) ---
   const [showSettingsEditor, setShowSettingsEditor] = useState(false);
   const [globalSettings, setGlobalSettings] = useState({
@@ -623,6 +684,14 @@ const Auth: React.FC = () => {
                 {loading ? 'PROCESSING...' : (isRegister ? 'JOIN COMMUNITY' : 'LOG IN')}
                 <ArrowRight size={16} />
               </button>
+
+              {/* Google OAuth Button Container */}
+              <div className="space-y-4 pt-4 border-t border-white/5">
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-black px-2 text-white/30 tracking-[0.2em] font-mono text-[9px]">OR CONTINUE WITH</span>
+                </div>
+                <div id="google-btn-container" className="w-full flex justify-center h-[44px] mt-2" />
+              </div>
 
               <div className="text-center mt-8">
                 <button 

@@ -1045,6 +1045,164 @@ async function startServer() {
     }
   });
 
+  app.post("/api/auth/google", async (req, res) => {
+    try {
+      const { idToken } = req.body;
+      if (!idToken) {
+        return res.status(400).json({ message: "Token is required for verification." });
+      }
+
+      const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "162390818288-j2fcothougcpmok54mojqmn7fq2i5goc.apps.googleusercontent.com";
+
+      // Verify Google token via Google API
+      console.log("[CHILS & CO.] Verifying Google token...");
+      const verifyRes = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`).catch(err => {
+        console.error("Google verify token request failed:", err.message);
+        throw new Error("Invalid or expired Google authentication token.");
+      });
+
+      const payload = verifyRes.data;
+
+      // Security check: Verify audience matches our Client ID
+      if (payload.aud !== GOOGLE_CLIENT_ID) {
+        console.error(`Google token audience mismatch. Expected: ${GOOGLE_CLIENT_ID}, Got: ${payload.aud}`);
+        return res.status(400).json({ message: "Security validation failed: Google credentials mismatch." });
+      }
+
+      const email = (payload.email || "").toLowerCase().trim();
+      const firstName = payload.given_name || "";
+      const lastName = payload.family_name || "";
+
+      if (!email) {
+        return res.status(400).json({ message: "Google profile does not provide a valid email address." });
+      }
+
+      const wc = getWooCommerce();
+      let customerId = 0;
+      let customer = null;
+
+      if (wc) {
+        try {
+          console.log(`[CHILS & CO.] Searching WooCommerce for email: ${email}`);
+          const search = await wcSafeCall(wc, "get", "customers", { email });
+          if (search && Array.isArray(search.data) && search.data.length > 0) {
+            customer = search.data[0];
+            customerId = customer.id;
+            console.log(`[CHILS & CO.] Found existing customer matching Google login: ${customerId}`);
+          }
+        } catch (err) {
+          console.error("[CHILS & CO.] Error searching customer by email:", err);
+        }
+
+        // If customer doesn't exist, create a new one in WooCommerce
+        if (!customer) {
+          try {
+            console.log(`[CHILS & CO.] Customer not found. Creating WooCommerce account for: ${email}`);
+            const newCustomerData = {
+              email,
+              first_name: firstName,
+              last_name: lastName,
+              username: email.split('@')[0]
+            };
+            const response = await wcSafeCall(wc, "post", "customers", newCustomerData);
+            customer = response.data;
+            customerId = customer.id;
+            console.log(`[CHILS & CO.] Successfully created WooCommerce customer: ${customerId}`);
+
+            // Async trigger Welcome Email (non-blocking)
+            triggerWelcomeEmail(email, firstName).catch(err => {
+              console.error("[CHILS & CO. EMAIL] Google Welcome email failed:", err);
+            });
+          } catch (createErr: any) {
+            console.error("[CHILS & CO.] WooCommerce account auto-creation failed:", createErr.response?.data || createErr.message);
+            // If they registered in WordPress directly but not WooCommerce customer table (rare edge case), recover
+            if (createErr.response?.data?.code === 'registration-error-email-exists') {
+              const finalSearch = await wcSafeCall(wc, "get", "customers", { search: email });
+              const exactMatch = Array.isArray(finalSearch.data) 
+                ? finalSearch.data.find((c: any) => c.email?.toLowerCase() === email)
+                : null;
+              if (exactMatch) {
+                customer = exactMatch;
+                customerId = customer.id;
+              }
+            }
+            if (!customerId) {
+              return res.status(500).json({ message: "Failed to initialize WooCommerce identity." });
+            }
+          }
+        }
+      }
+
+      // Fetch customer metadata if they exist
+      let onWaitlist = false;
+      let bespokeUnlocked = false;
+      let coCreatorInterest = false;
+      let pseudoName = "";
+
+      if (customer) {
+        const getMetaValue = (metaData: any[], key: string) => {
+          const match = metaData?.find((m: any) => {
+            const k = String(m.key).toLowerCase();
+            return k === key || k === `_${key}` || k === key.replace(/_/g, '-');
+          });
+          return match?.value;
+        };
+
+        const isTrue = (val: any) => {
+          if (val === true || val === 1 || val === '1') return true;
+          if (typeof val === 'string') {
+            const v = val.trim().toLowerCase();
+            return v === 'true' || v === 'yes' || v === 'on' || v === 'active';
+          }
+          return false;
+        };
+
+        onWaitlist = isTrue(getMetaValue(customer.meta_data, "bespoke_waitlist"));
+        bespokeUnlocked = isTrue(getMetaValue(customer.meta_data, "bespoke_unlocked"));
+        coCreatorInterest = isTrue(getMetaValue(customer.meta_data, "co_creator_interest"));
+        pseudoName = getMetaValue(customer.meta_data, "pseudo_name") || '';
+      }
+
+      // Sign JWT Auth Token
+      const userPayload = {
+        id: customerId,
+        email: email,
+        username: email.split('@')[0],
+        displayName: `${firstName} ${lastName}`.trim(),
+        firstName,
+        lastName,
+        onWaitlist,
+        bespokeUnlocked,
+        coCreatorInterest,
+        pseudoName
+      };
+
+      const locallySignedToken = jwt.sign(userPayload, JWT_SECRET, { expiresIn: '30d' });
+
+      res.json({
+        token: locallySignedToken,
+        user: {
+          id: customerId,
+          email: email,
+          username: email.split('@')[0],
+          first_name: firstName,
+          last_name: lastName,
+          firstName,
+          lastName,
+          onWaitlist,
+          bespokeUnlocked,
+          coCreatorInterest,
+          pseudoName
+        },
+        message: "Google authentication successful"
+      });
+
+    } catch (error: any) {
+      console.error("Google Auth Server Error:", error);
+      res.status(400).json({ message: error.message || "Google authentication failed." });
+    }
+  });
+
   app.post("/api/bespoke/waitlist", async (req, res) => {
     try {
       const { email: rawEmail, pseudoName } = req.body;
