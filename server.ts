@@ -420,7 +420,14 @@ async function startServer() {
       material: attributes.find((a: any) => a.name?.toLowerCase() === "material")?.options?.[0] || "Premium technical fabric.",
       fit: attributes.find((a: any) => a.name?.toLowerCase() === "fit")?.options?.[0] || "Regular fit.",
       care: attributes.find((a: any) => a.name?.toLowerCase() === "care")?.options?.[0] || "Machine wash cold.",
-      images: images.map((img: any) => img.src).filter(Boolean),
+      images: images.map((img: any) => {
+        const src = img.src;
+        if (!src) return '';
+        if (src.includes('wp-content/uploads')) {
+          return `/api/media?url=${encodeURIComponent(src)}`;
+        }
+        return src;
+      }).filter(Boolean),
       status: wcProduct.stock_status === "instock" ? "Available" : "Coming Soon",
       totalSales: parseInt(wcProduct.total_sales || "0", 10),
       stockQuantity: wcProduct.stock_quantity || 0,
@@ -2121,6 +2128,41 @@ async function startServer() {
     }
     next();
   });
+  app.get("/api/media", async (req, res) => {
+    try {
+      const imageUrl = req.query.url;
+      if (!imageUrl || typeof imageUrl !== 'string') {
+        return res.status(400).send("URL is required");
+      }
+
+      // Security validation to prevent SSRF: Only proxy from our configured WooCommerce domain
+      const targetDomain = new URL(imageUrl).hostname;
+      const allowedDomain = new URL(process.env.WOOCOMMERCE_URL || 'https://api.chilsandco.com').hostname;
+      if (targetDomain !== allowedDomain && !targetDomain.endsWith(allowedDomain)) {
+        console.warn(`[CHILS MEDIA PROXY] Blocked SSRF attempt to non-allowed domain: ${targetDomain}`);
+        return res.status(403).send("Forbidden: Domain not whitelisted");
+      }
+
+      console.log(`[CHILS MEDIA PROXY] Fetching image from WooCommerce: ${imageUrl}`);
+      const response = await axios.get(imageUrl, {
+        responseType: 'arraybuffer',
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+        },
+        timeout: 8000
+      });
+
+      res.setHeader('Content-Type', response.headers['content-type'] || 'image/png');
+      res.setHeader('Cache-Control', 'public, max-age=86400');
+      res.send(response.data);
+    } catch (err: any) {
+      console.error(`[CHILS MEDIA PROXY] Proxy failed for ${req.query.url}: ${err.message}`);
+      // Fallback redirect to high-quality branding logo placeholder
+      res.redirect("https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png");
+    }
+  });
+
   // API Fallback - Catches any unmatched /api routes and returns JSON instead of HTML
   app.all("/api/*", (req, res) => {
     console.warn(`[CHILS DEBUG] Unmatched API path: ${req.method} ${req.url}`);
