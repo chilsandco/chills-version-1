@@ -24,6 +24,7 @@ interface Address {
   city: string;
   state: string;
   pincode: string;
+  phone?: string;
 }
 
 const Checkout: React.FC = () => {
@@ -69,7 +70,8 @@ const Checkout: React.FC = () => {
     address: '',
     city: '',
     state: '',
-    pincode: ''
+    pincode: '',
+    phone: ''
   });
 
   // Redirect to login if not authenticated (Guest checkout disabled)
@@ -137,7 +139,8 @@ const Checkout: React.FC = () => {
         address: selected.address,
         city: selected.city,
         state: selected.state,
-        pincode: selected.pincode
+        pincode: selected.pincode,
+        phone: selected.phone || prev.phone
       }));
     }
   }, [selectedAddressId, addresses]);
@@ -182,11 +185,15 @@ const Checkout: React.FC = () => {
 
     setShowAddressForm(false);
     setEditingAddressId(null);
-    setAddressFormData({ label: '', type: 'other', address: '', city: '', state: '', pincode: '' });
+    setAddressFormData({ label: '', type: 'other', address: '', city: '', state: '', pincode: '', phone: '' });
   };
 
   const deleteAddress = (id: string) => {
-    const updated = addresses.filter(a => a.id !== id);
+    let updated = addresses.filter(a => a.id !== id);
+    const wasDefault = addresses.find(a => a.id === id)?.isDefault;
+    if (wasDefault && updated.length > 0) {
+      updated = updated.map((a, index) => index === 0 ? { ...a, isDefault: true } : a);
+    }
     setAddresses(updated);
     localStorage.setItem(`chils_addresses_${user?.id || 'anon'}`, JSON.stringify(updated));
     if (selectedAddressId === id) setSelectedAddressId(updated[0]?.id || null);
@@ -199,7 +206,8 @@ const Checkout: React.FC = () => {
       address: addr.address,
       city: addr.city,
       state: addr.state,
-      pincode: addr.pincode
+      pincode: addr.pincode,
+      phone: addr.phone || ''
     });
     setEditingAddressId(addr.id);
     setShowAddressForm(true);
@@ -517,7 +525,7 @@ const Checkout: React.FC = () => {
                   {addresses.length > 0 && !showAddressForm && (
                     <button
                       type="button"
-                      onClick={() => { setShowAddressForm(true); setEditingAddressId(null); setAddressFormData({ label:'', type:'other', address:'', city:'', state:'', pincode:'' }); }}
+                      onClick={() => { setShowAddressForm(true); setEditingAddressId(null); setAddressFormData({ label:'', type:'other', address:'', city:'', state:'', pincode:'', phone:'' }); }}
                       className="ml-3 text-[9px] uppercase tracking-[0.2em] font-bold text-neutral-500 hover:text-accent transition-colors flex items-center gap-1.5 group"
                     >
                       <Plus size={9} className="group-hover:rotate-90 transition-transform" />
@@ -600,18 +608,22 @@ const Checkout: React.FC = () => {
                                     >
                                       <Settings size={10} />
                                     </button>
-                                    {!addr.isDefault && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => { e.stopPropagation(); deleteAddress(addr.id); }}
-                                        className="p-1.5 bg-neutral-900 rounded-sm hover:text-red-500 transition-colors"
-                                      >
-                                        <Trash size={10} />
-                                      </button>
-                                    )}
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); deleteAddress(addr.id); }}
+                                      className="p-1.5 bg-neutral-900 rounded-sm hover:text-red-500 transition-colors"
+                                    >
+                                      <Trash size={10} />
+                                    </button>
                                   </div>
                                 </div>
-                                <p className="text-xs font-mono leading-relaxed mb-4 text-white/60">{addr.address}, {addr.city}</p>
+                                <p className="text-xs font-mono leading-relaxed mb-2 text-white/60">{addr.address}, {addr.city}</p>
+                                {addr.phone && (
+                                  <p className="text-[10px] font-mono text-neutral-500 mb-4 flex items-center gap-1.5">
+                                    <Phone size={10} className="text-neutral-600" />
+                                    <span>{addr.phone}</span>
+                                  </p>
+                                )}
                                 <div className="flex items-center justify-between pt-3 border-t border-neutral-900/50">
                                   <p className="text-[9px] uppercase tracking-[0.2em] text-neutral-600 font-bold">{addr.state} • {addr.pincode}</p>
                                   {selectedAddressId === addr.id && (
@@ -719,6 +731,17 @@ const Checkout: React.FC = () => {
                               onChange={handleAddressInputChange}
                               className="w-full bg-transparent border-b border-neutral-900 py-3 px-0 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
                               placeholder="000000"
+                            />
+                          </div>
+                          <div className="space-y-3">
+                            <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Contact Phone Number</label>
+                            <input
+                              type="tel"
+                              name="phone"
+                              value={addressFormData.phone}
+                              onChange={handleAddressInputChange}
+                              className="w-full bg-transparent border-b border-neutral-900 py-3 px-0 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
+                              placeholder="+91 XXXXXXXXXX (optional)"
                             />
                           </div>
                         </div>
