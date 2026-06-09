@@ -15,7 +15,7 @@ const SEO: React.FC<SEOProps> = ({
   description = "Chils & Co. delivers high-end bespoke garments and luxury ready-to-wear. Handcrafted precision for the modern individual.",
   canonical = "https://chilsandco.com",
   ogType = "website",
-  ogImage = "https://chilsandco.com/og-image.jpg",
+  ogImage = "https://res.cloudinary.com/ddatd5ruz/image/upload/v1781014185/chils_main_logo_transparent_ab7vru.png",
   keywords = "luxury fashion, bespoke tailoring, handcrafted garments, Chils and Co, custom suits, high-end menswear"
 }) => {
   const siteName = "CHILS & CO.";
@@ -50,7 +50,7 @@ const SEO: React.FC<SEOProps> = ({
           "@type": "Organization",
           "name": siteName,
           "url": "https://chilsandco.com",
-          "logo": "https://chilsandco.com/logo.png",
+          "logo": "https://res.cloudinary.com/ddatd5ruz/image/upload/v1781014185/chils_main_logo_transparent_ab7vru.png",
           "sameAs": [
             "https://www.instagram.com/chils_and_co/",
             "https://facebook.com/chilsandco"
