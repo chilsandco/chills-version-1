@@ -29,7 +29,7 @@ const WinkingEye: React.FC<{ isVisible: boolean; onClick: () => void }> = ({ isV
     <button
       type="button"
       onClick={onClick}
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white transition-colors focus:outline-none p-1.5 z-10 cursor-pointer"
+      className="text-white/40 hover:text-white transition-colors focus:outline-none p-1.5 z-10 cursor-pointer shrink-0"
       aria-label={isVisible ? "Hide password" : "Show password"}
     >
       <svg
@@ -589,11 +589,11 @@ const Auth: React.FC = () => {
 
                 <div className="space-y-2">
                   <label className="text-[10px] tracking-widest text-white/40 uppercase">Password</label>
-                  <div className="relative">
+                  <div className="flex items-center gap-3">
                     <input 
                       type={showPassword ? "text" : "password"} 
                       required
-                      className="w-full bg-white/5 border border-white/10 pl-4 pr-10 py-3 text-sm focus:border-white outline-none transition-colors"
+                      className="flex-1 bg-white/5 border border-white/10 px-4 py-3 text-sm focus:border-white outline-none transition-colors"
                       value={formData.password}
                       onChange={(e) => setFormData({...formData, password: e.target.value})}
                     />
