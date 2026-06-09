@@ -507,7 +507,20 @@ const Home: React.FC = () => {
 
       {/* Collection Preview - Cinematic Reveal */}
       <section className="py-16 md:py-20 px-6 md:px-12 max-w-[1800px] mx-auto overflow-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-32">
+        
+        {/* Active Inventory Counter Header */}
+        {!loading && products.length > 0 && (
+          <div className="flex justify-between items-center mb-8 border-b border-white/5 pb-4">
+            <span className="text-neutral-500 text-[10px] uppercase tracking-[0.4em] font-mono">
+              Showing 4 of {products.length} Available Designs
+            </span>
+            <Link to="/collection" className="text-accent hover:text-white text-[10px] uppercase tracking-[0.3em] font-bold transition-colors">
+              View All
+            </Link>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
           {loading ? (
             Array(4).fill(0).map((_, i) => (
               <div key={i} className="aspect-[3/4] bg-white/5 animate-pulse" />
@@ -537,6 +550,19 @@ const Home: React.FC = () => {
           )}
         </div>
 
+        {/* Centered CTA Button */}
+        {!loading && products.length > 0 && (
+          <div className="flex justify-center mb-24">
+            <Link 
+              to="/collection" 
+              className="group relative px-16 py-6 border border-accent/30 text-accent text-[11px] tracking-[0.5em] font-bold uppercase transition-all duration-500 hover:border-accent hover:bg-accent hover:text-black rounded-sm overflow-hidden flex items-center gap-4"
+            >
+              Explore All {products.length} Designs
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform duration-500" />
+            </Link>
+          </div>
+        )}
+
         <div className="flex flex-col md:flex-row justify-between items-end gap-12">
           <motion.div
             initial={{ opacity: 0, x: -60, filter: 'blur(10px)' }}
@@ -553,26 +579,6 @@ const Home: React.FC = () => {
               A precise exploration of form and function. <br />
               Engineered by those who build systems. Worn by those who understand them.
             </p>
-          </motion.div>
-          
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1.5, delay: 0.6, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <Link 
-              to="/collection" 
-              className="group flex items-center gap-6 text-[13px] uppercase tracking-[0.4em] font-bold border-b border-white/10 pb-4 hover:border-white transition-all duration-1000"
-            >
-              Explore All 
-              <motion.div
-                whileHover={{ x: 5 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-              >
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-3 transition-transform duration-1000" />
-              </motion.div>
-            </Link>
           </motion.div>
         </div>
       </section>
