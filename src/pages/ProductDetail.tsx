@@ -164,6 +164,14 @@ const MagnifiedImageCard: React.FC<MagnifiedImageCardProps> = ({
   );
 };
 
+const sizeAdvisories: Record<string, { fit: string; chest: string; length: string; shoulder: string; note: string }> = {
+  S: { fit: 'Slim fit', chest: '38.5"', length: '28"', shoulder: '16.25"', note: 'Ideal for a structured, close-to-body silhouette. If you prefer a dropped shoulder look, consider M.' },
+  M: { fit: 'Standard fit', chest: '40.5"', length: '28.5"', shoulder: '16.75"', note: 'The standard system design. Balanced torso drape and structured shoulder line.' },
+  L: { fit: 'Relaxed fit', chest: '42.5"', length: '29"', shoulder: '17.25"', note: 'Oversized aesthetic. Features dropped shoulders, a wider chest, and a longer hem drop.' },
+  XL: { fit: 'Loose fit', chest: '45.5"', length: '29.5"', shoulder: '17.75"', note: 'Highly relaxed torso line for an ultra-oversized silhouette.' },
+  '2XL': { fit: 'Extra relaxed', chest: '48.5"', length: '30"', shoulder: '18.25"', note: 'Maximum volume, room, and drape for an extremely relaxed profile.' }
+};
+
 const ProductDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -621,9 +629,78 @@ const ProductDetail: React.FC = () => {
                   </motion.button>
                 ))}
               </div>
-              <p className="text-[10px] text-neutral-600 uppercase tracking-widest mb-4">
-                Model is 5'9" wearing size M for a standard fit.
-              </p>
+              <AnimatePresence mode="wait">
+                {selectedSize ? (
+                  <motion.div
+                    key={selectedSize}
+                    initial={{ opacity: 0, height: 0, y: -10 }}
+                    animate={{ opacity: 1, height: 'auto', y: 0 }}
+                    exit={{ opacity: 0, height: 0, y: -10 }}
+                    transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                    className="overflow-hidden mb-6"
+                  >
+                    <div className="border border-accent/20 bg-neutral-950 p-4 rounded-sm relative mt-2">
+                      {/* Corner technical accents */}
+                      <div className="absolute top-0 left-0 w-2 h-[1px] bg-accent" />
+                      <div className="absolute top-0 left-0 w-[1px] h-2 bg-accent" />
+                      <div className="absolute bottom-0 right-0 w-2 h-[1px] bg-accent" />
+                      <div className="absolute bottom-0 right-0 w-[1px] h-2 bg-accent" />
+
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-[9px] font-mono tracking-[0.3em] text-accent uppercase font-bold">
+                          Size Profile: {selectedSize}
+                        </span>
+                        <span className="text-[9px] font-mono tracking-[0.1em] text-white/50 uppercase px-2 py-0.5 border border-white/10 rounded-sm">
+                          {sizeAdvisories[selectedSize].fit}
+                        </span>
+                      </div>
+
+                      {/* Technical specifications grid */}
+                      <div className="grid grid-cols-3 gap-4 border-y border-white/5 py-3 mb-3 text-center">
+                        <div>
+                          <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Chest</p>
+                          <motion.p 
+                            animate={{ opacity: [0.5, 1, 0.8, 1], textShadow: ["none", "0 0 8px rgba(212,175,55,0.4)", "none"] }}
+                            transition={{ duration: 0.3 }}
+                            className="font-mono text-sm text-white"
+                          >
+                            {sizeAdvisories[selectedSize].chest}
+                          </motion.p>
+                        </div>
+                        <div>
+                          <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Length</p>
+                          <motion.p 
+                            animate={{ opacity: [0.5, 1, 0.8, 1], textShadow: ["none", "0 0 8px rgba(212,175,55,0.4)", "none"] }}
+                            transition={{ duration: 0.3, delay: 0.05 }}
+                            className="font-mono text-sm text-white"
+                          >
+                            {sizeAdvisories[selectedSize].length}
+                          </motion.p>
+                        </div>
+                        <div>
+                          <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Shoulder</p>
+                          <motion.p 
+                            animate={{ opacity: [0.5, 1, 0.8, 1], textShadow: ["none", "0 0 8px rgba(212,175,55,0.4)", "none"] }}
+                            transition={{ duration: 0.3, delay: 0.1 }}
+                            className="font-mono text-sm text-white"
+                          >
+                            {sizeAdvisories[selectedSize].shoulder}
+                          </motion.p>
+                        </div>
+                      </div>
+
+                      {/* Fitting advisory note */}
+                      <p className="text-[11px] text-neutral-400 font-light leading-relaxed">
+                        {sizeAdvisories[selectedSize].note}
+                      </p>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <p className="text-[10px] text-neutral-600 uppercase tracking-widest mb-4">
+                    Model is 5'9" wearing size M for a standard fit.
+                  </p>
+                )}
+              </AnimatePresence>
               <AnimatePresence>
                 {sizeError && (
                   <motion.div 
