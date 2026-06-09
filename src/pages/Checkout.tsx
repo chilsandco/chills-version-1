@@ -887,7 +887,7 @@ const Checkout: React.FC = () => {
               <div className="space-y-4">
                 <button
                   type="submit"
-                  disabled={isProcessing || (addresses.length === 0 && !showAddressForm)}
+                  disabled={isProcessing}
                   className="w-full bg-white text-black py-6 text-[12px] tracking-[0.4em] font-bold uppercase hover:bg-accent transition-all duration-500 flex flex-col items-center justify-center gap-2 relative overflow-hidden group disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <div className="absolute inset-0 bg-accent translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
