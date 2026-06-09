@@ -561,6 +561,83 @@ async function startServer() {
       });
     }
   });
+  app.post("/api/checkout/phonepe/retry", async (req, res) => {
+    try {
+      const { orderId, signal } = req.body;
+      if (!orderId || !signal) {
+        return res.status(400).json({ success: false, message: "Order ID and Signal are required." });
+      }
+      const expectedSignal = toSignalId(orderId);
+      if (signal !== expectedSignal) {
+        return res.status(403).json({ success: false, message: "Signal validation failed." });
+      }
+      const wc = getWooCommerce();
+      if (!wc) {
+        return res.status(400).json({ success: false, message: "WooCommerce not configured." });
+      }
+      console.log(`[CHILS & CO.] Initiating payment retry for Order ID: ${orderId}`);
+      const orderResponse = await wcSafeCall(wc, "get", `orders/${orderId}`);
+      const order = orderResponse.data;
+      if (!order) {
+        return res.status(404).json({ success: false, message: "Order not found." });
+      }
+      const allowedStatuses = ["pending", "failed", "cancelled", "on-hold"];
+      if (!allowedStatuses.includes(order.status)) {
+        return res.status(400).json({
+          success: false,
+          message: `Order status is '${order.status}'. Payment retry not allowed.`
+        });
+      }
+      const merchantTransactionId = `${orderId}_${Date.now()}`;
+      console.log(`[CHILS & CO.] Updating WC Order ${orderId} status to 'pending' with new transaction ID: ${merchantTransactionId}`);
+      await wcSafeCall(wc, "put", `orders/${orderId}`, {
+        status: "pending",
+        meta_data: [
+          { key: "_phonepe_transaction_id", value: merchantTransactionId }
+        ]
+      });
+      const phonePeClient = getPhonePeClient();
+      if (!phonePeClient) {
+        return res.status(400).json({
+          success: false,
+          message: "PhonePe SDK not configured."
+        });
+      }
+      const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+      const host = req.headers["host"] || req.get("host") || "www.chilsandco.com";
+      const isStrictProd = process.env.PHONEPE_ENV?.toUpperCase() === "PRODUCTION";
+      const siteUrl = "https://www.chilsandco.com";
+      const currentOrigin = isStrictProd && host.includes("chilsandco.com") ? `${protocol}://${host}` : isStrictProd ? siteUrl : `${protocol}://${host}`;
+      const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?signal=${toSignalId(orderId)}`;
+      const callbackUrl = process.env.PHONEPE_CALLBACK_URL || `${currentOrigin}/api/checkout/phonepe/callback`;
+      const amountRupees = parseFloat(order.total);
+      const amountPaise = Math.max(100, Math.round(amountRupees * 100));
+      console.log(`[CHILS & CO.] PhonePe SDK Retry - Initiating Checkout:
+        - Transaction ID: ${merchantTransactionId}
+        - Base Domain: ${currentOrigin}
+        - Redirect URL: ${redirectUrl}
+        - Callback URL: ${callbackUrl}
+        - Amount: ${amountRupees} INR (${amountPaise} paise)
+      `);
+      const requestBuilder = StandardCheckoutPayRequest.builder().merchantOrderId(merchantTransactionId.toString()).amount(amountPaise).redirectUrl(redirectUrl).message(`Payment retry for Order #${orderId}`);
+      if (typeof requestBuilder.callbackUrl === "function") {
+        requestBuilder.callbackUrl(callbackUrl);
+      }
+      const request = requestBuilder.build();
+      const response = await phonePeClient.pay(request);
+      console.log(`[CHILS & CO.] PhonePe SDK Retry Success. Redirect URL: ${response.redirectUrl}`);
+      return res.json({
+        success: true,
+        url: response.redirectUrl
+      });
+    } catch (error) {
+      console.error("[CHILS & CO.] PhonePe Retry Error:", error.response?.data || error);
+      res.status(500).json({
+        success: false,
+        message: error.message || "Payment retry initiation failed. Please try again."
+      });
+    }
+  });
   app.post("/api/checkout/phonepe/callback", async (req, res) => {
     try {
       const phonePeClient = getPhonePeClient();
@@ -1745,7 +1822,8 @@ Images: ${images ? images.join(", ") : "None"}`;
         },
         timeout: 8e3
       });
-      res.setHeader("Content-Type", response.headers["content-type"] || "image/png");
+      const contentType = response.headers["content-type"];
+      res.setHeader("Content-Type", typeof contentType === "string" ? contentType : "image/png");
       res.setHeader("Cache-Control", "public, max-age=86400");
       res.send(response.data);
     } catch (err) {

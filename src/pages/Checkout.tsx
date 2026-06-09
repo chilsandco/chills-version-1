@@ -772,7 +772,7 @@ const Checkout: React.FC = () => {
             <div className="space-y-10">
               {cart.map(item => (
                 <div key={`${item.id}-${item.selectedSize}`} className="flex gap-8 group">
-                  <div className="w-28 h-36 bg-neutral-950 overflow-hidden relative flex-shrink-0">
+                  <Link to={`/product/${item.id}`} className="w-28 h-36 bg-neutral-950 overflow-hidden relative flex-shrink-0 block">
                     <img 
                         src={item.images[0]} 
                         alt={item.name} 
@@ -780,11 +780,13 @@ const Checkout: React.FC = () => {
                         referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  </div>
+                  </Link>
                   <div className="flex-grow flex flex-col py-1">
                     <div className="flex justify-between items-start mb-4">
                       <div>
-                        <h3 className="text-[15px] tracking-tight font-display font-medium uppercase mb-1">{item.name}</h3>
+                        <Link to={`/product/${item.id}`} className="hover:text-accent transition-colors">
+                          <h3 className="text-[15px] tracking-tight font-display font-medium uppercase mb-1">{item.name}</h3>
+                        </Link>
                         <div className="flex items-center gap-4">
                           <span className="text-[9px] text-neutral-600 uppercase tracking-widest font-bold">CAT_{item.category?.toUpperCase()}</span>
                           <span className="w-1 h-1 bg-neutral-800 rounded-full" />

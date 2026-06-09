@@ -62,9 +62,42 @@ const OrderSuccess: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const cartCleared = useRef(false);
   
+  const [retrying, setRetrying] = useState(false);
+  const [retryError, setRetryError] = useState<string | null>(null);
+  
   // Extract original order ID if suffix exists (e.g. 123_1715535555 -> 123)
   const orderId = fullOrderId?.split('_')[0];
   const signalId = searchParams.get('signal');
+
+  const handleRetryPayment = async () => {
+    if (!orderId || !signalId) return;
+    setRetrying(true);
+    setRetryError(null);
+    try {
+      const response = await fetch('/api/checkout/phonepe/retry', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          orderId: orderId,
+          signal: signalId
+        })
+      });
+      
+      const data = await response.json();
+      if (!response.ok || !data.success || !data.url) {
+        throw new Error(data.message || 'Failed to initiate payment retry.');
+      }
+      
+      // Redirect to PhonePe portal
+      window.location.href = data.url;
+    } catch (err: any) {
+      console.error("Payment retry error:", err);
+      setRetryError(err.message || "Something went wrong. Please try again.");
+      setRetrying(false);
+    }
+  };
 
   useEffect(() => {
     let pollTimer: any;
@@ -228,15 +261,35 @@ const OrderSuccess: React.FC = () => {
                   <AlertCircle className="text-red-500" size={24} />
                   <div>
                     <h3 className="text-[11px] font-bold uppercase tracking-widest mb-1 text-red-500">Action Required</h3>
-                    <p className="text-[10px] text-white/40 uppercase tracking-widest">Return to checkout to try another payment method.</p>
+                    <p className="text-[10px] text-white/40 uppercase tracking-widest">
+                      {retryError ? (
+                        <span className="text-red-400 font-bold">{retryError}</span>
+                      ) : (
+                        "Re-initiate standard checkout payment request securely."
+                      )}
+                    </p>
                   </div>
                 </div>
-                <Link 
-                  to="/checkout" 
-                  className="bg-red-500 text-white px-8 py-3 text-[10px] tracking-[0.2em] font-bold uppercase hover:bg-red-600 transition-colors flex items-center gap-2"
+                <button 
+                  onClick={handleRetryPayment}
+                  disabled={retrying}
+                  className="bg-red-500 text-white px-8 py-3 text-[10px] tracking-[0.2em] font-bold uppercase hover:bg-red-600 disabled:opacity-50 transition-colors flex items-center gap-2"
                 >
-                  Retry Payment <ArrowRight size={12} />
-                </Link>
+                  {retrying ? (
+                    <>
+                      Retrying...
+                      <motion.div 
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        className="w-3.5 h-3.5 border border-white border-t-transparent rounded-full ml-1"
+                      />
+                    </>
+                  ) : (
+                    <>
+                      Retry Payment <ArrowRight size={12} />
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           )}
