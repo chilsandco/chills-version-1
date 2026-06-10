@@ -5,7 +5,7 @@ import { useCart } from '../CartContext';
 import { useWishlist } from '../WishlistContext';
 import ShareSignal from '../components/ShareSignal';
 import { motion, AnimatePresence, useSpring } from 'motion/react';
-import { BookOpen, Check, CreditCard, Droplets, Heart, Ruler, Shirt, Sparkles, X, ZoomIn, ZoomOut, ChevronLeft } from 'lucide-react';
+import { BookOpen, Check, CreditCard, Droplets, Heart, Ruler, Shirt, Sparkles, X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useGesture } from '@use-gesture/react';
 import { Link } from 'react-router-dom';
 import SizeGuide from '../components/SizeGuide';
@@ -252,6 +252,43 @@ const ProductDetail: React.FC = () => {
   const [buttonText, setButtonText] = useState("Add to Cart");
   const productImgRef = useRef<HTMLImageElement>(null);
   const addToCartBtnRef = useRef<HTMLButtonElement>(null);
+
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Swipe gesture tracking for mobile image carousel
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe) {
+      setCurrentImageIndex((prev) => (prev + 1) % (product?.images?.length || 1));
+    } else if (isRightSwipe) {
+      setCurrentImageIndex((prev) => (prev - 1 + (product?.images?.length || 1)) % (product?.images?.length || 1));
+    }
+  };
+
+  const handlePrevImage = () => {
+    setCurrentImageIndex((prev) => (prev - 1 + (product?.images?.length || 1)) % (product?.images?.length || 1));
+  };
+
+  const handleNextImage = () => {
+    setCurrentImageIndex((prev) => (prev + 1) % (product?.images?.length || 1));
+  };
 
   const handleAddToCart = () => {
     if (!product) return;
@@ -507,8 +544,8 @@ const ProductDetail: React.FC = () => {
       </motion.div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-        {/* Image Gallery */}
-        <div className="lg:col-span-7 grid grid-cols-1 md:grid-cols-2 gap-4 h-fit">
+        {/* Desktop Image Gallery (Hidden on Mobile) */}
+        <div className="hidden lg:grid lg:col-span-7 grid-cols-1 md:grid-cols-2 gap-4 h-fit">
           {product.images.map((img, i) => (
             <MagnifiedImageCard
               key={i}
@@ -525,6 +562,73 @@ const ProductDetail: React.FC = () => {
               }}
             />
           ))}
+        </div>
+
+        {/* Mobile Image Carousel (Hidden on Desktop) */}
+        <div 
+          className="block lg:hidden lg:col-span-7 w-full relative mb-4"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          <div className="relative aspect-[3/4] w-full bg-neutral-950 overflow-hidden border border-white/5">
+            <AnimatePresence mode="wait">
+              <motion.img
+                key={currentImageIndex}
+                src={product.images[currentImageIndex]}
+                alt={`${product.name} mobile view ${currentImageIndex + 1}`}
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 1.02 }}
+                transition={{ duration: 0.4, ease: "easeInOut" }}
+                className="w-full h-full object-cover cursor-pointer"
+                onClick={() => {
+                  setSelectedImage(product.images[currentImageIndex]);
+                  scale.set(1);
+                  positionX.set(0);
+                  positionY.set(0);
+                }}
+                referrerPolicy="no-referrer"
+              />
+            </AnimatePresence>
+
+            {/* Navigation Overlay */}
+            {product.images.length > 1 && (
+              <>
+                <button
+                  onClick={handlePrevImage}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 flex items-center justify-center bg-black/60 border border-white/10 text-white/70 hover:text-white transition-all backdrop-blur-md active:scale-95 cursor-pointer"
+                  aria-label="Previous Image"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  onClick={handleNextImage}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 flex items-center justify-center bg-black/60 border border-white/10 text-white/70 hover:text-white transition-all backdrop-blur-md active:scale-95 cursor-pointer"
+                  aria-label="Next Image"
+                >
+                  <ChevronRight size={18} />
+                </button>
+                
+                {/* Monospace HUD Counter indicator */}
+                <div className="absolute bottom-4 left-4 z-10 bg-black/75 px-3 py-1.5 border border-white/5 text-[9px] tracking-[0.25em] font-mono text-accent/90 rounded-[2px] font-bold">
+                  {String(currentImageIndex + 1).padStart(2, '0')} / {String(product.images.length).padStart(2, '0')}
+                </div>
+
+                {/* Progress dot indicators */}
+                <div className="absolute bottom-5 right-4 z-10 flex gap-1.5">
+                  {product.images.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setCurrentImageIndex(idx)}
+                      className={`h-1.5 transition-all duration-300 rounded-full cursor-pointer ${idx === currentImageIndex ? 'w-4 bg-accent' : 'w-1.5 bg-neutral-600'}`}
+                      aria-label={`Go to slide ${idx + 1}`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         {/* Product Info */}
