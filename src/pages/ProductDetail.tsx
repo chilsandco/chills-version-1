@@ -544,6 +544,47 @@ const ProductDetail: React.FC = () => {
             <p className="text-xl font-medium">₹{product.price.toLocaleString()}</p>
           </div>
 
+          {/* Story Behind the Design (Moved Up) */}
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.25 }}
+            className="relative overflow-hidden border border-accent/20 bg-[linear-gradient(135deg,rgba(212,175,55,0.12),rgba(255,255,255,0.025)_38%,rgba(0,0,0,0)_100%)] p-6 md:p-7 mb-8"
+          >
+            <div className="absolute left-0 top-0 h-full w-[2px] bg-accent" />
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center border border-accent/30 bg-black/40 text-accent">
+                  <BookOpen size={16} />
+                </div>
+                <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-accent">Story Behind The Design</p>
+              </div>
+              <Sparkles size={15} className="text-accent/60" />
+            </div>
+            <div className="space-y-4">
+              {storyParagraphs.slice(0, 2).map((paragraph, index) => (
+                <p
+                  key={index}
+                  className={index === 0
+                    ? "font-display text-xl leading-snug tracking-normal text-white md:text-2xl"
+                    : "text-sm font-light leading-relaxed tracking-wide text-neutral-300"
+                  }
+                >
+                  {paragraph}
+                </p>
+              ))}
+            </div>
+            {productStory.length > 260 && (
+              <button
+                onClick={() => setIsDescOpen(true)}
+                className="group/btn mt-5 flex cursor-pointer items-center gap-3 text-[9px] font-bold uppercase tracking-[0.3em] text-accent transition-colors hover:text-white"
+              >
+                <span className="h-3 w-1 bg-accent transition-colors group-hover/btn:bg-white" />
+                Read Story And Details
+              </button>
+            )}
+          </motion.div>
+
           {/* Size Selection Section (Moved Up) */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-3">
@@ -769,46 +810,6 @@ const ProductDetail: React.FC = () => {
               </div>
             </div>
 
-            {/* Story Behind the Design */}
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.25 }}
-              className="relative overflow-hidden border border-accent/20 bg-[linear-gradient(135deg,rgba(212,175,55,0.12),rgba(255,255,255,0.025)_38%,rgba(0,0,0,0)_100%)] p-6 md:p-7"
-            >
-              <div className="absolute left-0 top-0 h-full w-[2px] bg-accent" />
-              <div className="mb-5 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 items-center justify-center border border-accent/30 bg-black/40 text-accent">
-                    <BookOpen size={16} />
-                  </div>
-                  <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-accent">Story Behind The Design</p>
-                </div>
-                <Sparkles size={15} className="text-accent/60" />
-              </div>
-              <div className="space-y-4">
-                {storyParagraphs.slice(0, 2).map((paragraph, index) => (
-                  <p
-                    key={index}
-                    className={index === 0
-                      ? "font-display text-xl leading-snug tracking-normal text-white md:text-2xl"
-                      : "text-sm font-light leading-relaxed tracking-wide text-neutral-300"
-                    }
-                  >
-                    {paragraph}
-                  </p>
-                ))}
-              </div>
-              {productStory.length > 260 && (
-                <button
-                  onClick={() => setIsDescOpen(true)}
-                  className="group/btn mt-5 flex cursor-pointer items-center gap-3 text-[9px] font-bold uppercase tracking-[0.3em] text-accent transition-colors hover:text-white"
-                >
-                  <span className="h-3 w-1 bg-accent transition-colors group-hover/btn:bg-white" />
-                  Read Story And Details
-                </button>
-              )}
-            </motion.div>
 
             {/* Signal Protocol */}
             <div className="py-6 border-b border-neutral-900/50">
