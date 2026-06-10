@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 import { Product } from '../types';
@@ -6,6 +7,8 @@ import { Product } from '../types';
 const Collection: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [filter, setFilter] = useState('All');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const creatorQuery = searchParams.get('creator');
 
   useEffect(() => {
     fetch('/api/products')
@@ -24,9 +27,11 @@ const Collection: React.FC = () => {
       });
   }, []);
 
-  const filteredProducts = filter === 'All'
-    ? products
-    : products.filter(p => p.category === filter);
+  const filteredProducts = creatorQuery
+    ? products.filter(p => p.coCreator?.toLowerCase() === creatorQuery.toLowerCase())
+    : filter === 'All'
+      ? products
+      : products.filter(p => p.category === filter);
 
   const categories = ['All', ...Array.from(new Set(products.map(p => p.category)))];
 
@@ -38,18 +43,39 @@ const Collection: React.FC = () => {
         keywords="premium shirts India, luxury menswear collection, handcrafted fashion, Chils and Co products"
       />
       <header className="mb-16">
-        <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter mb-8 uppercase">Collection</h1>
-        <div className="flex gap-8 border-b border-neutral-900 pb-4">
-          {categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setFilter(cat)}
-              className={`text-[11px] tracking-[0.2em] font-bold uppercase transition-colors ${filter === cat ? 'text-white' : 'text-neutral-600 hover:text-white'}`}
-            >
-              {cat}
-            </button>
-          ))}
-        </div>
+        {creatorQuery ? (
+          <>
+            <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter mb-8 uppercase">
+              CO-CREATED BY {creatorQuery}
+            </h1>
+            <div className="flex items-center gap-6 border-b border-neutral-900 pb-4">
+              <span className="text-[10px] tracking-[0.25em] font-mono text-accent uppercase font-bold">
+                SPOTLIGHT // SYSTEM DESIGN EXTRACTIONS
+              </span>
+              <button
+                onClick={() => setSearchParams({})}
+                className="text-[10px] tracking-[0.25em] font-mono font-bold uppercase text-neutral-500 hover:text-white px-4 py-1.5 border border-neutral-800 hover:border-white transition-all duration-300 cursor-pointer active:scale-95"
+              >
+                [ RESET FILTER ]
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter mb-8 uppercase">Collection</h1>
+            <div className="flex gap-8 border-b border-neutral-900 pb-4">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setFilter(cat)}
+                  className={`text-[11px] tracking-[0.2em] font-bold uppercase transition-colors ${filter === cat ? 'text-white' : 'text-neutral-600 hover:text-white'}`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </header>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1 bg-neutral-900">

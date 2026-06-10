@@ -637,9 +637,12 @@ const ProductDetail: React.FC = () => {
             <div className="flex items-center justify-between gap-4 mb-4">
               <p className="text-[12px] tracking-[0.3em] uppercase text-neutral-500">{product.category}</p>
               {product.coCreator && (
-                <div className="text-[9px] tracking-[0.25em] font-bold text-accent uppercase bg-accent/5 px-3.5 py-1.5 border border-accent/20 rounded-[2px] backdrop-blur-md">
+                <Link
+                  to={`/collection?creator=${encodeURIComponent(product.coCreator)}`}
+                  className="text-[9px] tracking-[0.25em] font-bold text-accent uppercase bg-accent/5 hover:bg-accent/15 px-3.5 py-1.5 border border-accent/20 hover:border-accent/50 rounded-[2px] backdrop-blur-md transition-all duration-300 cursor-pointer active:scale-95"
+                >
                   CO-CREATED BY {product.coCreator}
-                </div>
+                </Link>
               )}
             </div>
             <div className="flex items-center gap-3 mb-4">
