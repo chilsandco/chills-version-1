@@ -529,7 +529,7 @@ const ProductDetail: React.FC = () => {
 
         {/* Product Info */}
         <div className="lg:col-span-5 lg:sticky lg:top-32 h-fit">
-          <div className="mb-12">
+          <div className="mb-8">
             <div className="flex items-center justify-between gap-4 mb-4">
               <p className="text-[12px] tracking-[0.3em] uppercase text-neutral-500">{product.category}</p>
               {product.coCreator && (
@@ -544,182 +544,273 @@ const ProductDetail: React.FC = () => {
             <p className="text-xl font-medium">₹{product.price.toLocaleString()}</p>
           </div>
 
-          {/* Precision Metrics */}
-          <div className="flex gap-12 mb-6 py-4 border-y border-neutral-900/50">
-            <div>
-              <p className="text-[9px] tracking-[0.2em] font-bold uppercase text-neutral-500 mb-1">Signals Deployed</p>
-              <p className="text-xl font-display font-bold tracking-tighter text-accent">
-                {product.totalSales || 0}
-              </p>
+          {/* Size Selection Section (Moved Up) */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase text-neutral-500">Choose Your Size</h3>
+              <button 
+                onClick={() => setIsSizeGuideOpen(true)}
+                className="flex items-center gap-2 text-[10px] tracking-[0.2em] font-bold uppercase text-accent hover:text-accent/80 transition-colors cursor-pointer"
+              >
+                <Ruler size={12} />
+                Size Guide
+              </button>
             </div>
-          </div>
-
-          {/* Story Behind the Design */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.25 }}
-            className="relative mb-8 overflow-hidden border border-accent/20 bg-[linear-gradient(135deg,rgba(212,175,55,0.12),rgba(255,255,255,0.025)_38%,rgba(0,0,0,0)_100%)] p-6 md:p-7"
-          >
-            <div className="absolute left-0 top-0 h-full w-[2px] bg-accent" />
-            <div className="mb-5 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center border border-accent/30 bg-black/40 text-accent">
-                  <BookOpen size={16} />
-                </div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-accent">Story Behind The Design</p>
-              </div>
-              <Sparkles size={15} className="text-accent/60" />
-            </div>
-            <div className="space-y-4">
-              {storyParagraphs.slice(0, 2).map((paragraph, index) => (
-                <p
-                  key={index}
-                  className={index === 0
-                    ? "font-display text-xl leading-snug tracking-normal text-white md:text-2xl"
-                    : "text-sm font-light leading-relaxed tracking-wide text-neutral-300"
-                  }
+            <div className="flex gap-3 mb-4">
+              {['S', 'M', 'L', 'XL', '2XL'].map(size => (
+                <motion.button 
+                  key={size}
+                  onClick={() => {
+                    setSelectedSize(size);
+                    setSizeError(false);
+                  }}
+                  animate={sizeError ? { x: [-2, 2, -2, 2, 0] } : {}}
+                  transition={{ duration: 0.4 }}
+                  className={`w-12 h-12 border flex items-center justify-center text-[11px] font-bold transition-all duration-300 cursor-pointer ${
+                    selectedSize === size 
+                      ? 'bg-white text-black border-white scale-105 shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
+                      : sizeError 
+                        ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
+                        : 'border-neutral-800 hover:border-white'
+                  }`}
                 >
-                  {paragraph}
-                </p>
+                  {size}
+                </motion.button>
               ))}
             </div>
-            {productStory.length > 260 && (
+            <AnimatePresence mode="wait">
+              {selectedSize ? (
+                <motion.div
+                  key={selectedSize}
+                  initial={{ opacity: 0, height: 0, y: -10 }}
+                  animate={{ opacity: 1, height: 'auto', y: 0 }}
+                  exit={{ opacity: 0, height: 0, y: -10 }}
+                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                  className="overflow-hidden mb-6"
+                >
+                  <div className="border border-accent/20 bg-neutral-950 p-4 rounded-sm relative mt-2">
+                    {/* Corner technical accents */}
+                    <div className="absolute top-0 left-0 w-2 h-[1px] bg-accent" />
+                    <div className="absolute top-0 left-0 w-[1px] h-2 bg-accent" />
+                    <div className="absolute bottom-0 right-0 w-2 h-[1px] bg-accent" />
+                    <div className="absolute bottom-0 right-0 w-[1px] h-2 bg-accent" />
+
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="text-[9px] font-mono tracking-[0.3em] text-accent uppercase font-bold">
+                        Size Profile: {selectedSize}
+                      </span>
+                      <span className="text-[9px] font-mono tracking-[0.1em] text-white/50 uppercase px-2 py-0.5 border border-white/10 rounded-sm">
+                        {sizeAdvisories[selectedSize].fit}
+                      </span>
+                    </div>
+
+                    {/* Technical specifications grid */}
+                    <div className="grid grid-cols-3 gap-4 border-y border-white/5 py-3 mb-3 text-center">
+                      <div>
+                        <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Chest</p>
+                        <motion.p 
+                          animate={{ opacity: [0.5, 1, 0.8, 1], textShadow: ["none", "0 0 8px rgba(212,175,55,0.4)", "none"] }}
+                          transition={{ duration: 0.3 }}
+                          className="font-mono text-sm text-white"
+                        >
+                          {sizeAdvisories[selectedSize].chest}
+                        </motion.p>
+                      </div>
+                      <div>
+                        <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Length</p>
+                        <motion.p 
+                          animate={{ opacity: [0.5, 1, 0.8, 1], textShadow: ["none", "0 0 8px rgba(212,175,55,0.4)", "none"] }}
+                          transition={{ duration: 0.3, delay: 0.05 }}
+                          className="font-mono text-sm text-white"
+                        >
+                          {sizeAdvisories[selectedSize].length}
+                        </motion.p>
+                      </div>
+                      <div>
+                        <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Shoulder</p>
+                        <motion.p 
+                          animate={{ opacity: [0.5, 1, 0.8, 1], textShadow: ["none", "0 0 8px rgba(212,175,55,0.4)", "none"] }}
+                          transition={{ duration: 0.3, delay: 0.1 }}
+                          className="font-mono text-sm text-white"
+                        >
+                          {sizeAdvisories[selectedSize].shoulder}
+                        </motion.p>
+                      </div>
+                    </div>
+
+                    {/* Fitting advisory note */}
+                    <p className="text-[11px] text-neutral-400 font-light leading-relaxed">
+                      {sizeAdvisories[selectedSize].note}
+                    </p>
+                  </div>
+                </motion.div>
+              ) : (
+                <p className="text-[10px] text-neutral-600 uppercase tracking-widest mb-4">
+                  Model is 5'9" wearing size M for a standard fit.
+                </p>
+              )}
+            </AnimatePresence>
+            <AnimatePresence>
+              {sizeError && (
+                <motion.div 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-center gap-2 mb-4"
+                >
+                  <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
+                  <p className="text-[12px] text-red-500 tracking-[0.3em] uppercase font-bold">
+                    CAUTION: Select your size
+                  </p>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Action Buttons: Add to Cart, Buy Now, Wishlist (Moved Up) */}
+          <div className="flex flex-col gap-4 mb-10">
+            {product.status === "Available" ? (
+              <>
+                <motion.button
+                  ref={addToCartBtnRef}
+                  onClick={handleAddToCart}
+                  whileHover={{ 
+                    scale: 1.01,
+                    boxShadow: "0 0 30px rgba(255, 255, 255, 0.1)",
+                    borderColor: "rgba(255, 255, 255, 0.6)"
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full bg-white text-black py-5 text-[13px] tracking-[0.3em] font-bold uppercase transition-all duration-300 border border-transparent active:opacity-90 cursor-pointer"
+                >
+                  {buttonText}
+                </motion.button>
+                <div className="flex flex-col items-center gap-2">
+                  <p className="text-center text-[11px] tracking-widest text-neutral-600 uppercase">
+                    Signal assigned at dispatch
+                  </p>
+                  <AnimatePresence>
+                    {showConfirmation && (
+                      <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="text-center text-[12px] tracking-widest text-accent uppercase font-bold"
+                      >
+                        Added to Cart ✓ <br/>
+                        <span className="text-[10px] font-normal opacity-60">Signal assigned at dispatch</span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+ 
+                <motion.button
+                  onClick={handleBuyNow}
+                  disabled={isBuyNowProcessing}
+                  whileHover={{ 
+                    scale: 1.01,
+                    backgroundColor: "rgba(255, 255, 255, 1)",
+                    color: "rgba(0, 0, 0, 1)"
+                  }}
+                  whileTap={{ scale: 0.98 }}
+                  className="w-full border border-neutral-800 py-5 text-[13px] tracking-[0.3em] font-bold uppercase transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 cursor-pointer"
+                >
+                  {isBuyNowProcessing ? 'Securing Checkout...' : (
+                    <>
+                      <motion.div
+                        whileHover={{ scale: 1.1 }}
+                        transition={{ duration: 0.3, ease: "easeOut" }}
+                        className="text-accent"
+                      >
+                        <CreditCard size={16} />
+                      </motion.div>
+                      Buy Now
+                    </>
+                  )}
+                </motion.button>
+
+                <button
+                  onClick={() => toggleWishlist(product)}
+                  className="w-full flex items-center justify-center gap-3 py-3 text-[12px] tracking-[0.3em] font-bold uppercase text-neutral-500 hover:text-white transition-colors group cursor-pointer"
+                >
+                  <Heart 
+                    size={16} 
+                    className={`transition-all duration-500 ${isInWishlist(product.id) ? 'fill-accent text-accent' : 'group-hover:scale-110'}`} 
+                  />
+                  {isInWishlist(product.id) ? 'Saved' : 'Add to Wishlist'}
+                </button>
+
+                <div className="pt-4 mt-2 border-t border-neutral-900/50">
+                  <ShareSignal 
+                    productName={product.name}
+                    productUrl={window.location.href}
+                    productImage={product.images[0]}
+                  />
+                </div>
+              </>
+            ) : (
               <button
-                onClick={() => setIsDescOpen(true)}
-                className="group/btn mt-5 flex cursor-pointer items-center gap-3 text-[9px] font-bold uppercase tracking-[0.3em] text-accent transition-colors hover:text-white"
+                disabled
+                className="w-full border border-neutral-800 py-5 text-[11px] tracking-[0.3em] font-bold uppercase opacity-50 cursor-not-allowed"
               >
-                <span className="h-3 w-1 bg-accent transition-colors group-hover/btn:bg-white" />
-                Read Story And Details
+                Coming Soon
               </button>
             )}
-          </motion.div>
+          </div>
 
-          <div className="space-y-6 mb-10">
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase text-neutral-500">Choose Your Size</h3>
-                <button 
-                  onClick={() => setIsSizeGuideOpen(true)}
-                  className="flex items-center gap-2 text-[10px] tracking-[0.2em] font-bold uppercase text-accent hover:text-accent/80 transition-colors cursor-pointer"
-                >
-                  <Ruler size={12} />
-                  Size Guide
-                </button>
+          {/* Details & Specs Container (Moved Below Actions) */}
+          <div className="space-y-6 pt-6 border-t border-neutral-900/50">
+            {/* Precision Metrics */}
+            <div className="flex gap-12 py-4 border-b border-neutral-900/50">
+              <div>
+                <p className="text-[9px] tracking-[0.2em] font-bold uppercase text-neutral-500 mb-1">Signals Deployed</p>
+                <p className="text-xl font-display font-bold tracking-tighter text-accent">
+                  {product.totalSales || 0}
+                </p>
               </div>
-              <div className="flex gap-3 mb-4">
-                {['S', 'M', 'L', 'XL', '2XL'].map(size => (
-                  <motion.button 
-                    key={size}
-                    onClick={() => {
-                      setSelectedSize(size);
-                      setSizeError(false);
-                    }}
-                    animate={sizeError ? { x: [-2, 2, -2, 2, 0] } : {}}
-                    transition={{ duration: 0.4 }}
-                    className={`w-12 h-12 border flex items-center justify-center text-[11px] font-bold transition-all duration-300 cursor-pointer ${
-                      selectedSize === size 
-                        ? 'bg-white text-black border-white scale-105 shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
-                        : sizeError 
-                          ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
-                          : 'border-neutral-800 hover:border-white'
-                    }`}
-                  >
-                    {size}
-                  </motion.button>
-                ))}
-              </div>
-              <AnimatePresence mode="wait">
-                {selectedSize ? (
-                  <motion.div
-                    key={selectedSize}
-                    initial={{ opacity: 0, height: 0, y: -10 }}
-                    animate={{ opacity: 1, height: 'auto', y: 0 }}
-                    exit={{ opacity: 0, height: 0, y: -10 }}
-                    transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                    className="overflow-hidden mb-6"
-                  >
-                    <div className="border border-accent/20 bg-neutral-950 p-4 rounded-sm relative mt-2">
-                      {/* Corner technical accents */}
-                      <div className="absolute top-0 left-0 w-2 h-[1px] bg-accent" />
-                      <div className="absolute top-0 left-0 w-[1px] h-2 bg-accent" />
-                      <div className="absolute bottom-0 right-0 w-2 h-[1px] bg-accent" />
-                      <div className="absolute bottom-0 right-0 w-[1px] h-2 bg-accent" />
-
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-[9px] font-mono tracking-[0.3em] text-accent uppercase font-bold">
-                          Size Profile: {selectedSize}
-                        </span>
-                        <span className="text-[9px] font-mono tracking-[0.1em] text-white/50 uppercase px-2 py-0.5 border border-white/10 rounded-sm">
-                          {sizeAdvisories[selectedSize].fit}
-                        </span>
-                      </div>
-
-                      {/* Technical specifications grid */}
-                      <div className="grid grid-cols-3 gap-4 border-y border-white/5 py-3 mb-3 text-center">
-                        <div>
-                          <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Chest</p>
-                          <motion.p 
-                            animate={{ opacity: [0.5, 1, 0.8, 1], textShadow: ["none", "0 0 8px rgba(212,175,55,0.4)", "none"] }}
-                            transition={{ duration: 0.3 }}
-                            className="font-mono text-sm text-white"
-                          >
-                            {sizeAdvisories[selectedSize].chest}
-                          </motion.p>
-                        </div>
-                        <div>
-                          <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Length</p>
-                          <motion.p 
-                            animate={{ opacity: [0.5, 1, 0.8, 1], textShadow: ["none", "0 0 8px rgba(212,175,55,0.4)", "none"] }}
-                            transition={{ duration: 0.3, delay: 0.05 }}
-                            className="font-mono text-sm text-white"
-                          >
-                            {sizeAdvisories[selectedSize].length}
-                          </motion.p>
-                        </div>
-                        <div>
-                          <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Shoulder</p>
-                          <motion.p 
-                            animate={{ opacity: [0.5, 1, 0.8, 1], textShadow: ["none", "0 0 8px rgba(212,175,55,0.4)", "none"] }}
-                            transition={{ duration: 0.3, delay: 0.1 }}
-                            className="font-mono text-sm text-white"
-                          >
-                            {sizeAdvisories[selectedSize].shoulder}
-                          </motion.p>
-                        </div>
-                      </div>
-
-                      {/* Fitting advisory note */}
-                      <p className="text-[11px] text-neutral-400 font-light leading-relaxed">
-                        {sizeAdvisories[selectedSize].note}
-                      </p>
-                    </div>
-                  </motion.div>
-                ) : (
-                  <p className="text-[10px] text-neutral-600 uppercase tracking-widest mb-4">
-                    Model is 5'9" wearing size M for a standard fit.
-                  </p>
-                )}
-              </AnimatePresence>
-              <AnimatePresence>
-                {sizeError && (
-                  <motion.div 
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="flex items-center gap-2 mb-4"
-                  >
-                    <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
-                    <p className="text-[12px] text-red-500 tracking-[0.3em] uppercase font-bold">
-                      CAUTION: Select your size
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
 
+            {/* Story Behind the Design */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0.25 }}
+              className="relative overflow-hidden border border-accent/20 bg-[linear-gradient(135deg,rgba(212,175,55,0.12),rgba(255,255,255,0.025)_38%,rgba(0,0,0,0)_100%)] p-6 md:p-7"
+            >
+              <div className="absolute left-0 top-0 h-full w-[2px] bg-accent" />
+              <div className="mb-5 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center border border-accent/30 bg-black/40 text-accent">
+                    <BookOpen size={16} />
+                  </div>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-accent">Story Behind The Design</p>
+                </div>
+                <Sparkles size={15} className="text-accent/60" />
+              </div>
+              <div className="space-y-4">
+                {storyParagraphs.slice(0, 2).map((paragraph, index) => (
+                  <p
+                    key={index}
+                    className={index === 0
+                      ? "font-display text-xl leading-snug tracking-normal text-white md:text-2xl"
+                      : "text-sm font-light leading-relaxed tracking-wide text-neutral-300"
+                    }
+                  >
+                    {paragraph}
+                  </p>
+                ))}
+              </div>
+              {productStory.length > 260 && (
+                <button
+                  onClick={() => setIsDescOpen(true)}
+                  className="group/btn mt-5 flex cursor-pointer items-center gap-3 text-[9px] font-bold uppercase tracking-[0.3em] text-accent transition-colors hover:text-white"
+                >
+                  <span className="h-3 w-1 bg-accent transition-colors group-hover/btn:bg-white" />
+                  Read Story And Details
+                </button>
+              )}
+            </motion.div>
 
-
+            {/* Signal Protocol */}
             <div className="py-6 border-b border-neutral-900/50">
               <motion.div
                 initial={{ opacity: 0, y: 5 }}
@@ -737,6 +828,7 @@ const ProductDetail: React.FC = () => {
               </motion.div>
             </div>
 
+            {/* Garment Intelligence */}
             <div className="py-6 space-y-5">
               <div className="flex items-center gap-3">
                 <div className="h-px flex-1 bg-neutral-900" />
@@ -785,95 +877,6 @@ const ProductDetail: React.FC = () => {
                 )}
               </div>
             </div>
-          </div>
-
-          <div className="flex flex-col gap-4">
-            {product.status === "Available" ? (
-              <>
-                <motion.button
-                  ref={addToCartBtnRef}
-                  onClick={handleAddToCart}
-                  whileHover={{ 
-                    scale: 1.01,
-                    boxShadow: "0 0 30px rgba(255, 255, 255, 0.1)",
-                    borderColor: "rgba(255, 255, 255, 0.6)"
-                  }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full bg-white text-black py-5 text-[13px] tracking-[0.3em] font-bold uppercase transition-all duration-300 border border-transparent active:opacity-90"
-                >
-                  {buttonText}
-                </motion.button>
-                <div className="flex flex-col items-center gap-2">
-                  <p className="text-center text-[11px] tracking-widest text-neutral-600 uppercase">
-                    Signal assigned at dispatch
-                  </p>
-                  <AnimatePresence>
-                    {showConfirmation && (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="text-center text-[12px] tracking-widest text-accent uppercase font-bold"
-                      >
-                        Added to Cart ✓ <br/>
-                        <span className="text-[10px] font-normal opacity-60">Signal assigned at dispatch</span>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
- 
-                <motion.button
-                  onClick={handleBuyNow}
-                  disabled={isBuyNowProcessing}
-                  whileHover={{ 
-                    scale: 1.01,
-                    backgroundColor: "rgba(255, 255, 255, 1)",
-                    color: "rgba(0, 0, 0, 1)"
-                  }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full border border-neutral-800 py-5 text-[13px] tracking-[0.3em] font-bold uppercase transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50"
-                >
-                  {isBuyNowProcessing ? 'Securing Checkout...' : (
-                    <>
-                      <motion.div
-                        whileHover={{ scale: 1.1 }}
-                        transition={{ duration: 0.3, ease: "easeOut" }}
-                        className="text-accent"
-                      >
-                        <CreditCard size={16} />
-                      </motion.div>
-                      Buy Now
-                    </>
-                  )}
-                </motion.button>
-
-                <button
-                  onClick={() => toggleWishlist(product)}
-                  className="w-full flex items-center justify-center gap-3 py-3 text-[12px] tracking-[0.3em] font-bold uppercase text-neutral-500 hover:text-white transition-colors group"
-                >
-                  <Heart 
-                    size={16} 
-                    className={`transition-all duration-500 ${isInWishlist(product.id) ? 'fill-accent text-accent' : 'group-hover:scale-110'}`} 
-                  />
-                  {isInWishlist(product.id) ? 'Saved' : 'Add to Wishlist'}
-                </button>
-
-                <div className="pt-4 mt-4 border-t border-neutral-900/50">
-                  <ShareSignal 
-                    productName={product.name}
-                    productUrl={window.location.href}
-                    productImage={product.images[0]}
-                  />
-                </div>
-              </>
-            ) : (
-              <button
-                disabled
-                className="w-full border border-neutral-800 py-5 text-[11px] tracking-[0.3em] font-bold uppercase opacity-50 cursor-not-allowed"
-              >
-                Coming Soon
-              </button>
-            )}
           </div>
         </div>
       </div>
