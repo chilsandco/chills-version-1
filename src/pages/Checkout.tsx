@@ -51,6 +51,7 @@ const Checkout: React.FC = () => {
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
+  const [isEditingIdentity, setIsEditingIdentity] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -357,280 +358,319 @@ const Checkout: React.FC = () => {
         </div>
       </div>
 
-      <form onSubmit={handlePayment} className="grid grid-cols-1 lg:grid-cols-12 gap-16 xl:gap-24">
-        {/* Left Column: Form + Cart */}
-        <div className="lg:col-span-7 space-y-20">
+      <form onSubmit={handlePayment} className="grid grid-cols-1 lg:grid-cols-12 gap-16 xl:gap-24">        {/* Left Column: Form + Cart */}
+        <div className="lg:col-span-7 space-y-12">
           
-          {/* Identity Section — Commanding Step Card */}
+          {/* Step 01: Extraction Manifest */}
+          <section className="space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-neutral-900">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
+                <h2 className="text-[11px] tracking-[0.25em] font-mono font-bold uppercase text-white">01 / Extraction Manifest</h2>
+              </div>
+              <span className="text-[9px] font-mono text-neutral-600 uppercase">
+                {cart.length} unique {cart.length === 1 ? 'artifact' : 'artifacts'}
+              </span>
+            </div>
+            
+            <div className="space-y-4">
+              {cart.map(item => (
+                <div key={`${item.id}-${item.selectedSize}`} className="flex gap-6 p-4 border border-white/5 bg-neutral-950/10 rounded-sm group relative">
+                  <Link to={`/product/${item.id}`} className="w-16 h-20 bg-neutral-950 overflow-hidden relative flex-shrink-0 block rounded-sm">
+                    <img 
+                        src={item.images[0]} 
+                        alt={item.name} 
+                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-102 transition-all duration-500" 
+                        referrerPolicy="no-referrer"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                  </Link>
+                  <div className="flex-grow flex flex-col py-0.5 justify-between">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <Link to={`/product/${item.id}`} className="hover:text-accent transition-colors">
+                          <h3 className="text-sm tracking-tight font-display font-medium uppercase mb-0.5">{item.name}</h3>
+                        </Link>
+                        <div className="flex items-center gap-3">
+                          <span className="text-[8px] text-neutral-600 uppercase tracking-widest font-bold font-mono">CAT_{item.category?.toUpperCase()}</span>
+                          <span className="w-1 h-1 bg-neutral-800 rounded-full" />
+                          <span className="text-[8px] text-accent uppercase tracking-[0.2em] font-bold font-mono">SIZE: {item.selectedSize || 'OS'}</span>
+                        </div>
+                      </div>
+                      <button type="button" onClick={() => removeFromCart(item.id, item.selectedSize)} className="text-neutral-700 hover:text-red-500 transition-colors p-1 -mt-1 cursor-pointer">
+                          <Trash2 size={13} />
+                      </button>
+                    </div>
+
+                    <div className="flex justify-between items-center mt-2">
+                      <div className="flex items-center bg-black border border-neutral-900/80 p-0.5 rounded-sm">
+                        <button type="button" onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedSize)} className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer">
+                            <Minus size={8} />
+                        </button>
+                        <span className="w-6 text-center text-[9px] font-mono font-bold">{item.quantity.toString().padStart(2, '0')}</span>
+                        <button type="button" onClick={() => updateQuantity(item.id, item.quantity + 1, item.selectedSize)} className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer">
+                            <Plus size={8} />
+                        </button>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[8px] text-neutral-600 font-mono tracking-tighter block">₹{item.price.toLocaleString()} EACH</span>
+                        <p className="text-xs font-mono tracking-tight font-bold text-white">₹{(item.price * item.quantity).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Packaging Intelligence Banner (Visual divider between Step 1 and Step 2) */}
+          <PackagingUpsellBanner itemCount={totalItemCount} />
+
+          {/* Step 02: Identity Clearance */}
           {(() => {
             const identityComplete = !!(formData.firstName && formData.email && formData.phone);
+            const showIdentityForm = isEditingIdentity || !identityComplete;
             return (
-              <section id="identity-section">
-                {/* Step pill header */}
-                <div className="flex items-center gap-3 mb-6">
-                  <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 font-mono text-xs font-black transition-all duration-500 ${
-                    identityComplete
-                      ? 'border-accent bg-accent/10 text-accent shadow-[0_0_14px_rgba(212,175,55,0.4)]'
-                      : 'border-neutral-700 text-neutral-500'
-                  }`}>01</div>
-                  <div>
-                    <p className="text-[9px] text-neutral-600 uppercase tracking-[0.3em] font-bold">Step One</p>
-                    <h2 className="text-sm tracking-[0.25em] font-bold uppercase text-white leading-none mt-0.5">Identity Access</h2>
+              <section id="identity-section" className="space-y-6">
+                <div className="flex items-center justify-between pb-4 border-b border-neutral-900">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full transition-all ${
+                      identityComplete 
+                        ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' 
+                        : 'bg-amber-500 shadow-[0_0_8px_#f59e0b] animate-pulse'
+                    }`} />
+                    <h2 className="text-[11px] tracking-[0.25em] font-mono font-bold uppercase text-white">02 / Identity Clearance</h2>
                   </div>
-                  <div className="flex-grow h-[1px] bg-neutral-900 mx-2" />
-                  {identityComplete ? (
-                    <motion.div
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/10 border border-accent/30 rounded-full"
+                  {identityComplete && !showIdentityForm && (
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingIdentity(true)}
+                      className="text-[9px] tracking-[0.2em] font-bold uppercase text-neutral-500 hover:text-accent transition-colors cursor-pointer"
                     >
-                      <Check size={10} className="text-accent" />
-                      <span className="text-[9px] uppercase font-bold tracking-[0.15em] text-accent">Verified</span>
-                    </motion.div>
-                  ) : (
-                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-neutral-900/60 border border-neutral-800 rounded-full">
-                      <span className="w-1.5 h-1.5 rounded-full bg-neutral-600 animate-pulse" />
-                      <span className="text-[9px] uppercase font-bold tracking-[0.15em] text-neutral-500">Pending</span>
-                    </div>
+                      [ Edit Credentials ]
+                    </button>
                   )}
                 </div>
 
-                {/* Card body */}
-                <div className={`relative border transition-all duration-500 p-8 ${
-                  identityComplete
-                    ? 'border-accent/25 bg-[linear-gradient(135deg,rgba(212,175,55,0.04),rgba(0,0,0,0)_70%)] shadow-[0_0_40px_rgba(212,175,55,0.06)]'
-                    : 'border-neutral-800 bg-neutral-950/60'
-                }`}>
-                  {/* Corner accents */}
-                  <div className={`absolute top-0 left-0 w-5 h-5 border-t border-l transition-colors duration-500 ${identityComplete ? 'border-accent/50' : 'border-neutral-700'}`} />
-                  <div className={`absolute bottom-0 right-0 w-5 h-5 border-b border-r transition-colors duration-500 ${identityComplete ? 'border-accent/50' : 'border-neutral-700'}`} />
+                <AnimatePresence mode="wait">
+                  {!showIdentityForm ? (
+                    // Read-only Glassmorphic Security Badge
+                    <motion.div
+                      key="badge"
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -8 }}
+                      className="relative border border-white/5 bg-neutral-950/40 p-6 flex flex-col sm:flex-row items-center gap-6 rounded-sm backdrop-blur-md overflow-hidden"
+                    >
+                      {/* Corner subtle markings */}
+                      <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t border-l border-accent/20" />
+                      <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b border-r border-accent/20" />
+                      
+                      {/* Left side: Avatar */}
+                      <div className="w-14 h-14 rounded-full border border-accent/30 bg-accent/5 shadow-[0_0_15px_rgba(212,175,55,0.15)] flex items-center justify-center font-display text-accent text-xl font-bold uppercase shrink-0">
+                        {formData.firstName.charAt(0) || 'U'}
+                      </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
-                    <div className="space-y-3 group">
-                      <label className="text-[9px] text-neutral-500 uppercase tracking-[0.2em] block font-bold group-focus-within:text-accent transition-colors">First Name *</label>
-                      <div className="relative">
-                        <User className="absolute left-0 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within:text-accent transition-colors" size={13} />
-                        <input
-                          type="text"
-                          name="firstName"
-                          required
-                          value={formData.firstName}
-                          onChange={handleInputChange}
-                          className="w-full bg-transparent border-b border-neutral-800 py-3 pl-7 pr-4 text-sm focus:border-accent outline-none transition-all font-mono placeholder:text-neutral-800 text-white"
-                          placeholder="REQUIRED"
-                        />
+                      {/* Right side: Key-value metadata */}
+                      <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-[11px] uppercase tracking-wider font-light leading-relaxed">
+                        <div>
+                          <span className="text-neutral-600 block text-[8px] font-bold tracking-widest font-mono">HOLDER_NAME</span>
+                          <span className="text-white font-medium">{formData.firstName} {formData.lastName || ''}</span>
+                        </div>
+                        <div>
+                          <span className="text-neutral-600 block text-[8px] font-bold tracking-widest font-mono">SECURE_EMAIL</span>
+                          <span className="text-white font-medium lowercase font-sans">{formData.email}</span>
+                        </div>
+                        <div>
+                          <span className="text-neutral-600 block text-[8px] font-bold tracking-widest font-mono">VERIFIED_PHONE</span>
+                          <span className="text-white font-medium font-mono">{formData.phone}</span>
+                        </div>
+                        <div>
+                          <span className="text-neutral-600 block text-[8px] font-bold tracking-widest font-mono">CLEARANCE_LEVEL</span>
+                          <span className="text-accent font-bold">LEVEL 1 AUTHORIZED ✓</span>
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-3 group">
-                      <label className="text-[9px] text-neutral-500 uppercase tracking-[0.2em] block font-bold group-focus-within:text-accent transition-colors">Last Name</label>
-                      <input
-                        type="text"
-                        name="lastName"
-                        value={formData.lastName}
-                        onChange={handleInputChange}
-                        className="w-full bg-transparent border-b border-neutral-800 py-3 px-0 text-sm focus:border-accent outline-none transition-all font-mono placeholder:text-neutral-800 text-white"
-                        placeholder="OPTIONAL"
-                      />
-                    </div>
-                    <div className="space-y-3 group">
-                      <label className="text-[9px] text-neutral-500 uppercase tracking-[0.2em] block font-bold group-focus-within:text-accent transition-colors">Email Address *</label>
-                      <div className="relative">
-                        <Mail className="absolute left-0 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within:text-accent transition-colors" size={13} />
-                        <input
-                          type="email"
-                          name="email"
-                          required
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          className="w-full bg-transparent border-b border-neutral-800 py-3 pl-7 pr-4 text-sm focus:border-accent outline-none transition-all font-mono placeholder:text-neutral-800 text-white"
-                          placeholder="you@mail.com"
-                        />
+                    </motion.div>
+                  ) : (
+                    // Edit Form
+                    <motion.div
+                      key="form"
+                      initial={{ opacity: 0, scale: 0.99 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.99 }}
+                      className="border border-amber-500/10 bg-neutral-950/20 p-6 rounded-sm space-y-6 shadow-[0_0_20px_rgba(212,175,55,0.02)]"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
+                        <div className="space-y-2 group">
+                          <label className="text-[9px] text-neutral-500 uppercase tracking-[0.2em] block font-bold group-focus-within:text-accent transition-colors">First Name *</label>
+                          <input
+                            type="text"
+                            name="firstName"
+                            required
+                            value={formData.firstName}
+                            onChange={handleInputChange}
+                            className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none transition-all font-mono placeholder:text-neutral-800 text-white"
+                            placeholder="REQUIRED"
+                          />
+                        </div>
+                        <div className="space-y-2 group">
+                          <label className="text-[9px] text-neutral-500 uppercase tracking-[0.2em] block font-bold group-focus-within:text-accent transition-colors">Last Name</label>
+                          <input
+                            type="text"
+                            name="lastName"
+                            value={formData.lastName}
+                            onChange={handleInputChange}
+                            className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none transition-all font-mono placeholder:text-neutral-800 text-white"
+                            placeholder="OPTIONAL"
+                          />
+                        </div>
+                        <div className="space-y-2 group">
+                          <label className="text-[9px] text-neutral-500 uppercase tracking-[0.2em] block font-bold group-focus-within:text-accent transition-colors">Email Address *</label>
+                          <input
+                            type="email"
+                            name="email"
+                            required
+                            value={formData.email}
+                            onChange={handleInputChange}
+                            className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none transition-all font-mono placeholder:text-neutral-800 text-white"
+                            placeholder="you@mail.com"
+                          />
+                        </div>
+                        <div className="space-y-2 group">
+                          <label className="text-[9px] text-neutral-500 uppercase tracking-[0.2em] block font-bold group-focus-within:text-accent transition-colors">Phone Number *</label>
+                          <input
+                            type="tel"
+                            name="phone"
+                            required
+                            value={formData.phone}
+                            onChange={handleInputChange}
+                            className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none transition-all font-mono placeholder:text-neutral-800 text-white"
+                            placeholder="+91 XXXXXXXXXX"
+                          />
+                        </div>
                       </div>
-                    </div>
-                    <div className="space-y-3 group">
-                      <label className="text-[9px] text-neutral-500 uppercase tracking-[0.2em] block font-bold group-focus-within:text-accent transition-colors">Phone Number *</label>
-                      <div className="relative">
-                        <Phone className="absolute left-0 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within:text-accent transition-colors" size={13} />
-                        <input
-                          type="tel"
-                          name="phone"
-                          required
-                          value={formData.phone}
-                          onChange={handleInputChange}
-                          className="w-full bg-transparent border-b border-neutral-800 py-3 pl-7 pr-4 text-sm focus:border-accent outline-none transition-all font-mono placeholder:text-neutral-800 text-white"
-                          placeholder="+91 XXXXXXXXXX"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
+
+                      {identityComplete && (
+                        <div className="pt-2 flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingIdentity(false)}
+                            className="px-6 py-2.5 bg-white text-black text-[10px] uppercase font-bold tracking-[0.2em] hover:bg-accent hover:text-black transition-all rounded-sm cursor-pointer active:scale-95"
+                          >
+                            Lock Pass
+                          </button>
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </section>
             );
           })()}
 
-          {/* Step connector line */}
-          <div className="flex items-center gap-4 my-2 ml-4">
-            <div className="w-[1px] h-8 bg-gradient-to-b from-neutral-800 to-neutral-900" />
-          </div>
-
-          {/* Coordinates Section — Commanding Step Card */}
+          {/* Step 03: Delivery Destination */}
           {(() => {
             const coordComplete = !!selectedAddressId;
             return (
               <section
                 id="coordinates-section"
-                className={`transition-all duration-700 ${
+                className={`space-y-6 transition-all duration-700 ${
                   coordinatesFlash ? 'coordinates-flash' : ''
                 }`}
               >
-                {/* Step pill header */}
-                <div className="flex items-center gap-3 mb-6">
-                  <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 font-mono text-xs font-black transition-all duration-500 ${
-                    coordComplete
-                      ? 'border-accent bg-accent/10 text-accent shadow-[0_0_14px_rgba(212,175,55,0.4)]'
-                      : coordinatesFlash
-                        ? 'border-red-500 bg-red-500/10 text-red-400 shadow-[0_0_14px_rgba(239,68,68,0.4)]'
-                        : 'border-neutral-700 text-neutral-500'
-                  }`}>02</div>
-                  <div>
-                    <p className="text-[9px] text-neutral-600 uppercase tracking-[0.3em] font-bold">Step Two</p>
-                    <h2 className="text-sm tracking-[0.25em] font-bold uppercase text-white leading-none mt-0.5">Delivery Address</h2>
+                <div className="flex items-center justify-between pb-4 border-b border-neutral-900">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full transition-all ${
+                      coordComplete 
+                        ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' 
+                        : coordinatesFlash
+                          ? 'bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse'
+                          : 'bg-amber-500 shadow-[0_0_8px_#f59e0b] animate-pulse'
+                    }`} />
+                    <h2 className="text-[11px] tracking-[0.25em] font-mono font-bold uppercase text-white">03 / Delivery Destination</h2>
                   </div>
-                  <div className="flex-grow h-[1px] bg-neutral-900 mx-2" />
-                  {coordComplete ? (
-                    <motion.div
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/10 border border-accent/30 rounded-full"
-                    >
-                      <Check size={10} className="text-accent" />
-                      <span className="text-[9px] uppercase font-bold tracking-[0.15em] text-accent">Locked In</span>
-                    </motion.div>
-                  ) : (
-                    <div className={`flex items-center gap-1.5 px-3 py-1.5 border rounded-full transition-all duration-500 ${
-                      coordinatesFlash
-                        ? 'bg-red-500/10 border-red-500/40'
-                        : 'bg-neutral-900/60 border-neutral-800'
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full animate-pulse ${
-                        coordinatesFlash ? 'bg-red-500' : 'bg-neutral-600'
-                      }`} />
-                      <span className={`text-[9px] uppercase font-bold tracking-[0.15em] ${
-                        coordinatesFlash ? 'text-red-400' : 'text-neutral-500'
-                      }`}>
-                        {coordinatesFlash ? 'Required!' : 'Not Set'}
-                      </span>
-                    </div>
-                  )}
                   {addresses.length > 0 && !showAddressForm && (
                     <button
                       type="button"
                       onClick={() => { setShowAddressForm(true); setEditingAddressId(null); setAddressFormData({ label:'', type:'other', address:'', city:'', state:'', pincode:'', phone:'' }); }}
-                      className="ml-3 text-[9px] uppercase tracking-[0.2em] font-bold text-neutral-500 hover:text-accent transition-colors flex items-center gap-1.5 group"
+                      className="text-[9px] tracking-[0.2em] font-bold uppercase text-neutral-500 hover:text-accent transition-colors cursor-pointer"
                     >
-                      <Plus size={9} className="group-hover:rotate-90 transition-transform" />
-                      Add New
+                      [ + Add Destination ]
                     </button>
                   )}
                 </div>
 
-                {/* Card body */}
-                <div className={`relative border transition-all duration-500 p-8 ${
-                  coordComplete
-                    ? 'border-accent/25 bg-[linear-gradient(135deg,rgba(212,175,55,0.04),rgba(0,0,0,0)_70%)] shadow-[0_0_40px_rgba(212,175,55,0.06)]'
-                    : coordinatesFlash
-                      ? 'border-red-500/30 bg-red-500/[0.02] shadow-[0_0_30px_rgba(239,68,68,0.08)]'
-                      : 'border-neutral-800 bg-neutral-950/60'
-                }`}>
-                  {/* Corner accents */}
-                  <div className={`absolute top-0 left-0 w-5 h-5 border-t border-l transition-colors duration-500 ${
-                    coordComplete ? 'border-accent/50' : coordinatesFlash ? 'border-red-500/40' : 'border-neutral-700'
-                  }`} />
-                  <div className={`absolute bottom-0 right-0 w-5 h-5 border-b border-r transition-colors duration-500 ${
-                    coordComplete ? 'border-accent/50' : coordinatesFlash ? 'border-red-500/40' : 'border-neutral-700'
-                  }`} />
-
+                <div className={`relative transition-all duration-500`}>
                   <AnimatePresence mode="wait">
                     {!showAddressForm ? (
                       <motion.div
+                        key="address-list"
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -8 }}
                       >
                         {addresses.length === 0 ? (
-                          /* Empty state — big CTA */
+                          /* Empty state — minimal CTA */
                           <div
                             onClick={() => setShowAddressForm(true)}
-                            className="py-14 flex flex-col items-center justify-center cursor-pointer group"
+                            className="py-10 border border-dashed border-neutral-900 hover:border-accent/30 bg-neutral-950/20 hover:bg-accent/[0.01] transition-all rounded-sm flex flex-col items-center justify-center cursor-pointer group"
                           >
-                            <div className={`w-20 h-20 rounded-full border-2 border-dashed flex items-center justify-center mb-6 transition-all duration-500 ${
-                              coordinatesFlash
-                                ? 'border-red-500/50 bg-red-500/5'
-                                : 'border-neutral-800 group-hover:border-accent/50 group-hover:bg-accent/5'
-                            }`}>
-                              <MapPin className={`transition-all duration-500 ${
-                                coordinatesFlash ? 'text-red-400 animate-bounce' : 'text-neutral-700 group-hover:text-accent group-hover:scale-110'
-                              }`} size={28} />
-                            </div>
-                            <p className={`text-sm font-bold uppercase tracking-[0.25em] mb-2 transition-colors ${
-                              coordinatesFlash ? 'text-red-400' : 'text-neutral-500 group-hover:text-white'
-                            }`}>Add Delivery Address</p>
-                            <p className="text-[10px] uppercase tracking-[0.2em] text-neutral-700 group-hover:text-neutral-500 transition-colors">
-                              Tap here to enter your shipping location
+                            <MapPin className="text-neutral-700 group-hover:text-accent group-hover:scale-105 transition-all mb-3" size={24} />
+                            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 group-hover:text-white transition-colors">
+                              + Initialize Delivery Destination
                             </p>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-3">
                             {addresses.map(addr => (
                               <div
                                 key={addr.id}
                                 onClick={() => setSelectedAddressId(addr.id)}
-                                className={`relative p-6 border transition-all cursor-pointer group ${
+                                className={`relative p-5 border transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-sm ${
                                   selectedAddressId === addr.id
-                                    ? 'border-accent bg-accent/[0.03] shadow-[0_0_20px_rgba(212,175,55,0.06)]'
-                                    : 'border-neutral-900 bg-neutral-950/40 hover:border-neutral-700'
+                                    ? 'border-accent bg-accent/[0.02] shadow-[0_0_15px_rgba(212,175,55,0.05)]'
+                                    : 'border-white/5 bg-neutral-950/20 hover:border-neutral-800'
                                 }`}
                               >
-                                <div className="flex justify-between items-start mb-4">
-                                  <div className="flex items-center gap-3">
-                                    <div className={`w-3 h-3 rounded-full border-2 transition-all ${
-                                      selectedAddressId === addr.id ? 'border-accent bg-accent shadow-[0_0_8px_rgba(212,175,55,0.5)]' : 'border-neutral-700 bg-transparent'
-                                    }`} />
-                                    <span className={`text-[10px] uppercase font-bold tracking-[0.2em] ${
-                                      selectedAddressId === addr.id ? 'text-white' : 'text-neutral-500'
-                                    }`}>{addr.label}</span>
+                                <div className="flex items-start gap-4">
+                                  {/* Custom Radio Button */}
+                                  <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
+                                    selectedAddressId === addr.id ? 'border-accent' : 'border-neutral-800'
+                                  }`}>
+                                    {selectedAddressId === addr.id && (
+                                      <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                                    )}
                                   </div>
-                                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                      type="button"
-                                      onClick={(e) => { e.stopPropagation(); handleEditAddress(addr); }}
-                                      className="p-1.5 bg-neutral-900 rounded-sm hover:text-accent transition-colors"
-                                    >
-                                      <Settings size={10} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => { e.stopPropagation(); deleteAddress(addr.id); }}
-                                      className="p-1.5 bg-neutral-900 rounded-sm hover:text-red-500 transition-colors"
-                                    >
-                                      <Trash size={10} />
-                                    </button>
+                                  <div>
+                                    <div className="flex items-center gap-2.5 mb-1">
+                                      <span className={`text-[10px] uppercase font-bold tracking-[0.2em] px-2 py-0.5 rounded-sm ${
+                                        selectedAddressId === addr.id ? 'bg-accent/10 text-accent border border-accent/20' : 'bg-neutral-900 text-neutral-500 border border-transparent'
+                                      }`}>{addr.label}</span>
+                                      {addr.phone && (
+                                        <span className="text-[9px] font-mono text-neutral-600 font-bold">{addr.phone}</span>
+                                      )}
+                                    </div>
+                                    <p className="text-xs font-light text-neutral-400 font-sans tracking-wide leading-relaxed">
+                                      {addr.address}, {addr.city}, {addr.state} - {addr.pincode}
+                                    </p>
                                   </div>
                                 </div>
-                                <p className="text-xs font-mono leading-relaxed mb-2 text-white/60">{addr.address}, {addr.city}</p>
-                                {addr.phone && (
-                                  <p className="text-[10px] font-mono text-neutral-500 mb-4 flex items-center gap-1.5">
-                                    <Phone size={10} className="text-neutral-600" />
-                                    <span>{addr.phone}</span>
-                                  </p>
-                                )}
-                                <div className="flex items-center justify-between pt-3 border-t border-neutral-900/50">
-                                  <p className="text-[9px] uppercase tracking-[0.2em] text-neutral-600 font-bold">{addr.state} • {addr.pincode}</p>
-                                  {selectedAddressId === addr.id && (
-                                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
-                                      <Check size={14} className="text-accent" />
-                                    </motion.div>
-                                  )}
+
+                                <div className="flex items-center gap-4 self-end md:self-auto text-[9px] font-bold uppercase tracking-widest text-neutral-600">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); handleEditAddress(addr); }}
+                                    className="hover:text-accent transition-colors cursor-pointer"
+                                  >
+                                    [ Edit ]
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={(e) => { e.stopPropagation(); deleteAddress(addr.id); }}
+                                    className="hover:text-red-500 transition-colors cursor-pointer"
+                                  >
+                                    [ Delete ]
+                                  </button>
                                 </div>
                               </div>
                             ))}
@@ -638,31 +678,33 @@ const Checkout: React.FC = () => {
                         )}
                       </motion.div>
                     ) : (
+                      // Add / Edit address form
                       <motion.div
+                        key="address-form"
                         initial={{ opacity: 0, scale: 0.99 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.99 }}
-                        className="space-y-8"
+                        className="border border-neutral-900 bg-neutral-950/40 p-6 rounded-sm space-y-6"
                       >
                         <div className="flex items-center justify-between">
-                          <h3 className="text-[11px] font-bold uppercase tracking-[0.3em] text-accent">
-                            {editingAddressId ? 'Edit Address' : 'New Delivery Address'}
+                          <h3 className="text-[11px] font-bold uppercase tracking-[0.3em] text-accent font-mono">
+                            {editingAddressId ? 'Edit Coordinate Node' : 'Initialize Coordinate Node'}
                           </h3>
-                          <button type="button" onClick={() => { setShowAddressForm(false); setEditingAddressId(null); }} className="text-neutral-600 hover:text-white transition-colors">
+                          <button type="button" onClick={() => { setShowAddressForm(false); setEditingAddressId(null); }} className="text-neutral-600 hover:text-white transition-colors cursor-pointer">
                             <X size={18} />
                           </button>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-8">
-                          <div className="space-y-3">
-                            <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Address Type</label>
-                            <div className="flex gap-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
+                          <div className="space-y-2">
+                            <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Node Type</label>
+                            <div className="flex gap-2">
                               {['home', 'work', 'other'].map(t => (
                                 <button
                                   key={t}
                                   type="button"
                                   onClick={() => setAddressFormData(prev => ({ ...prev, type: t as any }))}
-                                  className={`flex-1 py-3 text-[9px] uppercase font-bold tracking-[0.2em] border transition-all ${
+                                  className={`flex-1 py-2 text-[9px] uppercase font-bold tracking-[0.2em] border transition-all cursor-pointer ${
                                     addressFormData.type === t
                                       ? 'bg-accent border-accent text-black'
                                       : 'bg-transparent border-neutral-900 text-neutral-600 hover:border-neutral-700'
@@ -674,7 +716,7 @@ const Checkout: React.FC = () => {
                             </div>
                           </div>
                           {addressFormData.type === 'other' && (
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                               <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Custom Label</label>
                               <input
                                 type="text"
@@ -682,11 +724,11 @@ const Checkout: React.FC = () => {
                                 value={addressFormData.label}
                                 onChange={handleAddressInputChange}
                                 placeholder="e.g. Studio, Hostel"
-                                className="w-full bg-transparent border-b border-neutral-900 py-3 px-0 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800"
+                                className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
                               />
                             </div>
                           )}
-                          <div className="md:col-span-2 space-y-3">
+                          <div className="md:col-span-2 space-y-2">
                             <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Street Address *</label>
                             <input
                               type="text"
@@ -694,11 +736,11 @@ const Checkout: React.FC = () => {
                               required
                               value={addressFormData.address}
                               onChange={handleAddressInputChange}
-                              className="w-full bg-transparent border-b border-neutral-900 py-3 px-0 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
+                              className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
                               placeholder="Flat / Building / Street"
                             />
                           </div>
-                          <div className="space-y-3">
+                          <div className="space-y-2">
                             <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">City *</label>
                             <input
                               type="text"
@@ -706,22 +748,22 @@ const Checkout: React.FC = () => {
                               required
                               value={addressFormData.city}
                               onChange={handleAddressInputChange}
-                              className="w-full bg-transparent border-b border-neutral-900 py-3 px-0 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
+                              className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
                               placeholder="Your City"
                             />
                           </div>
-                          <div className="space-y-3">
+                          <div className="space-y-2">
                             <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">State</label>
                             <input
                               type="text"
                               name="state"
                               value={addressFormData.state}
                               onChange={handleAddressInputChange}
-                              className="w-full bg-transparent border-b border-neutral-900 py-3 px-0 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
+                              className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
                               placeholder="State"
                             />
                           </div>
-                          <div className="space-y-3">
+                          <div className="space-y-2">
                             <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Pincode *</label>
                             <input
                               type="text"
@@ -729,18 +771,18 @@ const Checkout: React.FC = () => {
                               required
                               value={addressFormData.pincode}
                               onChange={handleAddressInputChange}
-                              className="w-full bg-transparent border-b border-neutral-900 py-3 px-0 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
+                              className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
                               placeholder="000000"
                             />
                           </div>
-                          <div className="space-y-3">
+                          <div className="space-y-2">
                             <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Contact Phone Number</label>
                             <input
                               type="tel"
                               name="phone"
                               value={addressFormData.phone}
                               onChange={handleAddressInputChange}
-                              className="w-full bg-transparent border-b border-neutral-900 py-3 px-0 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
+                              className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
                               placeholder="+91 XXXXXXXXXX (optional)"
                             />
                           </div>
@@ -750,14 +792,14 @@ const Checkout: React.FC = () => {
                           <button
                             type="button"
                             onClick={saveAddress}
-                            className="flex-grow bg-white text-black py-5 text-[12px] font-bold uppercase tracking-[0.3em] hover:bg-accent transition-colors"
+                            className="flex-grow bg-white text-black py-4 text-[11px] font-bold uppercase tracking-[0.25em] hover:bg-accent transition-colors cursor-pointer"
                           >
-                            Save Address
+                            Save Coordinates
                           </button>
                           <button
                             type="button"
                             onClick={() => { setShowAddressForm(false); setEditingAddressId(null); }}
-                            className="px-10 border border-neutral-900 py-5 text-[12px] font-bold uppercase tracking-[0.3em] hover:bg-neutral-900 transition-colors text-neutral-400"
+                            className="px-8 border border-neutral-900 py-4 text-[11px] font-bold uppercase tracking-[0.25em] hover:bg-neutral-900 transition-colors text-neutral-500 cursor-pointer"
                           >
                             Cancel
                           </button>
@@ -781,66 +823,6 @@ const Checkout: React.FC = () => {
             cartProductIds={cart.map(item => item.id)}
           />
 
-          {/* Packaging Intelligence Banner */}
-          <PackagingUpsellBanner itemCount={totalItemCount} />
-
-          {/* Cart Section */}
-          <section className="space-y-10">
-            <div className="flex items-center gap-4">
-              <span className="text-accent font-mono text-xs font-bold leading-none">03</span>
-              <h2 className="text-[12px] tracking-[0.3em] font-bold uppercase text-white">Extraction Manifest</h2>
-              <div className="flex-grow h-[1px] bg-neutral-900" />
-            </div>
-            
-            <div className="space-y-10">
-              {cart.map(item => (
-                <div key={`${item.id}-${item.selectedSize}`} className="flex gap-8 group">
-                  <Link to={`/product/${item.id}`} className="w-28 h-36 bg-neutral-950 overflow-hidden relative flex-shrink-0 block">
-                    <img 
-                        src={item.images[0]} 
-                        alt={item.name} 
-                        className="w-full h-full object-cover opacity-70 group-hover:opacity-100 group-hover:scale-105 transition-all duration-700" 
-                        referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  </Link>
-                  <div className="flex-grow flex flex-col py-1">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <Link to={`/product/${item.id}`} className="hover:text-accent transition-colors">
-                          <h3 className="text-[15px] tracking-tight font-display font-medium uppercase mb-1">{item.name}</h3>
-                        </Link>
-                        <div className="flex items-center gap-4">
-                          <span className="text-[9px] text-neutral-600 uppercase tracking-widest font-bold">CAT_{item.category?.toUpperCase()}</span>
-                          <span className="w-1 h-1 bg-neutral-800 rounded-full" />
-                          <span className="text-[9px] text-accent uppercase tracking-[0.2em] font-bold">BUILD: {item.selectedSize || 'OS'}</span>
-                        </div>
-                      </div>
-                      <button type="button" onClick={() => removeFromCart(item.id, item.selectedSize)} className="text-neutral-800 hover:text-red-500 transition-all p-2">
-                          <Trash2 size={16} />
-                      </button>
-                    </div>
-
-                    <div className="mt-auto flex justify-between items-center">
-                      <div className="flex items-center gap-6">
-                        <div className="flex items-center bg-black border border-neutral-900 p-1">
-                          <button type="button" onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedSize)} className="w-6 h-6 flex items-center justify-center hover:text-accent transition-colors">
-                              <Minus size={10} />
-                          </button>
-                          <span className="w-8 text-center text-[10px] font-mono font-bold">{item.quantity.toString().padStart(2, '0')}</span>
-                          <button type="button" onClick={() => updateQuantity(item.id, item.quantity + 1, item.selectedSize)} className="w-6 h-6 flex items-center justify-center hover:text-accent transition-colors">
-                              <Plus size={10} />
-                          </button>
-                        </div>
-                        <span className="text-[10px] text-neutral-700 font-mono tracking-tighter">UNIT_PRICE: ₹{item.price.toLocaleString()}</span>
-                      </div>
-                      <p className="text-sm font-mono tracking-tighter font-bold">TOTAL: ₹{(item.price * item.quantity).toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
         </div>
 
         {/* Summary */}
