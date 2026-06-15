@@ -125,7 +125,7 @@ const Shipping: React.FC = () => {
           <div className="space-y-4">
             <p className="text-2xl font-display font-bold tracking-tight uppercase">PAN INDIA</p>
             <p className="text-neutral-500 text-sm leading-relaxed uppercase tracking-widest font-medium">
-              We currently offer free shipping across India. No hidden protocols.
+              We charge ₹80 for store delivery (home shipping) across India. Collect in Store (Self Pickup) is available free of charge.
             </p>
           </div>
         </section>

@@ -841,7 +841,10 @@ const ProductDetail: React.FC = () => {
               </button>
             </div>
 
-            <p className="text-xl font-medium">₹{product.price.toLocaleString()}</p>
+            <p className="text-xl font-medium">
+              ₹{product.price.toLocaleString()}
+              <span className="text-[10px] text-neutral-500 uppercase tracking-widest font-mono font-bold block mt-1">(Excl. Shipping)</span>
+            </p>
           </div>
 
           {/* Story Behind the Design (Moved Up) */}
@@ -1028,6 +1031,9 @@ const ProductDetail: React.FC = () => {
                 <div className="flex flex-col items-center gap-2">
                   <p className="text-center text-[11px] tracking-widest text-neutral-600 uppercase">
                     Signal assigned at dispatch
+                  </p>
+                  <p className="text-center text-[9px] tracking-widest text-accent/80 uppercase font-mono mt-0.5">
+                    // Collect in Store (Free) or Home Delivery (₹80) available
                   </p>
                   <AnimatePresence>
                     {showConfirmation && (

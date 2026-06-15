@@ -40,6 +40,7 @@ const Checkout: React.FC = () => {
   const [showSecondLifeModal, setShowSecondLifeModal] = useState(false);
   const [secondLifeDismissed, setSecondLifeDismissed] = useState(false);
   const [coordinatesFlash, setCoordinatesFlash] = useState(false);
+  const [shippingMethod, setShippingMethod] = useState<'delivery' | 'pickup'>('delivery');
 
   const dismissSecondLife = () => {
     setSecondLifeDismissed(true);
@@ -216,15 +217,16 @@ const Checkout: React.FC = () => {
 
   // Core payment logic (extracted so modal can also trigger it)
   const proceedToPayment = async () => {
-    await triggerCheckout(formData, cart);
+    const shippingFee = shippingMethod === 'delivery' ? 80 : 0;
+    await triggerCheckout(formData, cart, totalPrice + shippingFee, shippingMethod);
     // triggerCheckout handles navigation logic via PhonePe redirect
   };
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Check if coordinates (shipping address) are selected/filled
-    if (!selectedAddressId) {
+    // Check if coordinates (shipping address) are selected/filled (only for home delivery)
+    if (shippingMethod === 'delivery' && !selectedAddressId) {
       // Flash the coordinates section to draw attention
       setCoordinatesFlash(true);
       setTimeout(() => setCoordinatesFlash(false), 2000);
@@ -568,249 +570,340 @@ const Checkout: React.FC = () => {
             );
           })()}
 
-          {/* Step 03: Delivery Destination */}
-          {(() => {
-            const coordComplete = !!selectedAddressId;
-            return (
-              <section
-                id="coordinates-section"
-                className={`space-y-6 transition-all duration-700 ${
-                  coordinatesFlash ? 'coordinates-flash' : ''
+          {/* Step 03: Transit Protocol */}
+          <section className="space-y-6">
+            <div className="flex items-center justify-between pb-4 border-b border-neutral-900">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
+                <h2 className="text-[11px] tracking-[0.25em] font-mono font-bold uppercase text-white">03 / Transit Protocol</h2>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => setShippingMethod('delivery')}
+                className={`p-5 border text-left rounded-sm transition-all cursor-pointer ${
+                  shippingMethod === 'delivery'
+                    ? 'border-accent bg-accent/[0.02] shadow-[0_0_15px_rgba(212,175,55,0.05)]'
+                    : 'border-white/5 bg-neutral-950/20 hover:border-neutral-800'
                 }`}
               >
-                <div className="flex items-center justify-between pb-4 border-b border-neutral-900">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full transition-all ${
-                      coordComplete 
-                        ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' 
-                        : coordinatesFlash
-                          ? 'bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse'
-                          : 'bg-amber-500 shadow-[0_0_8px_#f59e0b] animate-pulse'
-                    }`} />
-                    <h2 className="text-[11px] tracking-[0.25em] font-mono font-bold uppercase text-white">03 / Delivery Destination</h2>
-                  </div>
-                  {addresses.length > 0 && !showAddressForm && (
-                    <button
-                      type="button"
-                      onClick={() => { setShowAddressForm(true); setEditingAddressId(null); setAddressFormData({ label:'', type:'other', address:'', city:'', state:'', pincode:'', phone:'' }); }}
-                      className="text-[9px] tracking-[0.2em] font-bold uppercase text-neutral-500 hover:text-accent transition-colors cursor-pointer"
-                    >
-                      [ + Add Destination ]
-                    </button>
-                  )}
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] uppercase tracking-widest font-bold text-white">Store Delivery</span>
+                  <span className="text-[11px] font-mono font-bold text-accent">₹80</span>
                 </div>
+                <p className="text-[10px] text-neutral-500 uppercase tracking-wider font-light leading-relaxed">
+                  Delivered to your specified coordinate node. Standard dispatch times apply.
+                </p>
+              </button>
 
-                <div className={`relative transition-all duration-500`}>
-                  <AnimatePresence mode="wait">
-                    {!showAddressForm ? (
-                      <motion.div
-                        key="address-list"
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
+              <button
+                type="button"
+                onClick={() => setShippingMethod('pickup')}
+                className={`p-5 border text-left rounded-sm transition-all cursor-pointer ${
+                  shippingMethod === 'pickup'
+                    ? 'border-accent bg-accent/[0.02] shadow-[0_0_15px_rgba(212,175,55,0.05)]'
+                    : 'border-white/5 bg-neutral-950/20 hover:border-neutral-800'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] uppercase tracking-widest font-bold text-white">Collect in Store</span>
+                  <span className="text-[11px] font-mono font-bold text-emerald-500">FREE</span>
+                </div>
+                <p className="text-[10px] text-neutral-500 uppercase tracking-wider font-light leading-relaxed">
+                  Pick up at Miyapur, Hyderabad store. Ready within 24 hours.
+                </p>
+              </button>
+            </div>
+          </section>
+
+          {/* Delivery Destination (Conditional based on Transit Protocol) */}
+          {shippingMethod === 'delivery' ? (
+            (() => {
+              const coordComplete = !!selectedAddressId;
+              return (
+                <section
+                  id="coordinates-section"
+                  className={`space-y-6 transition-all duration-700 ${
+                    coordinatesFlash ? 'coordinates-flash' : ''
+                  }`}
+                >
+                  <div className="flex items-center justify-between pb-4 border-b border-neutral-900">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-2 rounded-full transition-all ${
+                        coordComplete 
+                          ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' 
+                          : coordinatesFlash
+                            ? 'bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse'
+                            : 'bg-amber-500 shadow-[0_0_8px_#f59e0b] animate-pulse'
+                      }`} />
+                      <h2 className="text-[11px] tracking-[0.25em] font-mono font-bold uppercase text-white">04 / Delivery Destination</h2>
+                    </div>
+                    {addresses.length > 0 && !showAddressForm && (
+                      <button
+                        type="button"
+                        onClick={() => { setShowAddressForm(true); setEditingAddressId(null); setAddressFormData({ label:'', type:'other', address:'', city:'', state:'', pincode:'', phone:'' }); }}
+                        className="text-[9px] tracking-[0.2em] font-bold uppercase text-neutral-500 hover:text-accent transition-colors cursor-pointer"
                       >
-                        {addresses.length === 0 ? (
-                          /* Empty state — minimal CTA */
-                          <div
-                            onClick={() => setShowAddressForm(true)}
-                            className="py-10 border border-dashed border-neutral-900 hover:border-accent/30 bg-neutral-950/20 hover:bg-accent/[0.01] transition-all rounded-sm flex flex-col items-center justify-center cursor-pointer group"
-                          >
-                            <MapPin className="text-neutral-700 group-hover:text-accent group-hover:scale-105 transition-all mb-3" size={24} />
-                            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 group-hover:text-white transition-colors">
-                              + Initialize Delivery Destination
-                            </p>
-                          </div>
-                        ) : (
-                          <div className="space-y-3">
-                            {addresses.map(addr => (
-                              <div
-                                key={addr.id}
-                                onClick={() => setSelectedAddressId(addr.id)}
-                                className={`relative p-5 border transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-sm ${
-                                  selectedAddressId === addr.id
-                                    ? 'border-accent bg-accent/[0.02] shadow-[0_0_15px_rgba(212,175,55,0.05)]'
-                                    : 'border-white/5 bg-neutral-950/20 hover:border-neutral-800'
-                                }`}
-                              >
-                                <div className="flex items-start gap-4">
-                                  {/* Custom Radio Button */}
-                                  <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
-                                    selectedAddressId === addr.id ? 'border-accent' : 'border-neutral-800'
-                                  }`}>
-                                    {selectedAddressId === addr.id && (
-                                      <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                                    )}
-                                  </div>
-                                  <div>
-                                    <div className="flex items-center gap-2.5 mb-1">
-                                      <span className={`text-[10px] uppercase font-bold tracking-[0.2em] px-2 py-0.5 rounded-sm ${
-                                        selectedAddressId === addr.id ? 'bg-accent/10 text-accent border border-accent/20' : 'bg-neutral-900 text-neutral-500 border border-transparent'
-                                      }`}>{addr.label}</span>
-                                      {addr.phone && (
-                                        <span className="text-[9px] font-mono text-neutral-600 font-bold">{addr.phone}</span>
-                                      )}
-                                    </div>
-                                    <p className="text-xs font-light text-neutral-400 font-sans tracking-wide leading-relaxed">
-                                      {addr.address}, {addr.city}, {addr.state} - {addr.pincode}
-                                    </p>
-                                  </div>
-                                </div>
+                        [ + Add Destination ]
+                      </button>
+                    )}
+                  </div>
 
-                                <div className="flex items-center gap-4 self-end md:self-auto text-[9px] font-bold uppercase tracking-widest text-neutral-600">
-                                  <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); handleEditAddress(addr); }}
-                                    className="hover:text-accent transition-colors cursor-pointer"
-                                  >
-                                    [ Edit ]
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); deleteAddress(addr.id); }}
-                                    className="hover:text-red-500 transition-colors cursor-pointer"
-                                  >
-                                    [ Delete ]
-                                  </button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </motion.div>
-                    ) : (
-                      // Add / Edit address form
-                      <motion.div
-                        key="address-form"
-                        initial={{ opacity: 0, scale: 0.99 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.99 }}
-                        className="border border-neutral-900 bg-neutral-950/40 p-6 rounded-sm space-y-6"
-                      >
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-[11px] font-bold uppercase tracking-[0.3em] text-accent font-mono">
-                            {editingAddressId ? 'Edit Coordinate Node' : 'Initialize Coordinate Node'}
-                          </h3>
-                          <button type="button" onClick={() => { setShowAddressForm(false); setEditingAddressId(null); }} className="text-neutral-600 hover:text-white transition-colors cursor-pointer">
-                            <X size={18} />
-                          </button>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
-                          <div className="space-y-2">
-                            <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Node Type</label>
-                            <div className="flex gap-2">
-                              {['home', 'work', 'other'].map(t => (
-                                <button
-                                  key={t}
-                                  type="button"
-                                  onClick={() => setAddressFormData(prev => ({ ...prev, type: t as any }))}
-                                  className={`flex-1 py-2 text-[9px] uppercase font-bold tracking-[0.2em] border transition-all cursor-pointer ${
-                                    addressFormData.type === t
-                                      ? 'bg-accent border-accent text-black'
-                                      : 'bg-transparent border-neutral-900 text-neutral-600 hover:border-neutral-700'
+                  <div className={`relative transition-all duration-500`}>
+                    <AnimatePresence mode="wait">
+                      {!showAddressForm ? (
+                        <motion.div
+                          key="address-list"
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -8 }}
+                        >
+                          {addresses.length === 0 ? (
+                            /* Empty state — minimal CTA */
+                            <div
+                              onClick={() => setShowAddressForm(true)}
+                              className="py-10 border border-dashed border-neutral-900 hover:border-accent/30 bg-neutral-950/20 hover:bg-accent/[0.01] transition-all rounded-sm flex flex-col items-center justify-center cursor-pointer group"
+                            >
+                              <MapPin className="text-neutral-700 group-hover:text-accent group-hover:scale-105 transition-all mb-3" size={24} />
+                              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 group-hover:text-white transition-colors">
+                                + Initialize Delivery Destination
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="space-y-3">
+                              {addresses.map(addr => (
+                                <div
+                                  key={addr.id}
+                                  onClick={() => setSelectedAddressId(addr.id)}
+                                  className={`relative p-5 border transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-sm ${
+                                    selectedAddressId === addr.id
+                                      ? 'border-accent bg-accent/[0.02] shadow-[0_0_15px_rgba(212,175,55,0.05)]'
+                                      : 'border-white/5 bg-neutral-950/20 hover:border-neutral-800'
                                   }`}
                                 >
-                                  {t}
-                                </button>
+                                  <div className="flex items-start gap-4">
+                                    {/* Custom Radio Button */}
+                                    <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
+                                      selectedAddressId === addr.id ? 'border-accent' : 'border-neutral-800'
+                                    }`}>
+                                      {selectedAddressId === addr.id && (
+                                        <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
+                                      )}
+                                    </div>
+                                    <div>
+                                      <div className="flex items-center gap-2.5 mb-1">
+                                        <span className={`text-[10px] uppercase font-bold tracking-[0.2em] px-2 py-0.5 rounded-sm ${
+                                          selectedAddressId === addr.id ? 'bg-accent/10 text-accent border border-accent/20' : 'bg-neutral-900 text-neutral-500 border border-transparent'
+                                        }`}>{addr.label}</span>
+                                        {addr.phone && (
+                                          <span className="text-[9px] font-mono text-neutral-600 font-bold">{addr.phone}</span>
+                                        )}
+                                      </div>
+                                      <p className="text-xs font-light text-neutral-400 font-sans tracking-wide leading-relaxed">
+                                        {addr.address}, {addr.city}, {addr.state} - {addr.pincode}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-4 self-end md:self-auto text-[9px] font-bold uppercase tracking-widest text-neutral-600">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); handleEditAddress(addr); }}
+                                      className="hover:text-accent transition-colors cursor-pointer"
+                                    >
+                                      [ Edit ]
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); deleteAddress(addr.id); }}
+                                      className="hover:text-red-500 transition-colors cursor-pointer"
+                                    >
+                                      [ Delete ]
+                                    </button>
+                                  </div>
+                                </div>
                               ))}
                             </div>
+                          )}
+                        </motion.div>
+                      ) : (
+                        // Add / Edit address form
+                        <motion.div
+                          key="address-form"
+                          initial={{ opacity: 0, scale: 0.99 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.99 }}
+                          className="border border-neutral-900 bg-neutral-950/40 p-6 rounded-sm space-y-6"
+                        >
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-[11px] font-bold uppercase tracking-[0.3em] text-accent font-mono">
+                              {editingAddressId ? 'Edit Coordinate Node' : 'Initialize Coordinate Node'}
+                            </h3>
+                            <button type="button" onClick={() => { setShowAddressForm(false); setEditingAddressId(null); }} className="text-neutral-600 hover:text-white transition-colors cursor-pointer">
+                              <X size={18} />
+                            </button>
                           </div>
-                          {addressFormData.type === 'other' && (
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
                             <div className="space-y-2">
-                              <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Custom Label</label>
+                              <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Node Type</label>
+                              <div className="flex gap-2">
+                                {['home', 'work', 'other'].map(t => (
+                                  <button
+                                    key={t}
+                                    type="button"
+                                    onClick={() => setAddressFormData(prev => ({ ...prev, type: t as any }))}
+                                    className={`flex-1 py-2 text-[9px] uppercase font-bold tracking-[0.2em] border transition-all cursor-pointer ${
+                                      addressFormData.type === t
+                                        ? 'bg-accent border-accent text-black'
+                                        : 'bg-transparent border-neutral-900 text-neutral-600 hover:border-neutral-700'
+                                    }`}
+                                  >
+                                    {t}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            {addressFormData.type === 'other' && (
+                              <div className="space-y-2">
+                                <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Custom Label</label>
+                                <input
+                                  type="text"
+                                  name="label"
+                                  value={addressFormData.label}
+                                  onChange={handleAddressInputChange}
+                                  placeholder="e.g. Studio, Hostel"
+                                  className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
+                                />
+                              </div>
+                            )}
+                            <div className="md:col-span-2 space-y-2">
+                              <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Street Address *</label>
                               <input
-                                type="text"
-                                name="label"
-                                value={addressFormData.label}
-                                onChange={handleAddressInputChange}
-                                placeholder="e.g. Studio, Hostel"
-                                className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
+                                  type="text"
+                                  name="address"
+                                  required
+                                  value={addressFormData.address}
+                                  onChange={handleAddressInputChange}
+                                  className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
+                                  placeholder="Flat / Building / Street"
                               />
                             </div>
-                          )}
-                          <div className="md:col-span-2 space-y-2">
-                            <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Street Address *</label>
-                            <input
-                              type="text"
-                              name="address"
-                              required
-                              value={addressFormData.address}
-                              onChange={handleAddressInputChange}
-                              className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
-                              placeholder="Flat / Building / Street"
-                            />
+                            <div className="space-y-2">
+                              <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">City *</label>
+                              <input
+                                type="text"
+                                name="city"
+                                required
+                                value={addressFormData.city}
+                                onChange={handleAddressInputChange}
+                                className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
+                                placeholder="Your City"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">State</label>
+                              <input
+                                type="text"
+                                name="state"
+                                value={addressFormData.state}
+                                onChange={handleAddressInputChange}
+                                className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
+                                placeholder="State"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Pincode *</label>
+                              <input
+                                type="text"
+                                name="pincode"
+                                required
+                                value={addressFormData.pincode}
+                                onChange={handleAddressInputChange}
+                                className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
+                                placeholder="000000"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Contact Phone Number</label>
+                              <input
+                                type="tel"
+                                name="phone"
+                                value={addressFormData.phone}
+                                onChange={handleAddressInputChange}
+                                className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
+                                placeholder="+91 XXXXXXXXXX (optional)"
+                              />
+                            </div>
                           </div>
-                          <div className="space-y-2">
-                            <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">City *</label>
-                            <input
-                              type="text"
-                              name="city"
-                              required
-                              value={addressFormData.city}
-                              onChange={handleAddressInputChange}
-                              className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
-                              placeholder="Your City"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">State</label>
-                            <input
-                              type="text"
-                              name="state"
-                              value={addressFormData.state}
-                              onChange={handleAddressInputChange}
-                              className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
-                              placeholder="State"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Pincode *</label>
-                            <input
-                              type="text"
-                              name="pincode"
-                              required
-                              value={addressFormData.pincode}
-                              onChange={handleAddressInputChange}
-                              className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
-                              placeholder="000000"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Contact Phone Number</label>
-                            <input
-                              type="tel"
-                              name="phone"
-                              value={addressFormData.phone}
-                              onChange={handleAddressInputChange}
-                              className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
-                              placeholder="+91 XXXXXXXXXX (optional)"
-                            />
-                          </div>
-                        </div>
 
-                        <div className="pt-4 flex gap-4">
-                          <button
-                            type="button"
-                            onClick={saveAddress}
-                            className="flex-grow bg-white text-black py-4 text-[11px] font-bold uppercase tracking-[0.25em] hover:bg-accent transition-colors cursor-pointer"
-                          >
-                            Save Coordinates
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => { setShowAddressForm(false); setEditingAddressId(null); }}
-                            className="px-8 border border-neutral-900 py-4 text-[11px] font-bold uppercase tracking-[0.25em] hover:bg-neutral-900 transition-colors text-neutral-500 cursor-pointer"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                          <div className="pt-4 flex gap-4">
+                            <button
+                              type="button"
+                              onClick={saveAddress}
+                              className="flex-grow bg-white text-black py-4 text-[11px] font-bold uppercase tracking-[0.25em] hover:bg-accent transition-colors cursor-pointer"
+                            >
+                              Save Coordinates
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => { setShowAddressForm(false); setEditingAddressId(null); }}
+                              className="px-8 border border-neutral-900 py-4 text-[11px] font-bold uppercase tracking-[0.25em] hover:bg-neutral-900 transition-colors text-neutral-500 cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </section>
+              );
+            })()
+          ) : (
+            <section className="space-y-6">
+              <div className="flex items-center justify-between pb-4 border-b border-neutral-900">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
+                  <h2 className="text-[11px] tracking-[0.25em] font-mono font-bold uppercase text-white">04 / Store Collection Node</h2>
                 </div>
-              </section>
-            );
-          })()}
+              </div>
+
+              <div className="border border-accent/20 bg-neutral-950/40 p-6 rounded-sm relative overflow-hidden backdrop-blur-md">
+                <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t border-l border-accent/20" />
+                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b border-r border-accent/20" />
+                
+                <div className="flex items-start gap-4">
+                  <MapPin className="text-accent shrink-0 mt-0.5" size={18} />
+                  <div>
+                    <span className="text-[10px] uppercase font-bold tracking-[0.2em] px-2 py-0.5 bg-accent/10 text-accent border border-accent/20 rounded-sm mb-2 inline-block">
+                      CHILS & CO. HQ / FLAGSHIP STORE
+                    </span>
+                    <p className="text-xs text-neutral-400 font-sans tracking-wide leading-relaxed mt-1">
+                      3rd Floor, Plot No. 38 & 39, Matrusri Nagar, Miyapur<br />
+                      Hyderabad, Telangana – 500049, India
+                    </p>
+                    <p className="text-[9px] font-mono text-neutral-600 font-bold mt-2 uppercase">
+                      Hours: Mon–Sat · 10 AM – 6 PM IST
+                    </p>
+                    <div className="mt-4">
+                      <a
+                        href="https://share.google/IwXCYyuX7MlF1tCt2"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-2 px-4 py-2 border border-accent/30 hover:border-accent bg-accent/5 hover:bg-accent/15 text-[10px] uppercase font-bold tracking-widest text-accent hover:text-white transition-all rounded-sm cursor-pointer"
+                      >
+                        <Navigation size={10} className="rotate-45" />
+                        View Map Location
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          )}
 
           {/* Second Life Modal — triggered on pay with 1 item */}
           <SecondLifeModal
@@ -842,11 +935,15 @@ const Checkout: React.FC = () => {
                 </div>
                 <div className="flex justify-between items-center text-[11px] uppercase tracking-widest">
                   <span className="text-neutral-600">Transit Protocol</span>
-                  <span className="text-accent font-bold">Complementary Signal</span>
+                  {shippingMethod === 'delivery' ? (
+                    <span className="font-mono text-white font-bold">₹80</span>
+                  ) : (
+                    <span className="text-accent font-bold">Free (Store Pickup)</span>
+                  )}
                 </div>
                 <div className="flex justify-between items-center text-[11px] uppercase tracking-widest pt-6 border-t border-neutral-900">
                   <span className="text-white font-bold">Extraction Total</span>
-                  <span className="text-2xl font-display font-medium text-white">₹{totalPrice.toLocaleString()}</span>
+                  <span className="text-2xl font-display font-medium text-white">₹{(totalPrice + (shippingMethod === 'delivery' ? 80 : 0)).toLocaleString()}</span>
                 </div>
               </div>
 

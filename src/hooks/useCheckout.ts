@@ -6,7 +6,7 @@ export const useCheckout = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const triggerCheckout = async (customerDetails: any, cartItems: any[], customAmount?: number) => {
+  const triggerCheckout = async (customerDetails: any, cartItems: any[], customAmount?: number, shippingMethod?: string) => {
     const amountToPay = customAmount || totalPrice;
     if (amountToPay <= 0) return;
 
@@ -25,7 +25,8 @@ export const useCheckout = () => {
         body: JSON.stringify({ 
           amount: amountToPay,
           customerDetails,
-          lineItems: cartItems
+          lineItems: cartItems,
+          shippingMethod
         })
       });
       const order = await response.json();

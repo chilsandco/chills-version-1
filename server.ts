@@ -787,7 +787,7 @@ async function startServer() {
 
   app.post("/api/checkout/create-order", async (req, res) => {
     try {
-      const { amount, currency, customerDetails, lineItems } = req.body;
+      const { amount, currency, customerDetails, lineItems, shippingMethod } = req.body;
       const wc = getWooCommerce();
       
       if (!req.headers.authorization) {
@@ -809,6 +809,9 @@ async function startServer() {
       }
 
       if (wc) {
+        const isPickup = shippingMethod === "pickup";
+        const shippingFee = isPickup ? 0 : 80;
+
         // Create order in WooCommerce
         const orderData = {
           payment_method: "phonepe",
@@ -818,15 +821,23 @@ async function startServer() {
           billing: {
             first_name: customerDetails.firstName,
             last_name: customerDetails.lastName,
-            address_1: customerDetails.address,
-            city: customerDetails.city,
-            state: customerDetails.state,
-            postcode: customerDetails.pincode,
+            address_1: customerDetails.address || "Local Pickup Store Address",
+            city: customerDetails.city || "Hyderabad",
+            state: customerDetails.state || "Telangana",
+            postcode: customerDetails.pincode || "500049",
             country: "IN",
             email: customerDetails.email,
             phone: customerDetails.phone
           },
-          shipping: {
+          shipping: isPickup ? {
+            first_name: customerDetails.firstName,
+            last_name: customerDetails.lastName,
+            address_1: "3rd Floor, Plot No. 38 & 39, Matrusri Nagar, Miyapur",
+            city: "Hyderabad",
+            state: "Telangana",
+            postcode: "500049",
+            country: "IN"
+          } : {
             first_name: customerDetails.firstName,
             last_name: customerDetails.lastName,
             address_1: customerDetails.address,
@@ -840,12 +851,23 @@ async function startServer() {
             quantity: item.quantity,
             meta_data: item.selectedSize ? [{ key: "pa_size", value: item.selectedSize }] : []
           })),
+          shipping_lines: [
+            {
+              method_id: isPickup ? "local_pickup" : "flat_rate",
+              method_title: isPickup ? "Collect in Store" : "Store Delivery",
+              total: shippingFee.toString()
+            }
+          ],
           meta_data: [
             {
               key: "Packaging Selection",
               value: lineItems.reduce((sum: number, item: any) => sum + item.quantity, 0) === 1 
                 ? "Biodegradable Eco Bag" 
                 : "Second Life Box"
+            },
+            {
+              key: "Delivery Method",
+              value: isPickup ? "Collect in Store" : "Store Delivery"
             }
           ]
         };

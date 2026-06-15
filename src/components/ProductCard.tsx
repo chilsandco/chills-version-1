@@ -136,7 +136,10 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               </p>
             )}
           </div>
-          <p className="text-[13px] font-mono opacity-40 group-hover:opacity-100 transition-opacity duration-500">₹{product.price.toLocaleString()}</p>
+          <div className="text-right">
+            <p className="text-[13px] font-mono opacity-40 group-hover:opacity-100 transition-opacity duration-500">₹{product.price.toLocaleString()}</p>
+            <span className="text-[8px] text-neutral-600 uppercase tracking-widest font-mono font-bold mt-1 block">excl. shipping</span>
+          </div>
         </div>
 
         {product.status === "Coming Soon" && (
