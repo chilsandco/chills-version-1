@@ -1,10 +1,18 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Shield, Lock, Eye, Server, RefreshCcw, Mail, MapPin, Phone, Clock } from 'lucide-react';
+import SEO from '../components/SEO';
+
 
 const PrivacyPolicy: React.FC = () => {
   return (
     <div className="bg-black text-white min-h-screen pt-32 pb-24 px-6 md:px-12 selection:bg-accent selection:text-black font-sans">
+      <SEO 
+        title="Privacy Policy & Data Security"
+        description="Verify how Chilamkuri Ventures collects, stores, and protects your identity data, transaction notes, and coordinates at Chils & Co."
+        canonical="https://chilsandco.com/privacy-policy"
+        keywords="privacy policy, data security, user agreement, cookies policy, personal information, chilamkuri ventures"
+      />
       <div className="max-w-[1000px] mx-auto">
         {/* Header Section */}
         <motion.section 

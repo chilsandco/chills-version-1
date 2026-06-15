@@ -3,6 +3,8 @@ import { motion, useAnimation } from 'motion/react';
 import { ArrowRight, CheckCircle2, AlertCircle, LogOut, Package, ExternalLink } from 'lucide-react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
+import SEO from '../components/SEO';
+
 
 const WinkingEye: React.FC<{ isVisible: boolean; onClick: () => void }> = ({ isVisible, onClick }) => {
   const controls = useAnimation();
@@ -375,7 +377,13 @@ const Auth: React.FC = () => {
 
     return (
       <div className="min-h-screen pt-36 md:pt-32 pb-24 px-6">
-        <div className="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-12">
+      <SEO 
+        title="Member Portal & Authentication"
+        description="Access your Chils & Co. account, track your custom garment builds, secure co-creator badges, and view order history."
+        canonical="https://chilsandco.com/auth"
+        keywords="login, signup, chils and co account, authentication console, member console, track orders"
+      />
+      <div className="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-12">
           {/* Profile Sidebar */}
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
@@ -550,6 +558,12 @@ const Auth: React.FC = () => {
 
   return (
     <div className="min-h-screen pt-36 md:pt-32 flex flex-col md:flex-row">
+      <SEO 
+        title="Authenticate Identity"
+        description="Sign in or register to join the Chils & Co. community. Gain early access to limited bespoke drops and personalized fittings."
+        canonical="https://chilsandco.com/auth"
+        keywords="login, signup, register identity, authentication gate, bespoke access"
+      />
       {/* Left: Branding */}
       <div className="hidden md:flex flex-1 bg-[#0a0a0a] items-center justify-center p-12 border-r border-white/10">
         <div className="max-w-md">

@@ -1,10 +1,18 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { Shield, Book, UserCheck, Package, CreditCard, Truck, RefreshCcw, Layout, UserX, Globe, AlertCircle, Mail, MapPin, Phone, Clock } from 'lucide-react';
+import SEO from '../components/SEO';
+
 
 const TermsConditions: React.FC = () => {
   return (
     <div className="bg-black text-white min-h-screen pt-32 pb-24 px-6 md:px-12 selection:bg-accent selection:text-black font-sans">
+      <SEO 
+        title="Terms & Conditions"
+        description="Read the operational terms, binding criteria, pricing policies, and governance rules set forth by Chilamkuri Ventures for Chils & Co."
+        canonical="https://chilsandco.com/terms-conditions"
+        keywords="terms and conditions, user agreement, legal policy, governing law, hyderabad jurisdiction, chilamkuri ventures"
+      />
       <div className="max-w-[1000px] mx-auto">
         {/* Header Section */}
         <motion.section 

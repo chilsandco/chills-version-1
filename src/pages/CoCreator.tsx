@@ -4,6 +4,8 @@ import confetti from 'canvas-confetti';
 import { ArrowRight, Fingerprint, Palette, Send, Rocket, IndianRupee, Cpu, Globe, Lock, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
+import SEO from '../components/SEO';
+
 
 const HandshakeScene = () => {
   return (
@@ -352,6 +354,12 @@ const CoCreator: React.FC = () => {
 
   return (
     <div className="bg-black min-h-screen pt-36 md:pt-32 pb-24 overflow-hidden selection:bg-accent selection:text-black uppercase">
+      <SEO 
+        title="Co-Creator Network"
+        description="Join Chils & Co. as a Co-Creator. Define your pseudo-identity, submit your custom designs, and earn a 5% royalty per unit on limited releases."
+        canonical="https://chilsandco.com/co-creator"
+        keywords="co-creator, creator network, design shirts online, fashion submission portal, garment royalty system"
+      />
       {/* Background Grid */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />

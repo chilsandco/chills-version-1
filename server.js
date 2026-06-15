@@ -1831,6 +1831,50 @@ Images: ${images ? images.join(", ") : "None"}`;
       res.redirect("https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png");
     }
   });
+  app.get("/sitemap.xml", async (req, res) => {
+    res.header("Content-Type", "application/xml");
+    res.header("Cache-Control", "public, max-age=3600");
+    const staticUrls = [
+      { loc: "https://chilsandco.com/", priority: "1.0", changefreq: "daily" },
+      { loc: "https://chilsandco.com/collection", priority: "0.9", changefreq: "daily" },
+      { loc: "https://chilsandco.com/bespoke", priority: "0.9", changefreq: "weekly" },
+      { loc: "https://chilsandco.com/co-creator", priority: "0.8", changefreq: "weekly" },
+      { loc: "https://chilsandco.com/social-vault", priority: "0.7", changefreq: "weekly" },
+      { loc: "https://chilsandco.com/support", priority: "0.7", changefreq: "monthly" },
+      { loc: "https://chilsandco.com/shipping-delivery", priority: "0.5", changefreq: "monthly" },
+      { loc: "https://chilsandco.com/returns-refunds", priority: "0.5", changefreq: "monthly" },
+      { loc: "https://chilsandco.com/privacy-policy", priority: "0.5", changefreq: "monthly" },
+      { loc: "https://chilsandco.com/terms-conditions", priority: "0.5", changefreq: "monthly" }
+    ];
+    let productUrls = [];
+    try {
+      const wc = getWooCommerce();
+      if (wc) {
+        const response = await wcSafeCall(wc, "get", "products", { per_page: 100, status: "publish" });
+        if (Array.isArray(response.data)) {
+          productUrls = response.data.map((prod) => ({
+            loc: `https://chilsandco.com/product/${prod.id}`,
+            priority: "0.8",
+            changefreq: "weekly"
+          }));
+        }
+      }
+    } catch (err) {
+      console.error("[CHILS SITEMAP] Error generating product nodes for sitemap:", err.message || err);
+    }
+    const allUrls = [...staticUrls, ...productUrls];
+    const xmlItems = allUrls.map((url) => `
+  <url>
+    <loc>${url.loc}</loc>
+    <changefreq>${url.changefreq}</changefreq>
+    <priority>${url.priority}</priority>
+  </url>`).join("");
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${xmlItems}
+</urlset>`;
+    res.send(xml);
+  });
   app.all("/api/*", (req, res) => {
     console.warn(`[CHILS DEBUG] Unmatched API path: ${req.method} ${req.url}`);
     res.status(404).json({

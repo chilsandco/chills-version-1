@@ -2,6 +2,8 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { Mail, Phone, Clock, MapPin, ArrowRight, ShieldCheck, Headphones } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import SEO from '../components/SEO';
+
 
 const Support: React.FC = () => {
   const [settings, setSettings] = React.useState({
@@ -22,6 +24,12 @@ const Support: React.FC = () => {
 
   return (
     <div className="bg-black text-white min-h-screen pt-32 pb-24 px-6 md:px-12 selection:bg-accent selection:text-black">
+      <SEO 
+        title="Support & Customer Assistance"
+        description="Need help with your order or tailoring coordinates? Get in touch with the Chils & Co. support desk. Direct communication links and location maps."
+        canonical="https://chilsandco.com/support"
+        keywords="customer support, chils and co assistance, contact chils and co, miyapur studio, order inquiries"
+      />
       <div className="max-w-[1400px] mx-auto">
         {/* Header Section */}
         <motion.section 

@@ -16,6 +16,8 @@ import {
   IndianRupee
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import SEO from '../components/SEO';
+
 
 const Returns: React.FC = () => {
   const [settings, setSettings] = React.useState({
@@ -33,6 +35,12 @@ const Returns: React.FC = () => {
 
   return (
     <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen bg-black">
+      <SEO 
+        title="Returns, Refunds & Reversals"
+        description="Verify order returns eligibility, the 48-hour integrity window guidelines, required photographic evidence, and refund processing cycles."
+        canonical="https://chilsandco.com/returns-refunds"
+        keywords="return policy, refunds policy, reverse logistics, refund timelines, order cancellations, quality check"
+      />
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}

@@ -9,6 +9,7 @@ import { BookOpen, Check, CreditCard, Droplets, Heart, Ruler, Shirt, Sparkles, X
 import { useGesture } from '@use-gesture/react';
 import { Link } from 'react-router-dom';
 import SizeGuide from '../components/SizeGuide';
+import SEO from '../components/SEO';
 
 interface MagnifiedImageCardProps {
   img: string;
@@ -200,38 +201,6 @@ const ProductDetail: React.FC = () => {
       .then(data => {
         setProduct(data);
         setLoading(false);
-        
-        // Update Metadata for Sharing
-        const brandLine = "Not made for seasons. Made for reasons. — Chils & Co";
-        document.title = `${data.name} | Chils & Co`;
-        
-        const metaTags = {
-          'og:title': `${data.name} | Chils & Co`,
-          'og:description': brandLine,
-          'og:image': data.images[0],
-          'og:url': window.location.href,
-          'og:type': 'product',
-          'twitter:card': 'summary_large_image',
-          'twitter:title': data.name,
-          'twitter:description': brandLine,
-          'twitter:image': data.images[0],
-        };
-
-        Object.entries(metaTags).forEach(([property, content]) => {
-          let element = document.querySelector(`meta[property="${property}"]`) || 
-                        document.querySelector(`meta[name="${property}"]`);
-          
-          if (!element) {
-            element = document.createElement('meta');
-            if (property.startsWith('og:')) {
-              element.setAttribute('property', property);
-            } else {
-              element.setAttribute('name', property);
-            }
-            document.head.appendChild(element);
-          }
-          element.setAttribute('content', content);
-        });
       })
       .catch(() => navigate('/collection'));
   }, [id, navigate]);
@@ -524,6 +493,33 @@ const ProductDetail: React.FC = () => {
 
   return (
     <div className="pt-24 sm:pt-32 pb-24 px-6 md:px-12 max-w-[1800px] mx-auto">
+      <SEO 
+        title={product.name}
+        description={product.shortDescription || product.concept || "Chils & Co. delivers high-end bespoke garments and luxury ready-to-wear."}
+        canonical={`https://chilsandco.com/product/${product.id}`}
+        ogType="product"
+        ogImage={product.images[0]}
+        keywords={`${product.name.toLowerCase()}, luxury clothing, bespoke garments, chils and co product`}
+        schema={{
+          "@context": "https://schema.org/",
+          "@type": "Product",
+          "name": product.name,
+          "image": product.images,
+          "description": product.description || product.shortDescription,
+          "brand": {
+            "@type": "Brand",
+            "name": "CHILS & CO."
+          },
+          "offers": {
+            "@type": "Offer",
+            "url": `https://chilsandco.com/product/${product.id}`,
+            "priceCurrency": "INR",
+            "price": product.price.toString(),
+            "itemCondition": "https://schema.org/NewCondition",
+            "availability": product.status === "Available" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+          }
+        }}
+      />
       {/* Navigation Breadcrumb */}
       <motion.div 
         initial={{ opacity: 0, x: -10 }}

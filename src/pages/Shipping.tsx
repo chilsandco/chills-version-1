@@ -15,6 +15,8 @@ import {
   Search
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import SEO from '../components/SEO';
+
 
 const Shipping: React.FC = () => {
   const [settings, setSettings] = React.useState({
@@ -32,6 +34,12 @@ const Shipping: React.FC = () => {
 
   return (
     <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen bg-black">
+      <SEO 
+        title="Shipping & Delivery Protocols"
+        description="Review our shipping timelines, delivery coverage, cost structures, tracking protocols, and zero-plastic eco packaging standards."
+        canonical="https://chilsandco.com/shipping-delivery"
+        keywords="free shipping, shipping india, order tracking, delivery timelines, circular packaging, eco-bag, second life box"
+      />
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}

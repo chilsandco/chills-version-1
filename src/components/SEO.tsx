@@ -8,6 +8,7 @@ interface SEOProps {
   ogType?: string;
   ogImage?: string;
   keywords?: string;
+  schema?: Record<string, any>;
 }
 
 const SEO: React.FC<SEOProps> = ({ 
@@ -16,7 +17,8 @@ const SEO: React.FC<SEOProps> = ({
   canonical = "https://chilsandco.com",
   ogType = "website",
   ogImage = "https://res.cloudinary.com/ddatd5ruz/image/upload/v1781014185/chils_main_logo_transparent_ab7vru.png",
-  keywords = "luxury fashion, bespoke tailoring, handcrafted garments, Chils and Co, custom suits, high-end menswear"
+  keywords = "luxury fashion, bespoke tailoring, handcrafted garments, Chils and Co, custom suits, high-end menswear",
+  schema
 }) => {
   const siteName = "CHILS & CO.";
   const fullTitle = title.includes(siteName) ? title : `${title} | ${siteName}`;
@@ -57,6 +59,13 @@ const SEO: React.FC<SEOProps> = ({
           ]
         })}
       </script>
+
+      {/* Custom Schema.org JSON-LD (e.g. Product, LocalBusiness) */}
+      {schema && (
+        <script type="application/ld+json">
+          {JSON.stringify(schema)}
+        </script>
+      )}
     </Helmet>
   );
 };
