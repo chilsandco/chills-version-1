@@ -66,7 +66,7 @@ const SignalDetails: React.FC = () => {
   const steps = [
     { label: "Order Received", status: "completed" },
     { label: "Processing", status: (signal.status === 'processing' || signal.status === 'completed' || isRefunded) ? 'completed' : 'pending' },
-    { label: "Dispatched", status: (signal.status === 'shipping' || signal.status === 'completed' || isRefunded) ? 'completed' : 'pending' },
+    { label: "Dispatched", status: (signal.status === 'shipping' || !!signal.shipping?.awb || signal.status === 'completed' || isRefunded) ? 'completed' : 'pending' },
     { label: "Delivered", status: (signal.status === 'completed' || isRefunded) ? 'completed' : 'pending' },
   ];
 
@@ -287,6 +287,58 @@ const SignalDetails: React.FC = () => {
         </div>
 
         <div className="space-y-8">
+          {signal.shipping.awb && (
+            <motion.section 
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-neutral-950 border border-accent/20 p-8 relative overflow-hidden group shadow-[0_0_25px_rgba(212,175,55,0.02)]"
+            >
+              <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 blur-2xl rounded-full -mr-16 -mt-16 group-hover:bg-accent/10 transition-colors duration-1000" />
+              
+              <div className="flex items-center gap-3 mb-6 relative z-10">
+                <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase text-accent">Logistics Terminal</h3>
+              </div>
+              
+              <div className="space-y-5 relative z-10">
+                <div>
+                  <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Carrier Protocol</span>
+                  <p className="text-xs uppercase font-bold tracking-widest text-white">{signal.shipping.courier || 'Verified partner'}</p>
+                </div>
+                
+                <div>
+                  <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Relay AWB</span>
+                  <a 
+                    href={signal.shipping.trackingUrl || '#'} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="font-mono text-[13px] tracking-widest text-white hover:text-accent transition-colors flex items-center gap-1.5 decoration-neutral-800 underline underline-offset-4 decoration-dotted hover:decoration-accent"
+                  >
+                    #{signal.shipping.awb}
+                    <span className="text-[9px] text-neutral-500 font-sans">↗</span>
+                  </a>
+                </div>
+
+                <div>
+                  <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Logistics Status</span>
+                  <div className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                    <p className="text-[11px] uppercase font-bold tracking-widest text-green-400">{signal.shipping.trackingStatus || 'Dispatched'}</p>
+                  </div>
+                </div>
+
+                {signal.shipping.etd && (
+                  <div className="pt-4 border-t border-neutral-900">
+                    <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Estimated Delivery</span>
+                    <p className="text-[11px] uppercase font-bold tracking-widest text-neutral-400 font-mono">
+                      {new Date(signal.shipping.etd as string).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </motion.section>
+          )}
+
           <section className="bg-neutral-950 border border-neutral-900 p-8">
             <div className="flex items-center gap-3 mb-6">
               <MapPin size={14} className="text-accent" />

@@ -57,6 +57,11 @@ export interface Signal {
   shipping: {
     address: string;
     method: string;
+    awb?: string | null;
+    courier?: string | null;
+    trackingStatus?: string | null;
+    trackingUrl?: string | null;
+    etd?: string | null;
   };
   orderKey?: string;
 }

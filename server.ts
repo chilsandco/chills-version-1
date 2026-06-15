@@ -463,6 +463,50 @@ async function startServer() {
       const lineItems = Array.isArray(order.line_items) ? order.line_items : [];
       const shippingLines = Array.isArray(order.shipping_lines) ? order.shipping_lines : [];
       
+      const getMeta = (key: string) => {
+        return order.meta_data?.find((m: any) => m.key === key)?.value;
+      };
+
+      const getTrackingInfo = () => {
+        // 1. Direct custom Shiprocket keys or standard tracking keys
+        let awb = getMeta("_shiprocket_awb") || getMeta("_tracking_number");
+        let courier = getMeta("_shiprocket_courier") || getMeta("_tracking_provider");
+        let status = getMeta("_shiprocket_tracking_status") || getMeta("_tracking_status");
+        let url = getMeta("_shiprocket_tracking_url") || getMeta("_tracking_link");
+        let etd = getMeta("_shiprocket_etd");
+
+        // 2. Parsed standard wc_shipment_tracking_items (commonly used by WooCommerce shipment tracking plugins)
+        const trackingItems = getMeta("_wc_shipment_tracking_items");
+        if (!awb && trackingItems) {
+          try {
+            const items = typeof trackingItems === 'string' ? JSON.parse(trackingItems) : trackingItems;
+            if (Array.isArray(items) && items.length > 0) {
+              const item = items[0];
+              awb = item.tracking_number;
+              courier = item.tracking_provider;
+              url = item.custom_tracking_link || item.tracking_link;
+            }
+          } catch (e) {
+            console.error("[CHILS] Failed to parse wc_shipment_tracking_items:", e);
+          }
+        }
+
+        // 3. Fallback tracking url generation
+        if (awb && !url) {
+          url = `https://shiprocket.co/tracking/${awb}`;
+        }
+
+        return {
+          awb: awb ? String(awb) : null,
+          courier: courier ? String(courier) : null,
+          trackingStatus: status ? String(status) : null,
+          trackingUrl: url ? String(url) : null,
+          etd: etd ? String(etd) : null
+        };
+      };
+
+      const tracking = getTrackingInfo();
+
       return {
         id: (order.id || "").toString(),
         signalId: toSignalId(order.id),
@@ -482,7 +526,12 @@ async function startServer() {
         })),
         shipping: {
           address: order.shipping ? `${order.shipping.address_1 || ""}${order.shipping.address_1 && order.shipping.city ? ", " : ""}${order.shipping.city || ""}` : "No address provided",
-          method: shippingLines[0]?.method_title || "Standard Delivery"
+          method: shippingLines[0]?.method_title || "Standard Delivery",
+          awb: tracking.awb,
+          courier: tracking.courier,
+          trackingStatus: tracking.trackingStatus,
+          trackingUrl: tracking.trackingUrl,
+          etd: tracking.etd
         },
         orderKey: order.order_key
       };
@@ -2398,6 +2447,124 @@ async function startServer() {
     } catch (error: any) {
       console.error("[CHILS & CO. WEBHOOK] Webhook processing failed:", error.message);
       res.status(200).send("OK");
+    }
+  });
+
+  // Shiprocket / Logistics Webhook Integration
+  // NOTE: Route name is "logistics-relay" to avoid Shiprocket's restrictions on "shiprocket" keyword in URL
+  app.post("/api/webhooks/logistics-relay", async (req, res) => {
+    try {
+      const token = req.query.token || req.headers['x-api-key'];
+      const expectedToken = process.env.SHIPROCKET_WEBHOOK_TOKEN || "chils_secure_relay_token_109283";
+      
+      if (!token || token !== expectedToken) {
+        console.warn(`[LOGISTICS WEBHOOK] Unauthorized access attempt: token mismatch.`);
+        return res.status(401).json({ error: "Unauthorized: Invalid Webhook Token" });
+      }
+
+      const payload = req.body;
+      console.log("[LOGISTICS WEBHOOK] Payload received:", JSON.stringify(payload));
+
+      // Shiprocket webhook payload commonly maps order to order_id or channel_order_id
+      const rawOrderId = payload.channel_order_id || payload.order_id;
+      const awb = payload.awb;
+      const courier = payload.courier_name;
+      const trackingStatus = payload.status || payload.current_status || "In Transit";
+      const etd = payload.etd || payload.expected_delivery_date;
+
+      if (!rawOrderId) {
+        console.warn("[LOGISTICS WEBHOOK] Missing order identifier in payload.");
+        return res.status(400).json({ error: "Missing order reference" });
+      }
+
+      // Convert order id to integer
+      const orderId = parseInt(String(rawOrderId).replace(/\D/g, ''), 10);
+      if (isNaN(orderId)) {
+        console.warn(`[LOGISTICS WEBHOOK] Invalid order ID format: ${rawOrderId}`);
+        return res.status(400).json({ error: "Invalid order reference format" });
+      }
+
+      const wc = getWooCommerce();
+      if (!wc) {
+        console.error("[LOGISTICS WEBHOOK] WooCommerce client not configured. Webhook mapping aborted.");
+        return res.status(500).json({ error: "Internal store configuration error" });
+      }
+
+      console.log(`[LOGISTICS WEBHOOK] Syncing Order #${orderId} - AWB: ${awb}, Courier: ${courier}, Status: ${trackingStatus}`);
+
+      // Fetch existing WooCommerce order to inspect/update
+      let orderResponse;
+      try {
+        orderResponse = await wcSafeCall(wc, "get", `orders/${orderId}`);
+      } catch (err: any) {
+        console.error(`[LOGISTICS WEBHOOK] Order #${orderId} lookup failed in WooCommerce:`, err.message);
+        return res.status(404).json({ error: "Order not found in store archives" });
+      }
+
+      const existingOrder = orderResponse.data;
+      if (!existingOrder) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+
+      // Prepare updated meta_data array
+      const existingMeta = existingOrder.meta_data || [];
+      const newMetaMap = new Map(existingMeta.map((m: any) => [m.key, m.value]));
+
+      // Set/Overwrite logistics meta fields
+      if (awb) newMetaMap.set("_shiprocket_awb", String(awb));
+      if (courier) newMetaMap.set("_shiprocket_courier", String(courier));
+      if (trackingStatus) newMetaMap.set("_shiprocket_tracking_status", String(trackingStatus));
+      if (etd) newMetaMap.set("_shiprocket_etd", String(etd));
+      if (awb) newMetaMap.set("_shiprocket_tracking_url", `https://shiprocket.co/tracking/${awb}`);
+
+      const updatedMeta = Array.from(newMetaMap.entries()).map(([key, value]) => ({ key, value }));
+
+      // Prepare order status updates based on tracking status
+      let updatedStatus = existingOrder.status;
+      const normalStatus = String(trackingStatus).toLowerCase().trim();
+
+      if (['shipped', 'dispatched', 'out_for_delivery', 'out-for-delivery', 'in-transit', 'in transit'].some(s => normalStatus.includes(s))) {
+        updatedStatus = "shipping";
+      } else if (['delivered'].some(s => normalStatus.includes(s))) {
+        updatedStatus = "completed";
+      }
+
+      const orderUpdatePayload: any = {
+        meta_data: updatedMeta
+      };
+
+      // Attempt to update status. Since 'shipping' might not be registered, wrap in try/catch fallback
+      if (updatedStatus !== existingOrder.status) {
+        try {
+          console.log(`[LOGISTICS WEBHOOK] Attempting order status transition to: ${updatedStatus}`);
+          await wcSafeCall(wc, "put", `orders/${orderId}`, {
+            ...orderUpdatePayload,
+            status: updatedStatus,
+            customer_note: `Logistics status update: ${trackingStatus}. Carrier: ${courier || 'N/A'}, AWB: #${awb || 'N/A'}`
+          });
+          console.log(`[LOGISTICS WEBHOOK] Order #${orderId} status & meta updated successfully to: ${updatedStatus}`);
+        } catch (statusErr: any) {
+          console.warn(`[LOGISTICS WEBHOOK] WooCommerce rejected status transition to '${updatedStatus}' (may be unregistered). Falling back to meta update only.`);
+          // If update fails due to status restriction, perform a metadata-only update
+          await wcSafeCall(wc, "put", `orders/${orderId}`, {
+            ...orderUpdatePayload,
+            customer_note: `Logistics status update: ${trackingStatus} (In Transit). Carrier: ${courier || 'N/A'}, AWB: #${awb || 'N/A'}`
+          });
+          console.log(`[LOGISTICS WEBHOOK] Order #${orderId} metadata updated successfully (retained status: ${existingOrder.status})`);
+        }
+      } else {
+        // Metadata-only update
+        await wcSafeCall(wc, "put", `orders/${orderId}`, {
+          ...orderUpdatePayload,
+          customer_note: `Logistics details updated. Status: ${trackingStatus}. Carrier: ${courier || 'N/A'}, AWB: #${awb || 'N/A'}`
+        });
+        console.log(`[LOGISTICS WEBHOOK] Order #${orderId} metadata updated (no status change).`);
+      }
+
+      return res.status(200).send("OK");
+    } catch (error: any) {
+      console.error("[LOGISTICS WEBHOOK] Error processing webhook:", error.message || error);
+      return res.status(500).send("Internal Error");
     }
   });
   
