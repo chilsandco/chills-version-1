@@ -249,7 +249,7 @@ const SocialVault: React.FC = () => {
       </button>
 
       {/* Hero Section */}
-      <section className="relative flex flex-col items-center justify-center min-h-screen px-4 md:px-12 text-center z-10">
+      <section className="relative flex flex-col items-center justify-start min-h-screen pt-28 md:pt-32 px-4 md:px-12 text-center z-10">
         <motion.h1
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
