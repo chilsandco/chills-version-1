@@ -590,7 +590,7 @@ const Checkout: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] uppercase tracking-widest font-bold text-white">Store Delivery</span>
+                  <span className="text-[11px] uppercase tracking-widest font-bold text-white">Home Delivery</span>
                   <span className="text-[11px] font-mono font-bold text-accent">₹80</span>
                 </div>
                 <p className="text-[10px] text-neutral-500 uppercase tracking-wider font-light leading-relaxed">

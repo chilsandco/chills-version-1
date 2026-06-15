@@ -854,7 +854,7 @@ async function startServer() {
           shipping_lines: [
             {
               method_id: isPickup ? "local_pickup" : "flat_rate",
-              method_title: isPickup ? "Collect in Store" : "Store Delivery",
+              method_title: isPickup ? "Collect in Store" : "Home Delivery",
               total: shippingFee.toString()
             }
           ],
@@ -867,7 +867,7 @@ async function startServer() {
             },
             {
               key: "Delivery Method",
-              value: isPickup ? "Collect in Store" : "Store Delivery"
+              value: isPickup ? "Collect in Store" : "Home Delivery"
             }
           ]
         };
