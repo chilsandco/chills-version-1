@@ -2473,15 +2473,15 @@ async function startServer() {
       const etd = payload.etd || payload.expected_delivery_date;
 
       if (!rawOrderId) {
-        console.warn("[LOGISTICS WEBHOOK] Missing order identifier in payload.");
-        return res.status(400).json({ error: "Missing order reference" });
+        console.warn("[LOGISTICS WEBHOOK] Missing order identifier in payload. Acknowledging with 200 (potential dry-run test).");
+        return res.status(200).json({ success: true, message: "Dry-run check verified: route alive." });
       }
 
       // Convert order id to integer
       const orderId = parseInt(String(rawOrderId).replace(/\D/g, ''), 10);
       if (isNaN(orderId)) {
-        console.warn(`[LOGISTICS WEBHOOK] Invalid order ID format: ${rawOrderId}`);
-        return res.status(400).json({ error: "Invalid order reference format" });
+        console.warn(`[LOGISTICS WEBHOOK] Invalid order ID format: ${rawOrderId}. Acknowledging with 200.`);
+        return res.status(200).json({ success: true, message: "Webhook acknowledged (invalid order format)." });
       }
 
       const wc = getWooCommerce();
@@ -2498,12 +2498,14 @@ async function startServer() {
         orderResponse = await wcSafeCall(wc, "get", `orders/${orderId}`);
       } catch (err: any) {
         console.error(`[LOGISTICS WEBHOOK] Order #${orderId} lookup failed in WooCommerce:`, err.message);
-        return res.status(404).json({ error: "Order not found in store archives" });
+        // Acknowledge with 200 to prevent webhook from getting disabled or retrying endlessly
+        return res.status(200).json({ success: true, message: `Webhook received but order #${orderId} was not found in WooCommerce.` });
       }
 
       const existingOrder = orderResponse.data;
       if (!existingOrder) {
-        return res.status(404).json({ error: "Order not found" });
+        console.warn(`[LOGISTICS WEBHOOK] Order #${orderId} data payload was empty.`);
+        return res.status(200).json({ success: true, message: "Order data empty" });
       }
 
       // Prepare updated meta_data array
