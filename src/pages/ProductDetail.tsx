@@ -5,11 +5,14 @@ import { useCart } from '../CartContext';
 import { useWishlist } from '../WishlistContext';
 import ShareSignal from '../components/ShareSignal';
 import { motion, AnimatePresence, useSpring } from 'motion/react';
-import { BookOpen, Check, CreditCard, Droplets, Heart, Ruler, Shirt, Sparkles, X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BookOpen, Check, CreditCard, Droplets, Heart, Ruler, Shirt, Sparkles, X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Star, MessageSquare, AlertCircle } from 'lucide-react';
 import { useGesture } from '@use-gesture/react';
 import { Link } from 'react-router-dom';
 import SizeGuide from '../components/SizeGuide';
 import SEO from '../components/SEO';
+import { useAuth } from '../AuthContext';
+import { ProductReview } from '../types';
+
 
 interface MagnifiedImageCardProps {
   img: string;
@@ -184,6 +187,32 @@ const ProductDetail: React.FC = () => {
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [isDescOpen, setIsDescOpen] = useState(false);
   
+  const { user, token } = useAuth();
+  
+  // Reviews and ratings state
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [rating, setRating] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewerName, setReviewerName] = useState("");
+  const [reviewerEmail, setReviewerEmail] = useState("");
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Prepopulate review form if user profile changes
+  useEffect(() => {
+    if (user) {
+      const name = user.pseudoName || `${user.first_name || user.firstName || ''} ${user.last_name || user.lastName || ''}`.trim() || user.username || "";
+      setReviewerName(name);
+      setReviewerEmail(user.email || "");
+    } else {
+      setReviewerName("");
+      setReviewerEmail("");
+    }
+  }, [user]);
+
   // Spring-based motion values for ultra-smooth transitions
   const scale = useSpring(1, { stiffness: 150, damping: 25 });
   const positionX = useSpring(0, { stiffness: 150, damping: 25 });
@@ -193,6 +222,7 @@ const ProductDetail: React.FC = () => {
   const { toggleWishlist, isInWishlist } = useWishlist();
 
   useEffect(() => {
+    setLoading(true);
     fetch(`/api/products/${id}`)
       .then(res => {
         if (!res.ok) throw new Error();
@@ -203,17 +233,89 @@ const ProductDetail: React.FC = () => {
         setLoading(false);
       })
       .catch(() => navigate('/collection'));
+
+    setReviewsLoading(true);
+    fetch(`/api/products/${id}/reviews`)
+      .then(res => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
+      .then(data => {
+        setReviews(data);
+        setReviewsLoading(false);
+      })
+      .catch(err => {
+        console.error("Error fetching reviews:", err);
+        setReviewsLoading(false);
+      });
   }, [id, navigate]);
+
+  const handleSubmitReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rating || !reviewText.trim() || !reviewerName.trim() || !reviewerEmail.trim()) {
+      setSubmitError("All fields are required");
+      return;
+    }
+    setSubmitLoading(true);
+    setSubmitError(null);
+    try {
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+      const res = await fetch(`/api/products/${id}/reviews`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          reviewer: reviewerName,
+          reviewer_email: reviewerEmail,
+          review: reviewText,
+          rating
+        })
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || "Failed to submit review");
+      }
+      
+      setReviews(prev => [data, ...prev]);
+      setSubmitSuccess(true);
+      setReviewText("");
+      if (!user) {
+        setReviewerName("");
+        setReviewerEmail("");
+      }
+      setRating(5);
+      setTimeout(() => {
+        setSubmitSuccess(false);
+        setShowReviewModal(false);
+      }, 2000);
+    } catch (err: any) {
+      setSubmitError(err.message || "Failed to submit review. Please try again.");
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const scrollToReviews = () => {
+    const element = document.getElementById('reviews-section');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
 
   // Prevent scrolling when modal is open
   useEffect(() => {
-    if (selectedImage || isDescOpen) {
+    if (selectedImage || isDescOpen || showReviewModal) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
     }
     return () => { document.body.style.overflow = 'unset'; };
-  }, [selectedImage, isDescOpen]);
+  }, [selectedImage, isDescOpen, showReviewModal]);
+
 
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
@@ -491,6 +593,9 @@ const ProductDetail: React.FC = () => {
   const detailBullets = detailLines.filter(line => line.startsWith('-')).map(line => line.replace(/^-\s*/, ''));
   const detailParagraphs = detailLines.filter(line => !line.startsWith('-'));
 
+  const totalReviews = reviews.length;
+  const averageRating = totalReviews > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / totalReviews) : 0;
+
   return (
     <div className="pt-24 sm:pt-32 pb-24 px-6 md:px-12 max-w-[1800px] mx-auto">
       <SEO 
@@ -517,9 +622,34 @@ const ProductDetail: React.FC = () => {
             "price": product.price.toString(),
             "itemCondition": "https://schema.org/NewCondition",
             "availability": product.status === "Available" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
-          }
+          },
+          ...(totalReviews > 0 ? {
+            "aggregateRating": {
+              "@type": "AggregateRating",
+              "ratingValue": averageRating.toFixed(1),
+              "reviewCount": totalReviews.toString(),
+              "bestRating": "5",
+              "worstRating": "1"
+            },
+            "review": reviews.map(r => ({
+              "@type": "Review",
+              "author": {
+                "@type": "Person",
+                "name": r.reviewer
+              },
+              "datePublished": r.date_created.split('T')[0],
+              "reviewBody": r.review,
+              "reviewRating": {
+                "@type": "Rating",
+                "ratingValue": r.rating.toString(),
+                "bestRating": "5",
+                "worstRating": "1"
+              }
+            }))
+          } : {})
         }}
       />
+
       {/* Navigation Breadcrumb */}
       <motion.div 
         initial={{ opacity: 0, x: -10 }}
@@ -641,9 +771,38 @@ const ProductDetail: React.FC = () => {
                 </Link>
               )}
             </div>
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3 mb-2">
               <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tighter uppercase">{product.name}</h1>
             </div>
+            
+            {/* Star Rating Summary */}
+            <div className="flex items-center gap-2 mb-4">
+              <button 
+                onClick={scrollToReviews}
+                className="flex items-center gap-1.5 hover:opacity-80 transition-opacity cursor-pointer group"
+              >
+                <div className="flex items-center gap-0.5 text-accent">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      size={13}
+                      className={
+                        star <= Math.round(averageRating)
+                          ? "fill-accent stroke-accent"
+                          : "text-neutral-800 stroke-neutral-700"
+                      }
+                    />
+                  ))}
+                </div>
+                <span className="text-[10px] font-mono tracking-widest text-neutral-500 group-hover:text-accent transition-colors uppercase">
+                  {totalReviews > 0 
+                    ? `${averageRating.toFixed(1)} / 5.0 (${totalReviews} Transmission${totalReviews > 1 ? 's' : ''})`
+                    : "0.0 / 5.0 (0 Transmissions)"
+                  }
+                </span>
+              </button>
+            </div>
+
             <p className="text-xl font-medium">₹{product.price.toLocaleString()}</p>
           </div>
 
@@ -984,6 +1143,284 @@ const ProductDetail: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Product Reviews & Ratings Section */}
+      <div id="reviews-section" className="mt-24 pt-16 border-t border-neutral-900">
+        <div className="flex items-center gap-3 mb-10">
+          <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
+          <h2 className="text-[12px] tracking-[0.4em] font-bold uppercase text-accent font-mono">
+            TRANSMISSION REPORT // CLIENT FEEDBACK
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+          {/* Rating Breakdown & Stats */}
+          <div className="lg:col-span-4 space-y-6">
+            <div className="border border-neutral-900 bg-neutral-950/40 p-6 rounded-[2px] relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-2 h-[1px] bg-accent/40" />
+              <div className="absolute top-0 left-0 w-[1px] h-2 bg-accent/40" />
+              
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-5xl font-display font-bold tracking-tighter text-white">
+                  {averageRating.toFixed(1)}
+                </span>
+                <span className="text-sm font-mono text-neutral-500">/ 5.0</span>
+              </div>
+
+              <div className="flex items-center gap-0.5 text-accent mb-4">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star
+                    key={star}
+                    size={18}
+                    className={
+                      star <= Math.round(averageRating)
+                        ? "fill-accent stroke-accent"
+                        : "text-neutral-900 stroke-neutral-800"
+                    }
+                  />
+                ))}
+              </div>
+
+              <p className="text-[10px] font-mono tracking-widest text-neutral-500 uppercase mb-6">
+                Based on {totalReviews} deployment{totalReviews !== 1 ? 's' : ''}
+              </p>
+
+              {/* Star Breakdown Bars */}
+              <div className="space-y-2 mb-6">
+                {[5, 4, 3, 2, 1].map((stars) => {
+                  const count = reviews.filter(r => r.rating === stars).length;
+                  const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
+                  return (
+                    <div key={stars} className="flex items-center gap-3 text-[10px] font-mono">
+                      <span className="w-12 text-neutral-500">{stars} STARS</span>
+                      <div className="flex-1 h-1 bg-neutral-900 overflow-hidden rounded-[1px]">
+                        <div 
+                          className="h-full bg-accent transition-all duration-500" 
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                      <span className="w-6 text-right text-neutral-400">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => setShowReviewModal(true)}
+                className="w-full border border-accent/30 hover:border-accent bg-accent/5 hover:bg-accent/10 py-4 text-[11px] tracking-[0.25em] font-bold uppercase text-accent hover:text-white transition-all duration-300 rounded-[1px] cursor-pointer"
+              >
+                TRANSMIT SIGNAL
+              </button>
+            </div>
+          </div>
+
+          {/* Reviews List */}
+          <div className="lg:col-span-8">
+            <div className="border border-neutral-900 bg-neutral-950/20 p-6 rounded-[2px] relative min-h-[300px]">
+              <div className="absolute top-0 right-0 w-2 h-[1px] bg-neutral-800" />
+              <div className="absolute top-0 right-0 w-[1px] h-2 bg-neutral-800" />
+
+              {reviewsLoading ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-[10px] font-mono tracking-[0.3em] text-neutral-500 uppercase">
+                  <div className="w-6 h-6 border border-accent border-t-transparent rounded-full animate-spin mb-4" />
+                  DECODING SECURE FEEDBACK...
+                </div>
+              ) : reviews.length === 0 ? (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-[10px] font-mono tracking-[0.2em] text-neutral-600 uppercase text-center p-6">
+                  <MessageSquare size={20} className="text-neutral-800 mb-3" />
+                  NO DEPLOYED SIGNALS FOUND FOR THIS CO-CREATION.
+                </div>
+              ) : (
+                <div className="divide-y divide-neutral-900">
+                  {reviews.map((rev) => (
+                    <div key={rev.id} className="py-6 first:pt-0 last:pb-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                        <div className="flex items-center gap-3">
+                          <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-white font-mono">
+                            {rev.reviewer}
+                          </span>
+                          <span className="text-[8px] font-mono tracking-widest text-accent bg-accent/5 px-2 py-0.5 border border-accent/20 rounded-[1px] uppercase">
+                            VERIFIED DEPLOYMENT
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="flex items-center gap-0.5 text-accent">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <Star
+                                key={star}
+                                size={10}
+                                className={
+                                  star <= rev.rating
+                                    ? "fill-accent stroke-accent"
+                                    : "text-neutral-950 stroke-neutral-900"
+                                }
+                              />
+                            ))}
+                          </div>
+                          <span className="text-[9px] font-mono text-neutral-500">
+                            DEPLOYED: {new Date(rev.date_created).toLocaleDateString('en-US', {
+                              year: 'numeric',
+                              month: '2-digit',
+                              day: '2-digit'
+                            }).replace(/\//g, '.')}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-sm leading-relaxed text-neutral-400 font-light tracking-wide whitespace-pre-line pl-1 border-l border-neutral-900">
+                        {rev.review}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Review Submission Modal */}
+      <AnimatePresence>
+        {showReviewModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/95 backdrop-blur-xl animate-fade-in"
+            onClick={() => setShowReviewModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="bg-neutral-950 border border-neutral-900 p-8 md:p-10 max-w-lg w-full relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button 
+                onClick={() => setShowReviewModal(false)}
+                className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
+                <h2 className="text-[11px] tracking-[0.4em] font-bold uppercase text-accent font-mono">
+                  TRANSMIT FEEDBACK SIGNAL
+                </h2>
+              </div>
+
+              <form onSubmit={handleSubmitReview} className="space-y-5">
+                {submitError && (
+                  <div className="border border-red-500/20 bg-red-500/5 p-4 flex gap-3 text-red-400 text-xs items-start rounded-[1px]">
+                    <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                    <p className="leading-relaxed font-mono">{submitError}</p>
+                  </div>
+                )}
+
+                {submitSuccess ? (
+                  <div className="border border-accent/20 bg-accent/5 p-8 text-center space-y-3 rounded-[1px]">
+                    <div className="w-10 h-10 border border-accent rounded-full flex items-center justify-center mx-auto text-accent mb-2 font-bold animate-pulse">
+                      <Check size={20} />
+                    </div>
+                    <h3 className="text-sm font-bold tracking-[0.2em] uppercase text-white font-mono">
+                      SIGNAL BROADCAST SUCCESSFUL
+                    </h3>
+                    <p className="text-[11px] text-neutral-400 leading-relaxed font-light">
+                      Your transmission details have been recorded and embedded in the database.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {/* Name */}
+                      <div>
+                        <label className="block text-[9px] font-mono tracking-[0.2em] text-neutral-500 uppercase mb-2 font-bold">
+                          Client Signature / Pseudonym
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          disabled={!!user}
+                          value={reviewerName}
+                          onChange={(e) => setReviewerName(e.target.value)}
+                          placeholder="e.g. UDAY B."
+                          className="w-full bg-black border border-neutral-800 focus:border-accent px-4 py-3 text-xs text-white focus:outline-none transition-colors rounded-[1px] disabled:opacity-50 disabled:cursor-not-allowed font-mono"
+                        />
+                      </div>
+
+                      {/* Email */}
+                      <div>
+                        <label className="block text-[9px] font-mono tracking-[0.2em] text-neutral-500 uppercase mb-2 font-bold">
+                          Secure Email (Unpublished)
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          disabled={!!user}
+                          value={reviewerEmail}
+                          onChange={(e) => setReviewerEmail(e.target.value)}
+                          placeholder="e.g. client@chilsandco.com"
+                          className="w-full bg-black border border-neutral-800 focus:border-accent px-4 py-3 text-xs text-white focus:outline-none transition-colors rounded-[1px] disabled:opacity-50 disabled:cursor-not-allowed font-mono"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Star Rating Select */}
+                    <div>
+                      <label className="block text-[9px] font-mono tracking-[0.2em] text-neutral-500 uppercase mb-2 font-bold">
+                        Signal Strength (Rating)
+                      </label>
+                      <div className="flex items-center gap-1">
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <button
+                            key={star}
+                            type="button"
+                            onClick={() => setRating(star)}
+                            className="p-1 text-neutral-800 hover:text-accent focus:outline-none transition-colors cursor-pointer"
+                          >
+                            <Star
+                              size={22}
+                              className={
+                                star <= rating
+                                  ? "fill-accent stroke-accent"
+                                  : "stroke-neutral-800"
+                              }
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Review text */}
+                    <div>
+                      <label className="block text-[9px] font-mono tracking-[0.2em] text-neutral-500 uppercase mb-2 font-bold">
+                        Decoded Transmission / Feedback
+                      </label>
+                      <textarea
+                        required
+                        rows={4}
+                        value={reviewText}
+                        onChange={(e) => setReviewText(e.target.value)}
+                        placeholder="Detail the fabric drape, sizing precision, weave texture, or deployment aesthetics..."
+                        className="w-full bg-black border border-neutral-800 focus:border-accent px-4 py-3 text-xs text-white focus:outline-none transition-colors rounded-[1px] resize-none font-light leading-relaxed tracking-wide"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={submitLoading}
+                      className="w-full bg-white text-black hover:bg-neutral-200 py-4 text-[11px] tracking-[0.3em] font-bold uppercase transition-all duration-300 disabled:opacity-50 cursor-pointer rounded-[1px]"
+                    >
+                      {submitLoading ? "TRANSMITTING SIGNAL..." : "BROADCAST TRANSMISSION"}
+                    </button>
+                  </>
+                )}
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <SizeGuide 
         isOpen={isSizeGuideOpen} 

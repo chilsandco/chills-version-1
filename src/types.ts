@@ -60,3 +60,13 @@ export interface Signal {
   };
   orderKey?: string;
 }
+
+export interface ProductReview {
+  id: number;
+  reviewer: string;
+  reviewer_email: string;
+  review: string;
+  rating: number;
+  date_created: string;
+}
+

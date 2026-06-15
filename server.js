@@ -423,6 +423,103 @@ async function startServer() {
       res.status(404).json({ message: "Product not found" });
     }
   });
+  app.get("/api/products/:id/reviews", async (req, res) => {
+    try {
+      const wc = getWooCommerce();
+      if (!wc) {
+        return res.json([
+          {
+            id: 1,
+            reviewer: "Uday Boya",
+            reviewer_email: "uday@chilsandco.com",
+            review: "Awesome structured fabric thickness and premium dropped shoulders. Highly recommend!",
+            rating: 5,
+            date_created: new Date(Date.now() - 5 * 24 * 60 * 60 * 1e3).toISOString()
+          },
+          {
+            id: 2,
+            reviewer: "Aditya K.",
+            reviewer_email: "aditya@chilsandco.com",
+            review: "The oxford weave is clean and doesn't sag. Fits like a second skin.",
+            rating: 4,
+            date_created: new Date(Date.now() - 12 * 24 * 60 * 60 * 1e3).toISOString()
+          }
+        ]);
+      }
+      const response = await wcSafeCall(wc, "get", "products/reviews", {
+        product: req.params.id,
+        status: "approved"
+      });
+      const mappedReviews = Array.isArray(response.data) ? response.data.map((r) => ({
+        id: r.id,
+        reviewer: r.reviewer,
+        reviewer_email: r.reviewer_email,
+        review: r.review.replace(/<[^>]*>?/gm, "").trim(),
+        rating: r.rating,
+        date_created: r.date_created
+      })) : [];
+      res.json(mappedReviews);
+    } catch (error) {
+      console.error("WooCommerce reviews API Error:", error.message || error);
+      res.status(500).json({ message: "Failed to fetch product reviews" });
+    }
+  });
+  app.post("/api/products/:id/reviews", async (req, res) => {
+    try {
+      const { reviewer, reviewer_email, review, rating } = req.body;
+      const productId = req.params.id;
+      if (!review || !rating || rating < 1 || rating > 5) {
+        return res.status(400).json({ message: "Invalid review content or rating" });
+      }
+      let finalReviewer = reviewer;
+      let finalEmail = reviewer_email;
+      const authHeader = req.headers["authorization"];
+      const token = authHeader && authHeader.split(" ")[1];
+      if (token) {
+        try {
+          const decoded = jwt.verify(token, JWT_SECRET);
+          const userObj = decoded.data?.user || decoded;
+          finalReviewer = userObj.pseudoName || `${userObj.first_name || ""} ${userObj.last_name || ""}`.trim() || userObj.username || finalReviewer;
+          finalEmail = userObj.email || finalEmail;
+        } catch (e) {
+        }
+      }
+      if (!finalReviewer || !finalEmail) {
+        return res.status(400).json({ message: "Reviewer name and email are required" });
+      }
+      const wc = getWooCommerce();
+      if (!wc) {
+        return res.json({
+          id: Math.floor(Math.random() * 1e4),
+          reviewer: finalReviewer,
+          reviewer_email: finalEmail,
+          review,
+          rating: Number(rating),
+          date_created: (/* @__PURE__ */ new Date()).toISOString()
+        });
+      }
+      const reviewData = {
+        product_id: parseInt(productId, 10),
+        reviewer: finalReviewer,
+        reviewer_email: finalEmail,
+        review,
+        rating: Number(rating),
+        status: "approved"
+      };
+      const response = await wcSafeCall(wc, "post", "products/reviews", reviewData);
+      res.json({
+        id: response.data.id,
+        reviewer: response.data.reviewer,
+        reviewer_email: response.data.reviewer_email,
+        review: response.data.review.replace(/<[^>]*>?/gm, "").trim(),
+        rating: response.data.rating,
+        date_created: response.data.date_created
+      });
+    } catch (error) {
+      console.error("WooCommerce submit review API Error:", error.response?.data || error.message || error);
+      res.status(500).json({ message: "Failed to submit product review" });
+    }
+  });
   app.post("/api/checkout/create-order", async (req, res) => {
     try {
       const { amount, currency, customerDetails, lineItems } = req.body;
