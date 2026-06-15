@@ -564,7 +564,8 @@ async function startServer() {
             reviewer_email: "uday@chilsandco.com",
             review: "Awesome structured fabric thickness and premium dropped shoulders. Highly recommend!",
             rating: 5,
-            date_created: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString()
+            date_created: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+            images: []
           },
           {
             id: 2,
@@ -572,7 +573,8 @@ async function startServer() {
             reviewer_email: "aditya@chilsandco.com",
             review: "The oxford weave is clean and doesn't sag. Fits like a second skin.",
             rating: 4,
-            date_created: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString()
+            date_created: new Date(Date.now() - 12 * 24 * 60 * 60 * 1000).toISOString(),
+            images: []
           }
         ]);
       }
@@ -581,14 +583,30 @@ async function startServer() {
         status: "approved"
       });
       
-      const mappedReviews = Array.isArray(response.data) ? response.data.map((r: any) => ({
-        id: r.id,
-        reviewer: r.reviewer,
-        reviewer_email: r.reviewer_email,
-        review: r.review.replace(/<[^>]*>?/gm, '').trim(),
-        rating: r.rating,
-        date_created: r.date_created
-      })) : [];
+      const mappedReviews = Array.isArray(response.data) ? response.data.map((r: any) => {
+        let reviewText = r.review.replace(/<[^>]*>?/gm, '').trim();
+        let images: string[] = [];
+        
+        const imgMatch = reviewText.match(/__IMAGES__(\[.*?\])/);
+        if (imgMatch) {
+          try {
+            images = JSON.parse(imgMatch[1]);
+            reviewText = reviewText.replace(/__IMAGES__\[.*?\]/, '').trim();
+          } catch (e) {
+            // Ignore parse errors
+          }
+        }
+        
+        return {
+          id: r.id,
+          reviewer: r.reviewer,
+          reviewer_email: r.reviewer_email,
+          review: reviewText,
+          rating: r.rating,
+          date_created: r.date_created,
+          images: images
+        };
+      }) : [];
       
       res.json(mappedReviews);
     } catch (error: any) {
@@ -599,7 +617,7 @@ async function startServer() {
 
   app.post("/api/products/:id/reviews", async (req, res) => {
     try {
-      const { reviewer, reviewer_email, review, rating } = req.body;
+      const { reviewer, reviewer_email, review, rating, images } = req.body;
       const productId = req.params.id;
 
       if (!review || !rating || rating < 1 || rating > 5) {
@@ -626,6 +644,47 @@ async function startServer() {
         return res.status(400).json({ message: "Reviewer name and email are required" });
       }
 
+      // Process uploaded base64 images if present
+      const savedUrls: string[] = [];
+      if (Array.isArray(images) && images.length > 0) {
+        images.forEach((imgBase64: string, index: number) => {
+          try {
+            if (typeof imgBase64 === 'string' && imgBase64.startsWith('data:image/')) {
+              const mimeMatch = imgBase64.match(/^data:image\/(\w+);base64,/);
+              const ext = mimeMatch ? mimeMatch[1] : 'jpg';
+              const base64Content = imgBase64.replace(/^data:image\/\w+;base64,/, "");
+              const buffer = Buffer.from(base64Content, 'base64');
+              
+              const filename = `rev-${productId}-${Date.now()}-${index}.${ext}`;
+              const publicUploadDir = path.resolve(__dirname, "public", "uploads", "reviews");
+              const distUploadDir = path.resolve(__dirname, "dist", "uploads", "reviews");
+
+              // Write to public folder for Vite development server
+              if (!fs.existsSync(publicUploadDir)) {
+                fs.mkdirSync(publicUploadDir, { recursive: true });
+              }
+              fs.writeFileSync(path.join(publicUploadDir, filename), buffer);
+
+              // Write to dist folder for Production mode if exists
+              if (fs.existsSync(path.resolve(__dirname, "dist"))) {
+                if (!fs.existsSync(distUploadDir)) {
+                  fs.mkdirSync(distUploadDir, { recursive: true });
+                }
+                fs.writeFileSync(path.join(distUploadDir, filename), buffer);
+              }
+
+              savedUrls.push(`/uploads/reviews/${filename}`);
+            }
+          } catch (err) {
+            console.error("Failed to save review image:", err);
+          }
+        });
+      }
+
+      const reviewPayload = savedUrls.length > 0 
+        ? `${review}\n\n__IMAGES__${JSON.stringify(savedUrls)}`
+        : review;
+
       const wc = getWooCommerce();
       if (!wc) {
         return res.json({
@@ -634,7 +693,8 @@ async function startServer() {
           reviewer_email: finalEmail,
           review: review,
           rating: Number(rating),
-          date_created: new Date().toISOString()
+          date_created: new Date().toISOString(),
+          images: savedUrls
         });
       }
 
@@ -642,19 +702,33 @@ async function startServer() {
         product_id: parseInt(productId, 10),
         reviewer: finalReviewer,
         reviewer_email: finalEmail,
-        review: review,
+        review: reviewPayload,
         rating: Number(rating),
         status: "approved"
       };
 
       const response = await wcSafeCall(wc, "post", "products/reviews", reviewData);
+      
+      let resReview = response.data.review.replace(/<[^>]*>?/gm, '').trim();
+      let resImages: string[] = [];
+      const imgMatch = resReview.match(/__IMAGES__(\[.*?\])/);
+      if (imgMatch) {
+        try {
+          resImages = JSON.parse(imgMatch[1]);
+          resReview = resReview.replace(/__IMAGES__\[.*?\]/, '').trim();
+        } catch (e) {
+          // Ignore parse error
+        }
+      }
+
       res.json({
         id: response.data.id,
         reviewer: response.data.reviewer,
         reviewer_email: response.data.reviewer_email,
-        review: response.data.review.replace(/<[^>]*>?/gm, '').trim(),
+        review: resReview,
         rating: response.data.rating,
-        date_created: response.data.date_created
+        date_created: response.data.date_created,
+        images: resImages
       });
     } catch (error: any) {
       console.error("WooCommerce submit review API Error:", error.response?.data || error.message || error);

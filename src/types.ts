@@ -68,5 +68,7 @@ export interface ProductReview {
   review: string;
   rating: number;
   date_created: string;
+  images?: string[];
 }
+
 

@@ -197,9 +197,45 @@ const ProductDetail: React.FC = () => {
   const [reviewText, setReviewText] = useState("");
   const [reviewerName, setReviewerName] = useState("");
   const [reviewerEmail, setReviewerEmail] = useState("");
+  const [selectedImages, setSelectedImages] = useState<string[]>([]);
   const [submitLoading, setSubmitLoading] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const files = Array.from(e.target.files) as File[];
+      
+      if (selectedImages.length + files.length > 3) {
+        setSubmitError("Maximum of 3 images can be attached per review.");
+        return;
+      }
+      
+      files.forEach((file: File) => {
+        if (file.size > 5 * 1024 * 1024) {
+          setSubmitError(`Image ${file.name} exceeds the 5MB size limit.`);
+          return;
+        }
+        
+        if (!file.type.startsWith("image/")) {
+          setSubmitError("Only image files are allowed.");
+          return;
+        }
+        
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (typeof reader.result === 'string') {
+            setSelectedImages((prev) => [...prev, reader.result as string]);
+          }
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+  };
+
+  const handleRemoveImage = (indexToRemove: number) => {
+    setSelectedImages((prev) => prev.filter((_, idx) => idx !== indexToRemove));
+  };
 
   // Prepopulate review form if user profile changes
   useEffect(() => {
@@ -272,7 +308,8 @@ const ProductDetail: React.FC = () => {
           reviewer: reviewerName,
           reviewer_email: reviewerEmail,
           review: reviewText,
-          rating
+          rating,
+          images: selectedImages
         })
       });
       const data = await res.json();
@@ -283,6 +320,7 @@ const ProductDetail: React.FC = () => {
       setReviews(prev => [data, ...prev]);
       setSubmitSuccess(true);
       setReviewText("");
+      setSelectedImages([]);
       if (!user) {
         setReviewerName("");
         setReviewerEmail("");
@@ -1269,6 +1307,24 @@ const ProductDetail: React.FC = () => {
                       <p className="text-sm leading-relaxed text-neutral-400 font-light tracking-wide whitespace-pre-line pl-1 border-l border-neutral-900">
                         {rev.review}
                       </p>
+                      {rev.images && rev.images.length > 0 && (
+                        <div className="flex gap-3 mt-3 mb-1 pl-1">
+                          {rev.images.map((imgUrl, imgIdx) => (
+                            <div 
+                              key={imgIdx} 
+                              className="w-20 h-20 md:w-24 md:h-24 border border-white/5 bg-neutral-950 overflow-hidden cursor-zoom-in rounded-[1px] hover:border-accent/30 transition-colors"
+                              onClick={() => {
+                                setSelectedImage(imgUrl);
+                                scale.set(1);
+                                positionX.set(0);
+                                positionY.set(0);
+                              }}
+                            >
+                              <img src={imgUrl} alt="Customer Review attachment" className="w-full h-full object-cover" />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1389,6 +1445,42 @@ const ProductDetail: React.FC = () => {
                             />
                           </button>
                         ))}
+                      </div>
+                    </div>
+
+                    {/* Image Upload Input */}
+                    <div>
+                      <label className="block text-[9px] font-mono tracking-[0.2em] text-neutral-500 uppercase mb-2 font-bold">
+                        Attach Product Photos (Max 3, up to 5MB each)
+                      </label>
+                      
+                      <div className="flex flex-wrap gap-3 mb-2">
+                        {selectedImages.map((imgBase64, idx) => (
+                          <div key={idx} className="relative w-16 h-16 border border-neutral-800 bg-neutral-900 overflow-hidden group rounded-[1px]">
+                            <img src={imgBase64} alt={`Preview ${idx}`} className="w-full h-full object-cover" />
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveImage(idx)}
+                              className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-red-400 transition-opacity duration-200 cursor-pointer"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ))}
+                        
+                        {selectedImages.length < 3 && (
+                          <label className="w-16 h-16 border border-dashed border-neutral-800 hover:border-accent/40 flex flex-col items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer rounded-[1px]">
+                            <span className="text-lg font-light">+</span>
+                            <span className="text-[7px] tracking-tighter uppercase font-mono">Upload</span>
+                            <input
+                              type="file"
+                              multiple
+                              accept="image/*"
+                              className="hidden"
+                              onChange={handleImageChange}
+                            />
+                          </label>
+                        )}
                       </div>
                     </div>
 
