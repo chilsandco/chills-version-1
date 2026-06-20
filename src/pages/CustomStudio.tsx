@@ -48,8 +48,8 @@ const CUSTOM_PRODUCTS: CustomProduct[] = [
     category: 'Apparel',
     tagline: 'Premium oversized customization',
     images: [
-      'https://res.cloudinary.com/ddatd5ruz/image/upload/v1781931358/ChatGPT_Image_Jun_20_2026_09_38_26_AM_ec3aov.png',
-      'https://res.cloudinary.com/ddatd5ruz/image/upload/v1781931356/ChatGPT_Image_Jun_20_2026_10_25_16_AM_k4tglk.png'
+      'https://res.cloudinary.com/ddatd5ruz/image/upload/v1781951761/ChatGPT_Image_Jun_20_2026_04_04_35_PM_hscckf.png',
+      'https://res.cloudinary.com/ddatd5ruz/image/upload/v1781951762/ChatGPT_Image_Jun_20_2026_04_03_02_PM_p2gssc.png'
     ],
     basePrice: 1799,
     bulkStartPrice: 999,
