@@ -26,6 +26,7 @@ import BespokeSignals from './pages/BespokeSignals';
 import AdminConfig from './pages/AdminConfig';
 import CoCreator from './pages/CoCreator';
 import SocialVault from './pages/SignalNetwork';
+import CustomStudio from './pages/CustomStudio';
 import SmoothScroll from './components/SmoothScroll';
 import ScrollProgress from './components/ScrollProgress';
 import CustomCursor from './components/CustomCursor';
@@ -61,6 +62,7 @@ export default function App() {
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/bespoke" element={<Bespoke />} />
                   <Route path="/co-creator" element={<CoCreator />} />
+                  <Route path="/customize" element={<CustomStudio />} />
                   <Route path="/social-vault" element={<SocialVault />} />
                   <Route path="/console/bespoke" element={<BespokeSignals />} />
                   <Route path="/admin/config" element={<AdminConfig />} />

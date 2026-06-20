@@ -346,6 +346,41 @@ async function startServer() {
     try {
       const lineItems = Array.isArray(order.line_items) ? order.line_items : [];
       const shippingLines = Array.isArray(order.shipping_lines) ? order.shipping_lines : [];
+      const getMeta = (key) => {
+        return order.meta_data?.find((m) => m.key === key)?.value;
+      };
+      const getTrackingInfo = () => {
+        let awb = getMeta("_shiprocket_awb") || getMeta("_tracking_number");
+        let courier = getMeta("_shiprocket_courier") || getMeta("_tracking_provider");
+        let status = getMeta("_shiprocket_tracking_status") || getMeta("_tracking_status");
+        let url = getMeta("_shiprocket_tracking_url") || getMeta("_tracking_link");
+        let etd = getMeta("_shiprocket_etd");
+        const trackingItems = getMeta("_wc_shipment_tracking_items");
+        if (!awb && trackingItems) {
+          try {
+            const items = typeof trackingItems === "string" ? JSON.parse(trackingItems) : trackingItems;
+            if (Array.isArray(items) && items.length > 0) {
+              const item = items[0];
+              awb = item.tracking_number;
+              courier = item.tracking_provider;
+              url = item.custom_tracking_link || item.tracking_link;
+            }
+          } catch (e) {
+            console.error("[CHILS] Failed to parse wc_shipment_tracking_items:", e);
+          }
+        }
+        if (awb && !url) {
+          url = `https://shiprocket.co/tracking/${awb}`;
+        }
+        return {
+          awb: awb ? String(awb) : null,
+          courier: courier ? String(courier) : null,
+          trackingStatus: status ? String(status) : null,
+          trackingUrl: url ? String(url) : null,
+          etd: etd ? String(etd) : null
+        };
+      };
+      const tracking = getTrackingInfo();
       return {
         id: (order.id || "").toString(),
         signalId: toSignalId(order.id),
@@ -365,7 +400,12 @@ async function startServer() {
         })),
         shipping: {
           address: order.shipping ? `${order.shipping.address_1 || ""}${order.shipping.address_1 && order.shipping.city ? ", " : ""}${order.shipping.city || ""}` : "No address provided",
-          method: shippingLines[0]?.method_title || "Standard Delivery"
+          method: shippingLines[0]?.method_title || "Standard Delivery",
+          awb: tracking.awb,
+          courier: tracking.courier,
+          trackingStatus: tracking.trackingStatus,
+          trackingUrl: tracking.trackingUrl,
+          etd: tracking.etd
         },
         orderKey: order.order_key
       };
@@ -434,7 +474,8 @@ async function startServer() {
             reviewer_email: "uday@chilsandco.com",
             review: "Awesome structured fabric thickness and premium dropped shoulders. Highly recommend!",
             rating: 5,
-            date_created: new Date(Date.now() - 5 * 24 * 60 * 60 * 1e3).toISOString()
+            date_created: new Date(Date.now() - 5 * 24 * 60 * 60 * 1e3).toISOString(),
+            images: []
           },
           {
             id: 2,
@@ -442,7 +483,8 @@ async function startServer() {
             reviewer_email: "aditya@chilsandco.com",
             review: "The oxford weave is clean and doesn't sag. Fits like a second skin.",
             rating: 4,
-            date_created: new Date(Date.now() - 12 * 24 * 60 * 60 * 1e3).toISOString()
+            date_created: new Date(Date.now() - 12 * 24 * 60 * 60 * 1e3).toISOString(),
+            images: []
           }
         ]);
       }
@@ -450,14 +492,27 @@ async function startServer() {
         product: req.params.id,
         status: "approved"
       });
-      const mappedReviews = Array.isArray(response.data) ? response.data.map((r) => ({
-        id: r.id,
-        reviewer: r.reviewer,
-        reviewer_email: r.reviewer_email,
-        review: r.review.replace(/<[^>]*>?/gm, "").trim(),
-        rating: r.rating,
-        date_created: r.date_created
-      })) : [];
+      const mappedReviews = Array.isArray(response.data) ? response.data.map((r) => {
+        let reviewText = r.review.replace(/<[^>]*>?/gm, "").trim();
+        let images = [];
+        const imgMatch = reviewText.match(/__IMAGES__(\[.*?\])/);
+        if (imgMatch) {
+          try {
+            images = JSON.parse(imgMatch[1]);
+            reviewText = reviewText.replace(/__IMAGES__\[.*?\]/, "").trim();
+          } catch (e) {
+          }
+        }
+        return {
+          id: r.id,
+          reviewer: r.reviewer,
+          reviewer_email: r.reviewer_email,
+          review: reviewText,
+          rating: r.rating,
+          date_created: r.date_created,
+          images
+        };
+      }) : [];
       res.json(mappedReviews);
     } catch (error) {
       console.error("WooCommerce reviews API Error:", error.message || error);
@@ -466,7 +521,7 @@ async function startServer() {
   });
   app.post("/api/products/:id/reviews", async (req, res) => {
     try {
-      const { reviewer, reviewer_email, review, rating } = req.body;
+      const { reviewer, reviewer_email, review, rating, images } = req.body;
       const productId = req.params.id;
       if (!review || !rating || rating < 1 || rating > 5) {
         return res.status(400).json({ message: "Invalid review content or rating" });
@@ -487,6 +542,38 @@ async function startServer() {
       if (!finalReviewer || !finalEmail) {
         return res.status(400).json({ message: "Reviewer name and email are required" });
       }
+      const savedUrls = [];
+      if (Array.isArray(images) && images.length > 0) {
+        images.forEach((imgBase64, index) => {
+          try {
+            if (typeof imgBase64 === "string" && imgBase64.startsWith("data:image/")) {
+              const mimeMatch = imgBase64.match(/^data:image\/(\w+);base64,/);
+              const ext = mimeMatch ? mimeMatch[1] : "jpg";
+              const base64Content = imgBase64.replace(/^data:image\/\w+;base64,/, "");
+              const buffer = Buffer.from(base64Content, "base64");
+              const filename = `rev-${productId}-${Date.now()}-${index}.${ext}`;
+              const publicUploadDir = path.resolve(__dirname, "public", "uploads", "reviews");
+              const distUploadDir = path.resolve(__dirname, "dist", "uploads", "reviews");
+              if (!fs.existsSync(publicUploadDir)) {
+                fs.mkdirSync(publicUploadDir, { recursive: true });
+              }
+              fs.writeFileSync(path.join(publicUploadDir, filename), buffer);
+              if (fs.existsSync(path.resolve(__dirname, "dist"))) {
+                if (!fs.existsSync(distUploadDir)) {
+                  fs.mkdirSync(distUploadDir, { recursive: true });
+                }
+                fs.writeFileSync(path.join(distUploadDir, filename), buffer);
+              }
+              savedUrls.push(`/uploads/reviews/${filename}`);
+            }
+          } catch (err) {
+            console.error("Failed to save review image:", err);
+          }
+        });
+      }
+      const reviewPayload = savedUrls.length > 0 ? `${review}
+
+__IMAGES__${JSON.stringify(savedUrls)}` : review;
       const wc = getWooCommerce();
       if (!wc) {
         return res.json({
@@ -495,25 +582,37 @@ async function startServer() {
           reviewer_email: finalEmail,
           review,
           rating: Number(rating),
-          date_created: (/* @__PURE__ */ new Date()).toISOString()
+          date_created: (/* @__PURE__ */ new Date()).toISOString(),
+          images: savedUrls
         });
       }
       const reviewData = {
         product_id: parseInt(productId, 10),
         reviewer: finalReviewer,
         reviewer_email: finalEmail,
-        review,
+        review: reviewPayload,
         rating: Number(rating),
         status: "approved"
       };
       const response = await wcSafeCall(wc, "post", "products/reviews", reviewData);
+      let resReview = response.data.review.replace(/<[^>]*>?/gm, "").trim();
+      let resImages = [];
+      const imgMatch = resReview.match(/__IMAGES__(\[.*?\])/);
+      if (imgMatch) {
+        try {
+          resImages = JSON.parse(imgMatch[1]);
+          resReview = resReview.replace(/__IMAGES__\[.*?\]/, "").trim();
+        } catch (e) {
+        }
+      }
       res.json({
         id: response.data.id,
         reviewer: response.data.reviewer,
         reviewer_email: response.data.reviewer_email,
-        review: response.data.review.replace(/<[^>]*>?/gm, "").trim(),
+        review: resReview,
         rating: response.data.rating,
-        date_created: response.data.date_created
+        date_created: response.data.date_created,
+        images: resImages
       });
     } catch (error) {
       console.error("WooCommerce submit review API Error:", error.response?.data || error.message || error);
@@ -522,7 +621,7 @@ async function startServer() {
   });
   app.post("/api/checkout/create-order", async (req, res) => {
     try {
-      const { amount, currency, customerDetails, lineItems } = req.body;
+      const { amount, currency, customerDetails, lineItems, shippingMethod } = req.body;
       const wc = getWooCommerce();
       if (!req.headers.authorization) {
         return res.status(401).json({ message: "Authentication required: Please sign in or register to place an order." });
@@ -540,6 +639,8 @@ async function startServer() {
         return res.status(401).json({ message: "Identity validation failed: A registered profile is required to check out." });
       }
       if (wc) {
+        const isPickup = shippingMethod === "pickup";
+        const shippingFee = isPickup ? 0 : 80;
         const orderData = {
           payment_method: "phonepe",
           payment_method_title: "PhonePe",
@@ -549,15 +650,23 @@ async function startServer() {
           billing: {
             first_name: customerDetails.firstName,
             last_name: customerDetails.lastName,
-            address_1: customerDetails.address,
-            city: customerDetails.city,
-            state: customerDetails.state,
-            postcode: customerDetails.pincode,
+            address_1: customerDetails.address || "Local Pickup Store Address",
+            city: customerDetails.city || "Hyderabad",
+            state: customerDetails.state || "Telangana",
+            postcode: customerDetails.pincode || "500049",
             country: "IN",
             email: customerDetails.email,
             phone: customerDetails.phone
           },
-          shipping: {
+          shipping: isPickup ? {
+            first_name: customerDetails.firstName,
+            last_name: customerDetails.lastName,
+            address_1: "3rd Floor, Plot No. 38 & 39, Matrusri Nagar, Miyapur",
+            city: "Hyderabad",
+            state: "Telangana",
+            postcode: "500049",
+            country: "IN"
+          } : {
             first_name: customerDetails.firstName,
             last_name: customerDetails.lastName,
             address_1: customerDetails.address,
@@ -571,10 +680,21 @@ async function startServer() {
             quantity: item.quantity,
             meta_data: item.selectedSize ? [{ key: "pa_size", value: item.selectedSize }] : []
           })),
+          shipping_lines: [
+            {
+              method_id: isPickup ? "local_pickup" : "flat_rate",
+              method_title: isPickup ? "Collect in Store" : "Home Delivery",
+              total: shippingFee.toString()
+            }
+          ],
           meta_data: [
             {
               key: "Packaging Selection",
               value: lineItems.reduce((sum, item) => sum + item.quantity, 0) === 1 ? "Biodegradable Eco Bag" : "Second Life Box"
+            },
+            {
+              key: "Delivery Method",
+              value: isPickup ? "Collect in Store" : "Home Delivery"
             }
           ]
         };
@@ -1499,6 +1619,67 @@ async function startServer() {
       res.status(500).json({ message: "Failed to check status" });
     }
   });
+  app.post("/api/custom/quote", async (req, res) => {
+    try {
+      const { name, email, phone, productType, quantity, designFile, additionalNotes } = req.body;
+      if (!name || !email || !phone || !productType || !quantity) {
+        return res.status(400).json({ message: "Name, email, phone, product type, and quantity are required." });
+      }
+      let fileUrl = "";
+      if (designFile && typeof designFile === "string" && designFile.includes(";base64,")) {
+        try {
+          const parts = designFile.split(";base64,");
+          const mime = parts[0].match(/data:(.*)/)?.[1] || "";
+          const ext = mime.split("/")[1] || "png";
+          const base64Content = parts[1];
+          const buffer = Buffer.from(base64Content, "base64");
+          const filename = `design-${Date.now()}-${Math.floor(Math.random() * 1e3)}.${ext}`;
+          const publicUploadDir = path.resolve(__dirname, "public", "uploads", "custom_designs");
+          const distUploadDir = path.resolve(__dirname, "dist", "uploads", "custom_designs");
+          if (!fs.existsSync(publicUploadDir)) {
+            fs.mkdirSync(publicUploadDir, { recursive: true });
+          }
+          fs.writeFileSync(path.join(publicUploadDir, filename), buffer);
+          if (fs.existsSync(path.resolve(__dirname, "dist"))) {
+            if (!fs.existsSync(distUploadDir)) {
+              fs.mkdirSync(distUploadDir, { recursive: true });
+            }
+            fs.writeFileSync(path.join(distUploadDir, filename), buffer);
+          }
+          fileUrl = `/uploads/custom_designs/${filename}`;
+        } catch (err) {
+          console.error("[CHILS & CO.] Failed to save design file:", err);
+        }
+      }
+      const QUOTES_FILE = path.join(process.cwd(), "quotes.json");
+      let quotes = [];
+      if (fs.existsSync(QUOTES_FILE)) {
+        try {
+          quotes = JSON.parse(fs.readFileSync(QUOTES_FILE, "utf-8"));
+        } catch (e) {
+          quotes = [];
+        }
+      }
+      const newQuote = {
+        id: `q-${Date.now()}`,
+        name,
+        email,
+        phone,
+        productType,
+        quantity: parseInt(quantity, 10) || 1,
+        designFile: fileUrl,
+        additionalNotes,
+        timestamp: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      quotes.push(newQuote);
+      fs.writeFileSync(QUOTES_FILE, JSON.stringify(quotes, null, 2));
+      console.log(`[CHILS & CO.] Custom quote request logged for ${email}`);
+      res.json({ success: true, message: "Quote request successfully processed", quote: newQuote });
+    } catch (error) {
+      console.error("[CHILS & CO.] Custom Quote Error:", error);
+      res.status(500).json({ message: error.message || "Failed to process quote request" });
+    }
+  });
   app.get("/api/bespoke/list", authenticateToken, async (req, res) => {
     try {
       const adminEmails = ["chilsandco.com@gmail.com", "chilsandco@gmail.com"];
@@ -1876,6 +2057,96 @@ Images: ${images ? images.join(", ") : "None"}`;
     } catch (error) {
       console.error("[CHILS & CO. WEBHOOK] Webhook processing failed:", error.message);
       res.status(200).send("OK");
+    }
+  });
+  app.post("/api/webhooks/logistics-relay", async (req, res) => {
+    try {
+      const token = req.query.token || req.headers["x-api-key"];
+      const expectedToken = process.env.SHIPROCKET_WEBHOOK_TOKEN || "chils_secure_relay_token_109283";
+      if (!token || token !== expectedToken) {
+        console.warn(`[LOGISTICS WEBHOOK] Unauthorized access attempt: token mismatch.`);
+        return res.status(401).json({ error: "Unauthorized: Invalid Webhook Token" });
+      }
+      const payload = req.body;
+      console.log("[LOGISTICS WEBHOOK] Payload received:", JSON.stringify(payload));
+      const rawOrderId = payload.channel_order_id || payload.order_id;
+      const awb = payload.awb;
+      const courier = payload.courier_name;
+      const trackingStatus = payload.status || payload.current_status || "In Transit";
+      const etd = payload.etd || payload.expected_delivery_date;
+      if (!rawOrderId) {
+        console.warn("[LOGISTICS WEBHOOK] Missing order identifier in payload. Acknowledging with 200 (potential dry-run test).");
+        return res.status(200).json({ success: true, message: "Dry-run check verified: route alive." });
+      }
+      const orderId = parseInt(String(rawOrderId).replace(/\D/g, ""), 10);
+      if (isNaN(orderId)) {
+        console.warn(`[LOGISTICS WEBHOOK] Invalid order ID format: ${rawOrderId}. Acknowledging with 200.`);
+        return res.status(200).json({ success: true, message: "Webhook acknowledged (invalid order format)." });
+      }
+      const wc = getWooCommerce();
+      if (!wc) {
+        console.error("[LOGISTICS WEBHOOK] WooCommerce client not configured. Webhook mapping aborted.");
+        return res.status(500).json({ error: "Internal store configuration error" });
+      }
+      console.log(`[LOGISTICS WEBHOOK] Syncing Order #${orderId} - AWB: ${awb}, Courier: ${courier}, Status: ${trackingStatus}`);
+      let orderResponse;
+      try {
+        orderResponse = await wcSafeCall(wc, "get", `orders/${orderId}`);
+      } catch (err) {
+        console.error(`[LOGISTICS WEBHOOK] Order #${orderId} lookup failed in WooCommerce:`, err.message);
+        return res.status(200).json({ success: true, message: `Webhook received but order #${orderId} was not found in WooCommerce.` });
+      }
+      const existingOrder = orderResponse.data;
+      if (!existingOrder) {
+        console.warn(`[LOGISTICS WEBHOOK] Order #${orderId} data payload was empty.`);
+        return res.status(200).json({ success: true, message: "Order data empty" });
+      }
+      const existingMeta = existingOrder.meta_data || [];
+      const newMetaMap = new Map(existingMeta.map((m) => [m.key, m.value]));
+      if (awb) newMetaMap.set("_shiprocket_awb", String(awb));
+      if (courier) newMetaMap.set("_shiprocket_courier", String(courier));
+      if (trackingStatus) newMetaMap.set("_shiprocket_tracking_status", String(trackingStatus));
+      if (etd) newMetaMap.set("_shiprocket_etd", String(etd));
+      if (awb) newMetaMap.set("_shiprocket_tracking_url", `https://shiprocket.co/tracking/${awb}`);
+      const updatedMeta = Array.from(newMetaMap.entries()).map(([key, value]) => ({ key, value }));
+      let updatedStatus = existingOrder.status;
+      const normalStatus = String(trackingStatus).toLowerCase().trim();
+      if (["shipped", "dispatched", "out_for_delivery", "out-for-delivery", "in-transit", "in transit"].some((s) => normalStatus.includes(s))) {
+        updatedStatus = "shipping";
+      } else if (["delivered"].some((s) => normalStatus.includes(s))) {
+        updatedStatus = "completed";
+      }
+      const orderUpdatePayload = {
+        meta_data: updatedMeta
+      };
+      if (updatedStatus !== existingOrder.status) {
+        try {
+          console.log(`[LOGISTICS WEBHOOK] Attempting order status transition to: ${updatedStatus}`);
+          await wcSafeCall(wc, "put", `orders/${orderId}`, {
+            ...orderUpdatePayload,
+            status: updatedStatus,
+            customer_note: `Logistics status update: ${trackingStatus}. Carrier: ${courier || "N/A"}, AWB: #${awb || "N/A"}`
+          });
+          console.log(`[LOGISTICS WEBHOOK] Order #${orderId} status & meta updated successfully to: ${updatedStatus}`);
+        } catch (statusErr) {
+          console.warn(`[LOGISTICS WEBHOOK] WooCommerce rejected status transition to '${updatedStatus}' (may be unregistered). Falling back to meta update only.`);
+          await wcSafeCall(wc, "put", `orders/${orderId}`, {
+            ...orderUpdatePayload,
+            customer_note: `Logistics status update: ${trackingStatus} (In Transit). Carrier: ${courier || "N/A"}, AWB: #${awb || "N/A"}`
+          });
+          console.log(`[LOGISTICS WEBHOOK] Order #${orderId} metadata updated successfully (retained status: ${existingOrder.status})`);
+        }
+      } else {
+        await wcSafeCall(wc, "put", `orders/${orderId}`, {
+          ...orderUpdatePayload,
+          customer_note: `Logistics details updated. Status: ${trackingStatus}. Carrier: ${courier || "N/A"}, AWB: #${awb || "N/A"}`
+        });
+        console.log(`[LOGISTICS WEBHOOK] Order #${orderId} metadata updated (no status change).`);
+      }
+      return res.status(200).send("OK");
+    } catch (error) {
+      console.error("[LOGISTICS WEBHOOK] Error processing webhook:", error.message || error);
+      return res.status(500).send("Internal Error");
     }
   });
   app.get("/", async (req, res, next) => {

@@ -2012,6 +2012,76 @@ async function startServer() {
     }
   });
 
+  app.post("/api/custom/quote", async (req, res) => {
+    try {
+      const { name, email, phone, productType, quantity, designFile, additionalNotes } = req.body;
+      if (!name || !email || !phone || !productType || !quantity) {
+        return res.status(400).json({ message: "Name, email, phone, product type, and quantity are required." });
+      }
+
+      let fileUrl = "";
+      if (designFile && typeof designFile === 'string' && designFile.includes(';base64,')) {
+        try {
+          const parts = designFile.split(';base64,');
+          const mime = parts[0].match(/data:(.*)/)?.[1] || "";
+          const ext = mime.split('/')[1] || "png";
+          const base64Content = parts[1];
+          const buffer = Buffer.from(base64Content, 'base64');
+          const filename = `design-${Date.now()}-${Math.floor(Math.random() * 1000)}.${ext}`;
+          
+          const publicUploadDir = path.resolve(__dirname, "public", "uploads", "custom_designs");
+          const distUploadDir = path.resolve(__dirname, "dist", "uploads", "custom_designs");
+
+          if (!fs.existsSync(publicUploadDir)) {
+            fs.mkdirSync(publicUploadDir, { recursive: true });
+          }
+          fs.writeFileSync(path.join(publicUploadDir, filename), buffer);
+
+          if (fs.existsSync(path.resolve(__dirname, "dist"))) {
+            if (!fs.existsSync(distUploadDir)) {
+              fs.mkdirSync(distUploadDir, { recursive: true });
+            }
+            fs.writeFileSync(path.join(distUploadDir, filename), buffer);
+          }
+          fileUrl = `/uploads/custom_designs/${filename}`;
+        } catch (err) {
+          console.error("[CHILS & CO.] Failed to save design file:", err);
+        }
+      }
+
+      const QUOTES_FILE = path.join(process.cwd(), "quotes.json");
+      let quotes = [];
+      if (fs.existsSync(QUOTES_FILE)) {
+        try {
+          quotes = JSON.parse(fs.readFileSync(QUOTES_FILE, "utf-8"));
+        } catch (e) {
+          quotes = [];
+        }
+      }
+
+      const newQuote = {
+        id: `q-${Date.now()}`,
+        name,
+        email,
+        phone,
+        productType,
+        quantity: parseInt(quantity, 10) || 1,
+        designFile: fileUrl,
+        additionalNotes,
+        timestamp: new Date().toISOString()
+      };
+
+      quotes.push(newQuote);
+      fs.writeFileSync(QUOTES_FILE, JSON.stringify(quotes, null, 2));
+
+      console.log(`[CHILS & CO.] Custom quote request logged for ${email}`);
+      res.json({ success: true, message: "Quote request successfully processed", quote: newQuote });
+    } catch (error: any) {
+      console.error("[CHILS & CO.] Custom Quote Error:", error);
+      res.status(500).json({ message: error.message || "Failed to process quote request" });
+    }
+  });
+
   app.get("/api/bespoke/list", authenticateToken, async (req: any, res) => {
     try {
       // Secure endpoint for admin only
