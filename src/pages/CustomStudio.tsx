@@ -23,8 +23,8 @@ const CUSTOM_PRODUCTS: CustomProduct[] = [
     category: 'Apparel',
     tagline: 'Front, back & sleeve prints',
     images: [
-      'https://res.cloudinary.com/ddatd5ruz/image/upload/v1781931358/ChatGPT_Image_Jun_20_2026_09_38_14_AM_e5iqrl.png',
-      'https://res.cloudinary.com/ddatd5ruz/image/upload/v1781931357/ChatGPT_Image_Jun_20_2026_10_22_21_AM_rieewh.png'
+      'https://res.cloudinary.com/ddatd5ruz/image/upload/v1781952420/ChatGPT_Image_Apr_19_2026_01_02_46_PM_1_cwxgof.png',
+      'https://res.cloudinary.com/ddatd5ruz/image/upload/v1781952421/ChatGPT_Image_Apr_19_2026_01_00_15_PM_1_ysa1ie.png'
     ],
     basePrice: 799,
     bulkStartPrice: 399,
