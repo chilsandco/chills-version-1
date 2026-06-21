@@ -131,7 +131,7 @@ function getPhonePeTransactionId(order: any, fallback?: string) {
 
 async function verifyPhonePeTransaction(merchantTransactionId: string) {
   const merchantId = process.env.PHONEPE_MERCHANT_ID?.trim();
-  const saltKey = process.env.PHONEPE_SALT_KEY?.trim();
+  const saltKey = (process.env.PHONEPE_SALT_KEY || process.env.PHONEPE_API_KEY || "").trim();
   const saltIndex = process.env.PHONEPE_SALT_INDEX || "1";
 
   if (!merchantTransactionId) {
@@ -2831,7 +2831,7 @@ ${xmlItems}
       const response = await wcSafeCall(wc, "get", "orders", { 
         status: "pending,on-hold",
         per_page: 50,
-        after: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString() // Last 24 hours
+        after: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString() // Last 30 days
       });
 
       const orders = response.data;
@@ -2870,11 +2870,19 @@ ${xmlItems}
           }
         } catch (err: any) {
           // If 404 from PhonePe, it might not even have been initiated or failed very early
-          if (err.response?.status === 404) {
+          const is404 = err.response?.status === 404 || 
+                        err.status === 404 || 
+                        err.message?.includes('404') || 
+                        err.message?.toLowerCase().includes('not found') || 
+                        err.message?.toLowerCase().includes('not_found');
+          
+          if (is404) {
             console.warn(`[CHILS RECON] Order ${order.id} not found in PhonePe records. Marking as failed after 30 mins.`);
             if (ageInMins > 30) {
               await wcSafeCall(wc, "put", `orders/${order.id}`, { status: "failed", customer_note: "Archived due to payment abandonment." });
             }
+          } else {
+            console.error(`[CHILS RECON] Error processing order ${order.id}:`, err.message || err);
           }
         }
       }
