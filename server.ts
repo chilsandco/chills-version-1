@@ -2816,7 +2816,7 @@ ${xmlItems}
       // specific OG tags so link previews show the correct product image,
       // title, and description.
       const SOCIAL_CRAWLER_UA = /facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|Discordbot|TelegramBot|Pinterest|Googlebot|bingbot|Applebot/i;
-      const DEFAULT_OG_IMAGE = "https://res.cloudinary.com/ddatd5ruz/image/upload/v1782039896/ChatGPT_Image_Jun_21_2026_04_34_04_PM_avhfel.png";
+      const DEFAULT_OG_IMAGE = "https://res.cloudinary.com/ddatd5ruz/image/upload/w_1200,h_630,c_fill,f_jpg,q_80/v1782039896/ChatGPT_Image_Jun_21_2026_04_34_04_PM_avhfel.png";
 
       app.get("*", async (req, res) => {
         const indexPath = path.resolve(distPath, "index.html");
