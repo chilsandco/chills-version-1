@@ -221,6 +221,18 @@ const Checkout: React.FC = () => {
     }
   }, [user]);
 
+  // If credentials are not complete, force editing mode so the form is visible
+  useEffect(() => {
+    const isPhoneValid = selectedCountry.length > 0 
+      ? phoneInput.length === selectedCountry.length 
+      : phoneInput.length >= 7;
+    const complete = !!(formData.firstName.trim() && formData.email.trim() && isPhoneValid);
+    
+    if (!complete) {
+      setIsEditingIdentity(true);
+    }
+  }, [formData.firstName, formData.email, phoneInput, selectedCountry]);
+
   // Sync selected address to form data for final submission
   useEffect(() => {
     const selected = addresses.find(a => a.id === selectedAddressId);
@@ -250,9 +262,16 @@ const Checkout: React.FC = () => {
       return;
     }
 
-    if (addressPhoneInput.trim() && addressCountry.length > 0 && addressPhoneInput.length !== addressCountry.length) {
-      alert(`Contact phone number must be exactly ${addressCountry.length} digits for ${addressCountry.name}.`);
-      return;
+    if (addressPhoneInput.trim()) {
+      if (addressCountry.length > 0) {
+        if (addressPhoneInput.length !== addressCountry.length) {
+          alert(`Contact phone number must be exactly ${addressCountry.length} digits for ${addressCountry.name}.`);
+          return;
+        }
+      } else if (addressPhoneInput.length < 7) {
+        alert("Contact phone number must be at least 7 digits.");
+        return;
+      }
     }
 
     let newAddresses = [...addresses];
@@ -366,8 +385,16 @@ const Checkout: React.FC = () => {
     }
 
     // Validate phone number length based on selected country
-    if (selectedCountry.length > 0 && phoneInput.length !== selectedCountry.length) {
-      setError(`Phone number must be exactly ${selectedCountry.length} digits for ${selectedCountry.name}.`);
+    const isPhoneValid = selectedCountry.length > 0 
+      ? phoneInput.length === selectedCountry.length 
+      : phoneInput.length >= 7;
+
+    if (!isPhoneValid) {
+      if (selectedCountry.length > 0) {
+        setError(`Phone number must be exactly ${selectedCountry.length} digits for ${selectedCountry.name}.`);
+      } else {
+        setError("Phone number must be at least 7 digits.");
+      }
       const identitySection = document.getElementById('identity-section');
       if (identitySection) {
         identitySection.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -539,7 +566,10 @@ const Checkout: React.FC = () => {
 
           {/* Step 02: Identity Clearance */}
           {(() => {
-            const identityComplete = !!(formData.firstName && formData.email && formData.phone);
+            const isPhoneValid = selectedCountry.length > 0 
+              ? phoneInput.length === selectedCountry.length 
+              : phoneInput.length >= 7;
+            const identityComplete = !!(formData.firstName.trim() && formData.email.trim() && isPhoneValid);
             const showIdentityForm = isEditingIdentity || !identityComplete;
             return (
               <section id="identity-section" className="space-y-6">
