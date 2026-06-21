@@ -5,7 +5,7 @@ import { useCart } from '../CartContext';
 import { useWishlist } from '../WishlistContext';
 import ShareSignal from '../components/ShareSignal';
 import { motion, AnimatePresence, useSpring } from 'motion/react';
-import { BookOpen, Check, CreditCard, Droplets, Heart, Ruler, Shirt, Sparkles, X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Star, MessageSquare, AlertCircle } from 'lucide-react';
+import { BookOpen, Check, CreditCard, Droplets, Heart, Ruler, Shirt, Sparkles, X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Star, MessageSquare, AlertCircle, RotateCcw, ExternalLink } from 'lucide-react';
 import { useGesture } from '@use-gesture/react';
 import { Link } from 'react-router-dom';
 import SizeGuide from '../components/SizeGuide';
@@ -1151,16 +1151,17 @@ const ProductDetail: React.FC = () => {
                 <div className="h-px flex-1 bg-neutral-900" />
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 {[
                   { label: "Material", value: product.material, icon: Shirt },
                   { label: "Fit", value: product.fit, icon: Ruler },
-                  { label: "Care", value: product.care, icon: Droplets }
+                  { label: "Care", value: product.care, icon: Droplets },
+                  { label: "Reversals", value: "Returnable within 48h of delivery.", icon: RotateCcw }
                 ].map(({ label, value, icon: Icon }) => (
                   <div key={label} className="border border-neutral-900 bg-neutral-950/70 p-4">
                     <Icon size={16} className="mb-4 text-accent" />
                     <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-600">{label}</p>
-                    <p className="text-[12px] leading-relaxed text-neutral-300">{value}</p>
+                    <p className="text-[11px] leading-relaxed text-neutral-300">{value}</p>
                   </div>
                 ))}
               </div>
@@ -1190,6 +1191,44 @@ const ProductDetail: React.FC = () => {
                     ))}
                   </div>
                 )}
+              </div>
+
+              {/* Reversal Protocol */}
+              <div className="border border-neutral-900 bg-black p-5 space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <h3 className="text-[11px] font-bold uppercase tracking-[0.3em] text-accent flex items-center gap-2">
+                    <RotateCcw size={13} />
+                    Reversal Protocol
+                  </h3>
+                  <Link 
+                    to="/returns-refunds" 
+                    className="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-500 transition-colors hover:text-white flex items-center gap-1"
+                  >
+                    Policy Intel <ExternalLink size={10} />
+                  </Link>
+                </div>
+                <div className="space-y-3 text-[12px] font-light leading-relaxed tracking-wide text-neutral-400">
+                  <p>
+                    Every garment is eligible for a refund or size exchange within <strong className="text-white">48 hours of delivery</strong>.
+                  </p>
+                  <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-mono pt-1">
+                    How to execute a return:
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                    <div className="p-3 bg-neutral-950 border border-neutral-900">
+                      <span className="text-[9px] font-mono text-accent block mb-1">01 / ARCHIVE</span>
+                      <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-normal">Go to your Orders Archive console.</p>
+                    </div>
+                    <div className="p-3 bg-neutral-950 border border-neutral-900">
+                      <span className="text-[9px] font-mono text-accent block mb-1">02 / TRANSMISSION</span>
+                      <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-normal">Select the delivered order signal.</p>
+                    </div>
+                    <div className="p-3 bg-neutral-950 border border-neutral-900">
+                      <span className="text-[9px] font-mono text-accent block mb-1">03 / INITIATE</span>
+                      <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-normal">Click "Initiate Reversal" to request.</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
