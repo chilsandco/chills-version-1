@@ -27,6 +27,20 @@ interface Address {
   phone?: string;
 }
 
+const countryCodes = [
+  { name: 'India', code: '+91', length: 10, flag: '🇮🇳' },
+  { name: 'United States', code: '+1', length: 10, flag: '🇺🇸' },
+  { name: 'United Kingdom', code: '+44', length: 10, flag: '🇬🇧' },
+  { name: 'Canada', code: '+1', length: 10, flag: '🇨🇦' },
+  { name: 'Australia', code: '+61', length: 9, flag: '🇦🇺' },
+  { name: 'Singapore', code: '+65', length: 8, flag: '🇸🇬' },
+  { name: 'United Arab Emirates', code: '+971', length: 9, flag: '🇦🇪' },
+  { name: 'Germany', code: '+49', length: 10, flag: '🇩🇪' },
+  { name: 'France', code: '+33', length: 9, flag: '🇫🇷' },
+  { name: 'Saudi Arabia', code: '+966', length: 9, flag: '🇸🇦' },
+  { name: 'Other', code: '+', length: 0, flag: '🌐' }
+];
+
 const Checkout: React.FC = () => {
   const { cart, updateQuantity, removeFromCart, totalPrice } = useCart();
 
@@ -75,6 +89,81 @@ const Checkout: React.FC = () => {
     pincode: '',
     phone: ''
   });
+
+  // Country Code and Phone Digit components
+  const [selectedCountry, setSelectedCountry] = useState(countryCodes[0]);
+  const [phoneInput, setPhoneInput] = useState('');
+  const [addressCountry, setAddressCountry] = useState(countryCodes[0]);
+  const [addressPhoneInput, setAddressPhoneInput] = useState('');
+
+  // Sync components to formData.phone
+  useEffect(() => {
+    const formatted = phoneInput.trim();
+    setFormData(prev => ({
+      ...prev,
+      phone: formatted ? `${selectedCountry.code} ${formatted}` : ''
+    }));
+  }, [selectedCountry, phoneInput]);
+
+  // Sync back from formData.phone if updated externally
+  useEffect(() => {
+    if (!formData.phone) return;
+    const currentCombined = `${selectedCountry.code} ${phoneInput}`.trim();
+    if (formData.phone.trim() === currentCombined) return;
+
+    const match = countryCodes.find(c => c.code !== '+' && formData.phone.startsWith(c.code + ' '));
+    if (match) {
+      setSelectedCountry(match);
+      setPhoneInput(formData.phone.slice(match.code.length + 1).trim());
+    } else if (formData.phone.startsWith('+')) {
+      const parts = formData.phone.split(' ');
+      const code = parts[0];
+      const rest = parts.slice(1).join(' ').trim();
+      const customMatch = countryCodes.find(c => c.code === code) || { name: 'Other', code, length: 0, flag: '🌐' };
+      setSelectedCountry(customMatch);
+      setPhoneInput(rest);
+    } else {
+      setSelectedCountry(countryCodes[0]);
+      setPhoneInput(formData.phone.trim());
+    }
+  }, [formData.phone]);
+
+  // Sync components to addressFormData.phone
+  useEffect(() => {
+    const formatted = addressPhoneInput.trim();
+    setAddressFormData(prev => ({
+      ...prev,
+      phone: formatted ? `${addressCountry.code} ${formatted}` : ''
+    }));
+  }, [addressCountry, addressPhoneInput]);
+
+  // Sync back from addressFormData.phone if updated externally
+  useEffect(() => {
+    if (addressFormData.phone === undefined) return;
+    const currentCombined = `${addressCountry.code} ${addressPhoneInput}`.trim();
+    if (addressFormData.phone.trim() === currentCombined) return;
+
+    if (!addressFormData.phone) {
+      setAddressPhoneInput('');
+      return;
+    }
+
+    const match = countryCodes.find(c => c.code !== '+' && addressFormData.phone.startsWith(c.code + ' '));
+    if (match) {
+      setAddressCountry(match);
+      setAddressPhoneInput(addressFormData.phone.slice(match.code.length + 1).trim());
+    } else if (addressFormData.phone.startsWith('+')) {
+      const parts = addressFormData.phone.split(' ');
+      const code = parts[0];
+      const rest = parts.slice(1).join(' ').trim();
+      const customMatch = countryCodes.find(c => c.code === code) || { name: 'Other', code, length: 0, flag: '🌐' };
+      setAddressCountry(customMatch);
+      setAddressPhoneInput(rest);
+    } else {
+      setAddressCountry(countryCodes[0]);
+      setAddressPhoneInput(addressFormData.phone.trim());
+    }
+  }, [addressFormData.phone]);
 
   // Redirect to login if not authenticated (Guest checkout disabled)
   useEffect(() => {
@@ -158,6 +247,11 @@ const Checkout: React.FC = () => {
   const saveAddress = () => {
     if (!addressFormData.address || !addressFormData.city || !addressFormData.pincode) {
       alert("Please fill required address fields");
+      return;
+    }
+
+    if (addressPhoneInput.trim() && addressCountry.length > 0 && addressPhoneInput.length !== addressCountry.length) {
+      alert(`Contact phone number must be exactly ${addressCountry.length} digits for ${addressCountry.name}.`);
       return;
     }
 
@@ -266,6 +360,21 @@ const Checkout: React.FC = () => {
         setTimeout(() => {
           const emptyInput = identitySection.querySelector(`input[name="${missingIdentityFields[0]}"]`) as HTMLInputElement;
           if (emptyInput) emptyInput.focus();
+        }, 600);
+      }
+      return;
+    }
+
+    // Validate phone number length based on selected country
+    if (selectedCountry.length > 0 && phoneInput.length !== selectedCountry.length) {
+      setError(`Phone number must be exactly ${selectedCountry.length} digits for ${selectedCountry.name}.`);
+      const identitySection = document.getElementById('identity-section');
+      if (identitySection) {
+        identitySection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setIsEditingIdentity(true);
+        setTimeout(() => {
+          const phoneField = identitySection.querySelector('input[type="tel"]') as HTMLInputElement;
+          if (phoneField) phoneField.focus();
         }, 600);
       }
       return;
@@ -540,15 +649,33 @@ const Checkout: React.FC = () => {
                         </div>
                         <div className="space-y-2 group">
                           <label className="text-[9px] text-neutral-500 uppercase tracking-[0.2em] block font-bold group-focus-within:text-accent transition-colors">Phone Number *</label>
-                          <input
-                            type="tel"
-                            name="phone"
-                            required
-                            value={formData.phone}
-                            onChange={handleInputChange}
-                            className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none transition-all font-mono placeholder:text-neutral-800 text-white"
-                            placeholder="+91 XXXXXXXXXX"
-                          />
+                          <div className="flex gap-2 items-end border-b border-neutral-900 focus-within:border-accent transition-all">
+                            <select
+                              value={selectedCountry.code}
+                              onChange={(e) => {
+                                const selected = countryCodes.find(c => c.code === e.target.value) || countryCodes[0];
+                                setSelectedCountry(selected);
+                              }}
+                              className="bg-transparent py-2 text-sm outline-none font-mono text-white border-none cursor-pointer max-w-[120px]"
+                            >
+                              {countryCodes.map(c => (
+                                <option key={c.name} value={c.code} className="bg-black text-white font-mono text-xs">
+                                  {c.flag} {c.code} ({c.name})
+                                </option>
+                              ))}
+                            </select>
+                            <input
+                              type="tel"
+                              required
+                              value={phoneInput}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, '');
+                                setPhoneInput(val);
+                              }}
+                              className="flex-1 bg-transparent py-2 text-sm outline-none border-none font-mono placeholder:text-neutral-800 text-white"
+                              placeholder={selectedCountry.length > 0 ? `${selectedCountry.length} DIGITS` : "NUMBER"}
+                            />
+                          </div>
                         </div>
                       </div>
 
@@ -828,14 +955,32 @@ const Checkout: React.FC = () => {
                             </div>
                             <div className="space-y-2">
                               <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Contact Phone Number</label>
-                              <input
-                                type="tel"
-                                name="phone"
-                                value={addressFormData.phone}
-                                onChange={handleAddressInputChange}
-                                className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
-                                placeholder="+91 XXXXXXXXXX (optional)"
-                              />
+                              <div className="flex gap-2 items-end border-b border-neutral-900 focus-within:border-accent transition-all">
+                                <select
+                                  value={addressCountry.code}
+                                  onChange={(e) => {
+                                    const selected = countryCodes.find(c => c.code === e.target.value) || countryCodes[0];
+                                    setAddressCountry(selected);
+                                  }}
+                                  className="bg-transparent py-2 text-sm outline-none font-mono text-white border-none cursor-pointer max-w-[120px]"
+                                >
+                                  {countryCodes.map(c => (
+                                    <option key={c.name} value={c.code} className="bg-black text-white font-mono text-xs">
+                                      {c.flag} {c.code} ({c.name})
+                                    </option>
+                                  ))}
+                                </select>
+                                <input
+                                  type="tel"
+                                  value={addressPhoneInput}
+                                  onChange={(e) => {
+                                    const val = e.target.value.replace(/\D/g, '');
+                                    setAddressPhoneInput(val);
+                                  }}
+                                  className="flex-1 bg-transparent py-2 text-sm outline-none border-none font-mono placeholder:text-neutral-800 text-white"
+                                  placeholder={addressCountry.length > 0 ? `${addressCountry.length} DIGITS (optional)` : "NUMBER (optional)"}
+                                />
+                              </div>
                             </div>
                           </div>
 
