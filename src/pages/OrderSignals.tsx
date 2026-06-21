@@ -197,7 +197,15 @@ const OrderSignals: React.FC = () => {
                   <div className="w-24">
                     <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Status</p>
                     <div className="flex items-center gap-2">
-                      <div className={`w-1.5 h-1.5 rounded-full ${paidStatuses.includes(signal.status) ? 'bg-green-500' : 'bg-accent animate-pulse'}`} />
+                      <div className={`w-1.5 h-1.5 rounded-full ${
+                        paidStatuses.includes(signal.status) 
+                          ? 'bg-green-500' 
+                          : ['failed', 'cancelled'].includes(signal.status)
+                            ? 'bg-red-500'
+                            : signal.status === 'refunded'
+                              ? 'bg-red-500/50'
+                              : 'bg-accent animate-pulse'
+                      }`} />
                       <p className="text-[10px] uppercase font-bold tracking-widest">{signal.status}</p>
                     </div>
                   </div>

@@ -64,7 +64,14 @@ const SignalDetails: React.FC = () => {
   const isSuccessful = ['processing', 'completed', 'shipping', 'delivered'].includes(signal.status);
 
   const steps = [
-    { label: "Order Received", status: "completed" },
+    { 
+      label: signal.status === 'failed' 
+        ? "Order Failed" 
+        : signal.status === 'cancelled' 
+          ? "Order Cancelled" 
+          : "Order Received", 
+      status: ['failed', 'cancelled'].includes(signal.status) ? 'failed' : 'completed' 
+    },
     { label: "Processing", status: (signal.status === 'processing' || signal.status === 'completed' || isRefunded) ? 'completed' : 'pending' },
     { label: "Dispatched", status: (signal.status === 'shipping' || !!signal.shipping?.awb || signal.status === 'completed' || isRefunded) ? 'completed' : 'pending' },
     { label: "Delivered", status: (signal.status === 'completed' || isRefunded) ? 'completed' : 'pending' },
@@ -90,7 +97,7 @@ const SignalDetails: React.FC = () => {
               {isRefunded ? 'Refund Complete' : isFailed ? 'Order Terminated' : 'Order Details'}
             </h1>
             <div className="flex items-center gap-4">
-              <p className={`font-mono text-xl tracking-tighter ${isRefunded ? 'text-red-500' : 'text-accent'}`}>#{signal.signalId}</p>
+              <p className={`font-mono text-xl tracking-tighter ${['failed', 'cancelled', 'refunded'].includes(signal.status) ? 'text-red-500' : 'text-accent'}`}>#{signal.signalId}</p>
               <span className="w-1 h-1 rounded-full bg-neutral-800" />
               <p className="text-[10px] text-neutral-600 uppercase tracking-widest">
                 Date: {new Date(signal.date).toLocaleDateString()}
@@ -98,7 +105,7 @@ const SignalDetails: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {!isRefunded && (
+            {!['failed', 'cancelled', 'refunded'].includes(signal.status) && (
               <a 
                 href={`https://api.chilsandco.com/?print-order=${signal.id}&print-order-type=invoice&order_key=${signal.orderKey || ''}`}
                 target="_blank"
@@ -111,12 +118,12 @@ const SignalDetails: React.FC = () => {
                 </p>
               </a>
             )}
-            <div className={`px-6 py-4 border rounded-sm ${isRefunded ? 'bg-red-500/5 border-red-500/20' : 'bg-neutral-950 border-neutral-900'}`}>
-              <p className={`text-[8px] tracking-[0.3em] uppercase mb-1 ${isRefunded ? 'text-red-500/50' : 'text-neutral-600'}`}>Status</p>
-            <p className={`text-[11px] font-bold uppercase tracking-widest ${isRefunded ? 'text-red-500' : ''}`}>
-               {isRefunded ? '✅ Refunded' : signal.status}
-            </p>
-          </div>
+            <div className={`px-6 py-4 border rounded-sm ${['failed', 'cancelled', 'refunded'].includes(signal.status) ? 'bg-red-500/5 border-red-500/20' : 'bg-neutral-950 border-neutral-900'}`}>
+              <p className={`text-[8px] tracking-[0.3em] uppercase mb-1 ${['failed', 'cancelled', 'refunded'].includes(signal.status) ? 'text-red-500/50' : 'text-neutral-600'}`}>Status</p>
+              <p className={`text-[11px] font-bold uppercase tracking-widest ${['failed', 'cancelled', 'refunded'].includes(signal.status) ? 'text-red-500' : ''}`}>
+                {signal.status === 'refunded' ? '✅ Refunded' : signal.status === 'failed' ? '❌ Failed' : signal.status === 'cancelled' ? '🚫 Cancelled' : signal.status}
+              </p>
+            </div>
         </div>
       </div>
     </header>
@@ -161,35 +168,77 @@ const SignalDetails: React.FC = () => {
              </motion.section>
           )}
 
-          <section className="bg-neutral-950 border border-neutral-900 p-8">
-            <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-12 flex items-center gap-3">
-              <Activity size={14} className={isRefunded ? 'text-white/20' : 'text-accent'} />
-              Order Status
-            </h2>
-            
-            <div className="relative pl-8 space-y-12">
-              <div className="absolute left-[3px] top-1 bottom-1 w-[1px] bg-neutral-900" />
-              {steps.map((step, idx) => (
-                <div key={idx} className="relative">
-                  <div className={`absolute -left-[32px] top-1 w-2.5 h-2.5 rounded-full border border-black ${step.status === 'completed' ? (isRefunded ? 'bg-white/10' : 'bg-accent') : 'bg-neutral-800'}`} />
-                  <div>
-                    <p className={`text-[11px] font-bold uppercase tracking-widest mb-1 ${step.status === 'completed' ? 'text-white/40' : 'text-neutral-600'}`}>
-                      {step.label}
-                    </p>
+          {['failed', 'cancelled'].includes(signal.status) ? (
+            <section className="bg-red-500/5 border border-red-500/20 p-8 md:p-10 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-8 opacity-5 text-red-500">
+                <ShieldAlert size={120} />
+              </div>
+              <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-8 flex items-center gap-3 text-red-500">
+                <ShieldAlert size={16} />
+                Transaction Terminated
+              </h2>
+              <div className="space-y-4 max-w-lg relative z-10">
+                <p className="text-[13px] font-medium text-white leading-relaxed">
+                  {signal.status === 'failed' 
+                    ? "The payment for this order could not be authenticated. The checkout flow has been interrupted."
+                    : "This order has been cancelled."}
+                </p>
+                <p className="text-[11px] text-neutral-500 uppercase tracking-widest leading-relaxed">
+                  If any amount was deducted from your account, it will automatically revert within 3-5 business days. You can initiate a new order from our archive collection.
+                </p>
+              </div>
+              <div className="flex gap-4 mt-8 relative z-10">
+                <Link to="/collection" className="bg-white text-black px-6 py-3 text-[10px] tracking-widest font-bold uppercase hover:bg-accent transition-colors">
+                  Create New Order
+                </Link>
+                <a href="mailto:chilsandco@gmail.com" className="border border-white/10 px-6 py-3 text-[10px] tracking-widest font-bold uppercase hover:border-white transition-colors text-center inline-block">
+                  Support Protocol
+                </a>
+              </div>
+            </section>
+          ) : (
+            <section className="bg-neutral-950 border border-neutral-900 p-8">
+              <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-12 flex items-center gap-3">
+                <Activity size={14} className={isRefunded ? 'text-white/20' : 'text-accent'} />
+                Order Status
+              </h2>
+              
+              <div className="relative pl-8 space-y-12">
+                <div className="absolute left-[3px] top-1 bottom-1 w-[1px] bg-neutral-900" />
+                {steps.map((step, idx) => (
+                  <div key={idx} className="relative">
+                    <div className={`absolute -left-[32px] top-1 w-2.5 h-2.5 rounded-full border border-black ${
+                      step.status === 'completed' 
+                        ? (isRefunded ? 'bg-white/10' : 'bg-accent') 
+                        : step.status === 'failed' 
+                          ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' 
+                          : 'bg-neutral-800'
+                    }`} />
+                    <div>
+                      <p className={`text-[11px] font-bold uppercase tracking-widest mb-1 ${
+                        step.status === 'completed' 
+                          ? 'text-white/40' 
+                          : step.status === 'failed' 
+                            ? 'text-red-500' 
+                            : 'text-neutral-600'
+                      }`}>
+                        {step.label}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              ))}
-              {isRefunded && (
-                <div className="relative">
-                  <div className="absolute -left-[32px] top-1 w-2.5 h-2.5 rounded-full border border-black bg-red-500" />
-                  <div>
-                    <p className="text-[11px] font-bold uppercase tracking-widest mb-1 text-red-500">Refunded</p>
-                    <p className="text-[9px] text-red-500/50 uppercase tracking-widest italic">Recoupment successful</p>
+                ))}
+                {isRefunded && (
+                  <div className="relative">
+                    <div className="absolute -left-[32px] top-1 w-2.5 h-2.5 rounded-full border border-black bg-red-500" />
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-widest mb-1 text-red-500">Refunded</p>
+                      <p className="text-[9px] text-red-500/50 uppercase tracking-widest italic">Recoupment successful</p>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
-          </section>
+                )}
+              </div>
+            </section>
+          )}
 
           <section className="bg-neutral-950 border border-neutral-900 p-8">
             <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-8 flex items-center gap-3">
@@ -357,15 +406,21 @@ const SignalDetails: React.FC = () => {
               <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase">Payment</h3>
             </div>
             <div className="flex items-center gap-2 mb-4">
-              <div className={`w-2 h-2 rounded-full ${isSuccessful ? 'bg-green-500' : isFailed ? 'bg-red-500' : 'bg-amber-500 animate-pulse'}`} />
+              <div className={`w-2 h-2 rounded-full ${
+                (isSuccessful || isRefunded) 
+                  ? 'bg-green-500' 
+                  : ['failed', 'cancelled'].includes(signal.status) 
+                    ? 'bg-red-500' 
+                    : 'bg-amber-500 animate-pulse'
+              }`} />
               <p className="text-[11px] font-bold uppercase tracking-widest">
-                {isSuccessful ? 'Authenticated' : isFailed ? 'Failed' : 'Pending'}
+                {(isSuccessful || isRefunded) ? 'Authenticated' : ['failed', 'cancelled'].includes(signal.status) ? 'Failed' : 'Pending'}
               </p>
             </div>
             <p className="text-[10px] text-neutral-500 uppercase tracking-widest leading-relaxed italic">
-              {isSuccessful 
+              {(isSuccessful || isRefunded)
                 ? 'Payment was registered successfully.' 
-                : isFailed 
+                : ['failed', 'cancelled'].includes(signal.status) 
                   ? 'Payment was unsuccessful or cancelled.' 
                   : 'Awaiting payment confirmation from gateway.'}
             </p>
