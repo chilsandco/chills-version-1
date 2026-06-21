@@ -2272,8 +2272,93 @@ ${xmlItems}
     if (fs.existsSync(distPath)) {
       console.log(`[CHILS & CO.] Production mode: Serving static files from ${distPath}`);
       app.use(express.static(distPath));
-      app.get("*", (req, res) => {
-        res.sendFile(path.resolve(distPath, "index.html"));
+      const SOCIAL_CRAWLER_UA = /facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|Discordbot|TelegramBot|Pinterest|Googlebot|bingbot|Applebot/i;
+      const DEFAULT_OG_IMAGE = "https://res.cloudinary.com/ddatd5ruz/image/upload/v1782039896/ChatGPT_Image_Jun_21_2026_04_34_04_PM_avhfel.png";
+      app.get("*", async (req, res) => {
+        const indexPath = path.resolve(distPath, "index.html");
+        const ua = req.headers["user-agent"] || "";
+        const isCrawler = SOCIAL_CRAWLER_UA.test(ua);
+        if (!isCrawler) {
+          return res.sendFile(indexPath);
+        }
+        const productMatch = req.path.match(/^\/product\/(\d+)/);
+        if (!productMatch) {
+          return res.sendFile(indexPath);
+        }
+        const productId = productMatch[1];
+        try {
+          const wc = getWooCommerce();
+          if (!wc) {
+            return res.sendFile(indexPath);
+          }
+          const response = await wcSafeCall(wc, "get", `products/${productId}`);
+          const product = response.data;
+          if (!product) {
+            return res.sendFile(indexPath);
+          }
+          const productName = (product.name || "Product").replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+          const productDesc = (product.short_description || product.description || "").replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"').replace(/&nbsp;/g, " ").substring(0, 200).trim() || "Premium luxury garment by Chils & Co.";
+          const productImage = Array.isArray(product.images) && product.images.length > 0 ? product.images[0].src : DEFAULT_OG_IMAGE;
+          const productPrice = product.price || "0";
+          const productUrl = `https://chilsandco.com/product/${productId}`;
+          let html = fs.readFileSync(indexPath, "utf-8");
+          const escAttr = (s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+          const ogTitle = escAttr(`${productName} | CHILS & CO.`);
+          const ogDesc = escAttr(productDesc);
+          const ogImage = escAttr(productImage);
+          const ogUrl = escAttr(productUrl);
+          html = html.replace(
+            /(<meta\s+property="og:title"\s+content=")([^"]*)("\s*\/>)/i,
+            `$1${ogTitle}$3`
+          );
+          html = html.replace(
+            /(<meta\s+property="og:description"\s+content=")([^"]*)("\s*\/>)/i,
+            `$1${ogDesc}$3`
+          );
+          html = html.replace(
+            /(<meta\s+property="og:image"\s+content=")([^"]*)("\s*\/>)/i,
+            `$1${ogImage}$3`
+          );
+          html = html.replace(
+            /(<meta\s+property="og:url"\s+content=")([^"]*)("\s*\/>)/i,
+            `$1${ogUrl}$3`
+          );
+          html = html.replace(
+            /(<meta\s+property="og:type"\s+content=")([^"]*)("\s*\/>)/i,
+            `$1product$3`
+          );
+          html = html.replace(
+            /(<meta\s+name="twitter:title"\s+content=")([^"]*)("\s*\/>)/i,
+            `$1${ogTitle}$3`
+          );
+          html = html.replace(
+            /(<meta\s+name="twitter:description"\s+content=")([^"]*)("\s*\/>)/i,
+            `$1${ogDesc}$3`
+          );
+          html = html.replace(
+            /(<meta\s+name="twitter:image"\s+content=")([^"]*)("\s*\/>)/i,
+            `$1${ogImage}$3`
+          );
+          html = html.replace(
+            /(<meta\s+name="twitter:url"\s+content=")([^"]*)("\s*\/>)/i,
+            `$1${ogUrl}$3`
+          );
+          html = html.replace(
+            /(<title>)([^<]*)(<\/title>)/i,
+            `$1${productName} | CHILS & CO.$3`
+          );
+          const productMeta = `
+    <meta property="product:price:amount" content="${escAttr(productPrice)}" />
+    <meta property="product:price:currency" content="INR" />`;
+          html = html.replace("</head>", `${productMeta}
+  </head>`);
+          console.log(`[CHILS OG] Served dynamic OG tags for product ${productId}: "${productName}"`);
+          res.set("Content-Type", "text/html");
+          res.send(html);
+        } catch (error) {
+          console.error(`[CHILS OG] Failed to fetch product ${productId} for OG tags:`, error.message || error);
+          res.sendFile(indexPath);
+        }
       });
     } else {
       console.warn(`[CHILS & CO.] Production mode active but 'dist' directory not found at ${distPath}`);
