@@ -1156,7 +1156,7 @@ const ProductDetail: React.FC = () => {
                   { label: "Material", value: product.material, icon: Shirt },
                   { label: "Fit", value: product.fit, icon: Ruler },
                   { label: "Care", value: product.care, icon: Droplets },
-                  { label: "Reversals", value: "Returnable within 48h of delivery.", icon: RotateCcw }
+                  { label: "Reversals", value: "Returnable within 7 days of delivery.", icon: RotateCcw }
                 ].map(({ label, value, icon: Icon }) => (
                   <div key={label} className="border border-neutral-900 bg-neutral-950/70 p-4">
                     <Icon size={16} className="mb-4 text-accent" />
