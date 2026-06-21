@@ -126,7 +126,7 @@ const Checkout: React.FC = () => {
       setSelectedCountry(countryCodes[0]);
       setPhoneInput(formData.phone.trim());
     }
-  }, [formData.phone]);
+  }, [formData.phone, selectedCountry, phoneInput]);
 
   // Sync components to addressFormData.phone
   useEffect(() => {
@@ -163,7 +163,7 @@ const Checkout: React.FC = () => {
       setAddressCountry(countryCodes[0]);
       setAddressPhoneInput(addressFormData.phone.trim());
     }
-  }, [addressFormData.phone]);
+  }, [addressFormData.phone, addressCountry, addressPhoneInput]);
 
   // Redirect to login if not authenticated (Guest checkout disabled)
   useEffect(() => {
@@ -686,7 +686,7 @@ const Checkout: React.FC = () => {
                                 const selected = countryCodes.find(c => c.code === e.target.value) || countryCodes[0];
                                 setSelectedCountry(selected);
                               }}
-                              className="bg-transparent py-2 text-sm outline-none font-mono text-white border-none cursor-pointer max-w-[120px]"
+                              className="bg-transparent py-2 text-sm outline-none font-mono text-white border-none cursor-pointer w-[90px] shrink-0"
                             >
                               {countryCodes.map(c => (
                                 <option key={c.name} value={c.code} className="bg-black text-white font-mono text-xs">
@@ -698,8 +698,12 @@ const Checkout: React.FC = () => {
                               type="tel"
                               required
                               value={phoneInput}
+                              maxLength={selectedCountry.length > 0 ? selectedCountry.length : undefined}
                               onChange={(e) => {
-                                const val = e.target.value.replace(/\D/g, '');
+                                let val = e.target.value.replace(/\D/g, '');
+                                if (selectedCountry.length > 0) {
+                                  val = val.slice(0, selectedCountry.length);
+                                }
                                 setPhoneInput(val);
                               }}
                               className="flex-1 bg-transparent py-2 text-sm outline-none border-none font-mono placeholder:text-neutral-800 text-white"
@@ -992,7 +996,7 @@ const Checkout: React.FC = () => {
                                     const selected = countryCodes.find(c => c.code === e.target.value) || countryCodes[0];
                                     setAddressCountry(selected);
                                   }}
-                                  className="bg-transparent py-2 text-sm outline-none font-mono text-white border-none cursor-pointer max-w-[120px]"
+                                  className="bg-transparent py-2 text-sm outline-none font-mono text-white border-none cursor-pointer w-[90px] shrink-0"
                                 >
                                   {countryCodes.map(c => (
                                     <option key={c.name} value={c.code} className="bg-black text-white font-mono text-xs">
@@ -1003,8 +1007,12 @@ const Checkout: React.FC = () => {
                                 <input
                                   type="tel"
                                   value={addressPhoneInput}
+                                  maxLength={addressCountry.length > 0 ? addressCountry.length : undefined}
                                   onChange={(e) => {
-                                    const val = e.target.value.replace(/\D/g, '');
+                                    let val = e.target.value.replace(/\D/g, '');
+                                    if (addressCountry.length > 0) {
+                                      val = val.slice(0, addressCountry.length);
+                                    }
                                     setAddressPhoneInput(val);
                                   }}
                                   className="flex-1 bg-transparent py-2 text-sm outline-none border-none font-mono placeholder:text-neutral-800 text-white"
