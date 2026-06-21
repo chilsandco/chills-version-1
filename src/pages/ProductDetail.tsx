@@ -1209,7 +1209,7 @@ const ProductDetail: React.FC = () => {
                 </div>
                 <div className="space-y-3 text-[12px] font-light leading-relaxed tracking-wide text-neutral-400">
                   <p>
-                    Every garment is eligible for a refund or size exchange within <strong className="text-white">48 hours of delivery</strong>.
+                    Every garment is eligible for a refund or size exchange within <strong className="text-white">7 days of delivery</strong>.
                   </p>
                   <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-mono pt-1">
                     How to execute a return:

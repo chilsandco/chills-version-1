@@ -127,7 +127,7 @@ const TermsConditions: React.FC = () => {
                   <h2 className="text-[11px] tracking-[0.3em] font-bold uppercase">06 // Returns & Refunds</h2>
                 </div>
                 <p className="text-neutral-400 text-[10px] leading-relaxed uppercase tracking-[0.15em]">
-                    Governed by our Returns Policy. Requests must be initiated within 48 hours of delivery. Orders can only be cancelled prior to dispatch.
+                    Governed by our Returns Policy. Requests must be initiated within 7 days of delivery. Orders can only be cancelled prior to dispatch.
                 </p>
              </div>
           </section>

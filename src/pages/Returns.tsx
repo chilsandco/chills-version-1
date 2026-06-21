@@ -126,9 +126,9 @@ const Returns: React.FC = () => {
             <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase">Integrity Window</h2>
           </div>
           <div className="space-y-4">
-            <p className="text-2xl font-display font-bold tracking-tight">48 HOURS</p>
+            <p className="text-2xl font-display font-bold tracking-tight">7 DAYS</p>
             <p className="text-neutral-500 text-sm leading-relaxed uppercase tracking-widest font-medium">
-              To ensure accurate verification and maintain product integrity standards, return requests must be initiated within 48 hours of delivery. This protocol helps us maintain the quality standards we build by.
+              To ensure accurate verification and maintain product integrity standards, return requests must be initiated within 7 days of delivery. This protocol helps us maintain the quality standards we build by.
             </p>
           </div>
         </motion.section>

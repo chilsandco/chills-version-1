@@ -135,13 +135,13 @@ const ReturnRequest: React.FC = () => {
     }
   };
 
-  // Logic for 48 hour window
+  // Logic for 7 day window
   const isReturnable = () => {
     if (!signal || signal.status !== 'completed' || !signal.dateCompleted) return false;
     const completedDate = new Date(signal.dateCompleted);
     const now = new Date();
     const diffHours = (now.getTime() - completedDate.getTime()) / (1000 * 60 * 60);
-    return diffHours <= 48;
+    return diffHours <= 168;
   };
 
   if (loading) {
@@ -199,9 +199,9 @@ const ReturnRequest: React.FC = () => {
         {isWindowExpired ? (
           <div className="lg:col-span-12 bg-red-500/5 border border-red-500/20 p-12 text-center rounded-sm">
             <AlertCircle size={40} className="mx-auto mb-6 text-red-500" />
-            <h3 className="text-2xl font-display font-bold tracking-tight mb-4 uppercase">System Lock: 48hr Window Expired</h3>
+            <h3 className="text-2xl font-display font-bold tracking-tight mb-4 uppercase">System Lock: 7-Day Window Expired</h3>
             <p className="text-[11px] text-white/50 tracking-[0.2em] uppercase italic max-w-md mx-auto leading-relaxed">
-              Returns are only authorized within a 48-hour delivery window. This window has now closed for your transmission. For critical defective hardware issues, please contact direct support.
+              Returns are only authorized within a 7-day delivery window. This window has now closed for your transmission. For critical defective hardware issues, please contact direct support.
             </p>
           </div>
         ) : (
