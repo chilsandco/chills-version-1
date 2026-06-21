@@ -48,7 +48,7 @@ export const useCheckout = () => {
           amount: amountToPay,
           merchantTransactionId: merchantTransactionId,
           merchantUserId: localStorage.getItem('chils_user_id') || `GUEST_${Date.now()}`,
-          mobileNumber: customerDetails.phone
+          mobileNumber: customerDetails.phone ? customerDetails.phone.replace(/\D/g, '').slice(-10) : ''
         })
       });
 
