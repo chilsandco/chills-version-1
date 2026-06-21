@@ -410,6 +410,10 @@ const ProductDetail: React.FC = () => {
     setIsAddingToCart(true);
     addToCart(product, selectedSize);
 
+    if (isInWishlist(product.id)) {
+      toggleWishlist(product);
+    }
+
     const cartIcon = document.getElementById('cart-icon');
     const addToCartBtn = addToCartBtnRef.current;
 
@@ -583,6 +587,10 @@ const ProductDetail: React.FC = () => {
     
     if (!isAlreadyInCart) {
       addToCart(product, selectedSize);
+    }
+    
+    if (isInWishlist(product.id)) {
+      toggleWishlist(product);
     }
     
     // Instant redirect after a tiny delay for the text swap
