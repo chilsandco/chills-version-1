@@ -37,7 +37,7 @@ const Returns: React.FC = () => {
     <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen bg-black">
       <SEO 
         title="Returns, Refunds & Reversals"
-        description="Verify order returns eligibility, the 48-hour integrity window guidelines, required photographic evidence, and refund processing cycles."
+        description="Verify order returns eligibility, the 7-day integrity window guidelines, required photographic evidence, and refund processing cycles."
         canonical="https://chilsandco.com/returns-refunds"
         keywords="return policy, refunds policy, reverse logistics, refund timelines, order cancellations, quality check"
       />
@@ -345,7 +345,7 @@ const Returns: React.FC = () => {
                     </li>
                     <li className="flex items-center gap-3 text-red-900">
                         <div className="w-1 h-1 bg-red-900" />
-                        <span>Requests made outside the 48-hour window</span>
+                        <span>Requests made outside the 7-day window</span>
                     </li>
                 </ul>
             </div>
