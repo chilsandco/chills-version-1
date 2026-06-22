@@ -23,19 +23,49 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user, isAuthenticated]);
 
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [hasInitialized, setHasInitialized] = useState(false);
 
   // Load cart when storageKey changes (e.g., user logs in/out)
+  // If transitioning from guest → authenticated, merge the guest cart items
   useEffect(() => {
-    const savedCart = localStorage.getItem(storageKey);
-    setCart(savedCart ? JSON.parse(savedCart) : []);
+    const userCart: CartItem[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+
+    if (isAuthenticated && user) {
+      // User just logged in — check if there were guest cart items to carry over
+      const guestCart: CartItem[] = JSON.parse(localStorage.getItem('chils-cart-guest') || '[]');
+
+      if (guestCart.length > 0) {
+        // Merge guest items into the user's cart (avoid duplicates by id+size)
+        const merged = [...userCart];
+        for (const guestItem of guestCart) {
+          const existing = merged.find(
+            item => item.id === guestItem.id && item.selectedSize === guestItem.selectedSize
+          );
+          if (existing) {
+            existing.quantity += guestItem.quantity;
+          } else {
+            merged.push(guestItem);
+          }
+        }
+        setCart(merged);
+        // Clear the guest cart so items don't get re-merged on next login
+        localStorage.removeItem('chils-cart-guest');
+      } else {
+        setCart(userCart);
+      }
+    } else {
+      setCart(userCart);
+    }
+
+    setHasInitialized(true);
   }, [storageKey]);
 
-  // Save cart whenever it changes
+  // Save cart whenever it changes (only after initial load to avoid overwriting)
   useEffect(() => {
-    if (storageKey) {
+    if (hasInitialized) {
       localStorage.setItem(storageKey, JSON.stringify(cart));
     }
-  }, [cart, storageKey]);
+  }, [cart, storageKey, hasInitialized]);
 
   const addToCart = (product: Product, size?: string) => {
     setCart(prev => {
