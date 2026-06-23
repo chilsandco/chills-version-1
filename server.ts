@@ -473,10 +473,13 @@ async function startServer() {
 
         // Deduplicate and route through media proxy if needed
         vImages = [...new Set(vImages)].map(src => {
-            if (src.includes('wp-content/uploads')) {
-               return `/api/media?url=${encodeURIComponent(src)}`;
+            // Strip WordPress thumbnail suffixes (e.g. -150x150.png -> .png) to ensure high-res
+            let cleanSrc = src.replace(/-\d+x\d+(?=\.[a-zA-Z0-9]+$)/, '');
+            
+            if (cleanSrc.includes('wp-content/uploads')) {
+               return `/api/media?url=${encodeURIComponent(cleanSrc)}`;
             }
-            return src;
+            return cleanSrc;
         });
 
         if (vAttrs.color && !availableColors.includes(vAttrs.color)) {

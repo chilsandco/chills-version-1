@@ -347,10 +347,11 @@ async function startServer() {
           }
         });
         vImages = [...new Set(vImages)].map((src) => {
-          if (src.includes("wp-content/uploads")) {
-            return `/api/media?url=${encodeURIComponent(src)}`;
+          let cleanSrc = src.replace(/-\d+x\d+(?=\.[a-zA-Z0-9]+$)/, "");
+          if (cleanSrc.includes("wp-content/uploads")) {
+            return `/api/media?url=${encodeURIComponent(cleanSrc)}`;
           }
-          return src;
+          return cleanSrc;
         });
         if (vAttrs.color && !availableColors.includes(vAttrs.color)) {
           availableColors.push(vAttrs.color);
