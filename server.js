@@ -313,20 +313,39 @@ async function startServer() {
         if (v.image && v.image.src) {
           vImages.push(v.image.src);
         }
-        console.log(`[CHILS & CO. DEBUG] Variation ${v.id} keys:`, Object.keys(v).join(", "));
-        if (v.meta_data && Array.isArray(v.meta_data)) {
-          const galleryMeta = v.meta_data.find(
-            (m) => m.key.includes("gallery") || m.key.includes("image")
-          );
-          if (galleryMeta) {
-            console.log(`[CHILS & CO. DEBUG] Variation ${v.id} gallery meta found:`, JSON.stringify(galleryMeta));
-          }
+        let galleryIds = [];
+        if (v.gallery_image_ids && Array.isArray(v.gallery_image_ids)) {
+          galleryIds = [...galleryIds, ...v.gallery_image_ids];
         }
-        if (v.variation_gallery_images && Array.isArray(v.variation_gallery_images)) {
-          v.variation_gallery_images.forEach((img) => {
-            if (img.src) vImages.push(img.src);
+        if (v.meta_data && Array.isArray(v.meta_data)) {
+          const metaKeys = ["_woo_variation_gallery_images", "woo_variation_gallery_images", "_wc_additional_variation_images", "variation_image_gallery"];
+          metaKeys.forEach((key) => {
+            const meta = v.meta_data.find((m) => m.key === key);
+            if (meta && typeof meta.value === "string") {
+              const ids = meta.value.split(",").map((id) => id.trim()).filter(Boolean);
+              galleryIds = [...galleryIds, ...ids];
+            } else if (meta && Array.isArray(meta.value)) {
+              galleryIds = [...galleryIds, ...meta.value];
+            }
           });
         }
+        if (galleryIds.length > 0 && Array.isArray(wcProduct.images)) {
+          galleryIds.forEach((id) => {
+            const parentImg = wcProduct.images.find((img) => String(img.id) === String(id));
+            if (parentImg && parentImg.src) {
+              vImages.push(parentImg.src);
+            }
+          });
+        }
+        const directArrayKeys = ["variation_gallery_images", "woo_variation_gallery_images"];
+        directArrayKeys.forEach((key) => {
+          if (v[key] && Array.isArray(v[key])) {
+            v[key].forEach((img) => {
+              if (img.src) vImages.push(img.src);
+              else if (typeof img === "string" && img.startsWith("http")) vImages.push(img);
+            });
+          }
+        });
         vImages = [...new Set(vImages)].map((src) => {
           if (src.includes("wp-content/uploads")) {
             return `/api/media?url=${encodeURIComponent(src)}`;

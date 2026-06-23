@@ -429,24 +429,47 @@ async function startServer() {
            vImages.push(v.image.src);
         }
 
-        console.log(`[CHILS & CO. DEBUG] Variation ${v.id} keys:`, Object.keys(v).join(", "));
-        
-        if (v.meta_data && Array.isArray(v.meta_data)) {
-            const galleryMeta = v.meta_data.find((m: any) => 
-                m.key.includes("gallery") || m.key.includes("image")
-            );
-            if (galleryMeta) {
-                console.log(`[CHILS & CO. DEBUG] Variation ${v.id} gallery meta found:`, JSON.stringify(galleryMeta));
-            }
+        let galleryIds: string[] = [];
+
+        // 1. Native WooCommerce Core Property (introduced May 2026)
+        if (v.gallery_image_ids && Array.isArray(v.gallery_image_ids)) {
+            galleryIds = [...galleryIds, ...v.gallery_image_ids];
         }
 
-        
-        // Handle Additional Variation Images Gallery format
-        if (v.variation_gallery_images && Array.isArray(v.variation_gallery_images)) {
-            v.variation_gallery_images.forEach((img: any) => {
-                if (img.src) vImages.push(img.src);
+        // 2. Meta Data extraction (for third party plugins)
+        if (v.meta_data && Array.isArray(v.meta_data)) {
+            const metaKeys = ['_woo_variation_gallery_images', 'woo_variation_gallery_images', '_wc_additional_variation_images', 'variation_image_gallery'];
+            metaKeys.forEach(key => {
+                const meta = v.meta_data.find((m: any) => m.key === key);
+                if (meta && typeof meta.value === 'string') {
+                    const ids = meta.value.split(',').map((id: string) => id.trim()).filter(Boolean);
+                    galleryIds = [...galleryIds, ...ids];
+                } else if (meta && Array.isArray(meta.value)) {
+                    galleryIds = [...galleryIds, ...meta.value];
+                }
             });
         }
+
+        // Resolve IDs to URLs using the parent product's images array
+        if (galleryIds.length > 0 && Array.isArray(wcProduct.images)) {
+            galleryIds.forEach(id => {
+                const parentImg = wcProduct.images.find((img: any) => String(img.id) === String(id));
+                if (parentImg && parentImg.src) {
+                    vImages.push(parentImg.src);
+                }
+            });
+        }
+        
+        // 3. Direct array injection (some plugins inject objects directly)
+        const directArrayKeys = ['variation_gallery_images', 'woo_variation_gallery_images'];
+        directArrayKeys.forEach(key => {
+            if (v[key] && Array.isArray(v[key])) {
+                v[key].forEach((img: any) => {
+                    if (img.src) vImages.push(img.src);
+                    else if (typeof img === 'string' && img.startsWith('http')) vImages.push(img);
+                });
+            }
+        });
 
         // Deduplicate and route through media proxy if needed
         vImages = [...new Set(vImages)].map(src => {
