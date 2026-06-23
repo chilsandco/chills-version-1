@@ -428,6 +428,18 @@ async function startServer() {
         if (v.image && v.image.src) {
            vImages.push(v.image.src);
         }
+
+        console.log(`[CHILS & CO. DEBUG] Variation ${v.id} keys:`, Object.keys(v).join(", "));
+        
+        if (v.meta_data && Array.isArray(v.meta_data)) {
+            const galleryMeta = v.meta_data.find((m: any) => 
+                m.key.includes("gallery") || m.key.includes("image")
+            );
+            if (galleryMeta) {
+                console.log(`[CHILS & CO. DEBUG] Variation ${v.id} gallery meta found:`, JSON.stringify(galleryMeta));
+            }
+        }
+
         
         // Handle Additional Variation Images Gallery format
         if (v.variation_gallery_images && Array.isArray(v.variation_gallery_images)) {
