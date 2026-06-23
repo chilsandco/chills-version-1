@@ -417,8 +417,9 @@ async function startServer() {
         const vAttrs: any = {};
         if (Array.isArray(v.attributes)) {
           v.attributes.forEach((attr: any) => {
-            if (attr.name.toLowerCase() === 'color') vAttrs.color = attr.option;
-            if (attr.name.toLowerCase() === 'size') vAttrs.size = attr.option;
+            const attrName = (attr.name || "").toLowerCase();
+            if (attrName === 'color' || attrName === 'pa_color') vAttrs.color = attr.option;
+            if (attrName === 'size' || attrName === 'pa_size') vAttrs.size = attr.option;
           });
         }
         
