@@ -304,6 +304,7 @@ async function startServer() {
         if (Array.isArray(v.attributes)) {
           v.attributes.forEach((attr) => {
             const attrName = (attr.name || "").toLowerCase();
+            console.log(`[CHILS & CO. DEBUG] Variation ${v.id} Attribute Name: '${attrName}', Option: '${attr.option}'`);
             if (attrName === "color" || attrName === "pa_color" || attrName === "colors" || attrName === "pa_colors") vAttrs.color = attr.option;
             if (attrName === "size" || attrName === "pa_size" || attrName === "sizes" || attrName === "pa_sizes") vAttrs.size = attr.option;
           });
@@ -326,6 +327,7 @@ async function startServer() {
         if (vAttrs.color && !availableColors.includes(vAttrs.color)) {
           availableColors.push(vAttrs.color);
         }
+        console.log(`[CHILS & CO. DEBUG] Variation ${v.id} Final Attrs:`, vAttrs);
         return {
           id: (v.id || "").toString(),
           attributes: vAttrs,
@@ -499,9 +501,11 @@ async function startServer() {
       }
       const response = await wcSafeCall(wc, "get", `products/${req.params.id}`);
       let productData = response.data;
+      console.log(`[CHILS & CO. DEBUG] Product ${req.params.id} Type: '${productData.type}'`);
       if (productData.type === "variable") {
         const variationsResponse = await wcSafeCall(wc, "get", `products/${req.params.id}/variations`);
         productData.variations_data = variationsResponse.data;
+        console.log(`[CHILS & CO. DEBUG] Fetched ${productData.variations_data?.length || 0} variations for product ${req.params.id}`);
       }
       res.json(mapProduct(productData));
     } catch (error) {
