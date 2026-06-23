@@ -418,8 +418,8 @@ async function startServer() {
         if (Array.isArray(v.attributes)) {
           v.attributes.forEach((attr: any) => {
             const attrName = (attr.name || "").toLowerCase();
-            if (attrName === 'color' || attrName === 'pa_color') vAttrs.color = attr.option;
-            if (attrName === 'size' || attrName === 'pa_size') vAttrs.size = attr.option;
+            if (attrName === 'color' || attrName === 'pa_color' || attrName === 'colors' || attrName === 'pa_colors') vAttrs.color = attr.option;
+            if (attrName === 'size' || attrName === 'pa_size' || attrName === 'sizes' || attrName === 'pa_sizes') vAttrs.size = attr.option;
           });
         }
         
