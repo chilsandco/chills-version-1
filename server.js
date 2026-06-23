@@ -318,7 +318,19 @@ async function startServer() {
           galleryIds = [...galleryIds, ...v.gallery_image_ids];
         }
         if (v.meta_data && Array.isArray(v.meta_data)) {
-          const metaKeys = ["_woo_variation_gallery_images", "woo_variation_gallery_images", "_wc_additional_variation_images", "variation_image_gallery"];
+          const metaKeys = [
+            "_woo_variation_gallery_images",
+            "woo_variation_gallery_images",
+            "_wc_additional_variation_images",
+            "wc_additional_variation_images",
+            "_additional_variation_images",
+            "additional_variation_images",
+            "variation_image_gallery",
+            "_wpg_variation_gallery",
+            "wpg_variation_gallery",
+            "rtwpvg_images",
+            "_rtwpvg_images"
+          ];
           metaKeys.forEach((key) => {
             const meta = v.meta_data.find((m) => m.key === key);
             if (meta && typeof meta.value === "string") {
@@ -326,6 +338,9 @@ async function startServer() {
               galleryIds = [...galleryIds, ...ids];
             } else if (meta && Array.isArray(meta.value)) {
               galleryIds = [...galleryIds, ...meta.value];
+            } else if (meta && typeof meta.value === "object") {
+              const ids = Object.values(meta.value).map(String);
+              galleryIds = [...galleryIds, ...ids];
             }
           });
         }
@@ -544,7 +559,19 @@ async function startServer() {
             v.gallery_image_ids.forEach((id) => allGalleryIds.add(String(id)));
           }
           if (v.meta_data && Array.isArray(v.meta_data)) {
-            const metaKeys = ["_woo_variation_gallery_images", "woo_variation_gallery_images", "_wc_additional_variation_images", "variation_image_gallery"];
+            const metaKeys = [
+              "_woo_variation_gallery_images",
+              "woo_variation_gallery_images",
+              "_wc_additional_variation_images",
+              "wc_additional_variation_images",
+              "_additional_variation_images",
+              "additional_variation_images",
+              "variation_image_gallery",
+              "_wpg_variation_gallery",
+              "wpg_variation_gallery",
+              "rtwpvg_images",
+              "_rtwpvg_images"
+            ];
             metaKeys.forEach((key) => {
               const meta = v.meta_data.find((m) => m.key === key);
               if (meta && typeof meta.value === "string") {
@@ -553,6 +580,8 @@ async function startServer() {
                 });
               } else if (meta && Array.isArray(meta.value)) {
                 meta.value.forEach((id) => allGalleryIds.add(String(id)));
+              } else if (meta && typeof meta.value === "object") {
+                Object.values(meta.value).forEach((id) => allGalleryIds.add(String(id)));
               }
             });
           }
