@@ -409,6 +409,53 @@ async function startServer() {
 
     const coCreator = coCreatorAttr || coCreatorMeta || "";
 
+    let mappedVariations: any[] = [];
+    let availableColors: string[] = [];
+
+    if (wcProduct.variations_data && Array.isArray(wcProduct.variations_data)) {
+      mappedVariations = wcProduct.variations_data.map((v: any) => {
+        const vAttrs: any = {};
+        if (Array.isArray(v.attributes)) {
+          v.attributes.forEach((attr: any) => {
+            if (attr.name.toLowerCase() === 'color') vAttrs.color = attr.option;
+            if (attr.name.toLowerCase() === 'size') vAttrs.size = attr.option;
+          });
+        }
+        
+        let vImages: string[] = [];
+        if (v.image && v.image.src) {
+           vImages.push(v.image.src);
+        }
+        
+        // Handle Additional Variation Images Gallery format
+        if (v.variation_gallery_images && Array.isArray(v.variation_gallery_images)) {
+            v.variation_gallery_images.forEach((img: any) => {
+                if (img.src) vImages.push(img.src);
+            });
+        }
+
+        // Deduplicate and route through media proxy if needed
+        vImages = [...new Set(vImages)].map(src => {
+            if (src.includes('wp-content/uploads')) {
+               return `/api/media?url=${encodeURIComponent(src)}`;
+            }
+            return src;
+        });
+
+        if (vAttrs.color && !availableColors.includes(vAttrs.color)) {
+            availableColors.push(vAttrs.color);
+        }
+
+        return {
+          id: (v.id || "").toString(),
+          attributes: vAttrs,
+          price: parseFloat(v.price || wcProduct.price || "0"),
+          stockQuantity: v.stock_quantity || 0,
+          images: vImages
+        };
+      });
+    }
+
     return {
       id: (wcProduct.id || "").toString(),
       name: decodeEntities(wcProduct.name || "Unknown Product"),
@@ -432,7 +479,9 @@ async function startServer() {
       totalSales: parseInt(wcProduct.total_sales || "0", 10),
       stockQuantity: wcProduct.stock_quantity || 0,
       coCreator: coCreator,
-      featured: !!wcProduct.featured
+      featured: !!wcProduct.featured,
+      variations: mappedVariations.length > 0 ? mappedVariations : undefined,
+      availableColors: availableColors.length > 0 ? availableColors : undefined
     };
   };
 
@@ -595,7 +644,12 @@ async function startServer() {
           : res.status(404).json({ message: "Product not found (Mock Mode)" });
       }
       const response = await wcSafeCall(wc, "get", `products/${req.params.id}`);
-      res.json(mapProduct(response.data));
+      let productData = response.data;
+      if (productData.type === 'variable') {
+        const variationsResponse = await wcSafeCall(wc, "get", `products/${req.params.id}/variations`);
+        productData.variations_data = variationsResponse.data;
+      }
+      res.json(mapProduct(productData));
     } catch (error) {
       console.error("WooCommerce API Error:", error);
       res.status(404).json({ message: "Product not found" });

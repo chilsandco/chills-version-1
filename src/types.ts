@@ -15,11 +15,22 @@ export interface Product {
   totalSales?: number;
   stockQuantity?: number;
   featured?: boolean;
+  variations?: ProductVariation[];
+  availableColors?: string[];
+}
+
+export interface ProductVariation {
+  id: string;
+  attributes: { color?: string; size?: string };
+  price: number;
+  stockQuantity: number;
+  images: string[];
 }
 
 export interface CartItem extends Product {
   quantity: number;
   selectedSize?: string;
+  selectedColor?: string;
 }
 
 export interface Customer {

@@ -184,6 +184,8 @@ const ProductDetail: React.FC = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [sizeError, setSizeError] = useState(false);
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [colorError, setColorError] = useState(false);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [isDescOpen, setIsDescOpen] = useState(false);
   
@@ -405,10 +407,14 @@ const ProductDetail: React.FC = () => {
       setSizeError(true);
       return;
     }
+    if (product.availableColors && product.availableColors.length > 0 && !selectedColor) {
+      setColorError(true);
+      return;
+    }
 
     setButtonText("Adding...");
     setIsAddingToCart(true);
-    addToCart(product, selectedSize);
+    addToCart(product, selectedSize, selectedColor);
 
     if (isInWishlist(product.id)) {
       toggleWishlist(product);
@@ -580,13 +586,21 @@ const ProductDetail: React.FC = () => {
       setSizeError(true);
       return;
     }
+    if (product.availableColors && product.availableColors.length > 0 && !selectedColor) {
+      setColorError(true);
+      return;
+    }
     setIsBuyNowProcessing(true);
     
-    // Check if the item (product + size) is already in the cart
-    const isAlreadyInCart = cart.some(item => item.id === product.id && item.selectedSize === selectedSize);
+    // Check if the item (product + size + color) is already in the cart
+    const isAlreadyInCart = cart.some(item => 
+      item.id === product.id && 
+      item.selectedSize === selectedSize && 
+      item.selectedColor === selectedColor
+    );
     
     if (!isAlreadyInCart) {
-      addToCart(product, selectedSize);
+      addToCart(product, selectedSize, selectedColor);
     }
     
     if (isInWishlist(product.id)) {
@@ -641,6 +655,12 @@ const ProductDetail: React.FC = () => {
 
   const totalReviews = reviews.length;
   const averageRating = totalReviews > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / totalReviews) : 0;
+
+  const displayImages = selectedColor && product.variations
+    ? product.variations.find(v => v.attributes.color === selectedColor)?.images?.length 
+      ? product.variations.find(v => v.attributes.color === selectedColor)!.images
+      : product.images
+    : product.images;
 
   return (
     <div className="pt-24 sm:pt-32 pb-24 px-6 md:px-12 max-w-[1800px] mx-auto">
@@ -718,12 +738,12 @@ const ProductDetail: React.FC = () => {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
         {/* Desktop Image Gallery (Hidden on Mobile) */}
         <div className="hidden lg:grid lg:col-span-7 grid-cols-1 md:grid-cols-2 gap-4 h-fit">
-          {product.images.map((img, i) => (
+          {displayImages.map((img, i) => (
             <MagnifiedImageCard
-              key={i}
+              key={`${selectedColor}-${i}`}
               img={img}
               index={i}
-              total={product.images.length}
+              total={displayImages.length}
               productName={product.name}
               productImgRef={i === 0 ? productImgRef : undefined}
               onClick={() => {
@@ -746,8 +766,8 @@ const ProductDetail: React.FC = () => {
           <div className="relative aspect-[3/4] w-full bg-neutral-950 overflow-hidden border border-white/5">
             <AnimatePresence mode="wait">
               <motion.img
-                key={currentImageIndex}
-                src={product.images[currentImageIndex]}
+                key={`${selectedColor}-${currentImageIndex}`}
+                src={displayImages[currentImageIndex] || displayImages[0]}
                 alt={`${product.name} mobile view ${currentImageIndex + 1}`}
                 initial={{ opacity: 0, scale: 0.98 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -755,7 +775,7 @@ const ProductDetail: React.FC = () => {
                 transition={{ duration: 0.4, ease: "easeInOut" }}
                 className="w-full h-full object-cover cursor-pointer"
                 onClick={() => {
-                  setSelectedImage(product.images[currentImageIndex]);
+                  setSelectedImage(displayImages[currentImageIndex] || displayImages[0]);
                   scale.set(1);
                   positionX.set(0);
                   positionY.set(0);
@@ -765,7 +785,7 @@ const ProductDetail: React.FC = () => {
             </AnimatePresence>
 
             {/* Navigation Overlay */}
-            {product.images.length > 1 && (
+            {displayImages.length > 1 && (
               <>
                 <button
                   onClick={handlePrevImage}
@@ -784,12 +804,12 @@ const ProductDetail: React.FC = () => {
                 
                 {/* Monospace HUD Counter indicator */}
                 <div className="absolute bottom-4 left-4 z-10 bg-black/75 px-3 py-1.5 border border-white/5 text-[9px] tracking-[0.25em] font-mono text-accent/90 rounded-[2px] font-bold">
-                  {String(currentImageIndex + 1).padStart(2, '0')} / {String(product.images.length).padStart(2, '0')}
+                  {String(currentImageIndex + 1).padStart(2, '0')} / {String(displayImages.length).padStart(2, '0')}
                 </div>
 
                 {/* Progress dot indicators */}
                 <div className="absolute bottom-5 right-4 z-10 flex gap-1.5">
-                  {product.images.map((_, idx) => (
+                  {displayImages.map((_, idx) => (
                     <button
                       key={idx}
                       onClick={() => setCurrentImageIndex(idx)}
@@ -895,6 +915,58 @@ const ProductDetail: React.FC = () => {
               </button>
             )}
           </motion.div>
+
+          {/* Color Selection Section */}
+          {product.availableColors && product.availableColors.length > 0 && (
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase text-neutral-500">Select Signal Type</h3>
+                {selectedColor && (
+                  <span className="text-[10px] tracking-[0.2em] font-bold uppercase text-white font-mono">
+                    {selectedColor}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-3 mb-2">
+                {product.availableColors.map(color => (
+                  <motion.button 
+                    key={color}
+                    onClick={() => {
+                      setSelectedColor(color);
+                      setColorError(false);
+                      setCurrentImageIndex(0);
+                    }}
+                    animate={colorError ? { x: [-2, 2, -2, 2, 0] } : {}}
+                    transition={{ duration: 0.4 }}
+                    className={`px-4 h-10 border flex items-center justify-center text-[11px] font-bold transition-all duration-300 cursor-pointer uppercase font-mono ${
+                      selectedColor === color 
+                        ? 'bg-white text-black border-white scale-105 shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
+                        : colorError 
+                          ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
+                          : 'border-neutral-800 hover:border-white text-neutral-400'
+                    }`}
+                  >
+                    {color}
+                  </motion.button>
+                ))}
+              </div>
+              <AnimatePresence>
+                {colorError && (
+                  <motion.div 
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-center gap-2 mt-2"
+                  >
+                    <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
+                    <p className="text-[10px] text-red-500 tracking-[0.3em] uppercase font-bold">
+                      CAUTION: Select your signal color
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
           {/* Size Selection Section (Moved Up) */}
           <div className="mb-8">
