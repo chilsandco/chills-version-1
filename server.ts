@@ -359,7 +359,7 @@ async function startServer() {
   });
 
   // Helper to map WC product to App product
-  const mapProduct = (wcProduct: any) => {
+  const mapProduct = (wcProduct: any, resolvedMediaUrls: Record<string, string> = {}) => {
     const attributes = Array.isArray(wcProduct.attributes) ? wcProduct.attributes : [];
     const categories = Array.isArray(wcProduct.categories) ? wcProduct.categories : [];
     const images = Array.isArray(wcProduct.images) ? wcProduct.images : [];
@@ -450,12 +450,14 @@ async function startServer() {
             });
         }
 
-        // Resolve IDs to URLs using the parent product's images array
-        if (galleryIds.length > 0 && Array.isArray(wcProduct.images)) {
+        // Resolve IDs to URLs using the parent product's images array OR the fetched media URLs
+        if (galleryIds.length > 0) {
             galleryIds.forEach(id => {
-                const parentImg = wcProduct.images.find((img: any) => String(img.id) === String(id));
+                const parentImg = Array.isArray(wcProduct.images) ? wcProduct.images.find((img: any) => String(img.id) === String(id)) : null;
                 if (parentImg && parentImg.src) {
                     vImages.push(parentImg.src);
+                } else if (resolvedMediaUrls[String(id)]) {
+                    vImages.push(resolvedMediaUrls[String(id)]);
                 }
             });
         }
@@ -688,12 +690,59 @@ async function startServer() {
       const response = await wcSafeCall(wc, "get", `products/${req.params.id}`);
       let productData = response.data;
       console.log(`[CHILS & CO. DEBUG] Product ${req.params.id} Type: '${productData.type}'`);
+      
+      let resolvedMediaUrls: Record<string, string> = {};
+
       if (productData.type === 'variable') {
         const variationsResponse = await wcSafeCall(wc, "get", `products/${req.params.id}/variations`);
         productData.variations_data = variationsResponse.data;
         console.log(`[CHILS & CO. DEBUG] Fetched ${productData.variations_data?.length || 0} variations for product ${req.params.id}`);
+        
+        // Harvest all gallery IDs from variations to fetch their URLs if missing
+        const allGalleryIds = new Set<string>();
+        productData.variations_data.forEach((v: any) => {
+            if (v.gallery_image_ids && Array.isArray(v.gallery_image_ids)) {
+                v.gallery_image_ids.forEach((id: any) => allGalleryIds.add(String(id)));
+            }
+            if (v.meta_data && Array.isArray(v.meta_data)) {
+                const metaKeys = ['_woo_variation_gallery_images', 'woo_variation_gallery_images', '_wc_additional_variation_images', 'variation_image_gallery'];
+                metaKeys.forEach(key => {
+                    const meta = v.meta_data.find((m: any) => m.key === key);
+                    if (meta && typeof meta.value === 'string') {
+                        meta.value.split(',').forEach((id: string) => {
+                           if(id.trim()) allGalleryIds.add(id.trim());
+                        });
+                    } else if (meta && Array.isArray(meta.value)) {
+                        meta.value.forEach((id: any) => allGalleryIds.add(String(id)));
+                    }
+                });
+            }
+        });
+        
+        // Filter out IDs that already exist in productData.images
+        const parentImageIds = new Set((productData.images || []).map((img: any) => String(img.id)));
+        const unresolvedIds = Array.from(allGalleryIds).filter(id => !parentImageIds.has(id));
+        
+        if (unresolvedIds.length > 0) {
+            console.log(`[CHILS & CO. DEBUG] Fetching ${unresolvedIds.length} unresolved media URLs from WordPress API...`);
+            try {
+                const wpUrl = (process.env.WOOCOMMERCE_URL || "").replace(/\/$/, "");
+                const mediaResponse = await axios.get(`${wpUrl}/wp-json/wp/v2/media`, {
+                    params: { include: unresolvedIds.join(',') }
+                });
+                if (mediaResponse.data && Array.isArray(mediaResponse.data)) {
+                    mediaResponse.data.forEach((media: any) => {
+                        if (media.source_url) {
+                            resolvedMediaUrls[String(media.id)] = media.source_url;
+                        }
+                    });
+                }
+            } catch (err: any) {
+                console.error("[CHILS & CO. DEBUG] Failed to fetch media URLs:", err.message);
+            }
+        }
       }
-      res.json(mapProduct(productData));
+      res.json(mapProduct(productData, resolvedMediaUrls));
     } catch (error) {
       console.error("WooCommerce API Error:", error);
       res.status(404).json({ message: "Product not found" });
