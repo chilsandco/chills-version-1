@@ -358,6 +358,9 @@ async function startServer() {
         if (v.gallery_image_ids && Array.isArray(v.gallery_image_ids)) {
           galleryIds = [...galleryIds, ...v.gallery_image_ids];
         }
+        if (v.custom_gallery_urls && Array.isArray(v.custom_gallery_urls)) {
+          vImages = [...vImages, ...v.custom_gallery_urls];
+        }
         if (v.meta_data && Array.isArray(v.meta_data)) {
           const metaKeys = [
             "_woo_variation_gallery_images",

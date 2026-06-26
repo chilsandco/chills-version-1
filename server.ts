@@ -484,6 +484,12 @@ async function startServer() {
         if (v.gallery_image_ids && Array.isArray(v.gallery_image_ids)) {
             galleryIds = [...galleryIds, ...v.gallery_image_ids];
         }
+        
+        // 1.5 Custom WP REST API Field (via PHP snippet)
+        if (v.custom_gallery_urls && Array.isArray(v.custom_gallery_urls)) {
+            // These are already URLs, not IDs! We can add them directly to vImages
+            vImages = [...vImages, ...v.custom_gallery_urls];
+        }
 
         // 2. Meta Data extraction (for third party plugins)
         if (v.meta_data && Array.isArray(v.meta_data)) {
