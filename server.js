@@ -278,7 +278,48 @@ async function startServer() {
       res.status(500).json({ status: "error", error: error.message });
     }
   });
-  const mapProduct = (wcProduct, resolvedMediaUrls = {}) => {
+  let globalSwatchesCache = null;
+  let lastSwatchesFetch = 0;
+  const fetchSwatches = async () => {
+    if (globalSwatchesCache && Date.now() - lastSwatchesFetch < 1e3 * 60 * 5) {
+      return globalSwatchesCache;
+    }
+    try {
+      const wpUrl = (process.env.WOOCOMMERCE_URL || "").replace(/\/$/, "");
+      const res = await axios.get(`${wpUrl}/wp-json/chils/v1/swatches`, { timeout: 4e3 });
+      if (res.data && typeof res.data === "object" && !res.data.code) {
+        const swatches = {};
+        Object.values(res.data).forEach((term) => {
+          if (term.meta && term.name) {
+            const meta = term.meta;
+            let type = "color";
+            let value = "";
+            const colorKey = Object.keys(meta).find((k) => k.includes("color"));
+            if (colorKey && meta[colorKey] && meta[colorKey][0]) {
+              type = "color";
+              value = meta[colorKey][0];
+            }
+            const imageKey = Object.keys(meta).find((k) => k.includes("image_url"));
+            if (imageKey && meta[imageKey]) {
+              type = "image";
+              value = meta[imageKey];
+            }
+            if (value) {
+              swatches[term.name.toLowerCase()] = { type, value };
+            }
+          }
+        });
+        globalSwatchesCache = swatches;
+        lastSwatchesFetch = Date.now();
+        console.log(`[CHILS & CO. DEBUG] Cached ${Object.keys(swatches).length} CartFlows Swatches`);
+        return swatches;
+      }
+    } catch (err) {
+      console.error("[CHILS & CO. DEBUG] Failed to fetch CartFlows swatches:", err.message);
+    }
+    return globalSwatchesCache || {};
+  };
+  const mapProduct = (wcProduct, resolvedMediaUrls = {}, swatchesData = {}) => {
     const attributes = Array.isArray(wcProduct.attributes) ? wcProduct.attributes : [];
     const categories = Array.isArray(wcProduct.categories) ? wcProduct.categories : [];
     const images = Array.isArray(wcProduct.images) ? wcProduct.images : [];
@@ -408,7 +449,8 @@ async function startServer() {
       coCreator,
       featured: !!wcProduct.featured,
       variations: mappedVariations.length > 0 ? mappedVariations : void 0,
-      availableColors: availableColors.length > 0 ? availableColors : void 0
+      availableColors: availableColors.length > 0 ? availableColors : void 0,
+      colorSwatches: Object.keys(swatchesData).length > 0 ? swatchesData : void 0
     };
   };
   const mockProducts = [
@@ -523,7 +565,8 @@ async function startServer() {
         return res.json(mockProducts);
       }
       console.log(`[CHILS & CO.] Fetching products from WooCommerce: ${process.env.WOOCOMMERCE_URL}`);
-      const response = await wcSafeCall(wc, "get", "products", { per_page: 20 });
+      const response = await wcSafeCall(wc, "get", "products", { per_page: 50, status: "publish" });
+      const swatchesData = await fetchSwatches();
       console.log(`[CHILS & CO.] WooCommerce Response Status: ${response.status}`);
       if (!Array.isArray(response.data)) {
         console.warn("[CHILS & CO.] WooCommerce did not return an array. Data type:", typeof response.data);
@@ -607,7 +650,8 @@ async function startServer() {
           }
         }
       }
-      res.json(mapProduct(productData, resolvedMediaUrls));
+      const swatchesData = await fetchSwatches();
+      res.json(mapProduct(productData, resolvedMediaUrls, swatchesData || {}));
     } catch (error) {
       console.error("WooCommerce API Error:", error);
       res.status(404).json({ message: "Product not found" });
@@ -2143,6 +2187,53 @@ Images: ${images ? images.join(", ") : "None"}`;
       res.status(500).json({ message: "Failed to calibrate settings nodes." });
     }
   });
+  app.post("/api/admin/whatsapp/broadcast", authenticateToken, async (req, res) => {
+    try {
+      const adminEmails = ["chilsandco@gmail.com", "chilsandco.com@gmail.com"];
+      const isAdmin = adminEmails.some((email) => email.toLowerCase() === req.user.email.toLowerCase());
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Higher clearance required." });
+      }
+      const { templateName, phoneNumbers, variables } = req.body;
+      if (!templateName || !phoneNumbers || !Array.isArray(phoneNumbers)) {
+        return res.status(400).json({ message: "Invalid payload. Required: templateName, phoneNumbers[]" });
+      }
+      let targets = phoneNumbers;
+      if (phoneNumbers.length === 1 && phoneNumbers[0] === "all_customers") {
+        const wc = getWooCommerce();
+        if (wc) {
+          const customersRes = await wcSafeCall(wc, "get", "customers", { per_page: 100 });
+          targets = customersRes.data.map((c) => c.billing?.phone).filter(Boolean);
+        } else {
+          targets = [];
+        }
+      }
+      let sent = 0;
+      let failed = 0;
+      for (const phone of targets) {
+        try {
+          const formatted = formatPhoneForWhatsApp(phone);
+          if (formatted) {
+            const components = variables ? [{
+              type: "body",
+              parameters: variables.map((v) => ({ type: "text", text: v }))
+            }] : [];
+            await sendWhatsAppMessage(formatted, templateName, "en_US", components);
+            sent++;
+          } else {
+            failed++;
+          }
+          await new Promise((r) => setTimeout(r, 50));
+        } catch (e) {
+          failed++;
+        }
+      }
+      res.json({ message: "Broadcast complete", sent, failed });
+    } catch (error) {
+      console.error("[CHILS & CO. WHATSAPP] Broadcast failed:", error.message);
+      res.status(500).json({ message: "Broadcast failed" });
+    }
+  });
   app.post("/api/webhooks/woocommerce", async (req, res) => {
     try {
       const payload = req.body;
@@ -2881,6 +2972,9 @@ async function triggerOrderConfirmationEmails(order) {
   }
   const adminHtml = compileAdminNotificationHtml(order);
   await sendEmailViaBrevo("chilsandco@gmail.com", "Chils & Co. Admin", `[ALERT] New Signal Generated // #${signalId}`, adminHtml);
+  triggerWhatsAppOrderConfirmation(order).catch((err) => {
+    console.error("[CHILS & CO. WHATSAPP] Failed to send order confirmation:", err?.message || "Unknown error");
+  });
 }
 async function triggerReturnRequestEmails(orderId, reason, description, products) {
   console.log(`[CHILS & CO. EMAIL] Preparing return request emails for Order ${orderId}`);
@@ -2919,6 +3013,74 @@ async function triggerRefundEmail(order) {
     const html = compileRefundHtml(order);
     await sendEmailViaBrevo(customerEmail, customerName, `Reversal Confirmed // Recoupment Complete`, html);
   }
+}
+var WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN || "";
+var WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || "";
+var WHATSAPP_BUSINESS_ACCOUNT_ID = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || "";
+function formatPhoneForWhatsApp(phone) {
+  if (!phone) return null;
+  let cleanPhone = phone.replace(/\D/g, "");
+  if (cleanPhone.length === 10) {
+    cleanPhone = "91" + cleanPhone;
+  }
+  if (cleanPhone.startsWith("0") && cleanPhone.length > 10) {
+    cleanPhone = cleanPhone.substring(1);
+    if (cleanPhone.length === 10) cleanPhone = "91" + cleanPhone;
+  }
+  return cleanPhone;
+}
+async function sendWhatsAppMessage(toPhone, templateName, languageCode = "en_US", components = []) {
+  if (!WHATSAPP_ACCESS_TOKEN || !WHATSAPP_PHONE_NUMBER_ID) {
+    console.warn("[CHILS & CO. WHATSAPP] WhatsApp credentials missing. Skipping transmission.");
+    return null;
+  }
+  try {
+    const data = {
+      messaging_product: "whatsapp",
+      to: toPhone,
+      type: "template",
+      template: {
+        name: templateName,
+        language: { code: languageCode }
+      }
+    };
+    if (components.length > 0) {
+      data.template.components = components;
+    }
+    const response = await axios.post(`https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, data, {
+      headers: {
+        "Authorization": `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+        "Content-Type": "application/json"
+      }
+    });
+    console.log(`[CHILS & CO. WHATSAPP] Transmission successful to ${toPhone}. ID: ${response.data?.messages?.[0]?.id}`);
+    return response.data;
+  } catch (err) {
+    console.error("[CHILS & CO. WHATSAPP] Transmission failed:", err.response?.data || err.message);
+    return null;
+  }
+}
+async function triggerWhatsAppOrderConfirmation(order) {
+  if (!order) return;
+  const rawPhone = order.billing?.phone;
+  const toPhone = formatPhoneForWhatsApp(rawPhone);
+  if (!toPhone) return;
+  const customerName = order.billing?.first_name || "Customer";
+  const signalId = toSignalId(order.id);
+  const itemsSummary = order.line_items?.map((i) => `${i.quantity}x ${i.name}`).join(", ") || "Your items";
+  const totalAmount = parseFloat(order.total || 0).toLocaleString();
+  const components = [
+    {
+      type: "body",
+      parameters: [
+        { type: "text", text: customerName },
+        { type: "text", text: signalId },
+        { type: "text", text: itemsSummary },
+        { type: "text", text: totalAmount }
+      ]
+    }
+  ];
+  await sendWhatsAppMessage(toPhone, "order_confirmation", "en_US", components);
 }
 process.on("unhandledRejection", (reason, promise) => {
   console.error("[CHILS & CO.] Unhandled Rejection at:", promise, "reason:", reason);

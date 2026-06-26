@@ -938,15 +938,31 @@ const ProductDetail: React.FC = () => {
                     }}
                     animate={colorError ? { x: [-2, 2, -2, 2, 0] } : {}}
                     transition={{ duration: 0.4 }}
-                    className={`px-4 h-10 border flex items-center justify-center text-[11px] font-bold transition-all duration-300 cursor-pointer uppercase font-mono ${
+                    className={`h-10 border flex items-center justify-center text-[11px] font-bold transition-all duration-300 cursor-pointer uppercase font-mono overflow-hidden ${
+                      product.colorSwatches?.[color.toLowerCase()] && product.colorSwatches[color.toLowerCase()].type === 'image' ? 'w-10 rounded-full !p-0' : 'px-4'
+                    } ${
                       selectedColor === color 
                         ? 'bg-white text-black border-white scale-105 shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
                         : colorError 
                           ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
                           : 'border-neutral-800 hover:border-white text-neutral-400'
                     }`}
+                    title={color}
                   >
-                    {color}
+                    {product.colorSwatches?.[color.toLowerCase()] ? (
+                      product.colorSwatches[color.toLowerCase()].type === 'image' ? (
+                        <img src={product.colorSwatches[color.toLowerCase()].value} alt={color} className="w-full h-full object-cover rounded-full" />
+                      ) : product.colorSwatches[color.toLowerCase()].type === 'color' ? (
+                        <div className="flex items-center gap-2">
+                          <span className="block h-4 w-4 rounded-full border border-neutral-600" style={{ backgroundColor: product.colorSwatches[color.toLowerCase()].value }} />
+                          <span>{color}</span>
+                        </div>
+                      ) : (
+                        color
+                      )
+                    ) : (
+                      color
+                    )}
                   </motion.button>
                 ))}
               </div>

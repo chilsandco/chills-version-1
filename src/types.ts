@@ -17,6 +17,7 @@ export interface Product {
   featured?: boolean;
   variations?: ProductVariation[];
   availableColors?: string[];
+  colorSwatches?: Record<string, { type: 'color' | 'image' | 'label', value: string }>;
 }
 
 export interface ProductVariation {
