@@ -928,7 +928,11 @@ const ProductDetail: React.FC = () => {
                 )}
               </div>
               <div className="flex flex-wrap gap-3 mb-2">
-                {product.availableColors.map(color => (
+                {product.availableColors.map(color => {
+                  const variation = product.variations?.find(v => v.attributes.color === color);
+                  const variationImageFallback = variation?.images?.[0];
+                  
+                  return (
                   <motion.button 
                     key={color}
                     onClick={() => {
@@ -939,7 +943,7 @@ const ProductDetail: React.FC = () => {
                     animate={colorError ? { x: [-2, 2, -2, 2, 0] } : {}}
                     transition={{ duration: 0.4 }}
                     className={`h-10 border flex items-center justify-center text-[11px] font-bold transition-all duration-300 cursor-pointer uppercase font-mono overflow-hidden ${
-                      product.colorSwatches?.[color.toLowerCase()] && product.colorSwatches[color.toLowerCase()].type === 'image' ? 'w-10 rounded-full !p-0' : 'px-4'
+                      (product.colorSwatches?.[color.toLowerCase()] && product.colorSwatches[color.toLowerCase()].type === 'image') || (!product.colorSwatches?.[color.toLowerCase()] && variationImageFallback) ? 'w-10 rounded-full !p-0' : 'px-4'
                     } ${
                       selectedColor === color 
                         ? 'bg-white text-black border-white scale-105 shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
@@ -960,11 +964,14 @@ const ProductDetail: React.FC = () => {
                       ) : (
                         color
                       )
+                    ) : variationImageFallback ? (
+                      <img src={variationImageFallback} alt={color} className="w-full h-full object-cover rounded-full" />
                     ) : (
                       color
                     )}
                   </motion.button>
-                ))}
+                  );
+                })}
               </div>
               <AnimatePresence>
                 {colorError && (
