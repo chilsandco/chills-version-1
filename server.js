@@ -370,7 +370,10 @@ async function startServer() {
             "_wpg_variation_gallery",
             "wpg_variation_gallery",
             "rtwpvg_images",
-            "_rtwpvg_images"
+            "_rtwpvg_images",
+            "vargal_params",
+            "_vargal_params",
+            "vargal_gallery"
           ];
           metaKeys.forEach((key) => {
             const meta = v.meta_data.find((m) => m.key === key);
