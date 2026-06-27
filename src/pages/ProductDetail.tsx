@@ -1136,7 +1136,7 @@ const ProductDetail: React.FC = () => {
                     Signal assigned at dispatch
                   </p>
                   <p className="text-center text-[9px] tracking-widest text-accent/80 uppercase font-mono mt-0.5">
-                    // Collect in Store (Free) or Home Delivery (₹80) available
+                    // Collect in Store (Free) or Home Delivery (Location-based) available
                   </p>
                   <AnimatePresence>
                     {showConfirmation && (

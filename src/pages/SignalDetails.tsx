@@ -285,7 +285,7 @@ const SignalDetails: React.FC = () => {
                     const now = new Date();
                     const deliveryDate = signal.dateCompleted ? new Date(signal.dateCompleted) : new Date(signal.date);
                     const diffHours = (now.getTime() - deliveryDate.getTime()) / (1000 * 60 * 60);
-                    const isWindowActive = diffHours <= 48;
+                    const isWindowActive = diffHours <= 168;
 
                     if (isWindowActive) {
                       return (
@@ -304,7 +304,7 @@ const SignalDetails: React.FC = () => {
                       return (
                         <div className="w-full bg-neutral-900/10 border border-neutral-900/20 text-neutral-600 p-4 text-[9px] tracking-[0.2em] font-bold uppercase flex items-center justify-center gap-2 cursor-not-allowed">
                           <ShieldAlert size={12} className="opacity-30" />
-                          Authorized Return window closed (48h)
+                          Authorized Return window closed (7 days)
                         </div>
                       );
                     }
