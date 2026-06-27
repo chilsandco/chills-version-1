@@ -296,6 +296,26 @@ const ProductDetail: React.FC = () => {
     return [];
   }, [product]);
 
+  const isSelectedSizeOutOfStock = React.useMemo(() => {
+    if (!product || !selectedSize) return false;
+    if (product.variations) {
+      const matchingVariations = product.variations.filter(v => {
+        const matchesSize = v.attributes.size === selectedSize;
+        const matchesColor = selectedColor ? v.attributes.color === selectedColor : true;
+        return matchesSize && matchesColor;
+      });
+      if (matchingVariations.length > 0) {
+        return matchingVariations.every(v => {
+          const hasNoQty = v.stockQuantity !== undefined && v.stockQuantity <= 0;
+          const isOosStatus = v.stockStatus === 'outofstock';
+          return v.manageStock ? hasNoQty : isOosStatus;
+        });
+      }
+      return true;
+    }
+    return false;
+  }, [product, selectedSize, selectedColor]);
+
   useEffect(() => {
     setLoading(true);
     fetch(`/api/products/${id}`)
@@ -442,6 +462,9 @@ const ProductDetail: React.FC = () => {
     if (!product) return;
     if (availableSizes.length > 0 && !selectedSize) {
       setSizeError(true);
+      return;
+    }
+    if (isSelectedSizeOutOfStock) {
       return;
     }
     if (product.availableColors && product.availableColors.length > 0 && !selectedColor) {
@@ -621,6 +644,9 @@ const ProductDetail: React.FC = () => {
     if (!product) return;
     if (availableSizes.length > 0 && !selectedSize) {
       setSizeError(true);
+      return;
+    }
+    if (isSelectedSizeOutOfStock) {
       return;
     }
     if (product.availableColors && product.availableColors.length > 0 && !selectedColor) {
@@ -1081,22 +1107,19 @@ const ProductDetail: React.FC = () => {
                   return (
                     <motion.button 
                       key={size}
-                      disabled={isOutOfStock}
                       onClick={() => {
                         setSelectedSize(size);
                         setSizeError(false);
                       }}
                       animate={sizeError ? { x: [-2, 2, -2, 2, 0] } : {}}
                       transition={{ duration: 0.4 }}
-                      className={`w-12 h-12 border flex items-center justify-center text-[11px] font-bold transition-all duration-300 relative ${
-                        isOutOfStock ? 'cursor-not-allowed' : 'cursor-pointer'
-                      } ${
+                      className={`w-12 h-12 border flex items-center justify-center text-[11px] font-bold transition-all duration-300 relative cursor-pointer ${
                         selectedSize === size 
                           ? 'bg-white text-black border-white scale-105 shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
                           : sizeError 
                             ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
                             : isOutOfStock
-                              ? 'border-neutral-900 text-neutral-600 bg-neutral-950/40 opacity-40'
+                              ? 'border-neutral-900 text-neutral-600 bg-neutral-950/40 opacity-40 hover:border-neutral-700'
                               : 'border-neutral-800 hover:border-white text-neutral-300'
                       }`}
                     >
@@ -1131,11 +1154,18 @@ const ProductDetail: React.FC = () => {
                         <span className="text-[9px] font-mono tracking-[0.3em] text-accent uppercase font-bold">
                           Size Profile: {selectedSize}
                         </span>
-                        {sizeAdvisories[selectedSize] && (
-                          <span className="text-[9px] font-mono tracking-[0.1em] text-white/50 uppercase px-2 py-0.5 border border-white/10 rounded-sm">
-                            {sizeAdvisories[selectedSize].fit}
-                          </span>
-                        )}
+                        <div className="flex gap-2">
+                          {isSelectedSizeOutOfStock && (
+                            <span className="text-[9px] font-mono tracking-[0.1em] text-red-500 bg-red-500/10 uppercase px-2 py-0.5 border border-red-500/20 rounded-sm font-bold">
+                              Out of Stock
+                            </span>
+                          )}
+                          {sizeAdvisories[selectedSize] && (
+                            <span className="text-[9px] font-mono tracking-[0.1em] text-white/50 uppercase px-2 py-0.5 border border-white/10 rounded-sm">
+                              {sizeAdvisories[selectedSize].fit}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Technical specifications grid */}
@@ -1208,65 +1238,76 @@ const ProductDetail: React.FC = () => {
           <div className="flex flex-col gap-4 mb-10">
             {product.status === "Available" ? (
               <>
-                <motion.button
-                  ref={addToCartBtnRef}
-                  onClick={handleAddToCart}
-                  whileHover={{ 
-                    scale: 1.01,
-                    boxShadow: "0 0 30px rgba(255, 255, 255, 0.1)",
-                    borderColor: "rgba(255, 255, 255, 0.6)"
-                  }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full bg-white text-black py-5 text-[13px] tracking-[0.3em] font-bold uppercase transition-all duration-300 border border-transparent active:opacity-90 cursor-pointer"
-                >
-                  {buttonText}
-                </motion.button>
-                <div className="flex flex-col items-center gap-2">
-                  <p className="text-center text-[11px] tracking-widest text-neutral-600 uppercase">
-                    Signal assigned at dispatch
-                  </p>
-                  <p className="text-center text-[9px] tracking-widest text-accent/80 uppercase font-mono mt-0.5">
-                    // Collect in Store (Free) or Home Delivery (Location-based) available
-                  </p>
-                  <AnimatePresence>
-                    {showConfirmation && (
-                      <motion.div 
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="text-center text-[12px] tracking-widest text-accent uppercase font-bold"
-                      >
-                        Added to Cart ✓ <br/>
-                        <span className="text-[10px] font-normal opacity-60">Signal assigned at dispatch</span>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
- 
-                <motion.button
-                  onClick={handleBuyNow}
-                  disabled={isBuyNowProcessing}
-                  whileHover={{ 
-                    scale: 1.01,
-                    backgroundColor: "rgba(255, 255, 255, 1)",
-                    color: "rgba(0, 0, 0, 1)"
-                  }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full border border-neutral-800 py-5 text-[13px] tracking-[0.3em] font-bold uppercase transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 cursor-pointer"
-                >
-                  {isBuyNowProcessing ? 'Securing Checkout...' : (
-                    <>
-                      <motion.div
-                        whileHover={{ scale: 1.1 }}
-                        transition={{ duration: 0.3, ease: "easeOut" }}
-                        className="text-accent"
-                      >
-                        <CreditCard size={16} />
-                      </motion.div>
-                      Buy Now
-                    </>
-                  )}
-                </motion.button>
+                {isSelectedSizeOutOfStock ? (
+                  <button
+                    disabled
+                    className="w-full border border-red-500/20 bg-red-500/5 text-red-500 py-5 text-[13px] tracking-[0.3em] font-bold uppercase cursor-not-allowed rounded-[2px]"
+                  >
+                    Size {selectedSize} Out of Stock
+                  </button>
+                ) : (
+                  <>
+                    <motion.button
+                      ref={addToCartBtnRef}
+                      onClick={handleAddToCart}
+                      whileHover={{ 
+                        scale: 1.01,
+                        boxShadow: "0 0 30px rgba(255, 255, 255, 0.1)",
+                        borderColor: "rgba(255, 255, 255, 0.6)"
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full bg-white text-black py-5 text-[13px] tracking-[0.3em] font-bold uppercase transition-all duration-300 border border-transparent active:opacity-90 cursor-pointer"
+                    >
+                      {buttonText}
+                    </motion.button>
+                    <div className="flex flex-col items-center gap-2">
+                      <p className="text-center text-[11px] tracking-widest text-neutral-600 uppercase">
+                        Signal assigned at dispatch
+                      </p>
+                      <p className="text-center text-[9px] tracking-widest text-accent/80 uppercase font-mono mt-0.5">
+                        // Collect in Store (Free) or Home Delivery (Location-based) available
+                      </p>
+                      <AnimatePresence>
+                        {showConfirmation && (
+                          <motion.div 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="text-center text-[12px] tracking-widest text-accent uppercase font-bold"
+                          >
+                            Added to Cart ✓ <br/>
+                            <span className="text-[10px] font-normal opacity-60">Signal assigned at dispatch</span>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+     
+                    <motion.button
+                      onClick={handleBuyNow}
+                      disabled={isBuyNowProcessing}
+                      whileHover={{ 
+                        scale: 1.01,
+                        backgroundColor: "rgba(255, 255, 255, 1)",
+                        color: "rgba(0, 0, 0, 1)"
+                      }}
+                      whileTap={{ scale: 0.98 }}
+                      className="w-full border border-neutral-800 py-5 text-[13px] tracking-[0.3em] font-bold uppercase transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 cursor-pointer"
+                    >
+                      {isBuyNowProcessing ? 'Securing Checkout...' : (
+                        <>
+                          <motion.div
+                            whileHover={{ scale: 1.1 }}
+                            transition={{ duration: 0.3, ease: "easeOut" }}
+                            className="text-accent"
+                          >
+                            <CreditCard size={16} />
+                          </motion.div>
+                          Buy Now
+                        </>
+                      )}
+                    </motion.button>
+                  </>
+                )}
 
                 <button
                   onClick={() => toggleWishlist(product)}
