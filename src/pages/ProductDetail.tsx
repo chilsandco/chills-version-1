@@ -183,7 +183,7 @@ const ProductDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const normSize = selectedSize ? (selectedSize.toUpperCase() === 'XXL' ? '2XL' : (selectedSize.toUpperCase() === 'XXXL' ? '3XL' : selectedSize)) : '';
+  const normSize = selectedSize ? (String(selectedSize).toUpperCase() === 'XXL' ? '2XL' : (String(selectedSize).toUpperCase() === 'XXXL' ? '3XL' : String(selectedSize))) : '';
   const [sizeError, setSizeError] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [colorError, setColorError] = useState(false);
@@ -668,29 +668,33 @@ const ProductDetail: React.FC = () => {
     if (product.availableSizes && product.availableSizes.length > 0) {
       const standardOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', 'XXXL', '3XL'];
       return [...product.availableSizes].sort((a, b) => {
-        const indexA = standardOrder.indexOf(a.toUpperCase());
-        const indexB = standardOrder.indexOf(b.toUpperCase());
+        const strA = a ? String(a).toUpperCase() : '';
+        const strB = b ? String(b).toUpperCase() : '';
+        const indexA = standardOrder.indexOf(strA);
+        const indexB = standardOrder.indexOf(strB);
         if (indexA !== -1 && indexB !== -1) return indexA - indexB;
         if (indexA !== -1) return -1;
         if (indexB !== -1) return 1;
-        return a.localeCompare(b);
+        return strA.localeCompare(strB);
       });
     }
     if (product.variations && product.variations.length > 0) {
       const sizes = new Set<string>();
       product.variations.forEach(v => {
         if (v.attributes && v.attributes.size) {
-          sizes.add(v.attributes.size);
+          sizes.add(String(v.attributes.size));
         }
       });
       const standardOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', 'XXXL', '3XL'];
       return Array.from(sizes).sort((a, b) => {
-        const indexA = standardOrder.indexOf(a.toUpperCase());
-        const indexB = standardOrder.indexOf(b.toUpperCase());
+        const strA = a ? String(a).toUpperCase() : '';
+        const strB = b ? String(b).toUpperCase() : '';
+        const indexA = standardOrder.indexOf(strA);
+        const indexB = standardOrder.indexOf(strB);
         if (indexA !== -1 && indexB !== -1) return indexA - indexB;
         if (indexA !== -1) return -1;
         if (indexB !== -1) return 1;
-        return a.localeCompare(b);
+        return strA.localeCompare(strB);
       });
     }
     return [];
@@ -976,8 +980,8 @@ const ProductDetail: React.FC = () => {
                       
                       if (selectedSize && product.variations) {
                         const hasSizeInNewColor = product.variations.some(v => {
-                          const matchesSize = v.attributes.size === selectedSize;
-                          const matchesColor = v.attributes.color === color;
+                          const matchesSize = v.attributes?.size === selectedSize;
+                          const matchesColor = v.attributes?.color === color;
                           const isOutOfStock = v.manageStock ? v.stockQuantity <= 0 : v.stockStatus === 'outofstock';
                           return matchesSize && matchesColor && !isOutOfStock;
                         });
@@ -1055,8 +1059,8 @@ const ProductDetail: React.FC = () => {
                   let isOutOfStock = false;
                   if (product.variations) {
                     const matching = product.variations.filter(v => 
-                      v.attributes.size === size && 
-                      (selectedColor ? v.attributes.color === selectedColor : true)
+                      v.attributes?.size === size && 
+                      (selectedColor ? v.attributes?.color === selectedColor : true)
                     );
                     if (matching.length > 0) {
                       isOutOfStock = matching.every(v => 
