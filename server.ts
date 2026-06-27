@@ -568,10 +568,23 @@ async function startServer() {
           id: (v.id || "").toString(),
           attributes: vAttrs,
           price: parseFloat(v.price || wcProduct.price || "0"),
-          stockQuantity: v.stock_quantity || 0,
+          stockQuantity: v.stock_quantity !== null && v.stock_quantity !== undefined ? v.stock_quantity : 0,
+          stockStatus: v.stock_status || "instock",
+          manageStock: v.manage_stock === true || v.manage_stock === 'parent' || false,
           images: vImages
         };
       });
+    }
+
+    let availableSizes: string[] = [];
+    if (mappedVariations.length > 0) {
+      const sizesSet = new Set<string>();
+      mappedVariations.forEach((v: any) => {
+        if (v.attributes && v.attributes.size) {
+          sizesSet.add(v.attributes.size);
+        }
+      });
+      availableSizes = Array.from(sizesSet);
     }
 
     return {
@@ -600,6 +613,7 @@ async function startServer() {
       featured: !!wcProduct.featured,
       variations: mappedVariations.length > 0 ? mappedVariations : undefined,
       availableColors: availableColors.length > 0 ? availableColors : undefined,
+      availableSizes: availableSizes.length > 0 ? availableSizes : undefined,
       colorSwatches: Object.keys(swatchesData).length > 0 ? swatchesData : undefined
     };
   };

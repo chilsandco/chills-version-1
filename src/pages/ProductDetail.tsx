@@ -403,7 +403,7 @@ const ProductDetail: React.FC = () => {
 
   const handleAddToCart = () => {
     if (!product) return;
-    if (!selectedSize) {
+    if (availableSizes.length > 0 && !selectedSize) {
       setSizeError(true);
       return;
     }
@@ -582,7 +582,7 @@ const ProductDetail: React.FC = () => {
 
   const handleBuyNow = async () => {
     if (!product) return;
-    if (!selectedSize) {
+    if (availableSizes.length > 0 && !selectedSize) {
       setSizeError(true);
       return;
     }
@@ -661,6 +661,39 @@ const ProductDetail: React.FC = () => {
       ? product.variations.find(v => v.attributes.color === selectedColor)!.images
       : product.images
     : product.images;
+
+  const availableSizes = React.useMemo(() => {
+    if (!product) return [];
+    if (product.availableSizes && product.availableSizes.length > 0) {
+      const standardOrder = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
+      return [...product.availableSizes].sort((a, b) => {
+        const indexA = standardOrder.indexOf(a.toUpperCase());
+        const indexB = standardOrder.indexOf(b.toUpperCase());
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return a.localeCompare(b);
+      });
+    }
+    if (product.variations && product.variations.length > 0) {
+      const sizes = new Set<string>();
+      product.variations.forEach(v => {
+        if (v.attributes && v.attributes.size) {
+          sizes.add(v.attributes.size);
+        }
+      });
+      const standardOrder = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
+      return Array.from(sizes).sort((a, b) => {
+        const indexA = standardOrder.indexOf(a.toUpperCase());
+        const indexB = standardOrder.indexOf(b.toUpperCase());
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return a.localeCompare(b);
+      });
+    }
+    return [];
+  }, [product]);
 
   return (
     <div className="pt-24 sm:pt-32 pb-24 px-6 md:px-12 max-w-[1800px] mx-auto">
@@ -939,6 +972,18 @@ const ProductDetail: React.FC = () => {
                       setSelectedColor(color);
                       setColorError(false);
                       setCurrentImageIndex(0);
+                      
+                      if (selectedSize && product.variations) {
+                        const hasSizeInNewColor = product.variations.some(v => {
+                          const matchesSize = v.attributes.size === selectedSize;
+                          const matchesColor = v.attributes.color === color;
+                          const isOutOfStock = v.manageStock ? v.stockQuantity <= 0 : v.stockStatus === 'outofstock';
+                          return matchesSize && matchesColor && !isOutOfStock;
+                        });
+                        if (!hasSizeInNewColor) {
+                          setSelectedSize(null);
+                        }
+                      }
                     }}
                     animate={colorError ? { x: [-2, 2, -2, 2, 0] } : {}}
                     transition={{ duration: 0.4 }}
@@ -992,127 +1037,162 @@ const ProductDetail: React.FC = () => {
           )}
 
           {/* Size Selection Section (Moved Up) */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase text-neutral-500">Choose Your Size</h3>
-              <button 
-                onClick={() => setIsSizeGuideOpen(true)}
-                className="flex items-center gap-2 text-[10px] tracking-[0.2em] font-bold uppercase text-accent hover:text-accent/80 transition-colors cursor-pointer"
-              >
-                <Ruler size={12} />
-                Size Guide
-              </button>
-            </div>
-            <div className="flex gap-3 mb-4">
-              {['S', 'M', 'L', 'XL', '2XL'].map(size => (
-                <motion.button 
-                  key={size}
-                  onClick={() => {
-                    setSelectedSize(size);
-                    setSizeError(false);
-                  }}
-                  animate={sizeError ? { x: [-2, 2, -2, 2, 0] } : {}}
-                  transition={{ duration: 0.4 }}
-                  className={`w-12 h-12 border flex items-center justify-center text-[11px] font-bold transition-all duration-300 cursor-pointer ${
-                    selectedSize === size 
-                      ? 'bg-white text-black border-white scale-105 shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
-                      : sizeError 
-                        ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
-                        : 'border-neutral-800 hover:border-white'
-                  }`}
+          {availableSizes.length > 0 && (
+            <div className="mb-8">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase text-neutral-500">Choose Your Size</h3>
+                <button 
+                  onClick={() => setIsSizeGuideOpen(true)}
+                  className="flex items-center gap-2 text-[10px] tracking-[0.2em] font-bold uppercase text-accent hover:text-accent/80 transition-colors cursor-pointer"
                 >
-                  {size}
-                </motion.button>
-              ))}
-            </div>
-            <AnimatePresence mode="wait">
-              {selectedSize ? (
-                <motion.div
-                  key={selectedSize}
-                  initial={{ opacity: 0, height: 0, y: -10 }}
-                  animate={{ opacity: 1, height: 'auto', y: 0 }}
-                  exit={{ opacity: 0, height: 0, y: -10 }}
-                  transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                  className="overflow-hidden mb-6"
-                >
-                  <div className="border border-accent/20 bg-neutral-950 p-4 rounded-sm relative mt-2">
-                    {/* Corner technical accents */}
-                    <div className="absolute top-0 left-0 w-2 h-[1px] bg-accent" />
-                    <div className="absolute top-0 left-0 w-[1px] h-2 bg-accent" />
-                    <div className="absolute bottom-0 right-0 w-2 h-[1px] bg-accent" />
-                    <div className="absolute bottom-0 right-0 w-[1px] h-2 bg-accent" />
+                  <Ruler size={12} />
+                  Size Guide
+                </button>
+              </div>
+              <div className="flex gap-3 mb-4">
+                {availableSizes.map(size => {
+                  let isOutOfStock = false;
+                  if (product.variations) {
+                    const matching = product.variations.filter(v => 
+                      v.attributes.size === size && 
+                      (selectedColor ? v.attributes.color === selectedColor : true)
+                    );
+                    if (matching.length > 0) {
+                      isOutOfStock = matching.every(v => 
+                        v.manageStock ? v.stockQuantity <= 0 : v.stockStatus === 'outofstock'
+                      );
+                    }
+                  }
 
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-[9px] font-mono tracking-[0.3em] text-accent uppercase font-bold">
-                        Size Profile: {selectedSize}
-                      </span>
-                      <span className="text-[9px] font-mono tracking-[0.1em] text-white/50 uppercase px-2 py-0.5 border border-white/10 rounded-sm">
-                        {sizeAdvisories[selectedSize].fit}
-                      </span>
+                  return (
+                    <motion.button 
+                      key={size}
+                      disabled={isOutOfStock}
+                      onClick={() => {
+                        setSelectedSize(size);
+                        setSizeError(false);
+                      }}
+                      animate={sizeError ? { x: [-2, 2, -2, 2, 0] } : {}}
+                      transition={{ duration: 0.4 }}
+                      className={`w-12 h-12 border flex items-center justify-center text-[11px] font-bold transition-all duration-300 relative ${
+                        isOutOfStock 
+                          ? 'border-neutral-900 text-neutral-600 bg-neutral-950/40 cursor-not-allowed opacity-40' 
+                          : selectedSize === size 
+                            ? 'bg-white text-black border-white scale-105 shadow-[0_0_15px_rgba(255,255,255,0.3)] cursor-pointer' 
+                            : sizeError 
+                              ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)] cursor-pointer'
+                              : 'border-neutral-800 hover:border-white text-neutral-300 cursor-pointer'
+                      }`}
+                    >
+                      {size}
+                      {isOutOfStock && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="w-[140%] h-[1px] bg-neutral-800 rotate-[45deg]" />
+                        </div>
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </div>
+              <AnimatePresence mode="wait">
+                {selectedSize ? (
+                  <motion.div
+                     key={selectedSize}
+                     initial={{ opacity: 0, height: 0, y: -10 }}
+                     animate={{ opacity: 1, height: 'auto', y: 0 }}
+                     exit={{ opacity: 0, height: 0, y: -10 }}
+                     transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                     className="overflow-hidden mb-6"
+                  >
+                    <div className="border border-accent/20 bg-neutral-950 p-4 rounded-sm relative mt-2">
+                      {/* Corner technical accents */}
+                      <div className="absolute top-0 left-0 w-2 h-[1px] bg-accent" />
+                      <div className="absolute top-0 left-0 w-[1px] h-2 bg-accent" />
+                      <div className="absolute bottom-0 right-0 w-2 h-[1px] bg-accent" />
+                      <div className="absolute bottom-0 right-0 w-[1px] h-2 bg-accent" />
+
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-[9px] font-mono tracking-[0.3em] text-accent uppercase font-bold">
+                          Size Profile: {selectedSize}
+                        </span>
+                        {sizeAdvisories[selectedSize] && (
+                          <span className="text-[9px] font-mono tracking-[0.1em] text-white/50 uppercase px-2 py-0.5 border border-white/10 rounded-sm">
+                            {sizeAdvisories[selectedSize].fit}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Technical specifications grid */}
+                      {sizeAdvisories[selectedSize] ? (
+                        <div className="grid grid-cols-3 gap-4 border-y border-white/5 py-3 mb-3 text-center">
+                          <div>
+                            <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Chest</p>
+                            <motion.p 
+                              animate={{ opacity: [0.5, 1, 0.8, 1], textShadow: ["none", "0 0 8px rgba(212,175,55,0.4)", "none"] }}
+                              transition={{ duration: 0.3 }}
+                              className="font-mono text-sm text-white"
+                            >
+                              {sizeAdvisories[selectedSize].chest}
+                            </motion.p>
+                          </div>
+                          <div>
+                            <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Length</p>
+                            <motion.p 
+                              animate={{ opacity: [0.5, 1, 0.8, 1], textShadow: ["none", "0 0 8px rgba(212,175,55,0.4)", "none"] }}
+                              transition={{ duration: 0.3, delay: 0.05 }}
+                              className="font-mono text-sm text-white"
+                            >
+                              {sizeAdvisories[selectedSize].length}
+                            </motion.p>
+                          </div>
+                          <div>
+                            <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Shoulder</p>
+                            <motion.p 
+                              animate={{ opacity: [0.5, 1, 0.8, 1], textShadow: ["none", "0 0 8px rgba(212,175,55,0.4)", "none"] }}
+                              transition={{ duration: 0.3, delay: 0.1 }}
+                              className="font-mono text-sm text-white"
+                            >
+                              {sizeAdvisories[selectedSize].shoulder}
+                            </motion.p>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-neutral-400 font-light leading-relaxed mb-3">
+                          Detailed size specifications for {selectedSize} are in the Size Guide.
+                        </p>
+                      )}
+
+                      {/* Fitting advisory note */}
+                      {sizeAdvisories[selectedSize] && (
+                        <p className="text-[11px] text-neutral-400 font-light leading-relaxed">
+                          {sizeAdvisories[selectedSize].note}
+                        </p>
+                      )}
                     </div>
-
-                    {/* Technical specifications grid */}
-                    <div className="grid grid-cols-3 gap-4 border-y border-white/5 py-3 mb-3 text-center">
-                      <div>
-                        <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Chest</p>
-                        <motion.p 
-                          animate={{ opacity: [0.5, 1, 0.8, 1], textShadow: ["none", "0 0 8px rgba(212,175,55,0.4)", "none"] }}
-                          transition={{ duration: 0.3 }}
-                          className="font-mono text-sm text-white"
-                        >
-                          {sizeAdvisories[selectedSize].chest}
-                        </motion.p>
-                      </div>
-                      <div>
-                        <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Length</p>
-                        <motion.p 
-                          animate={{ opacity: [0.5, 1, 0.8, 1], textShadow: ["none", "0 0 8px rgba(212,175,55,0.4)", "none"] }}
-                          transition={{ duration: 0.3, delay: 0.05 }}
-                          className="font-mono text-sm text-white"
-                        >
-                          {sizeAdvisories[selectedSize].length}
-                        </motion.p>
-                      </div>
-                      <div>
-                        <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Shoulder</p>
-                        <motion.p 
-                          animate={{ opacity: [0.5, 1, 0.8, 1], textShadow: ["none", "0 0 8px rgba(212,175,55,0.4)", "none"] }}
-                          transition={{ duration: 0.3, delay: 0.1 }}
-                          className="font-mono text-sm text-white"
-                        >
-                          {sizeAdvisories[selectedSize].shoulder}
-                        </motion.p>
-                      </div>
-                    </div>
-
-                    {/* Fitting advisory note */}
-                    <p className="text-[11px] text-neutral-400 font-light leading-relaxed">
-                      {sizeAdvisories[selectedSize].note}
-                    </p>
-                  </div>
-                </motion.div>
-              ) : (
-                <p className="text-[10px] text-neutral-600 uppercase tracking-widest mb-4">
-                  Model is 5'9" wearing size M for a standard fit.
-                </p>
-              )}
-            </AnimatePresence>
-            <AnimatePresence>
-              {sizeError && (
-                <motion.div 
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="flex items-center gap-2 mb-4"
-                >
-                  <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
-                  <p className="text-[12px] text-red-500 tracking-[0.3em] uppercase font-bold">
-                    CAUTION: Select your size
+                  </motion.div>
+                ) : (
+                  <p className="text-[10px] text-neutral-600 uppercase tracking-widest mb-4">
+                    Model is 5'9" wearing size M for a standard fit.
                   </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+                )}
+              </AnimatePresence>
+              <AnimatePresence>
+                {sizeError && (
+                  <motion.div 
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-center gap-2 mb-4"
+                  >
+                    <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
+                    <p className="text-[12px] text-red-500 tracking-[0.3em] uppercase font-bold">
+                      CAUTION: Select your size
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
           {/* Action Buttons: Add to Cart, Buy Now, Wishlist (Moved Up) */}
           <div className="flex flex-col gap-4 mb-10">

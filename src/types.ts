@@ -17,6 +17,7 @@ export interface Product {
   featured?: boolean;
   variations?: ProductVariation[];
   availableColors?: string[];
+  availableSizes?: string[];
   colorSwatches?: Record<string, { type: 'color' | 'image' | 'label', value: string }>;
 }
 
@@ -25,6 +26,8 @@ export interface ProductVariation {
   attributes: { color?: string; size?: string };
   price: number;
   stockQuantity: number;
+  stockStatus?: 'instock' | 'outofstock' | 'onbackorder';
+  manageStock?: boolean;
   images: string[];
 }
 
