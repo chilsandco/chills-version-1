@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { SlidersHorizontal, X, Search, RotateCcw } from 'lucide-react';
+import { SlidersHorizontal, X, Search, RotateCcw, Check } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 import { Product } from '../types';
@@ -13,6 +13,12 @@ const Collection: React.FC = () => {
   const creatorQuery = searchParams.get('creator');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Advanced filter states
+  const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
+  const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [maxPrice, setMaxPrice] = useState<number>(10000);
+  const [inStockOnly, setInStockOnly] = useState<boolean>(false);
 
   useEffect(() => {
     if (isDrawerOpen) {
@@ -42,11 +48,100 @@ const Collection: React.FC = () => {
       });
   }, []);
 
-  const filteredProducts = creatorQuery
-    ? products.filter(p => p.coCreator?.toLowerCase() === creatorQuery.toLowerCase())
-    : filter === 'All'
-      ? products
-      : products.filter(p => (p.categories || [p.category]).includes(filter));
+  // Dynamic filter lists aggregation
+  const allSizes = React.useMemo(() => {
+    const sizes = new Set<string>();
+    products.forEach(p => {
+      const productSizes = p.availableSizes || (p.variations ? p.variations.map(v => v.attributes.size).filter(Boolean) : []);
+      productSizes.forEach(s => sizes.add(s));
+    });
+    const standardOrder = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
+    return Array.from(sizes).sort((a, b) => {
+      const indexA = standardOrder.indexOf(a.toUpperCase());
+      const indexB = standardOrder.indexOf(b.toUpperCase());
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+      return a.localeCompare(b);
+    });
+  }, [products]);
+
+  const allColors = React.useMemo(() => {
+    const colors = new Set<string>();
+    products.forEach(p => {
+      const productColors = p.availableColors || (p.variations ? p.variations.map(v => v.attributes.color).filter(Boolean) : []);
+      productColors.forEach(c => colors.add(c));
+    });
+    return Array.from(colors).sort((a, b) => a.localeCompare(b));
+  }, [products]);
+
+  const priceRange = React.useMemo(() => {
+    if (products.length === 0) return { min: 0, max: 10000 };
+    const prices = products.map(p => p.price);
+    return {
+      min: Math.min(...prices),
+      max: Math.max(...prices)
+    };
+  }, [products]);
+
+  // Sync maxPrice when products load
+  useEffect(() => {
+    if (products.length > 0) {
+      const prices = products.map(p => p.price);
+      setMaxPrice(Math.max(...prices));
+    }
+  }, [products]);
+
+  // Apply all active filters to the collection
+  const filteredProducts = React.useMemo(() => {
+    return products.filter(p => {
+      // 1. Creator filter (from query param)
+      if (creatorQuery && p.coCreator?.toLowerCase() !== creatorQuery.toLowerCase()) {
+        return false;
+      }
+
+      // 2. Category filter
+      if (filter !== 'All' && !(p.categories || [p.category]).includes(filter)) {
+        return false;
+      }
+
+      // 3. Price filter
+      if (p.price > maxPrice) {
+        return false;
+      }
+
+      // 4. Stock Availability filter
+      const isAvailable = p.status === "Available" && 
+        (p.variations ? p.variations.some(v => v.manageStock ? v.stockQuantity > 0 : v.stockStatus !== 'outofstock') : true);
+      if (inStockOnly && !isAvailable) {
+        return false;
+      }
+
+      // 5. Size variation filter
+      if (selectedSizes.length > 0) {
+        if (!p.variations) return false;
+        const hasMatchingSize = p.variations.some(v => {
+          const matchesSize = v.attributes.size && selectedSizes.includes(v.attributes.size);
+          const inStock = v.manageStock ? v.stockQuantity > 0 : v.stockStatus !== 'outofstock';
+          return matchesSize && (!inStockOnly || inStock);
+        });
+        if (!hasMatchingSize) return false;
+      }
+
+      // 6. Color variation filter
+      if (selectedColors.length > 0) {
+        if (!p.variations) return false;
+        const hasMatchingColor = p.variations.some(v => {
+          const matchesColor = v.attributes.color && selectedColors.includes(v.attributes.color);
+          const inStock = v.manageStock ? v.stockQuantity > 0 : v.stockStatus !== 'outofstock';
+          return matchesColor && (!inStockOnly || inStock);
+        });
+        if (!hasMatchingColor) return false;
+      }
+
+      return true;
+    });
+  }, [products, creatorQuery, filter, selectedSizes, selectedColors, maxPrice, inStockOnly]);
 
   const categories = React.useMemo(() => {
     const allCats = new Set<string>();
@@ -78,6 +173,15 @@ const Collection: React.FC = () => {
       cat.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [categories, searchTerm]);
+
+  const isFilterDirty = React.useMemo(() => {
+    const maxPriceBoundary = products.length > 0 ? Math.max(...products.map(p => p.price)) : 10000;
+    return filter !== 'All' || 
+      selectedSizes.length > 0 || 
+      selectedColors.length > 0 || 
+      inStockOnly || 
+      maxPrice < maxPriceBoundary;
+  }, [filter, selectedSizes, selectedColors, inStockOnly, maxPrice, products]);
 
 
   return (
@@ -186,9 +290,9 @@ const Collection: React.FC = () => {
         {/* Header */}
         <div className="flex items-center justify-between px-8 py-6 border-b border-neutral-900">
           <div>
-            <h2 className="text-xl font-display font-bold tracking-tight uppercase">Categories</h2>
+            <h2 className="text-xl font-display font-bold tracking-tight uppercase">Filters</h2>
             <p className="text-[10px] tracking-[0.2em] font-mono text-neutral-500 mt-1 uppercase">
-              {products.length} Items Available
+              {filteredProducts.length} of {products.length} Deployed
             </p>
           </div>
           <button 
@@ -200,65 +304,171 @@ const Collection: React.FC = () => {
           </button>
         </div>
 
-        {/* Search */}
-        <div className="px-8 py-4 border-b border-neutral-900">
-          <div className="relative flex items-center">
-            <Search className="absolute left-3.5 text-neutral-500" size={16} />
-            <input
-              type="text"
-              placeholder="SEARCH CATEGORY..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full bg-neutral-950 border border-neutral-800 rounded-none pl-11 pr-4 py-3 text-[11px] tracking-[0.15em] text-white placeholder-neutral-600 focus:outline-none focus:border-white focus:ring-0 transition-all font-mono"
-            />
-            {searchTerm && (
-              <button 
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3.5 text-neutral-500 hover:text-white text-xs font-mono"
-              >
-                CLEAR
-              </button>
-            )}
+        {/* Filter Scrollable Content */}
+        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-800">
+          
+          {/* Availability Toggle */}
+          <div className="space-y-4">
+            <h3 className="text-[10px] font-mono tracking-[0.3em] text-accent uppercase font-bold">// Stock Availability</h3>
+            <button 
+              type="button"
+              onClick={() => setInStockOnly(!inStockOnly)}
+              className="flex items-center gap-3 text-neutral-400 hover:text-white transition-colors cursor-pointer group"
+            >
+              <div className={`w-5 h-5 border flex items-center justify-center transition-all duration-300 rounded-[2px] ${
+                inStockOnly ? 'bg-white border-white text-black' : 'border-neutral-800 group-hover:border-neutral-600'
+              }`}>
+                {inStockOnly && <Check size={12} strokeWidth={3} />}
+              </div>
+              <span className="text-[11px] tracking-[0.2em] font-bold uppercase">In Stock Only</span>
+            </button>
           </div>
-        </div>
 
-        {/* Categories List (Scrollable) */}
-        <div className="flex-1 overflow-y-auto px-8 py-6 scrollbar-none space-y-2">
-          {filteredCategories.length > 0 ? (
-            filteredCategories.map(cat => {
-              const count = categoryCounts[cat] || 0;
-              const isSelected = filter === cat;
-              return (
-                <button
-                  key={cat}
-                  onClick={() => {
-                    setFilter(cat);
-                    setIsDrawerOpen(false);
-                  }}
-                  className={`w-full text-left py-4 px-5 flex justify-between items-center transition-all duration-300 border border-transparent ${
-                    isSelected 
-                      ? 'bg-white/5 border-neutral-800 text-white font-semibold' 
-                      : 'hover:bg-white/[0.02] text-neutral-400 hover:text-white'
-                  } cursor-pointer group`}
-                >
-                  <span className="text-[12px] tracking-[0.2em] uppercase font-medium">
-                    {cat}
-                  </span>
-                  <span className={`text-[10px] font-mono tracking-normal transition-colors px-2 py-0.5 border ${
-                    isSelected 
-                      ? 'border-white/20 bg-white/10 text-accent font-bold' 
-                      : 'border-neutral-800 text-neutral-500 group-hover:text-neutral-300'
-                  }`}>
-                    {count} {count === 1 ? 'item' : 'items'}
-                  </span>
-                </button>
-              );
-            })
-          ) : (
-            <div className="py-12 text-center text-neutral-600 font-mono text-[11px] tracking-[0.15em] uppercase">
-              No categories match search
+          {/* Size Filter */}
+          {allSizes.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-[10px] font-mono tracking-[0.3em] text-accent uppercase font-bold">// Size Variation</h3>
+              <div className="flex flex-wrap gap-2">
+                {allSizes.map(size => {
+                  const isSelected = selectedSizes.includes(size);
+                  return (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => {
+                        setSelectedSizes(prev => 
+                          prev.includes(size) ? prev.filter(s => s !== size) : [...prev, size]
+                        );
+                      }}
+                      className={`w-11 h-11 border text-[10px] font-mono font-bold transition-all duration-300 cursor-pointer rounded-[2px] ${
+                        isSelected 
+                          ? 'bg-white text-black border-white scale-105 shadow-[0_0_15px_rgba(255,255,255,0.15)]' 
+                          : 'border-neutral-800 hover:border-white text-neutral-400'
+                      }`}
+                    >
+                      {size}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           )}
+
+          {/* Color Filter */}
+          {allColors.length > 0 && (
+            <div className="space-y-4">
+              <h3 className="text-[10px] font-mono tracking-[0.3em] text-accent uppercase font-bold">// Signal Colors</h3>
+              <div className="flex flex-wrap gap-2">
+                {allColors.map(color => {
+                  const isSelected = selectedColors.includes(color);
+                  return (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => {
+                        setSelectedColors(prev => 
+                          prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]
+                        );
+                      }}
+                      className={`px-3.5 py-2.5 border text-[9px] font-bold uppercase transition-all duration-300 cursor-pointer font-mono rounded-[2px] ${
+                        isSelected 
+                          ? 'bg-white text-black border-white scale-105' 
+                          : 'border-neutral-800 hover:border-white text-neutral-400'
+                      }`}
+                    >
+                      {color}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Price Range Slider */}
+          {priceRange.max > priceRange.min && (
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-[10px] font-mono tracking-[0.3em] text-accent uppercase font-bold">// Price Threshold</h3>
+                <span className="text-[10px] font-mono tracking-wider text-neutral-400 font-bold">
+                  Under ₹{maxPrice.toLocaleString()}
+                </span>
+              </div>
+              <div className="space-y-2">
+                <input 
+                  type="range" 
+                  min={priceRange.min} 
+                  max={priceRange.max} 
+                  value={maxPrice} 
+                  onChange={e => setMaxPrice(Number(e.target.value))}
+                  className="w-full accent-white bg-neutral-900 h-1 cursor-pointer outline-none rounded-sm"
+                />
+                <div className="flex justify-between text-[8px] font-mono text-neutral-600">
+                  <span>₹{priceRange.min}</span>
+                  <span>₹{priceRange.max}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Categories Search & List */}
+          <div className="space-y-4">
+            <h3 className="text-[10px] font-mono tracking-[0.3em] text-accent uppercase font-bold">// Product Category</h3>
+            
+            <div className="relative flex items-center mb-3">
+              <Search className="absolute left-3.5 text-neutral-500" size={14} />
+              <input
+                type="text"
+                placeholder="SEARCH CATEGORY..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full bg-neutral-950 border border-neutral-900 rounded-none pl-10 pr-4 py-2.5 text-[10px] tracking-[0.15em] text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-800 focus:ring-0 transition-all font-mono"
+              />
+              {searchTerm && (
+                <button 
+                  onClick={() => setSearchTerm('')}
+                  className="absolute right-3.5 text-neutral-500 hover:text-white text-[9px] font-mono"
+                >
+                  CLEAR
+                </button>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              {filteredCategories.length > 0 ? (
+                filteredCategories.map(cat => {
+                  const count = categoryCounts[cat] || 0;
+                  const isSelected = filter === cat;
+                  return (
+                    <button
+                      key={cat}
+                      type="button"
+                      onClick={() => setFilter(cat)}
+                      className={`w-full text-left py-3 px-4 flex justify-between items-center transition-all duration-300 border ${
+                        isSelected 
+                          ? 'bg-white/5 border-neutral-800 text-white font-semibold' 
+                          : 'border-transparent hover:bg-white/[0.02] text-neutral-400 hover:text-white'
+                      } cursor-pointer group rounded-[2px]`}
+                    >
+                      <span className="text-[11px] tracking-[0.2em] uppercase font-medium">
+                        {cat}
+                      </span>
+                      <span className={`text-[9px] font-mono tracking-normal transition-colors px-2 py-0.5 border ${
+                        isSelected 
+                          ? 'border-white/20 bg-white/10 text-accent font-bold' 
+                          : 'border-neutral-900 text-neutral-600 group-hover:text-neutral-300'
+                      }`}>
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="py-6 text-center text-neutral-600 font-mono text-[10px] tracking-[0.15em] uppercase">
+                  No categories match search
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Footer Actions */}
@@ -267,10 +477,16 @@ const Collection: React.FC = () => {
             onClick={() => {
               setFilter('All');
               setSearchTerm('');
+              setSelectedSizes([]);
+              setSelectedColors([]);
+              setInStockOnly(false);
+              if (products.length > 0) {
+                setMaxPrice(Math.max(...products.map(p => p.price)));
+              }
               setIsDrawerOpen(false);
             }}
-            disabled={filter === 'All'}
-            className="flex-1 py-4 border border-neutral-800 text-[11px] tracking-[0.2em] font-bold uppercase text-neutral-400 hover:text-white hover:border-neutral-700 disabled:opacity-30 disabled:hover:text-neutral-400 disabled:hover:border-neutral-800 transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:pointer-events-none"
+            disabled={!isFilterDirty}
+            className="flex-1 py-4 border border-neutral-800 text-[11px] tracking-[0.2em] font-bold uppercase text-neutral-400 hover:text-white hover:border-neutral-700 disabled:opacity-30 disabled:hover:text-neutral-400 disabled:hover:border-neutral-800 transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:pointer-events-none rounded-[2px]"
           >
             <RotateCcw size={13} />
             RESET
