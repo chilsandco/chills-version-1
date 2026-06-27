@@ -21,13 +21,23 @@ const Collection: React.FC = () => {
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
 
   useEffect(() => {
+    const html = document.documentElement;
     if (isDrawerOpen) {
       document.body.style.overflow = 'hidden';
+      document.body.style.height = '100vh';
+      html.style.overflow = 'hidden';
+      html.style.height = '100vh';
     } else {
       document.body.style.overflow = '';
+      document.body.style.height = '';
+      html.style.overflow = '';
+      html.style.height = '';
     }
     return () => {
       document.body.style.overflow = '';
+      document.body.style.height = '';
+      html.style.overflow = '';
+      html.style.height = '';
     };
   }, [isDrawerOpen]);
 
@@ -278,6 +288,7 @@ const Collection: React.FC = () => {
         <div 
           className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 transition-opacity duration-300 animate-fade-in"
           onClick={() => setIsDrawerOpen(false)}
+          onTouchMove={(e) => e.preventDefault()}
         />
       )}
 
@@ -305,7 +316,7 @@ const Collection: React.FC = () => {
         </div>
 
         {/* Filter Scrollable Content */}
-        <div className="flex-1 overflow-y-auto px-8 py-6 space-y-8 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-800">
+        <div className="flex-1 overflow-y-auto overscroll-contain px-8 py-6 space-y-8 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-800">
           
           {/* Availability Toggle */}
           <div className="space-y-4">
