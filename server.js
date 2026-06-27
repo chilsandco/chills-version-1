@@ -440,6 +440,7 @@ async function startServer() {
       id: (wcProduct.id || "").toString(),
       name: decodeEntities(wcProduct.name || "Unknown Product"),
       category: decodeEntities(categories[0]?.name || "Uncategorized"),
+      categories: categories.map((c) => decodeEntities(c.name || "")).filter(Boolean),
       price: parseFloat(wcProduct.price || "0"),
       description: longDescription || shortDescription,
       shortDescription: shortDescription || longDescription,

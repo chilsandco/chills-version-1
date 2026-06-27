@@ -18,6 +18,7 @@ export interface Product {
   variations?: ProductVariation[];
   availableColors?: string[];
   availableSizes?: string[];
+  categories?: string[];
   colorSwatches?: Record<string, { type: 'color' | 'image' | 'label', value: string }>;
 }
 

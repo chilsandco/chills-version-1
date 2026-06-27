@@ -46,16 +46,28 @@ const Collection: React.FC = () => {
     ? products.filter(p => p.coCreator?.toLowerCase() === creatorQuery.toLowerCase())
     : filter === 'All'
       ? products
-      : products.filter(p => p.category === filter);
+      : products.filter(p => (p.categories || [p.category]).includes(filter));
 
-  const categories: string[] = ['All', ...(Array.from(new Set(products.map(p => p.category))) as string[])];
+  const categories = React.useMemo(() => {
+    const allCats = new Set<string>();
+    products.forEach(p => {
+      const productCats = p.categories || [p.category];
+      productCats.forEach(c => {
+        if (c) allCats.add(c);
+      });
+    });
+    return ['All', ...Array.from(allCats)];
+  }, [products]);
 
   const categoryCounts = React.useMemo(() => {
     const counts: Record<string, number> = { All: products.length };
     products.forEach(p => {
-      if (p.category) {
-        counts[p.category] = (counts[p.category] || 0) + 1;
-      }
+      const productCats = p.categories || [p.category];
+      productCats.forEach(cat => {
+        if (cat) {
+          counts[cat] = (counts[cat] || 0) + 1;
+        }
+      });
     });
     return counts;
   }, [products]);
