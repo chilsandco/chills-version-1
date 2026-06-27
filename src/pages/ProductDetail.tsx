@@ -183,6 +183,7 @@ const ProductDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const normSize = selectedSize ? (selectedSize.toUpperCase() === 'XXL' ? '2XL' : (selectedSize.toUpperCase() === 'XXXL' ? '3XL' : selectedSize)) : '';
   const [sizeError, setSizeError] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [colorError, setColorError] = useState(false);
@@ -665,7 +666,7 @@ const ProductDetail: React.FC = () => {
   const availableSizes = React.useMemo(() => {
     if (!product) return [];
     if (product.availableSizes && product.availableSizes.length > 0) {
-      const standardOrder = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
+      const standardOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', 'XXXL', '3XL'];
       return [...product.availableSizes].sort((a, b) => {
         const indexA = standardOrder.indexOf(a.toUpperCase());
         const indexB = standardOrder.indexOf(b.toUpperCase());
@@ -682,7 +683,7 @@ const ProductDetail: React.FC = () => {
           sizes.add(v.attributes.size);
         }
       });
-      const standardOrder = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
+      const standardOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', 'XXXL', '3XL'];
       return Array.from(sizes).sort((a, b) => {
         const indexA = standardOrder.indexOf(a.toUpperCase());
         const indexB = standardOrder.indexOf(b.toUpperCase());
@@ -1115,15 +1116,15 @@ const ProductDetail: React.FC = () => {
                         <span className="text-[9px] font-mono tracking-[0.3em] text-accent uppercase font-bold">
                           Size Profile: {selectedSize}
                         </span>
-                        {sizeAdvisories[selectedSize] && (
+                        {sizeAdvisories[normSize] && (
                           <span className="text-[9px] font-mono tracking-[0.1em] text-white/50 uppercase px-2 py-0.5 border border-white/10 rounded-sm">
-                            {sizeAdvisories[selectedSize].fit}
+                            {sizeAdvisories[normSize].fit}
                           </span>
                         )}
                       </div>
 
                       {/* Technical specifications grid */}
-                      {sizeAdvisories[selectedSize] ? (
+                      {sizeAdvisories[normSize] ? (
                         <div className="grid grid-cols-3 gap-4 border-y border-white/5 py-3 mb-3 text-center">
                           <div>
                             <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Chest</p>
@@ -1132,7 +1133,7 @@ const ProductDetail: React.FC = () => {
                               transition={{ duration: 0.3 }}
                               className="font-mono text-sm text-white"
                             >
-                              {sizeAdvisories[selectedSize].chest}
+                              {sizeAdvisories[normSize].chest}
                             </motion.p>
                           </div>
                           <div>
@@ -1142,7 +1143,7 @@ const ProductDetail: React.FC = () => {
                               transition={{ duration: 0.3, delay: 0.05 }}
                               className="font-mono text-sm text-white"
                             >
-                              {sizeAdvisories[selectedSize].length}
+                              {sizeAdvisories[normSize].length}
                             </motion.p>
                           </div>
                           <div>
@@ -1152,7 +1153,7 @@ const ProductDetail: React.FC = () => {
                               transition={{ duration: 0.3, delay: 0.1 }}
                               className="font-mono text-sm text-white"
                             >
-                              {sizeAdvisories[selectedSize].shoulder}
+                              {sizeAdvisories[normSize].shoulder}
                             </motion.p>
                           </div>
                         </div>
@@ -1163,9 +1164,9 @@ const ProductDetail: React.FC = () => {
                       )}
 
                       {/* Fitting advisory note */}
-                      {sizeAdvisories[selectedSize] && (
+                      {sizeAdvisories[normSize] && (
                         <p className="text-[11px] text-neutral-400 font-light leading-relaxed">
-                          {sizeAdvisories[selectedSize].note}
+                          {sizeAdvisories[normSize].note}
                         </p>
                       )}
                     </div>
