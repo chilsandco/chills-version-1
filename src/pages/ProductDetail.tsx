@@ -183,7 +183,6 @@ const ProductDetail: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const normSize = selectedSize ? (String(selectedSize).toUpperCase() === 'XXL' ? '2XL' : (String(selectedSize).toUpperCase() === 'XXXL' ? '3XL' : String(selectedSize))) : '';
   const [sizeError, setSizeError] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [colorError, setColorError] = useState(false);
@@ -259,6 +258,43 @@ const ProductDetail: React.FC = () => {
 
   const { cart, addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
+
+  const availableSizes = React.useMemo(() => {
+    if (!product) return [];
+    if (product.availableSizes && product.availableSizes.length > 0) {
+      const standardOrder = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
+      return [...product.availableSizes].sort((a, b) => {
+        const indexA = standardOrder.indexOf(a.toUpperCase());
+        const indexB = standardOrder.indexOf(b.toUpperCase());
+        if (indexA !== -1 && indexB !== -1) {
+          return indexA - indexB;
+        }
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return a.localeCompare(b);
+      });
+    }
+    if (product.variations && product.variations.length > 0) {
+      const sizes = new Set<string>();
+      product.variations.forEach(v => {
+        if (v.attributes && v.attributes.size) {
+          sizes.add(v.attributes.size);
+        }
+      });
+      const standardOrder = ['XS', 'S', 'M', 'L', 'XL', '2XL', '3XL'];
+      return Array.from(sizes).sort((a, b) => {
+        const indexA = standardOrder.indexOf(a.toUpperCase());
+        const indexB = standardOrder.indexOf(b.toUpperCase());
+        if (indexA !== -1 && indexB !== -1) {
+          return indexA - indexB;
+        }
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return a.localeCompare(b);
+      });
+    }
+    return [];
+  }, [product]);
 
   useEffect(() => {
     setLoading(true);
@@ -663,43 +699,6 @@ const ProductDetail: React.FC = () => {
       : product.images
     : product.images;
 
-  const availableSizes = React.useMemo(() => {
-    if (!product) return [];
-    if (product.availableSizes && product.availableSizes.length > 0) {
-      const standardOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', 'XXXL', '3XL'];
-      return [...product.availableSizes].sort((a, b) => {
-        const strA = a ? String(a).toUpperCase() : '';
-        const strB = b ? String(b).toUpperCase() : '';
-        const indexA = standardOrder.indexOf(strA);
-        const indexB = standardOrder.indexOf(strB);
-        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-        if (indexA !== -1) return -1;
-        if (indexB !== -1) return 1;
-        return strA.localeCompare(strB);
-      });
-    }
-    if (product.variations && product.variations.length > 0) {
-      const sizes = new Set<string>();
-      product.variations.forEach(v => {
-        if (v.attributes && v.attributes.size) {
-          sizes.add(String(v.attributes.size));
-        }
-      });
-      const standardOrder = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', 'XXXL', '3XL'];
-      return Array.from(sizes).sort((a, b) => {
-        const strA = a ? String(a).toUpperCase() : '';
-        const strB = b ? String(b).toUpperCase() : '';
-        const indexA = standardOrder.indexOf(strA);
-        const indexB = standardOrder.indexOf(strB);
-        if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-        if (indexA !== -1) return -1;
-        if (indexB !== -1) return 1;
-        return strA.localeCompare(strB);
-      });
-    }
-    return [];
-  }, [product]);
-
   return (
     <div className="pt-24 sm:pt-32 pb-24 px-6 md:px-12 max-w-[1800px] mx-auto">
       <SEO 
@@ -978,12 +977,15 @@ const ProductDetail: React.FC = () => {
                       setColorError(false);
                       setCurrentImageIndex(0);
                       
+                      // Reset selected size if it's not available or out of stock in the new color
                       if (selectedSize && product.variations) {
                         const hasSizeInNewColor = product.variations.some(v => {
-                          const matchesSize = v.attributes?.size === selectedSize;
-                          const matchesColor = v.attributes?.color === color;
-                          const isOutOfStock = v.manageStock ? v.stockQuantity <= 0 : v.stockStatus === 'outofstock';
-                          return matchesSize && matchesColor && !isOutOfStock;
+                          const matchesSize = v.attributes.size === selectedSize;
+                          const matchesColor = v.attributes.color === color;
+                          const inStock = v.manageStock 
+                            ? (v.stockQuantity !== undefined && v.stockQuantity > 0) 
+                            : v.stockStatus !== 'outofstock';
+                          return matchesSize && matchesColor && inStock;
                         });
                         if (!hasSizeInNewColor) {
                           setSelectedSize(null);
@@ -1056,19 +1058,26 @@ const ProductDetail: React.FC = () => {
               </div>
               <div className="flex gap-3 mb-4">
                 {availableSizes.map(size => {
+                  // Determine stock of this size
                   let isOutOfStock = false;
                   if (product.variations) {
-                    const matching = product.variations.filter(v => 
-                      v.attributes?.size === size && 
-                      (selectedColor ? v.attributes?.color === selectedColor : true)
-                    );
-                    if (matching.length > 0) {
-                      isOutOfStock = matching.every(v => 
-                        v.manageStock ? v.stockQuantity <= 0 : v.stockStatus === 'outofstock'
-                      );
+                    const matchingVariations = product.variations.filter(v => {
+                      const matchesSize = v.attributes.size === size;
+                      const matchesColor = selectedColor ? v.attributes.color === selectedColor : true;
+                      return matchesSize && matchesColor;
+                    });
+                    
+                    if (matchingVariations.length > 0) {
+                      isOutOfStock = matchingVariations.every(v => {
+                        const hasNoQty = v.stockQuantity !== undefined && v.stockQuantity <= 0;
+                        const isOosStatus = v.stockStatus === 'outofstock';
+                        return v.manageStock ? hasNoQty : isOosStatus;
+                      });
+                    } else {
+                      isOutOfStock = true;
                     }
                   }
-
+                  
                   return (
                     <motion.button 
                       key={size}
@@ -1080,13 +1089,15 @@ const ProductDetail: React.FC = () => {
                       animate={sizeError ? { x: [-2, 2, -2, 2, 0] } : {}}
                       transition={{ duration: 0.4 }}
                       className={`w-12 h-12 border flex items-center justify-center text-[11px] font-bold transition-all duration-300 relative ${
-                        isOutOfStock 
-                          ? 'border-neutral-900 text-neutral-600 bg-neutral-950/40 cursor-not-allowed opacity-40' 
-                          : selectedSize === size 
-                            ? 'bg-white text-black border-white scale-105 shadow-[0_0_15px_rgba(255,255,255,0.3)] cursor-pointer' 
-                            : sizeError 
-                              ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)] cursor-pointer'
-                              : 'border-neutral-800 hover:border-white text-neutral-300 cursor-pointer'
+                        isOutOfStock ? 'cursor-not-allowed' : 'cursor-pointer'
+                      } ${
+                        selectedSize === size 
+                          ? 'bg-white text-black border-white scale-105 shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
+                          : sizeError 
+                            ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
+                            : isOutOfStock
+                              ? 'border-neutral-900 text-neutral-600 bg-neutral-950/40 opacity-40'
+                              : 'border-neutral-800 hover:border-white text-neutral-300'
                       }`}
                     >
                       {size}
@@ -1102,12 +1113,12 @@ const ProductDetail: React.FC = () => {
               <AnimatePresence mode="wait">
                 {selectedSize ? (
                   <motion.div
-                     key={selectedSize}
-                     initial={{ opacity: 0, height: 0, y: -10 }}
-                     animate={{ opacity: 1, height: 'auto', y: 0 }}
-                     exit={{ opacity: 0, height: 0, y: -10 }}
-                     transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                     className="overflow-hidden mb-6"
+                    key={selectedSize}
+                    initial={{ opacity: 0, height: 0, y: -10 }}
+                    animate={{ opacity: 1, height: 'auto', y: 0 }}
+                    exit={{ opacity: 0, height: 0, y: -10 }}
+                    transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+                    className="overflow-hidden mb-6"
                   >
                     <div className="border border-accent/20 bg-neutral-950 p-4 rounded-sm relative mt-2">
                       {/* Corner technical accents */}
@@ -1120,15 +1131,15 @@ const ProductDetail: React.FC = () => {
                         <span className="text-[9px] font-mono tracking-[0.3em] text-accent uppercase font-bold">
                           Size Profile: {selectedSize}
                         </span>
-                        {sizeAdvisories[normSize] && (
+                        {sizeAdvisories[selectedSize] && (
                           <span className="text-[9px] font-mono tracking-[0.1em] text-white/50 uppercase px-2 py-0.5 border border-white/10 rounded-sm">
-                            {sizeAdvisories[normSize].fit}
+                            {sizeAdvisories[selectedSize].fit}
                           </span>
                         )}
                       </div>
 
                       {/* Technical specifications grid */}
-                      {sizeAdvisories[normSize] ? (
+                      {sizeAdvisories[selectedSize] ? (
                         <div className="grid grid-cols-3 gap-4 border-y border-white/5 py-3 mb-3 text-center">
                           <div>
                             <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Chest</p>
@@ -1137,7 +1148,7 @@ const ProductDetail: React.FC = () => {
                               transition={{ duration: 0.3 }}
                               className="font-mono text-sm text-white"
                             >
-                              {sizeAdvisories[normSize].chest}
+                              {sizeAdvisories[selectedSize].chest}
                             </motion.p>
                           </div>
                           <div>
@@ -1147,7 +1158,7 @@ const ProductDetail: React.FC = () => {
                               transition={{ duration: 0.3, delay: 0.05 }}
                               className="font-mono text-sm text-white"
                             >
-                              {sizeAdvisories[normSize].length}
+                              {sizeAdvisories[selectedSize].length}
                             </motion.p>
                           </div>
                           <div>
@@ -1157,22 +1168,16 @@ const ProductDetail: React.FC = () => {
                               transition={{ duration: 0.3, delay: 0.1 }}
                               className="font-mono text-sm text-white"
                             >
-                              {sizeAdvisories[normSize].shoulder}
+                              {sizeAdvisories[selectedSize].shoulder}
                             </motion.p>
                           </div>
                         </div>
-                      ) : (
-                        <p className="text-[11px] text-neutral-400 font-light leading-relaxed mb-3">
-                          Detailed size specifications for {selectedSize} are in the Size Guide.
-                        </p>
-                      )}
+                      ) : null}
 
                       {/* Fitting advisory note */}
-                      {sizeAdvisories[normSize] && (
-                        <p className="text-[11px] text-neutral-400 font-light leading-relaxed">
-                          {sizeAdvisories[normSize].note}
-                        </p>
-                      )}
+                      <p className="text-[11px] text-neutral-400 font-light leading-relaxed">
+                        {sizeAdvisories[selectedSize] ? sizeAdvisories[selectedSize].note : `Standard fitting for size ${selectedSize}.`}
+                      </p>
                     </div>
                   </motion.div>
                 ) : (

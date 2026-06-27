@@ -339,6 +339,7 @@ async function startServer() {
     const coCreator = coCreatorAttr || coCreatorMeta || "";
     let mappedVariations = [];
     let availableColors = [];
+    let availableSizes = [];
     if (wcProduct.variations_data && Array.isArray(wcProduct.variations_data)) {
       mappedVariations = wcProduct.variations_data.map((v) => {
         const vAttrs = {};
@@ -420,6 +421,9 @@ async function startServer() {
         if (vAttrs.color && !availableColors.includes(vAttrs.color)) {
           availableColors.push(vAttrs.color);
         }
+        if (vAttrs.size && !availableSizes.includes(vAttrs.size)) {
+          availableSizes.push(vAttrs.size);
+        }
         console.log(`[CHILS & CO. DEBUG] Variation ${v.id} Final Attrs:`, vAttrs);
         return {
           id: (v.id || "").toString(),
@@ -431,16 +435,6 @@ async function startServer() {
           images: vImages
         };
       });
-    }
-    let availableSizes = [];
-    if (mappedVariations.length > 0) {
-      const sizesSet = /* @__PURE__ */ new Set();
-      mappedVariations.forEach((v) => {
-        if (v.attributes && v.attributes.size) {
-          sizesSet.add(v.attributes.size);
-        }
-      });
-      availableSizes = Array.from(sizesSet);
     }
     return {
       id: (wcProduct.id || "").toString(),
