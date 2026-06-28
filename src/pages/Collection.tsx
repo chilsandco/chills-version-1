@@ -9,6 +9,9 @@ import { Product } from '../types';
 const Collection: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'editorial' | 'archive'>(() => {
+    return (localStorage.getItem('chils_view_mode') as 'editorial' | 'archive') || 'archive';
+  });
   const [filter, setFilter] = useState('All');
   const [searchParams, setSearchParams] = useSearchParams();
   const creatorQuery = searchParams.get('creator');
@@ -260,14 +263,48 @@ const Collection: React.FC = () => {
                 <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-black to-transparent pointer-events-none z-10" />
               </div>
 
-              {/* Filter / Drawer Trigger */}
-              <button
-                onClick={() => setIsDrawerOpen(true)}
-                className="flex items-center gap-2 text-[11px] tracking-[0.2em] font-bold uppercase text-neutral-400 hover:text-white transition-all duration-300 ml-4 pl-4 border-l border-neutral-800 cursor-pointer active:scale-95 whitespace-nowrap group"
-              >
-                <SlidersHorizontal size={13} className="text-neutral-500 group-hover:text-accent transition-colors" />
-                <span>FILTER</span>
-              </button>
+              {/* Layout controls */}
+              <div className="flex items-center gap-4 ml-4 pl-4 border-l border-neutral-800">
+                {/* Layout Toggle Buttons */}
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => {
+                      setViewMode('editorial');
+                      localStorage.setItem('chils_view_mode', 'editorial');
+                    }}
+                    title="Editorial Grid (1 Col Mobile / 2 Col Desktop)"
+                    className={`h-7 w-7 text-[10px] font-mono font-bold transition-all border border-neutral-900 hover:border-neutral-700 hover:text-white flex items-center justify-center rounded-[2px] cursor-pointer ${
+                      viewMode === 'editorial'
+                        ? 'bg-white text-black border-white'
+                        : 'text-neutral-500'
+                    }`}
+                  >
+                    1
+                  </button>
+                  <button
+                    onClick={() => {
+                      setViewMode('archive');
+                      localStorage.setItem('chils_view_mode', 'archive');
+                    }}
+                    title="Archive Grid (2 Col Mobile / 4 Col Desktop)"
+                    className={`h-7 w-7 text-[10px] font-mono font-bold transition-all border border-neutral-900 hover:border-neutral-700 hover:text-white flex items-center justify-center rounded-[2px] cursor-pointer ${
+                      viewMode === 'archive'
+                        ? 'bg-white text-black border-white'
+                        : 'text-neutral-500'
+                    }`}
+                  >
+                    2
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setIsDrawerOpen(true)}
+                  className="flex items-center gap-2 text-[11px] tracking-[0.2em] font-bold uppercase text-neutral-400 hover:text-white transition-all duration-300 cursor-pointer active:scale-95 whitespace-nowrap group"
+                >
+                  <SlidersHorizontal size={13} className="text-neutral-500 group-hover:text-accent transition-colors" />
+                  <span>FILTER</span>
+                </button>
+              </div>
             </div>
           </>
         )}
@@ -281,10 +318,14 @@ const Collection: React.FC = () => {
       ) : (
         <>
           {filteredProducts.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1 bg-neutral-900">
+            <div className={`grid gap-1 bg-neutral-900 transition-all duration-300 ${
+              viewMode === 'editorial'
+                ? 'grid-cols-1 md:grid-cols-2'
+                : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
+            }`}>
               {filteredProducts.map(product => (
                 <div key={product.id} className="bg-black">
-                  <ProductCard product={product} />
+                  <ProductCard product={product} viewMode={viewMode} />
                 </div>
               ))}
             </div>

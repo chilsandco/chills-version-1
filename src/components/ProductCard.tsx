@@ -7,9 +7,10 @@ import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from
 
 interface ProductCardProps {
   product: Product;
+  viewMode?: 'editorial' | 'archive';
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'editorial' }) => {
   const { toggleWishlist, isInWishlist } = useWishlist();
   const [isHovered, setIsHovered] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -83,10 +84,14 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
               e.stopPropagation();
               toggleWishlist(product);
             }}
-            className="absolute top-4 right-4 z-30 p-2 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-white transition-all hover:scale-110 active:scale-95 group/heart"
+            className={`absolute z-30 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-white transition-all hover:scale-110 active:scale-95 group/heart ${
+              viewMode === 'archive'
+                ? 'top-2 right-2 sm:top-3 sm:right-3 md:top-4 md:right-4 p-1.5 md:p-2'
+                : 'top-4 right-4 p-2'
+            }`}
           >
             <Heart 
-              size={14} 
+              size={viewMode === 'archive' ? 12 : 14} 
               strokeWidth={2}
               className={`transition-colors duration-300 ${isInWishlist(product.id) ? 'fill-accent text-accent' : 'text-white'}`}
             />
@@ -126,30 +131,71 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
           )}
         </div>
 
-        <div className="p-8 flex justify-between items-start bg-black border-t border-white/5 relative z-10" style={{ transform: "translateZ(30px)" }}>
+        <div 
+          className={`flex justify-between items-start bg-black border-t border-white/5 relative z-10 transition-all duration-300 ${
+            viewMode === 'archive'
+              ? 'p-4 sm:p-5 md:p-6'
+              : 'p-6 sm:p-7 md:p-8'
+          }`} 
+          style={{ transform: "translateZ(30px)" }}
+        >
           <div>
-            <h3 className="text-[13px] tracking-[0.2em] font-bold uppercase mb-2 group-hover:text-accent transition-colors duration-500">{product.name}</h3>
-            <p className="text-[12px] text-neutral-600 uppercase tracking-widest">{product.category}</p>
+            <h3 className={`tracking-[0.2em] font-bold uppercase mb-2 group-hover:text-accent transition-colors duration-500 ${
+              viewMode === 'archive'
+                ? 'text-[11px] sm:text-[12px] md:text-[13px]'
+                : 'text-[13px] sm:text-[14px] md:text-[15px]'
+            }`}>{product.name}</h3>
+            <p className={`text-neutral-600 uppercase tracking-widest ${
+              viewMode === 'archive'
+                ? 'text-[9px] sm:text-[10px] md:text-[12px]'
+                : 'text-[12px]'
+            }`}>{product.category}</p>
             {product.coCreator && (
-              <p className="text-[9px] text-accent/85 font-mono tracking-[0.2em] uppercase mt-2">
+              <p className={`text-accent/85 font-mono tracking-[0.2em] uppercase mt-2 ${
+                viewMode === 'archive'
+                  ? 'text-[8px] sm:text-[9px]'
+                  : 'text-[9px]'
+              }`}>
                 CO-CREATED BY {product.coCreator}
               </p>
             )}
           </div>
           <div className="text-right">
-            <p className="text-[13px] font-mono opacity-40 group-hover:opacity-100 transition-opacity duration-500">₹{product.price.toLocaleString()}</p>
-            <span className="text-[8px] text-neutral-600 uppercase tracking-widest font-mono font-bold mt-1 block">excl. shipping</span>
+            <p className={`font-mono opacity-40 group-hover:opacity-100 transition-opacity duration-500 ${
+              viewMode === 'archive'
+                ? 'text-[11px] sm:text-[12px] md:text-[13px]'
+                : 'text-[13px] sm:text-[14px] md:text-[15px]'
+            }`}>₹{product.price.toLocaleString()}</p>
+            <span className={`text-neutral-600 uppercase tracking-widest font-mono font-bold mt-1 block ${
+              viewMode === 'archive'
+                ? 'text-[7px] sm:text-[8px]'
+                : 'text-[8px]'
+            }`}>excl. shipping</span>
           </div>
         </div>
 
         {product.status === "Coming Soon" && (
-          <div className="absolute top-6 left-6 bg-white text-black text-[11px] font-bold px-3 py-1.5 tracking-[0.2em] uppercase z-30" style={{ transform: "translateZ(60px)" }}>
+          <div 
+            className={`absolute bg-white text-black font-bold uppercase z-30 transition-all duration-300 ${
+              viewMode === 'archive'
+                ? 'top-2 left-2 sm:top-4 sm:left-4 md:top-6 md:left-6 text-[8px] sm:text-[10px] md:text-[11px] px-2 py-1 md:px-3 md:py-1.5 tracking-[0.15em] md:tracking-[0.2em]'
+                : 'top-6 left-6 text-[11px] px-3 py-1.5 tracking-[0.2em]'
+            }`} 
+            style={{ transform: "translateZ(60px)" }}
+          >
             Coming Soon
           </div>
         )}
 
         {product.totalSales !== undefined && product.totalSales > 0 && (
-          <div className="absolute top-6 left-6 bg-accent text-black text-[9px] font-bold px-3 py-1 tracking-[0.3em] uppercase z-30 flex items-center gap-2" style={{ transform: "translateZ(60px)" }}>
+          <div 
+            className={`absolute bg-accent text-black font-bold uppercase z-30 flex items-center gap-1.5 transition-all duration-300 ${
+              viewMode === 'archive'
+                ? 'top-2 left-2 sm:top-4 sm:left-4 md:top-6 md:left-6 text-[8px] sm:text-[9px] px-2 py-0.5 md:px-3 md:py-1 tracking-[0.2em] md:tracking-[0.3em]'
+                : 'top-6 left-6 text-[9px] px-3 py-1 tracking-[0.3em] gap-2'
+            }`} 
+            style={{ transform: "translateZ(60px)" }}
+          >
             <span className="w-1 h-1 rounded-full bg-black animate-pulse" />
             Deployed: {product.totalSales}
           </div>
