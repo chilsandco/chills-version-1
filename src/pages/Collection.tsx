@@ -20,7 +20,6 @@ const Collection: React.FC = () => {
 
   // Advanced filter states
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
-  const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [maxPrice, setMaxPrice] = useState<number>(10000);
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
 
@@ -83,15 +82,6 @@ const Collection: React.FC = () => {
     });
   }, [products]);
 
-  const allColors = React.useMemo(() => {
-    const colors = new Set<string>();
-    products.forEach(p => {
-      const productColors = p.availableColors || (p.variations ? p.variations.map(v => v.attributes.color).filter(Boolean) : []);
-      productColors.forEach(c => colors.add(c));
-    });
-    return Array.from(colors).sort((a, b) => a.localeCompare(b));
-  }, [products]);
-
   const priceRange = React.useMemo(() => {
     if (products.length === 0) return { min: 0, max: 10000 };
     const prices = products.map(p => p.price);
@@ -150,25 +140,9 @@ const Collection: React.FC = () => {
         }
       }
 
-      // 6. Color variation filter
-      if (selectedColors.length > 0) {
-        if (p.variations) {
-          const hasMatchingColor = p.variations.some(v => {
-            const matchesColor = v.attributes.color && selectedColors.includes(v.attributes.color);
-            const inStock = v.manageStock ? v.stockQuantity > 0 : v.stockStatus !== 'outofstock';
-            return matchesColor && (!inStockOnly || inStock);
-          });
-          if (!hasMatchingColor) return false;
-        } else {
-          // Fallback if variations data is not fetched for the list
-          const hasMatchingColor = p.availableColors?.some(color => selectedColors.includes(color));
-          if (!hasMatchingColor) return false;
-        }
-      }
-
       return true;
     });
-  }, [products, creatorQuery, filter, selectedSizes, selectedColors, maxPrice, inStockOnly]);
+  }, [products, creatorQuery, filter, selectedSizes, maxPrice, inStockOnly]);
 
   const categories = React.useMemo(() => {
     const allCats = new Set<string>();
@@ -205,10 +179,9 @@ const Collection: React.FC = () => {
     const maxPriceBoundary = products.length > 0 ? Math.max(...products.map(p => p.price)) : 10000;
     return filter !== 'All' || 
       selectedSizes.length > 0 || 
-      selectedColors.length > 0 || 
       inStockOnly || 
       maxPrice < maxPriceBoundary;
-  }, [filter, selectedSizes, selectedColors, inStockOnly, maxPrice, products]);
+  }, [filter, selectedSizes, inStockOnly, maxPrice, products]);
 
 
   return (
@@ -430,35 +403,7 @@ const Collection: React.FC = () => {
             </div>
           )}
 
-          {/* Color Filter */}
-          {allColors.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="text-[10px] font-mono tracking-[0.3em] text-accent uppercase font-bold">// Signal Colors</h3>
-              <div className="flex flex-wrap gap-2">
-                {allColors.map(color => {
-                  const isSelected = selectedColors.includes(color);
-                  return (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => {
-                        setSelectedColors(prev => 
-                          prev.includes(color) ? prev.filter(c => c !== color) : [...prev, color]
-                        );
-                      }}
-                      className={`px-3.5 py-2.5 border text-[9px] font-bold uppercase transition-all duration-300 cursor-pointer font-mono rounded-[2px] ${
-                        isSelected 
-                          ? 'bg-white text-black border-white scale-105' 
-                          : 'border-neutral-800 hover:border-white text-neutral-400'
-                      }`}
-                    >
-                      {color}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+
 
           {/* Price Range Slider */}
           {priceRange.max > priceRange.min && (
@@ -554,7 +499,6 @@ const Collection: React.FC = () => {
               setFilter('All');
               setSearchTerm('');
               setSelectedSizes([]);
-              setSelectedColors([]);
               setInStockOnly(false);
               if (products.length > 0) {
                 setMaxPrice(Math.max(...products.map(p => p.price)));
