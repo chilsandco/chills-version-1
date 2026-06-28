@@ -362,6 +362,17 @@ async function startServer() {
   let globalSwatchesCache: Record<string, { type: 'color'|'image'|'label', value: string }> | null = null;
   let lastSwatchesFetch = 0;
 
+  // Cache for /api/products
+  let globalProductsCache: any[] | null = null;
+  let lastProductsFetch = 0;
+  const PRODUCTS_CACHE_TTL = 1000 * 60 * 5; // 5 minutes cache
+
+  const invalidateProductsCache = () => {
+    console.log("[CHILS & CO.] Invalidating products cache.");
+    globalProductsCache = null;
+    lastProductsFetch = 0;
+  };
+
   const fetchSwatches = async () => {
       if (globalSwatchesCache && Date.now() - lastSwatchesFetch < 1000 * 60 * 5) {
           return globalSwatchesCache;
@@ -730,7 +741,17 @@ async function startServer() {
 
   // API Routes
   app.get("/api/products", async (req, res) => {
-    // Force no-cache for debugging
+    // Allow bypassing cache with ?fresh=true
+    const bypassCache = req.query.fresh === 'true';
+
+    if (!bypassCache && globalProductsCache && (Date.now() - lastProductsFetch < PRODUCTS_CACHE_TTL)) {
+      console.log("[CHILS & CO.] Serving products from memory cache.");
+      res.setHeader('X-Cache', 'HIT');
+      return res.json(globalProductsCache);
+    }
+
+    res.setHeader('X-Cache', 'MISS');
+    // Force no-cache for debugging / fresh fetches
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
@@ -755,7 +776,12 @@ async function startServer() {
       }
 
       console.log(`[CHILS & CO.] Successfully fetched ${response.data.length} products.`);
-      const mappedProducts = response.data.map(mapProduct);
+      const mappedProducts = response.data.map((p: any) => mapProduct(p, {}, swatchesData));
+      
+      // Update cache
+      globalProductsCache = mappedProducts;
+      lastProductsFetch = Date.now();
+
       res.json(mappedProducts);
     } catch (error) {
       console.error("WooCommerce API Error:", error);
@@ -1148,6 +1174,7 @@ async function startServer() {
 
         console.log("[CHILS & CO.] Creating WooCommerce Order:", orderData);
         const response = await wcSafeCall(wc, "post", "orders", orderData);
+        invalidateProductsCache();
         
         // Generate a unique transaction ID for PhonePe here
         const merchantTransactionId = `${response.data.id}_${Date.now()}`;
@@ -2795,9 +2822,9 @@ async function startServer() {
     }
   });
 
-  // WooCommerce Webhooks Integration
   app.post("/api/webhooks/woocommerce", async (req, res) => {
     try {
+      invalidateProductsCache();
       const payload = req.body;
       const topic = req.headers['x-wc-webhook-topic'] as string;
       const orderId = payload?.id;
