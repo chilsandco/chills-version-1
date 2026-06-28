@@ -23,6 +23,28 @@ const Collection: React.FC = () => {
   const [maxPrice, setMaxPrice] = useState<number>(10000);
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
 
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+  const touchStartY = React.useRef(0);
+
+  const handleScrollRedirectWheel = (e: React.WheelEvent) => {
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop += e.deltaY;
+    }
+  };
+
+  const handleScrollRedirectTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const handleScrollRedirectTouchMove = (e: React.TouchEvent) => {
+    if (scrollContainerRef.current) {
+      const touchY = e.touches[0].clientY;
+      const deltaY = touchStartY.current - touchY;
+      scrollContainerRef.current.scrollTop += deltaY;
+      touchStartY.current = touchY;
+    }
+  };
+
   useEffect(() => {
     const html = document.documentElement;
     if (isDrawerOpen) {
@@ -366,7 +388,9 @@ const Collection: React.FC = () => {
         <div 
           className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 transition-opacity duration-300 animate-fade-in"
           onClick={() => setIsDrawerOpen(false)}
-          onTouchMove={(e) => e.preventDefault()}
+          onWheel={handleScrollRedirectWheel}
+          onTouchStart={handleScrollRedirectTouchStart}
+          onTouchMove={handleScrollRedirectTouchMove}
         />
       )}
 
@@ -377,7 +401,12 @@ const Collection: React.FC = () => {
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-8 py-6 border-b border-neutral-900">
+        <div 
+          className="flex items-center justify-between px-8 py-6 border-b border-neutral-900"
+          onWheel={handleScrollRedirectWheel}
+          onTouchStart={handleScrollRedirectTouchStart}
+          onTouchMove={handleScrollRedirectTouchMove}
+        >
           <div>
             <h2 className="text-xl font-display font-bold tracking-tight uppercase">Filters</h2>
             <p className="text-[10px] tracking-[0.2em] font-mono text-neutral-500 mt-1 uppercase">
@@ -395,6 +424,7 @@ const Collection: React.FC = () => {
 
         {/* Filter Scrollable Content */}
         <div 
+          ref={scrollContainerRef}
           className="flex-1 overflow-y-auto overscroll-contain px-8 py-6 space-y-8 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-800"
           style={{ WebkitOverflowScrolling: 'touch' }}
         >
@@ -536,7 +566,12 @@ const Collection: React.FC = () => {
         </div>
 
         {/* Footer Actions */}
-        <div className="p-8 border-t border-neutral-900 bg-[#070707] flex gap-4">
+        <div 
+          className="p-8 border-t border-neutral-900 bg-[#070707] flex gap-4"
+          onWheel={handleScrollRedirectWheel}
+          onTouchStart={handleScrollRedirectTouchStart}
+          onTouchMove={handleScrollRedirectTouchMove}
+        >
           <button
             onClick={() => {
               setFilter('All');
