@@ -170,17 +170,6 @@ const OrderSignals: React.FC = () => {
                     <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Order Identity</p>
                     <div className="flex items-center gap-2">
                       <p className="font-mono text-sm tracking-widest group-hover:text-accent transition-colors">#{signal.signalId}</p>
-                      <a 
-                        href={`https://api.chilsandco.com/?print-order=${signal.id}&print-order-type=invoice&order_key=${signal.orderKey || ''}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                        }}
-                        className="text-[8px] text-neutral-500 hover:text-accent uppercase tracking-widest border border-neutral-800 px-1.5 py-0.5"
-                      >
-                        INV
-                      </a>
                     </div>
                   </div>
                   

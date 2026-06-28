@@ -105,26 +105,13 @@ const SignalDetails: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {!['failed', 'cancelled', 'refunded'].includes(signal.status) && (
-              <a 
-                href={`https://api.chilsandco.com/?print-order=${signal.id}&print-order-type=invoice&order_key=${signal.orderKey || ''}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-6 py-4 border border-neutral-800 bg-neutral-950 hover:border-accent hover:text-accent transition-all text-center rounded-sm"
-              >
-                <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1">Documents</p>
-                <p className="text-[11px] font-bold uppercase tracking-widest flex items-center gap-2">
-                  Download Invoice
-                </p>
-              </a>
-            )}
             <div className={`px-6 py-4 border rounded-sm ${['failed', 'cancelled', 'refunded'].includes(signal.status) ? 'bg-red-500/5 border-red-500/20' : 'bg-neutral-950 border-neutral-900'}`}>
               <p className={`text-[8px] tracking-[0.3em] uppercase mb-1 ${['failed', 'cancelled', 'refunded'].includes(signal.status) ? 'text-red-500/50' : 'text-neutral-600'}`}>Status</p>
               <p className={`text-[11px] font-bold uppercase tracking-widest ${['failed', 'cancelled', 'refunded'].includes(signal.status) ? 'text-red-500' : ''}`}>
                 {signal.status === 'refunded' ? '✅ Refunded' : signal.status === 'failed' ? '❌ Failed' : signal.status === 'cancelled' ? '🚫 Cancelled' : signal.status}
               </p>
             </div>
-        </div>
+          </div>
       </div>
     </header>
 

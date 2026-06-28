@@ -327,17 +327,6 @@ const OrderSuccess: React.FC = () => {
         </div>
 
         <div className="flex flex-col md:flex-row gap-6 justify-center">
-          {isSuccessful && (
-            <a 
-              href={`https://api.chilsandco.com/?print-order=${orderId}&print-order-type=invoice&order_key=${orderInfo?.orderKey || ''}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group flex items-center justify-center gap-3 px-12 py-5 border border-accent text-[11px] tracking-[0.3em] font-bold uppercase bg-accent/5 text-accent hover:bg-accent hover:text-black transition-all"
-            >
-              Download Invoice
-              <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform" />
-            </a>
-          )}
           <Link 
             to={isSuccessful ? "/console/orders" : "/"} 
             className="group flex items-center justify-center gap-3 px-12 py-5 border border-white text-[11px] tracking-[0.3em] font-bold uppercase bg-white text-black hover:bg-accent hover:border-accent transition-all"
