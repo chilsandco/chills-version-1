@@ -280,6 +280,14 @@ async function startServer() {
   });
   let globalSwatchesCache = null;
   let lastSwatchesFetch = 0;
+  let globalProductsCache = null;
+  let lastProductsFetch = 0;
+  const PRODUCTS_CACHE_TTL = 1e3 * 60 * 5;
+  const invalidateProductsCache = () => {
+    console.log("[CHILS & CO.] Invalidating products cache.");
+    globalProductsCache = null;
+    lastProductsFetch = 0;
+  };
   const fetchSwatches = async () => {
     if (globalSwatchesCache && Date.now() - lastSwatchesFetch < 1e3 * 60 * 5) {
       return globalSwatchesCache;
@@ -436,6 +444,14 @@ async function startServer() {
         };
       });
     }
+    const parentColors = (attributes.find((a) => {
+      const name = (a.name || "").toLowerCase();
+      return name === "color" || name === "pa_color" || name === "colors" || name === "pa_colors";
+    })?.options || []).map(decodeEntities);
+    const parentSizes = (attributes.find((a) => {
+      const name = (a.name || "").toLowerCase();
+      return name === "size" || name === "pa_size" || name === "sizes" || name === "pa_sizes";
+    })?.options || []).map(decodeEntities);
     return {
       id: (wcProduct.id || "").toString(),
       name: decodeEntities(wcProduct.name || "Unknown Product"),
@@ -462,8 +478,8 @@ async function startServer() {
       coCreator,
       featured: !!wcProduct.featured,
       variations: mappedVariations.length > 0 ? mappedVariations : void 0,
-      availableColors: availableColors.length > 0 ? availableColors : void 0,
-      availableSizes: availableSizes.length > 0 ? availableSizes : void 0,
+      availableColors: availableColors.length > 0 ? availableColors : parentColors.length > 0 ? parentColors : void 0,
+      availableSizes: availableSizes.length > 0 ? availableSizes : parentSizes.length > 0 ? parentSizes : void 0,
       colorSwatches: Object.keys(swatchesData).length > 0 ? swatchesData : void 0
     };
   };
@@ -569,6 +585,13 @@ async function startServer() {
     }
   };
   app.get("/api/products", async (req, res) => {
+    const bypassCache = req.query.fresh === "true";
+    if (!bypassCache && globalProductsCache && Date.now() - lastProductsFetch < PRODUCTS_CACHE_TTL) {
+      console.log("[CHILS & CO.] Serving products from memory cache.");
+      res.setHeader("X-Cache", "HIT");
+      return res.json(globalProductsCache);
+    }
+    res.setHeader("X-Cache", "MISS");
     res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
@@ -588,7 +611,9 @@ async function startServer() {
         return res.json([]);
       }
       console.log(`[CHILS & CO.] Successfully fetched ${response.data.length} products.`);
-      const mappedProducts = response.data.map(mapProduct);
+      const mappedProducts = response.data.map((p) => mapProduct(p, {}, swatchesData));
+      globalProductsCache = mappedProducts;
+      lastProductsFetch = Date.now();
       res.json(mappedProducts);
     } catch (error) {
       console.error("WooCommerce API Error:", error);
@@ -931,6 +956,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         };
         console.log("[CHILS & CO.] Creating WooCommerce Order:", orderData);
         const response = await wcSafeCall(wc, "post", "orders", orderData);
+        invalidateProductsCache();
         const merchantTransactionId = `${response.data.id}_${Date.now()}`;
         try {
           await wcSafeCall(wc, "put", `orders/${response.data.id}`, {
@@ -2273,6 +2299,7 @@ Images: ${images ? images.join(", ") : "None"}`;
   });
   app.post("/api/webhooks/woocommerce", async (req, res) => {
     try {
+      invalidateProductsCache();
       const payload = req.body;
       const topic = req.headers["x-wc-webhook-topic"];
       const orderId = payload?.id;

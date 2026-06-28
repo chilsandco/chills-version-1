@@ -136,24 +136,34 @@ const Collection: React.FC = () => {
 
       // 5. Size variation filter
       if (selectedSizes.length > 0) {
-        if (!p.variations) return false;
-        const hasMatchingSize = p.variations.some(v => {
-          const matchesSize = v.attributes.size && selectedSizes.includes(v.attributes.size);
-          const inStock = v.manageStock ? v.stockQuantity > 0 : v.stockStatus !== 'outofstock';
-          return matchesSize && (!inStockOnly || inStock);
-        });
-        if (!hasMatchingSize) return false;
+        if (p.variations) {
+          const hasMatchingSize = p.variations.some(v => {
+            const matchesSize = v.attributes.size && selectedSizes.includes(v.attributes.size);
+            const inStock = v.manageStock ? v.stockQuantity > 0 : v.stockStatus !== 'outofstock';
+            return matchesSize && (!inStockOnly || inStock);
+          });
+          if (!hasMatchingSize) return false;
+        } else {
+          // Fallback if variations data is not fetched for the list
+          const hasMatchingSize = p.availableSizes?.some(size => selectedSizes.includes(size));
+          if (!hasMatchingSize) return false;
+        }
       }
 
       // 6. Color variation filter
       if (selectedColors.length > 0) {
-        if (!p.variations) return false;
-        const hasMatchingColor = p.variations.some(v => {
-          const matchesColor = v.attributes.color && selectedColors.includes(v.attributes.color);
-          const inStock = v.manageStock ? v.stockQuantity > 0 : v.stockStatus !== 'outofstock';
-          return matchesColor && (!inStockOnly || inStock);
-        });
-        if (!hasMatchingColor) return false;
+        if (p.variations) {
+          const hasMatchingColor = p.variations.some(v => {
+            const matchesColor = v.attributes.color && selectedColors.includes(v.attributes.color);
+            const inStock = v.manageStock ? v.stockQuantity > 0 : v.stockStatus !== 'outofstock';
+            return matchesColor && (!inStockOnly || inStock);
+          });
+          if (!hasMatchingColor) return false;
+        } else {
+          // Fallback if variations data is not fetched for the list
+          const hasMatchingColor = p.availableColors?.some(color => selectedColors.includes(color));
+          if (!hasMatchingColor) return false;
+        }
       }
 
       return true;
