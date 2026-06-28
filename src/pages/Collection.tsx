@@ -272,7 +272,7 @@ const Collection: React.FC = () => {
                       setViewMode('editorial');
                       localStorage.setItem('chils_view_mode', 'editorial');
                     }}
-                    title="Editorial Grid (1 Col Mobile / 2 Col Desktop)"
+                    title="Show 1 product per row (Spacious Editorial View)"
                     className={`h-7 w-7 text-[10px] font-mono font-bold transition-all border border-neutral-900 hover:border-neutral-700 hover:text-white flex items-center justify-center rounded-[2px] cursor-pointer ${
                       viewMode === 'editorial'
                         ? 'bg-white text-black border-white'
@@ -286,7 +286,7 @@ const Collection: React.FC = () => {
                       setViewMode('archive');
                       localStorage.setItem('chils_view_mode', 'archive');
                     }}
-                    title="Archive Grid (2 Col Mobile / 4 Col Desktop)"
+                    title="Show 2 products per row (Compact Archive Scan View)"
                     className={`h-7 w-7 text-[10px] font-mono font-bold transition-all border border-neutral-900 hover:border-neutral-700 hover:text-white flex items-center justify-center rounded-[2px] cursor-pointer ${
                       viewMode === 'archive'
                         ? 'bg-white text-black border-white'
@@ -299,6 +299,7 @@ const Collection: React.FC = () => {
 
                 <button
                   onClick={() => setIsDrawerOpen(true)}
+                  title="Open filter options (Filter by Size, Color, Price, and Category)"
                   className="flex items-center gap-2 text-[11px] tracking-[0.2em] font-bold uppercase text-neutral-400 hover:text-white transition-all duration-300 cursor-pointer active:scale-95 whitespace-nowrap group"
                 >
                   <SlidersHorizontal size={13} className="text-neutral-500 group-hover:text-accent transition-colors" />
