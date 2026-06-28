@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { SlidersHorizontal, X, Search, RotateCcw, Check } from 'lucide-react';
+import { SlidersHorizontal, X, Search, RotateCcw, Check, Activity } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 import { Product } from '../types';
@@ -8,6 +8,7 @@ import { Product } from '../types';
 
 const Collection: React.FC = () => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('All');
   const [searchParams, setSearchParams] = useSearchParams();
   const creatorQuery = searchParams.get('creator');
@@ -55,6 +56,9 @@ const Collection: React.FC = () => {
       .catch(err => {
         console.error("Collection: Error fetching products", err);
         setProducts([]);
+      })
+      .finally(() => {
+        setLoading(false);
       });
   }, []);
 
@@ -269,18 +273,27 @@ const Collection: React.FC = () => {
         )}
       </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1 bg-neutral-900">
-        {filteredProducts.map(product => (
-          <div key={product.id} className="bg-black">
-            <ProductCard product={product} />
-          </div>
-        ))}
-      </div>
-
-      {filteredProducts.length === 0 && (
-        <div className="py-32 text-center text-neutral-500 uppercase tracking-widest text-sm">
-          No items found in this category.
+      {loading ? (
+        <div className="py-40 flex flex-col items-center justify-center gap-4">
+          <Activity className="animate-pulse text-accent" size={32} />
+          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-neutral-500">Synchronizing Archive...</p>
         </div>
+      ) : (
+        <>
+          {filteredProducts.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-1 bg-neutral-900">
+              {filteredProducts.map(product => (
+                <div key={product.id} className="bg-black">
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-32 text-center text-neutral-500 uppercase tracking-widest text-sm">
+              No items found in this category.
+            </div>
+          )}
+        </>
       )}
 
       {/* Drawer Overlay Backdrop */}
