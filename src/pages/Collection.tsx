@@ -23,26 +23,7 @@ const Collection: React.FC = () => {
   const [maxPrice, setMaxPrice] = useState<number>(10000);
   const [inStockOnly, setInStockOnly] = useState<boolean>(false);
 
-  useEffect(() => {
-    const html = document.documentElement;
-    if (isDrawerOpen) {
-      document.body.style.overflow = 'hidden';
-      document.body.style.height = '100vh';
-      html.style.overflow = 'hidden';
-      html.style.height = '100vh';
-    } else {
-      document.body.style.overflow = '';
-      document.body.style.height = '';
-      html.style.overflow = '';
-      html.style.height = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-      document.body.style.height = '';
-      html.style.overflow = '';
-      html.style.height = '';
-    };
-  }, [isDrawerOpen]);
+
 
   useEffect(() => {
     fetch('/api/products')
@@ -326,7 +307,6 @@ const Collection: React.FC = () => {
         <div 
           className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 transition-opacity duration-300 animate-fade-in"
           onClick={() => setIsDrawerOpen(false)}
-          onTouchMove={(e) => e.preventDefault()}
         />
       )}
 
