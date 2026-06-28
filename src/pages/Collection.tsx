@@ -276,7 +276,7 @@ const Collection: React.FC = () => {
       {loading ? (
         <div className="py-40 flex flex-col items-center justify-center gap-4">
           <Activity className="animate-pulse text-accent" size={32} />
-          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-neutral-500">Synchronizing Archive...</p>
+          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-neutral-500">Synchronizing Chils...</p>
         </div>
       ) : (
         <>
