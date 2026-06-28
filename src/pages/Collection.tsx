@@ -396,7 +396,7 @@ const Collection: React.FC = () => {
 
       {/* Drawer Panel */}
       <div 
-        className={`fixed top-0 right-0 h-screen max-h-screen w-full sm:w-[460px] bg-[#0a0a0a] z-50 shadow-2xl flex flex-col border-l border-neutral-900 transition-transform duration-350 ease-out transform ${
+        className={`fixed top-0 right-0 h-[100dvh] max-h-[100dvh] w-full sm:w-[460px] bg-[#0a0a0a] z-50 shadow-2xl flex flex-col border-l border-neutral-900 transition-transform duration-350 ease-out transform ${
           isDrawerOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
