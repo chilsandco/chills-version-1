@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { SlidersHorizontal, X, Search, RotateCcw, Check, Activity } from 'lucide-react';
+import { SlidersHorizontal, X, Search, RotateCcw, Check, Activity, Square, LayoutGrid } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 import { Product } from '../types';
@@ -273,13 +273,13 @@ const Collection: React.FC = () => {
                       localStorage.setItem('chils_view_mode', 'editorial');
                     }}
                     title="Show 1 product per row (Spacious Editorial View)"
-                    className={`h-7 w-7 text-[10px] font-mono font-bold transition-all border border-neutral-900 hover:border-neutral-700 hover:text-white flex items-center justify-center rounded-[2px] cursor-pointer ${
+                    className={`h-7 w-7 transition-all border border-neutral-900 hover:border-neutral-700 hover:text-white flex items-center justify-center rounded-[2px] cursor-pointer ${
                       viewMode === 'editorial'
                         ? 'bg-white text-black border-white'
                         : 'text-neutral-500'
                     }`}
                   >
-                    1
+                    <Square size={13} strokeWidth={1.5} />
                   </button>
                   <button
                     onClick={() => {
@@ -287,13 +287,13 @@ const Collection: React.FC = () => {
                       localStorage.setItem('chils_view_mode', 'archive');
                     }}
                     title="Show 2 products per row (Compact Archive Scan View)"
-                    className={`h-7 w-7 text-[10px] font-mono font-bold transition-all border border-neutral-900 hover:border-neutral-700 hover:text-white flex items-center justify-center rounded-[2px] cursor-pointer ${
+                    className={`h-7 w-7 transition-all border border-neutral-900 hover:border-neutral-700 hover:text-white flex items-center justify-center rounded-[2px] cursor-pointer ${
                       viewMode === 'archive'
                         ? 'bg-white text-black border-white'
                         : 'text-neutral-500'
                     }`}
                   >
-                    2
+                    <LayoutGrid size={13} strokeWidth={1.5} />
                   </button>
                 </div>
 
