@@ -607,9 +607,29 @@ async function startServer() {
       console.log(`[CHILS & CO. DEBUG] Product ${req.params.id} Type: '${productData.type}'`);
       let resolvedMediaUrls = {};
       if (productData.type === "variable") {
-        const variationsResponse = await wcSafeCall(wc, "get", `products/${req.params.id}/variations`);
-        productData.variations_data = variationsResponse.data;
-        console.log(`[CHILS & CO. DEBUG] Fetched ${productData.variations_data?.length || 0} variations for product ${req.params.id}`);
+        let allVariations = [];
+        let page = 1;
+        let hasMore = true;
+        while (hasMore) {
+          console.log(`[CHILS & CO. DEBUG] Fetching variations page ${page} for product ${req.params.id}...`);
+          const variationsResponse = await wcSafeCall(wc, "get", `products/${req.params.id}/variations`, {
+            per_page: 100,
+            page
+          });
+          const pageData = variationsResponse.data;
+          if (Array.isArray(pageData) && pageData.length > 0) {
+            allVariations = [...allVariations, ...pageData];
+            if (pageData.length < 100) {
+              hasMore = false;
+            } else {
+              page++;
+            }
+          } else {
+            hasMore = false;
+          }
+        }
+        productData.variations_data = allVariations;
+        console.log(`[CHILS & CO. DEBUG] Fetched ${productData.variations_data.length} variations total for product ${req.params.id}`);
         const allGalleryIds = /* @__PURE__ */ new Set();
         productData.variations_data.forEach((v) => {
           if (v.gallery_image_ids && Array.isArray(v.gallery_image_ids)) {

@@ -779,9 +779,32 @@ async function startServer() {
       let resolvedMediaUrls: Record<string, string> = {};
 
       if (productData.type === 'variable') {
-        const variationsResponse = await wcSafeCall(wc, "get", `products/${req.params.id}/variations`);
-        productData.variations_data = variationsResponse.data;
-        console.log(`[CHILS & CO. DEBUG] Fetched ${productData.variations_data?.length || 0} variations for product ${req.params.id}`);
+        let allVariations: any[] = [];
+        let page = 1;
+        let hasMore = true;
+        
+        while (hasMore) {
+          console.log(`[CHILS & CO. DEBUG] Fetching variations page ${page} for product ${req.params.id}...`);
+          const variationsResponse = await wcSafeCall(wc, "get", `products/${req.params.id}/variations`, { 
+            per_page: 100,
+            page: page
+          });
+          
+          const pageData = variationsResponse.data;
+          if (Array.isArray(pageData) && pageData.length > 0) {
+            allVariations = [...allVariations, ...pageData];
+            if (pageData.length < 100) {
+              hasMore = false;
+            } else {
+              page++;
+            }
+          } else {
+            hasMore = false;
+          }
+        }
+        
+        productData.variations_data = allVariations;
+        console.log(`[CHILS & CO. DEBUG] Fetched ${productData.variations_data.length} variations total for product ${req.params.id}`);
         
         // Harvest all gallery IDs from variations to fetch their URLs if missing
         const allGalleryIds = new Set<string>();
