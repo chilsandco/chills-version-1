@@ -158,8 +158,46 @@ const Collection: React.FC = () => {
   }, [products]);
 
   const categoryCounts = React.useMemo(() => {
-    const counts: Record<string, number> = { All: products.length };
-    products.forEach(p => {
+    // Filter products by all active filters EXCEPT the category filter itself
+    const productsMatchingOtherFilters = products.filter(p => {
+      // 1. Creator filter (from query param)
+      if (creatorQuery && p.coCreator?.toLowerCase() !== creatorQuery.toLowerCase()) {
+        return false;
+      }
+
+      // 2. Price filter
+      if (p.price > maxPrice) {
+        return false;
+      }
+
+      // 3. Stock Availability filter
+      const isAvailable = p.status === "Available" && 
+        (p.variations ? p.variations.some(v => v.manageStock ? v.stockQuantity > 0 : v.stockStatus !== 'outofstock') : true);
+      if (inStockOnly && !isAvailable) {
+        return false;
+      }
+
+      // 4. Size variation filter
+      if (selectedSizes.length > 0) {
+        if (p.variations) {
+          const hasMatchingSize = p.variations.some(v => {
+            const matchesSize = v.attributes.size && selectedSizes.includes(v.attributes.size);
+            const inStock = v.manageStock ? v.stockQuantity > 0 : v.stockStatus !== 'outofstock';
+            return matchesSize && (!inStockOnly || inStock);
+          });
+          if (!hasMatchingSize) return false;
+        } else {
+          // Fallback if variations data is not fetched
+          const hasMatchingSize = p.availableSizes?.some(size => selectedSizes.includes(size));
+          if (!hasMatchingSize) return false;
+        }
+      }
+
+      return true;
+    });
+
+    const counts: Record<string, number> = { All: productsMatchingOtherFilters.length };
+    productsMatchingOtherFilters.forEach(p => {
       const productCats = p.categories || [p.category];
       productCats.forEach(cat => {
         if (cat) {
@@ -168,7 +206,7 @@ const Collection: React.FC = () => {
       });
     });
     return counts;
-  }, [products]);
+  }, [products, creatorQuery, maxPrice, inStockOnly, selectedSizes]);
 
   const filteredCategories = React.useMemo(() => {
     if (!searchTerm.trim()) return categories;
