@@ -438,7 +438,7 @@ const Checkout: React.FC = () => {
             
             <div className="space-y-4">
               {cart.map(item => (
-                <div key={`${item.id}-${item.selectedSize}`} className="flex gap-6 p-4 border border-white/5 bg-neutral-950/10 rounded-sm group relative">
+                <div key={`${item.id}-${item.selectedSize}-${item.selectedColor || ''}`} className="flex gap-6 p-4 border border-white/5 bg-neutral-950/10 rounded-sm group relative">
                   <Link to={`/product/${item.id}`} className="w-16 h-20 bg-neutral-950 overflow-hidden relative flex-shrink-0 block rounded-sm">
                     <img 
                         src={item.images[0]} 
@@ -460,18 +460,18 @@ const Checkout: React.FC = () => {
                           <span className="text-[8px] text-accent uppercase tracking-[0.2em] font-bold font-mono">SIZE: {item.selectedSize || 'OS'}</span>
                         </div>
                       </div>
-                      <button type="button" onClick={() => removeFromCart(item.id, item.selectedSize)} className="text-neutral-700 hover:text-red-500 transition-colors p-1 -mt-1 cursor-pointer">
+                      <button type="button" onClick={() => removeFromCart(item.id, item.selectedSize, item.selectedColor)} className="text-neutral-700 hover:text-red-500 transition-colors p-1 -mt-1 cursor-pointer">
                           <Trash2 size={13} />
                       </button>
                     </div>
 
                     <div className="flex justify-between items-center mt-2">
                       <div className="flex items-center bg-black border border-neutral-900/80 p-0.5 rounded-sm">
-                        <button type="button" onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedSize)} className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer">
+                        <button type="button" onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedSize, item.selectedColor)} className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer">
                             <Minus size={8} />
                         </button>
                         <span className="w-6 text-center text-[9px] font-mono font-bold">{item.quantity.toString().padStart(2, '0')}</span>
-                        <button type="button" onClick={() => updateQuantity(item.id, item.quantity + 1, item.selectedSize)} className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer">
+                        <button type="button" onClick={() => updateQuantity(item.id, item.quantity + 1, item.selectedSize, item.selectedColor)} className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer">
                             <Plus size={8} />
                         </button>
                       </div>
