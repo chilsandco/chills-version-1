@@ -184,23 +184,20 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
                 </p>
               </div>
 
-              {/* Current vs Upgrade — Updated for MOQ */}
+              {/* Current vs Upgrade */}
               <div className="flex items-center gap-4 mt-5 mb-2">
-                {/* 
                 <div className="flex items-center gap-2 px-3 py-2 bg-neutral-900/60 border border-neutral-800">
                   <Leaf size={12} className="text-green-500/70" />
                   <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-neutral-500">Current: Eco Bag</span>
                 </div>
                 <ChevronRight size={14} className="text-neutral-700" />
-                */}
                 <div className="flex items-center gap-2 px-3 py-2 border border-accent/30 bg-accent/5">
                   <Package size={12} className="text-accent" />
-                  <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-accent">Active Shipping: Second Life Box Only</span>
+                  <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-accent">Upgrade: Second Life Box</span>
                 </div>
               </div>
 
-              {/* Top Eco Bag CTA — commented out for MOQ enforcement */}
-              {/* 
+              {/* Top Eco Bag CTA */}
               <button
                 type="button"
                 onClick={onContinueWithEcoBag}
@@ -209,7 +206,6 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
                 <Leaf size={11} />
                 <span>Continue with Biodegradable Eco Bag</span>
               </button>
-              */}
             </div>
 
             {/* Divider */}
@@ -322,8 +318,7 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
             <div className="p-8 md:p-10 pt-6">
               <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-neutral-800 to-transparent mb-6" />
 
-              {/* Bottom Eco Bag CTA — commented out for MOQ enforcement */}
-              {/* 
+              {/* Bottom Eco Bag CTA */}
               <button
                 type="button"
                 onClick={onContinueWithEcoBag}
@@ -332,7 +327,6 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
                 <Leaf size={12} />
                 <span>Continue with Biodegradable Eco Bag</span>
               </button>
-              */}
 
               <p className="text-[8px] uppercase tracking-[0.2em] text-neutral-800 text-center leading-relaxed mt-4">
                 Second Life Box packaging is 100% sustainable. Your choice. Your signal.

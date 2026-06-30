@@ -47,12 +47,15 @@ const Checkout: React.FC = () => {
 
   // Second Life modal state — shown when 1 item in cart
   const [showSecondLifeModal, setShowSecondLifeModal] = useState(false);
-  const [secondLifeDismissed, setSecondLifeDismissed] = useState(false);
+  const [secondLifeDismissed, setSecondLifeDismissed] = useState(() => {
+    return sessionStorage.getItem('chils_packaging_upsell_dismissed') === 'true';
+  });
   const [coordinatesFlash, setCoordinatesFlash] = useState(false);
   const [shippingMethod, setShippingMethod] = useState<'delivery' | 'pickup'>('delivery');
 
   const dismissSecondLife = () => {
     setSecondLifeDismissed(true);
+    sessionStorage.setItem('chils_packaging_upsell_dismissed', 'true');
     setShowSecondLifeModal(false);
   };
 
@@ -329,8 +332,8 @@ const Checkout: React.FC = () => {
       return;
     }
 
-    // Second Life gate: force at least 2 items. Single items cannot checkout.
-    if (totalItemCount < 2) {
+    // Second Life gate: single items show upsell modal once before checking out
+    if (totalItemCount === 1 && !secondLifeDismissed) {
       setShowSecondLifeModal(true);
       return;
     }
@@ -1053,7 +1056,7 @@ const Checkout: React.FC = () => {
                   {totalItemCount >= 2 ? (
                     <span className="text-accent font-medium">Congratulations! Your premium, handcrafted Second Life Box is unlocked and will ship with your order.</span>
                   ) : (
-                    <span>Add <strong className="text-white">one more tee</strong> to unlock your premium, handcrafted Second Life Box! (MOQ: 2 tees)</span>
+                    <span>Order qualifies for a <strong>Biodegradable Eco Bag</strong>. Add <strong className="text-white">one more tee</strong> to unlock the premium, handcrafted <strong className="text-accent">Second Life Box</strong>!</span>
                   )}
                 </p>
               </div>
@@ -1080,7 +1083,7 @@ const Checkout: React.FC = () => {
                   </div>
                   {!isProcessing && (
                     <span className="relative z-10 text-[8px] opacity-40 font-bold group-hover:opacity-100 transition-opacity">
-                      {totalItemCount < 2 ? "2 T-shirts requested for unboxing" : "Redirect to secure portal"}
+                      {totalItemCount < 2 && !secondLifeDismissed ? "Unlocks Premium Box with 2 Tees" : "Redirect to secure portal"}
                     </span>
                   )}
                 </button>

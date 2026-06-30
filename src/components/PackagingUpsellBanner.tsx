@@ -114,7 +114,6 @@ const PackagingUpsellBanner: React.FC<PackagingUpsellBannerProps> = ({ itemCount
                     <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
                   </motion.button>
 
-                  {/* Commented out for MOQ enforcement
                   <button
                     onClick={handleDismiss}
                     className="w-full py-3 text-[10px] tracking-[0.25em] font-bold uppercase text-neutral-600 hover:text-neutral-300 transition-colors flex items-center justify-center gap-2"
@@ -122,7 +121,6 @@ const PackagingUpsellBanner: React.FC<PackagingUpsellBannerProps> = ({ itemCount
                     <Leaf size={10} />
                     <span>Continue with Eco Bag</span>
                   </button>
-                  */}
 
                   <p className="text-[8px] uppercase tracking-[0.2em] text-neutral-800 text-center leading-relaxed mt-1">
                     Second Life Box packaging is 100% sustainable. <br />
