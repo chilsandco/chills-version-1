@@ -7,7 +7,7 @@ import {
   MapPin, Building, Trash, Navigation, 
   Check, Settings, X, ChevronRight,
   GripVertical, Share2, Package, ShieldCheck as Shield,
-  Lock, Info, Zap, Leaf
+  Lock, Info, Zap, Leaf, Sparkles
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
