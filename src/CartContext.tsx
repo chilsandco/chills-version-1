@@ -71,18 +71,28 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addToCart = (product: Product, size?: string, color?: string) => {
     setCart(prev => {
-      const existing = prev.find(item => item.id === product.id && item.selectedSize === size && item.selectedColor === color);
+      const existing = prev.find(item => 
+        item.id === product.id && 
+        item.selectedSize === size && 
+        (item.selectedColor || undefined) === (color || undefined)
+      );
       if (existing) {
         return prev.map(item =>
-          (item.id === product.id && item.selectedSize === size && item.selectedColor === color) ? { ...item, quantity: item.quantity + 1 } : item
+          (item.id === product.id && item.selectedSize === size && (item.selectedColor || undefined) === (color || undefined)) 
+            ? { ...item, quantity: item.quantity + 1 } 
+            : item
         );
       }
-      return [...prev, { ...product, quantity: 1, selectedSize: size, selectedColor: color }];
+      return [...prev, { ...product, quantity: 1, selectedSize: size, selectedColor: color || undefined }];
     });
   };
 
   const removeFromCart = (productId: string, size?: string, color?: string) => {
-    setCart(prev => prev.filter(item => !(item.id === productId && item.selectedSize === size && item.selectedColor === color)));
+    setCart(prev => prev.filter(item => !(
+      item.id === productId && 
+      item.selectedSize === size && 
+      (item.selectedColor || undefined) === (color || undefined)
+    )));
   };
 
   const updateQuantity = (productId: string, quantity: number, size?: string, color?: string) => {
@@ -91,7 +101,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
     setCart(prev =>
-      prev.map(item => (item.id === productId && item.selectedSize === size && item.selectedColor === color ? { ...item, quantity } : item))
+      prev.map(item => (
+        item.id === productId && 
+        item.selectedSize === size && 
+        (item.selectedColor || undefined) === (color || undefined) 
+          ? { ...item, quantity } 
+          : item
+      ))
     );
   };
 

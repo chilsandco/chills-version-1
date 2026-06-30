@@ -659,7 +659,7 @@ const ProductDetail: React.FC = () => {
     const isAlreadyInCart = cart.some(item => 
       item.id === product.id && 
       item.selectedSize === selectedSize && 
-      item.selectedColor === selectedColor
+      (item.selectedColor || undefined) === (selectedColor || undefined)
     );
     
     if (!isAlreadyInCart) {

@@ -42,7 +42,7 @@ const Checkout: React.FC = () => {
   // Total items in cart for packaging intelligence
   const totalItemCount = cart.reduce((count, item) => count + item.quantity, 0);
   const { triggerCheckout, isProcessing, error, setError } = useCheckout();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
   // Second Life modal state — shown when 1 item in cart
@@ -90,10 +90,10 @@ const Checkout: React.FC = () => {
 
   // Redirect to login if not authenticated (Guest checkout disabled)
   useEffect(() => {
-    if (!isAuthenticated) {
+    if (!isLoading && !isAuthenticated) {
       navigate('/auth?redirect=/checkout');
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isLoading, navigate]);
 
   // Load addresses and persisted form info from local storage on mount
   useEffect(() => {
@@ -340,6 +340,14 @@ const Checkout: React.FC = () => {
 
     await proceedToPayment();
   };
+
+  if (isLoading) {
+    return (
+      <div className="h-screen bg-black flex items-center justify-center">
+        <div className="w-12 h-12 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (cart.length === 0) {
     return (
