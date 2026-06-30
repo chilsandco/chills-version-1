@@ -946,7 +946,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
           meta_data: [
             {
               key: "Packaging Selection",
-              value: lineItems.reduce((sum, item) => sum + item.quantity, 0) === 1 ? "Biodegradable Eco Bag" : "Second Life Box"
+              value: lineItems.reduce((sum, item) => sum + item.quantity, 0) === 1 ? "Eco-friendly Biodegradable Bag" : "Second Life Box"
             },
             {
               key: "Delivery Method",

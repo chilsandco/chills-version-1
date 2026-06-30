@@ -1056,7 +1056,7 @@ const Checkout: React.FC = () => {
                   {totalItemCount >= 2 ? (
                     <span className="text-accent font-medium">Congratulations! Your premium, handcrafted Second Life Box is unlocked and will ship with your order.</span>
                   ) : (
-                    <span>Order qualifies for a <strong>Biodegradable Eco Bag</strong>. Add <strong className="text-white">one more tee</strong> to unlock the premium, handcrafted <strong className="text-accent">Second Life Box</strong>!</span>
+                    <span>Order qualifies for an <strong>Eco-friendly Biodegradable Bag</strong>. Add <strong className="text-white">one more tee</strong> to unlock the premium, handcrafted <strong className="text-accent">Second Life Box</strong>!</span>
                   )}
                 </p>
               </div>

@@ -204,7 +204,7 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
                 className="w-full mt-6 py-3 text-[10px] tracking-[0.25em] font-bold uppercase text-neutral-500 hover:text-white transition-colors flex items-center justify-center gap-2 border border-neutral-900 hover:border-neutral-600"
               >
                 <Leaf size={11} />
-                <span>Continue with Biodegradable Eco Bag</span>
+                <span>Continue with Eco-friendly Biodegradable Bag</span>
               </button>
             </div>
 
@@ -325,7 +325,7 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
                 className="w-full py-4 text-[10px] tracking-[0.3em] font-bold uppercase text-neutral-500 hover:text-white transition-colors flex items-center justify-center gap-2 border border-neutral-900 hover:border-neutral-700"
               >
                 <Leaf size={12} />
-                <span>Continue with Biodegradable Eco Bag</span>
+                <span>Continue with Eco-friendly Biodegradable Bag</span>
               </button>
 
               <p className="text-[8px] uppercase tracking-[0.2em] text-neutral-800 text-center leading-relaxed mt-4">

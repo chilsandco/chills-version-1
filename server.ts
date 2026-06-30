@@ -1172,7 +1172,7 @@ async function startServer() {
             {
               key: "Packaging Selection",
               value: lineItems.reduce((sum: number, item: any) => sum + item.quantity, 0) === 1 
-                ? "Biodegradable Eco Bag" 
+                ? "Eco-friendly Biodegradable Bag" 
                 : "Second Life Box"
             },
             {
