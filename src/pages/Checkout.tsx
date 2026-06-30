@@ -1103,12 +1103,12 @@ const Checkout: React.FC = () => {
                           </span>
                         ) : (
                           <span className="text-[8px] uppercase tracking-widest font-bold text-neutral-600">
-                            Locked (MOQ: 2)
+                            Locked (Requires 2+ tees)
                           </span>
                         )}
                       </div>
                       <p className="text-[9.5px] text-neutral-600 mt-1 leading-relaxed">
-                        Premium, handcrafted wooden/keepsake storage system designed for reuse.
+                        Premium cardboard box with storage system designed for reuse.
                       </p>
                       
                       {totalItemCount < 2 && (
