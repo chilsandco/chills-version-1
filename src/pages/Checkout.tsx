@@ -7,7 +7,7 @@ import {
   MapPin, Building, Trash, Navigation, 
   Check, Settings, X, ChevronRight,
   GripVertical, Share2, Package, ShieldCheck as Shield,
-  Lock, Info, Zap
+  Lock, Info, Zap, Leaf
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -1022,43 +1022,100 @@ const Checkout: React.FC = () => {
                 </div>
               </div>
 
-              {/* Progress Tracker replacing the warning banner */}
-              <div className="mb-6 border border-[#D4AF37]/20 bg-[linear-gradient(135deg,rgba(212,175,55,0.06),rgba(0,0,0,0)_60%)] p-5 relative overflow-hidden">
-                {/* Corner Accents */}
-                <div className="absolute top-0 right-0 w-6 h-6 border-t border-r border-[#D4AF37]/20" />
-                <div className="absolute bottom-0 left-0 w-6 h-6 border-b border-l border-[#D4AF37]/20" />
-                
-                <div className="flex items-center justify-between mb-3">
+              {/* Packaging & Unboxing Selection */}
+              <div className="mb-6 space-y-4">
+                <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Package size={14} className={totalItemCount >= 2 ? "text-accent" : "text-neutral-500"} />
-                    <span className="text-[10px] uppercase tracking-[0.25em] font-bold text-white">Unboxing Unlock</span>
+                    <Package size={14} className="text-neutral-500" />
+                    <span className="text-[10px] uppercase tracking-[0.25em] font-bold text-white/50">Packaging Selection</span>
                   </div>
-                  <span className="text-[9px] font-mono text-accent uppercase font-bold">
-                    {totalItemCount >= 2 ? "UNLOCKED ✓" : `${totalItemCount} / 2 ITEMS`}
-                  </span>
-                </div>
-
-                {/* Progress Bar */}
-                <div className="h-1.5 w-full bg-neutral-900 border border-white/5 rounded-full overflow-hidden mb-3 relative">
-                  <motion.div 
-                    initial={{ width: 0 }}
-                    animate={{ width: totalItemCount >= 2 ? '100%' : '50%' }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
-                    className="h-full bg-gradient-to-r from-[#D4AF37] via-[#f5d97a] to-[#D4AF37] relative"
-                  >
-                    {totalItemCount < 2 && (
-                      <span className="absolute top-0 right-0 h-full w-4 bg-white/30 blur-[2px] animate-pulse" />
-                    )}
-                  </motion.div>
-                </div>
-
-                <p className="text-[10.5px] leading-relaxed text-neutral-400 font-light tracking-wide">
-                  {totalItemCount >= 2 ? (
-                    <span className="text-accent font-medium">Congratulations! Your premium, handcrafted Second Life Box is unlocked and will ship with your order.</span>
-                  ) : (
-                    <span>Order qualifies for an <strong>Eco-friendly Biodegradable Bag</strong>. Add <strong className="text-white">one more tee</strong> to unlock the premium, handcrafted <strong className="text-accent">Second Life Box</strong>!</span>
+                  {totalItemCount < 2 && (
+                    <span className="text-[9px] font-mono text-accent uppercase font-bold animate-pulse">
+                      Upgrade Available
+                    </span>
                   )}
-                </p>
+                </div>
+
+                <div className="space-y-3">
+                  {/* Option 1: Eco-friendly Biodegradable Bag */}
+                  <div 
+                    className={`relative p-4 border transition-all duration-300 rounded-sm flex items-start gap-4 ${
+                      totalItemCount === 1 
+                        ? 'border-emerald-500/30 bg-emerald-500/[0.03] shadow-[0_0_15px_rgba(16,185,129,0.05)]' 
+                        : 'border-white/5 bg-neutral-950/20 opacity-40'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-full border ${
+                      totalItemCount === 1 
+                        ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' 
+                        : 'border-neutral-800 text-neutral-600'
+                    }`}>
+                      <Leaf size={16} />
+                    </div>
+                    <div className="flex-grow min-w-0">
+                      <div className="flex justify-between items-center">
+                        <h4 className={`text-[11px] font-bold uppercase tracking-wider ${totalItemCount === 1 ? 'text-white' : 'text-neutral-500'}`}>
+                          Eco-friendly Biodegradable Bag
+                        </h4>
+                        {totalItemCount === 1 && (
+                          <span className="text-[8px] uppercase tracking-widest font-extrabold px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-sm">
+                            Active Selection
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[9.5px] text-neutral-500 font-light mt-1 leading-relaxed">
+                        100% compostable, plant-based materials. Zero waste, zero footprint.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Option 2: Second Life Box */}
+                  <div 
+                    className={`relative p-4 border transition-all duration-300 rounded-sm flex items-start gap-4 ${
+                      totalItemCount >= 2 
+                        ? 'border-accent/40 bg-accent/[0.03] shadow-[0_0_15px_rgba(212,175,55,0.08)]' 
+                        : 'border-white/5 bg-neutral-950/10'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-full border ${
+                      totalItemCount >= 2 
+                        ? 'border-accent/30 bg-accent/10 text-accent' 
+                        : 'border-neutral-900 text-neutral-700'
+                    }`}>
+                      {totalItemCount >= 2 ? <Sparkles size={16} className="text-accent" /> : <Lock size={14} />}
+                    </div>
+                    <div className="flex-grow min-w-0">
+                      <div className="flex justify-between items-center">
+                        <h4 className={`text-[11px] font-bold uppercase tracking-wider ${totalItemCount >= 2 ? 'text-white' : 'text-neutral-600'}`}>
+                          Premium Second Life Box
+                        </h4>
+                        {totalItemCount >= 2 ? (
+                          <span className="text-[8px] uppercase tracking-widest font-extrabold px-2 py-0.5 bg-accent/10 text-accent border border-accent/20 rounded-sm">
+                            Unlocked
+                          </span>
+                        ) : (
+                          <span className="text-[8px] uppercase tracking-widest font-bold text-neutral-600">
+                            Locked (MOQ: 2)
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[9.5px] text-neutral-600 mt-1 leading-relaxed">
+                        Premium, handcrafted wooden/keepsake storage system designed for reuse.
+                      </p>
+                      
+                      {totalItemCount < 2 && (
+                        <div className="mt-3 pt-2 border-t border-neutral-900/60 flex items-center justify-between">
+                          <span className="text-[8px] uppercase tracking-widest text-[#D4AF37] font-bold animate-pulse">
+                            Add 1 more tee to unlock upgrade
+                          </span>
+                          <div className="h-1.5 w-24 bg-neutral-900 border border-white/5 rounded-full overflow-hidden">
+                            <div className="h-full w-1/2 bg-accent" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-4">
