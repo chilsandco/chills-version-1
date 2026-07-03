@@ -1647,6 +1647,7 @@ async function startServer() {
       let bespokeUnlocked = false;
       let coCreatorInterest = false;
       let pseudoName = '';
+      let wishlist: any[] = [];
 
       if (wc) {
         try {
@@ -1679,6 +1680,15 @@ async function startServer() {
             bespokeUnlocked = isTrue(getMetaValue(customer.meta_data, "bespoke_unlocked"));
             coCreatorInterest = isTrue(getMetaValue(customer.meta_data, "co_creator_interest"));
             pseudoName = getMetaValue(customer.meta_data, "pseudo_name") || '';
+            const wishlistValue = getMetaValue(customer.meta_data, "wishlist");
+            if (wishlistValue) {
+              try {
+                wishlist = JSON.parse(wishlistValue);
+                if (!Array.isArray(wishlist)) wishlist = [];
+              } catch (e) {
+                console.error("[CHILS & CO.] Failed to parse wishlist metadata:", e);
+              }
+            }
           }
         } catch (err) {
           console.error("[CHILS & CO.] Error searching for customer ID:", err);
@@ -1718,7 +1728,8 @@ async function startServer() {
           onWaitlist,
           bespokeUnlocked,
           coCreatorInterest,
-          pseudoName
+          pseudoName,
+          wishlist
         },
         message: "Login successful"
       });
@@ -1821,6 +1832,7 @@ async function startServer() {
       let bespokeUnlocked = false;
       let coCreatorInterest = false;
       let pseudoName = "";
+      let wishlist: any[] = [];
 
       if (customer) {
         const getMetaValue = (metaData: any[], key: string) => {
@@ -1844,6 +1856,15 @@ async function startServer() {
         bespokeUnlocked = isTrue(getMetaValue(customer.meta_data, "bespoke_unlocked"));
         coCreatorInterest = isTrue(getMetaValue(customer.meta_data, "co_creator_interest"));
         pseudoName = getMetaValue(customer.meta_data, "pseudo_name") || '';
+        const wishlistValue = getMetaValue(customer.meta_data, "wishlist");
+        if (wishlistValue) {
+          try {
+            wishlist = JSON.parse(wishlistValue);
+            if (!Array.isArray(wishlist)) wishlist = [];
+          } catch (e) {
+            console.error("[CHILS & CO.] Failed to parse wishlist metadata:", e);
+          }
+        }
       }
 
       // Sign JWT Auth Token
@@ -1875,7 +1896,8 @@ async function startServer() {
           onWaitlist,
           bespokeUnlocked,
           coCreatorInterest,
-          pseudoName
+          pseudoName,
+          wishlist
         },
         message: "Google authentication successful"
       });
@@ -2518,6 +2540,16 @@ async function startServer() {
           const bespokeUnlocked = isTrue(getMetaValue(customer.meta_data, "bespoke_unlocked"));
           const coCreatorInterest = isTrue(getMetaValue(customer.meta_data, "co_creator_interest"));
           const pseudoName = getMetaValue(customer.meta_data, "pseudo_name") || "";
+          const wishlistValue = getMetaValue(customer.meta_data, "wishlist");
+          let wishlist = [];
+          if (wishlistValue) {
+            try {
+              wishlist = JSON.parse(wishlistValue);
+              if (!Array.isArray(wishlist)) wishlist = [];
+            } catch (e) {
+              console.error("[CHILS & CO.] Failed to parse wishlist metadata:", e);
+            }
+          }
           
           const enhancedUser = {
             ...req.user,
@@ -2526,6 +2558,7 @@ async function startServer() {
             bespokeUnlocked,
             coCreatorInterest,
             pseudoName,
+            wishlist,
             id: customer.id,
             email: (customer.email || email).toLowerCase()
           };
@@ -2536,6 +2569,38 @@ async function startServer() {
     } catch (error) {
       console.warn("[CHILS & CO.] Recovery failed for auth meta", error);
       res.json(req.user);
+    }
+  });
+
+  app.post("/api/wishlist", authenticateToken, async (req: any, res) => {
+    try {
+      const { wishlist } = req.body;
+      if (!Array.isArray(wishlist)) {
+        return res.status(400).json({ message: "Wishlist must be an array of products." });
+      }
+
+      const wc = getWooCommerce();
+      if (!wc) {
+        return res.json({ success: true, message: "Wishlist updated (Mock Mode)", wishlist });
+      }
+
+      const customerId = req.user?.id || req.user?.data?.user?.id || req.user?.user_id;
+      if (!customerId) {
+        return res.status(400).json({ message: "Customer ID not found in token." });
+      }
+
+      console.log(`[CHILS & CO.] Updating wishlist for customer ${customerId}.`);
+      
+      await wcSafeCall(wc, "put", `customers/${customerId}`, {
+        meta_data: [
+          { key: "wishlist", value: JSON.stringify(wishlist) }
+        ]
+      });
+
+      res.json({ success: true, message: "Wishlist updated successfully", wishlist });
+    } catch (error: any) {
+      console.error("[CHILS & CO.] Wishlist Update Error:", error);
+      res.status(500).json({ message: "Failed to update wishlist due to server error" });
     }
   });
 

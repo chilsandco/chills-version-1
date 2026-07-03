@@ -50,6 +50,7 @@ export interface Customer {
   bespokeUnlocked?: boolean;
   coCreatorInterest?: boolean;
   pseudoName?: string;
+  wishlist?: Product[];
 }
 
 export interface SignalItem {
