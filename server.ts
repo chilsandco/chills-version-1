@@ -1648,6 +1648,7 @@ async function startServer() {
       let coCreatorInterest = false;
       let pseudoName = '';
       let wishlist: any[] = [];
+      let cart: any[] = [];
 
       if (wc) {
         try {
@@ -1687,6 +1688,15 @@ async function startServer() {
                 if (!Array.isArray(wishlist)) wishlist = [];
               } catch (e) {
                 console.error("[CHILS & CO.] Failed to parse wishlist metadata:", e);
+              }
+            }
+            const cartValue = getMetaValue(customer.meta_data, "cart");
+            if (cartValue) {
+              try {
+                cart = JSON.parse(cartValue);
+                if (!Array.isArray(cart)) cart = [];
+              } catch (e) {
+                console.error("[CHILS & CO.] Failed to parse cart metadata:", e);
               }
             }
           }
@@ -1729,7 +1739,8 @@ async function startServer() {
           bespokeUnlocked,
           coCreatorInterest,
           pseudoName,
-          wishlist
+          wishlist,
+          cart
         },
         message: "Login successful"
       });
@@ -1833,6 +1844,7 @@ async function startServer() {
       let coCreatorInterest = false;
       let pseudoName = "";
       let wishlist: any[] = [];
+      let cart: any[] = [];
 
       if (customer) {
         const getMetaValue = (metaData: any[], key: string) => {
@@ -1863,6 +1875,15 @@ async function startServer() {
             if (!Array.isArray(wishlist)) wishlist = [];
           } catch (e) {
             console.error("[CHILS & CO.] Failed to parse wishlist metadata:", e);
+          }
+        }
+        const cartValue = getMetaValue(customer.meta_data, "cart");
+        if (cartValue) {
+          try {
+            cart = JSON.parse(cartValue);
+            if (!Array.isArray(cart)) cart = [];
+          } catch (e) {
+            console.error("[CHILS & CO.] Failed to parse cart metadata:", e);
           }
         }
       }
@@ -1897,7 +1918,8 @@ async function startServer() {
           bespokeUnlocked,
           coCreatorInterest,
           pseudoName,
-          wishlist
+          wishlist,
+          cart
         },
         message: "Google authentication successful"
       });
@@ -2550,6 +2572,16 @@ async function startServer() {
               console.error("[CHILS & CO.] Failed to parse wishlist metadata:", e);
             }
           }
+          const cartValue = getMetaValue(customer.meta_data, "cart");
+          let cart = [];
+          if (cartValue) {
+            try {
+              cart = JSON.parse(cartValue);
+              if (!Array.isArray(cart)) cart = [];
+            } catch (e) {
+              console.error("[CHILS & CO.] Failed to parse cart metadata:", e);
+            }
+          }
           
           const enhancedUser = {
             ...req.user,
@@ -2559,6 +2591,7 @@ async function startServer() {
             coCreatorInterest,
             pseudoName,
             wishlist,
+            cart,
             id: customer.id,
             email: (customer.email || email).toLowerCase()
           };
@@ -2601,6 +2634,38 @@ async function startServer() {
     } catch (error: any) {
       console.error("[CHILS & CO.] Wishlist Update Error:", error);
       res.status(500).json({ message: "Failed to update wishlist due to server error" });
+    }
+  });
+
+  app.post("/api/cart", authenticateToken, async (req: any, res) => {
+    try {
+      const { cart } = req.body;
+      if (!Array.isArray(cart)) {
+        return res.status(400).json({ message: "Cart must be an array of cart items." });
+      }
+
+      const wc = getWooCommerce();
+      if (!wc) {
+        return res.json({ success: true, message: "Cart updated (Mock Mode)", cart });
+      }
+
+      const customerId = req.user?.id || req.user?.data?.user?.id || req.user?.user_id;
+      if (!customerId) {
+        return res.status(400).json({ message: "Customer ID not found in token." });
+      }
+
+      console.log(`[CHILS & CO.] Updating cart for customer ${customerId}.`);
+      
+      await wcSafeCall(wc, "put", `customers/${customerId}`, {
+        meta_data: [
+          { key: "cart", value: JSON.stringify(cart) }
+        ]
+      });
+
+      res.json({ success: true, message: "Cart updated successfully", cart });
+    } catch (error: any) {
+      console.error("[CHILS & CO.] Cart Update Error:", error);
+      res.status(500).json({ message: "Failed to update cart due to server error" });
     }
   });
 

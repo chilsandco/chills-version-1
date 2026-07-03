@@ -51,6 +51,7 @@ export interface Customer {
   coCreatorInterest?: boolean;
   pseudoName?: string;
   wishlist?: Product[];
+  cart?: CartItem[];
 }
 
 export interface SignalItem {

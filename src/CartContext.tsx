@@ -15,84 +15,135 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, token, updateUser } = useAuth();
   
-  // Storage key is user-specific if authenticated
   const storageKey = useMemo(() => {
     return isAuthenticated && user ? `chils-cart-${user.email}` : 'chils-cart-guest';
   }, [user, isAuthenticated]);
 
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [hasInitialized, setHasInitialized] = useState(false);
 
-  // Load cart when storageKey changes (e.g., user logs in/out)
-  // If transitioning from guest → authenticated, merge the guest cart items
+  // 1. Initial load from local caches/session
   useEffect(() => {
-    const userCart: CartItem[] = JSON.parse(localStorage.getItem(storageKey) || '[]');
+    if (!isAuthenticated) {
+      const savedCart = localStorage.getItem('chils-cart-guest');
+      setCart(savedCart ? JSON.parse(savedCart) : []);
+    } else if (user) {
+      setCart(user.cart || []);
+    }
+  }, [isAuthenticated, user?.email]);
+
+  // 2. Merge guest cart into user cart on login
+  useEffect(() => {
+    if (isAuthenticated && user && token) {
+      const guestCartStr = localStorage.getItem('chils-cart-guest');
+      if (guestCartStr) {
+        try {
+          const guestCart: CartItem[] = JSON.parse(guestCartStr);
+          if (guestCart.length > 0) {
+            const backendCart = user.cart || [];
+            const mergedCart = [...backendCart];
+            let hasChanges = false;
+
+            for (const guestItem of guestCart) {
+              const existing = mergedCart.find(
+                item => item.id === guestItem.id && 
+                        item.selectedSize === guestItem.selectedSize &&
+                        item.selectedColor === guestItem.selectedColor
+              );
+              if (existing) {
+                existing.quantity += guestItem.quantity;
+                hasChanges = true;
+              } else {
+                mergedCart.push(guestItem);
+                hasChanges = true;
+              }
+            }
+
+            // Clear guest cart from localStorage
+            localStorage.removeItem('chils-cart-guest');
+
+            if (hasChanges) {
+              // Update local state and auth
+              setCart(mergedCart);
+              updateUser({ cart: mergedCart });
+              
+              // Sync to server
+              fetch('/api/cart', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ cart: mergedCart })
+              }).catch(err => console.error('[CHILS] Failed to sync merged cart:', err));
+            }
+          }
+        } catch (e) {
+          console.error("[CHILS] Failed to parse guest cart on login:", e);
+        }
+      }
+    }
+  }, [isAuthenticated, token]);
+
+  // 3. Keep local state in sync with AuthContext user.cart
+  useEffect(() => {
+    if (isAuthenticated && user?.cart) {
+      if (JSON.stringify(cart) !== JSON.stringify(user.cart)) {
+        setCart(user.cart);
+      }
+    }
+  }, [user?.cart, isAuthenticated]);
+
+  // Helper to update state and sync to server
+  const updateCartAndSync = (newCart: CartItem[]) => {
+    setCart(newCart);
 
     if (isAuthenticated && user) {
-      // User just logged in — check if there were guest cart items to carry over
-      const guestCart: CartItem[] = JSON.parse(localStorage.getItem('chils-cart-guest') || '[]');
+      updateUser({ cart: newCart });
+      localStorage.setItem(`chils-cart-${user.email}`, JSON.stringify(newCart));
 
-      if (guestCart.length > 0) {
-        // Merge guest items into the user's cart (avoid duplicates by id+size)
-        const merged = [...userCart];
-        for (const guestItem of guestCart) {
-          const existing = merged.find(
-            item => item.id === guestItem.id && 
-                    item.selectedSize === guestItem.selectedSize &&
-                    item.selectedColor === guestItem.selectedColor
-          );
-          if (existing) {
-            existing.quantity += guestItem.quantity;
-          } else {
-            merged.push(guestItem);
-          }
-        }
-        setCart(merged);
-        // Clear the guest cart so items don't get re-merged on next login
-        localStorage.removeItem('chils-cart-guest');
-      } else {
-        setCart(userCart);
+      if (token) {
+        fetch('/api/cart', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ cart: newCart })
+        }).catch(err => console.error('[CHILS] Failed to sync cart:', err));
       }
     } else {
-      setCart(userCart);
+      localStorage.setItem('chils-cart-guest', JSON.stringify(newCart));
     }
-
-    setHasInitialized(true);
-  }, [storageKey]);
-
-  // Save cart whenever it changes (only after initial load to avoid overwriting)
-  useEffect(() => {
-    if (hasInitialized) {
-      localStorage.setItem(storageKey, JSON.stringify(cart));
-    }
-  }, [cart, storageKey, hasInitialized]);
+  };
 
   const addToCart = (product: Product, size?: string, color?: string) => {
-    setCart(prev => {
-      const existing = prev.find(item => 
-        item.id === product.id && 
-        item.selectedSize === size && 
-        (item.selectedColor || undefined) === (color || undefined)
+    const existingIndex = cart.findIndex(item => 
+      item.id === product.id && 
+      item.selectedSize === size && 
+      (item.selectedColor || undefined) === (color || undefined)
+    );
+
+    let newCart: CartItem[];
+    if (existingIndex > -1) {
+      newCart = cart.map((item, idx) => 
+        idx === existingIndex ? { ...item, quantity: item.quantity + 1 } : item
       );
-      if (existing) {
-        return prev.map(item =>
-          (item.id === product.id && item.selectedSize === size && (item.selectedColor || undefined) === (color || undefined)) 
-            ? { ...item, quantity: item.quantity + 1 } 
-            : item
-        );
-      }
-      return [...prev, { ...product, quantity: 1, selectedSize: size, selectedColor: color || undefined }];
-    });
+    } else {
+      newCart = [...cart, { ...product, quantity: 1, selectedSize: size, selectedColor: color || undefined }];
+    }
+    
+    updateCartAndSync(newCart);
   };
 
   const removeFromCart = (productId: string, size?: string, color?: string) => {
-    setCart(prev => prev.filter(item => !(
+    const newCart = cart.filter(item => !(
       item.id === productId && 
       item.selectedSize === size && 
       (item.selectedColor || undefined) === (color || undefined)
-    )));
+    ));
+    updateCartAndSync(newCart);
   };
 
   const updateQuantity = (productId: string, quantity: number, size?: string, color?: string) => {
@@ -100,18 +151,19 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       removeFromCart(productId, size, color);
       return;
     }
-    setCart(prev =>
-      prev.map(item => (
-        item.id === productId && 
-        item.selectedSize === size && 
-        (item.selectedColor || undefined) === (color || undefined) 
-          ? { ...item, quantity } 
-          : item
-      ))
-    );
+    const newCart = cart.map(item => (
+      item.id === productId && 
+      item.selectedSize === size && 
+      (item.selectedColor || undefined) === (color || undefined) 
+        ? { ...item, quantity } 
+        : item
+    ));
+    updateCartAndSync(newCart);
   };
 
-  const clearCart = () => setCart([]);
+  const clearCart = () => {
+    updateCartAndSync([]);
+  };
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
