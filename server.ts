@@ -1124,7 +1124,16 @@ async function startServer() {
 
       if (wc) {
         const isPickup = shippingMethod === "pickup";
-        const shippingFee = isPickup ? 0 : 80;
+        const totalItemCount = lineItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
+        let shippingFee = 0;
+        if (!isPickup) {
+          if (totalItemCount <= 2) {
+            shippingFee = 80;
+          } else {
+            const extra = totalItemCount - 2;
+            shippingFee = 80 + Math.floor(extra / 2) * 79 + (extra % 2) * 49;
+          }
+        }
 
         // Create order in WooCommerce
         const orderData = {

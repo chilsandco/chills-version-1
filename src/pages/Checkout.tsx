@@ -53,6 +53,13 @@ const Checkout: React.FC = () => {
   const [coordinatesFlash, setCoordinatesFlash] = useState(false);
   const [shippingMethod, setShippingMethod] = useState<'delivery' | 'pickup'>('delivery');
 
+  const getShippingFee = () => {
+    if (shippingMethod !== 'delivery') return 0;
+    if (totalItemCount <= 2) return 80;
+    const extra = totalItemCount - 2;
+    return 80 + Math.floor(extra / 2) * 79 + (extra % 2) * 49;
+  };
+
   const dismissSecondLife = () => {
     setSecondLifeDismissed(true);
     sessionStorage.setItem('chils_packaging_upsell_dismissed', 'true');
@@ -264,7 +271,7 @@ const Checkout: React.FC = () => {
 
   // Core payment logic (extracted so modal can also trigger it)
   const proceedToPayment = async () => {
-    const shippingFee = shippingMethod === 'delivery' ? 80 : 0;
+    const shippingFee = getShippingFee();
     await triggerCheckout(formData, cart, totalPrice + shippingFee, shippingMethod);
     // triggerCheckout handles navigation logic via PhonePe redirect
   };
@@ -682,7 +689,9 @@ const Checkout: React.FC = () => {
               >
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[11px] uppercase tracking-widest font-bold text-white">Home Delivery</span>
-                  <span className="text-[11px] font-mono font-bold text-accent">₹80</span>
+                  <span className="text-[11px] font-mono font-bold text-accent">
+                    ₹{totalItemCount <= 2 ? 80 : 80 + Math.floor((totalItemCount - 2) / 2) * 79 + ((totalItemCount - 2) % 2) * 49}
+                  </span>
                 </div>
                 <p className="text-[10px] text-neutral-500 uppercase tracking-wider font-light leading-relaxed">
                   Delivered to your specified coordinate node. Standard dispatch times apply.
@@ -1031,14 +1040,14 @@ const Checkout: React.FC = () => {
                 <div className="flex justify-between items-center text-[11px] uppercase tracking-widest">
                   <span className="text-neutral-600">Transit Protocol</span>
                   {shippingMethod === 'delivery' ? (
-                    <span className="font-mono text-white font-bold">₹80</span>
+                    <span className="font-mono text-white font-bold">₹{getShippingFee()}</span>
                   ) : (
                     <span className="text-accent font-bold">Free (Store Pickup)</span>
                   )}
                 </div>
                 <div className="flex justify-between items-center text-[11px] uppercase tracking-widest pt-6 border-t border-neutral-900">
                   <span className="text-white font-bold">Extraction Total</span>
-                  <span className="text-2xl font-display font-medium text-white">₹{(totalPrice + (shippingMethod === 'delivery' ? 80 : 0)).toLocaleString()}</span>
+                  <span className="text-2xl font-display font-medium text-white">₹{(totalPrice + getShippingFee()).toLocaleString()}</span>
                 </div>
               </div>
 
