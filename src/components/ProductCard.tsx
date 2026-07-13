@@ -139,7 +139,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'editoria
           }`} 
           style={{ transform: "translateZ(30px)" }}
         >
-          <div>
+          <div className="min-w-0 pr-4">
             <h3 className={`tracking-[0.2em] font-bold uppercase mb-2 group-hover:text-accent transition-colors duration-500 ${
               viewMode === 'archive'
                 ? 'text-[11px] sm:text-[12px] md:text-[13px]'
@@ -160,7 +160,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'editoria
               </p>
             )}
           </div>
-          <div className="text-right">
+          <div className="text-right flex-shrink-0">
             <p className={`font-mono opacity-40 group-hover:opacity-100 transition-opacity duration-500 ${
               viewMode === 'archive'
                 ? 'text-[11px] sm:text-[12px] md:text-[13px]'
