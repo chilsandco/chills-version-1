@@ -445,11 +445,17 @@ const Checkout: React.FC = () => {
             </div>
             
             <div className="space-y-4">
-              {cart.map(item => (
+              {cart.map(item => {
+                const variationImage = item.selectedColor && item.variations
+                  ? item.variations.find(v => v.attributes.color === item.selectedColor)?.images?.[0]
+                  : null;
+                const itemImage = variationImage || item.images[0];
+
+                return (
                 <div key={`${item.id}-${item.selectedSize}-${item.selectedColor || ''}`} className="flex gap-6 p-4 border border-white/5 bg-neutral-950/10 rounded-sm group relative">
                   <Link to={`/product/${item.id}`} className="w-16 h-20 bg-neutral-950 overflow-hidden relative flex-shrink-0 block rounded-sm">
                     <img 
-                        src={item.images[0]} 
+                        src={itemImage} 
                         alt={item.name} 
                         className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-102 transition-all duration-500" 
                         referrerPolicy="no-referrer"
@@ -462,10 +468,16 @@ const Checkout: React.FC = () => {
                         <Link to={`/product/${item.id}`} className="hover:text-accent transition-colors">
                           <h3 className="text-sm tracking-tight font-display font-medium uppercase mb-0.5">{item.name}</h3>
                         </Link>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 flex-wrap">
                           <span className="text-[8px] text-neutral-600 uppercase tracking-widest font-bold font-mono">CAT_{item.category?.toUpperCase()}</span>
                           <span className="w-1 h-1 bg-neutral-800 rounded-full" />
                           <span className="text-[8px] text-accent uppercase tracking-[0.2em] font-bold font-mono">SIZE: {item.selectedSize || 'OS'}</span>
+                          {item.selectedColor && (
+                            <>
+                              <span className="w-1 h-1 bg-neutral-800 rounded-full" />
+                              <span className="text-[8px] text-accent uppercase tracking-[0.2em] font-bold font-mono">COLOR: {item.selectedColor}</span>
+                            </>
+                          )}
                         </div>
                       </div>
                       <button type="button" onClick={() => removeFromCart(item.id, item.selectedSize, item.selectedColor)} className="text-neutral-700 hover:text-red-500 transition-colors p-1 -mt-1 cursor-pointer">
@@ -490,7 +502,7 @@ const Checkout: React.FC = () => {
                     </div>
                   </div>
                 </div>
-              ))}
+              ); })}
             </div>
           </section>
 

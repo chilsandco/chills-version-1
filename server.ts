@@ -480,7 +480,7 @@ async function startServer() {
           v.attributes.forEach((attr: any) => {
             const attrName = (attr.name || "").toLowerCase();
             console.log(`[CHILS & CO. DEBUG] Variation ${v.id} Attribute Name: '${attrName}', Option: '${attr.option}'`);
-            if (attrName === 'color' || attrName === 'pa_color' || attrName === 'colors' || attrName === 'pa_colors') vAttrs.color = attr.option;
+            if (attrName === 'color' || attrName === 'pa_color' || attrName === 'colors' || attrName === 'pa_colors' || attrName === 'colour' || attrName === 'pa_colour' || attrName === 'colours' || attrName === 'pa_colours') vAttrs.color = attr.option;
             if (attrName === 'size' || attrName === 'pa_size' || attrName === 'sizes' || attrName === 'pa_sizes') vAttrs.size = attr.option;
           });
         }
@@ -592,15 +592,17 @@ async function startServer() {
       });
     }
 
-    const parentColors = (attributes.find((a: any) => {
+    const matchedColorAttr = attributes.find((a: any) => {
       const name = (a.name || "").toLowerCase();
-      return name === 'color' || name === 'pa_color' || name === 'colors' || name === 'pa_colors';
-    })?.options || []).map(decodeEntities);
+      return name === 'color' || name === 'pa_color' || name === 'colors' || name === 'pa_colors' || name === 'colour' || name === 'pa_colour' || name === 'colours' || name === 'pa_colours';
+    });
+    const parentColors = (matchedColorAttr?.options || []).map(decodeEntities);
 
-    const parentSizes = (attributes.find((a: any) => {
+    const matchedSizeAttr = attributes.find((a: any) => {
       const name = (a.name || "").toLowerCase();
       return name === 'size' || name === 'pa_size' || name === 'sizes' || name === 'pa_sizes';
-    })?.options || []).map(decodeEntities);
+    });
+    const parentSizes = (matchedSizeAttr?.options || []).map(decodeEntities);
 
     return {
       id: (wcProduct.id || "").toString(),
@@ -630,7 +632,9 @@ async function startServer() {
       variations: mappedVariations.length > 0 ? mappedVariations : undefined,
       availableColors: availableColors.length > 0 ? availableColors : (parentColors.length > 0 ? parentColors : undefined),
       availableSizes: availableSizes.length > 0 ? availableSizes : (parentSizes.length > 0 ? parentSizes : undefined),
-      colorSwatches: Object.keys(swatchesData).length > 0 ? swatchesData : undefined
+      colorSwatches: Object.keys(swatchesData).length > 0 ? swatchesData : undefined,
+      colorAttributeName: matchedColorAttr ? matchedColorAttr.name : undefined,
+      sizeAttributeName: matchedSizeAttr ? matchedSizeAttr.name : undefined
     };
   };
 
@@ -1156,11 +1160,40 @@ async function startServer() {
             postcode: customerDetails.pincode,
             country: "IN"
           },
-          line_items: lineItems.map((item: any) => ({
-            product_id: parseInt(item.id),
-            quantity: item.quantity,
-            meta_data: item.selectedSize ? [{ key: "pa_size", value: item.selectedSize }] : []
-          })),
+          line_items: lineItems.map((item: any) => {
+            let variationId: number | undefined = undefined;
+            if (item.variations && Array.isArray(item.variations)) {
+              const match = item.variations.find((v: any) => {
+                const matchesSize = item.selectedSize ? (v.attributes?.size === item.selectedSize) : true;
+                const matchesColor = item.selectedColor ? (v.attributes?.color === item.selectedColor) : true;
+                return matchesSize && matchesColor;
+              });
+              if (match) {
+                variationId = parseInt(match.id, 10);
+              }
+            }
+
+            const meta_data: any[] = [];
+            if (item.selectedSize) {
+              meta_data.push({ 
+                key: item.sizeAttributeName || "pa_size", 
+                value: item.selectedSize 
+              });
+            }
+            if (item.selectedColor) {
+              meta_data.push({ 
+                key: item.colorAttributeName || "pa_color", 
+                value: item.selectedColor 
+              });
+            }
+
+            return {
+              product_id: parseInt(item.id, 10),
+              quantity: item.quantity,
+              ...(variationId ? { variation_id: variationId } : {}),
+              meta_data
+            };
+          }),
           shipping_lines: [
             {
               method_id: isPickup ? "local_pickup" : "flat_rate",

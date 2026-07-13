@@ -20,6 +20,8 @@ export interface Product {
   availableSizes?: string[];
   categories?: string[];
   colorSwatches?: Record<string, { type: 'color' | 'image' | 'label', value: string }>;
+  colorAttributeName?: string;
+  sizeAttributeName?: string;
 }
 
 export interface ProductVariation {
