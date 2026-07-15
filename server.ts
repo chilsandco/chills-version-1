@@ -761,7 +761,11 @@ async function startServer() {
     if (!bypassCache && globalProductsCache && (Date.now() - lastProductsFetch < PRODUCTS_CACHE_TTL)) {
       console.log("[CHILS & CO.] Serving products from memory cache.");
       res.setHeader('X-Cache', 'HIT');
-      return res.json(globalProductsCache);
+      let productsToReturn = globalProductsCache;
+      if (req.query.show_test !== 'true') {
+        productsToReturn = globalProductsCache.filter((p: any) => p.id.toString() !== '1672');
+      }
+      return res.json(productsToReturn);
     }
 
     res.setHeader('X-Cache', 'MISS');
@@ -796,7 +800,11 @@ async function startServer() {
       globalProductsCache = mappedProducts;
       lastProductsFetch = Date.now();
 
-      res.json(mappedProducts);
+      let productsToReturn = mappedProducts;
+      if (req.query.show_test !== 'true') {
+        productsToReturn = mappedProducts.filter((p: any) => p.id.toString() !== '1672');
+      }
+      res.json(productsToReturn);
     } catch (error) {
       console.error("WooCommerce API Error:", error);
       res.status(500).json({ message: "Failed to fetch products from WooCommerce" });
@@ -1124,13 +1132,16 @@ async function startServer() {
 
       if (wc) {
         const isPickup = shippingMethod === "pickup";
-        const totalItemCount = lineItems.reduce((sum: number, item: any) => sum + item.quantity, 0);
+        const realShippingCount = lineItems.reduce((sum: number, item: any) => {
+          if (item.id && item.id.toString() === "1672") return sum;
+          return sum + item.quantity;
+        }, 0);
         let shippingFee = 0;
-        if (!isPickup) {
-          if (totalItemCount <= 2) {
+        if (!isPickup && realShippingCount > 0) {
+          if (realShippingCount <= 2) {
             shippingFee = 80;
           } else {
-            const extra = totalItemCount - 2;
+            const extra = realShippingCount - 2;
             shippingFee = 80 + Math.floor(extra / 2) * 79 + (extra % 2) * 49;
           }
         }

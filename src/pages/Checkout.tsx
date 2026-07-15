@@ -55,8 +55,13 @@ const Checkout: React.FC = () => {
 
   const getShippingFee = () => {
     if (shippingMethod !== 'delivery') return 0;
-    if (totalItemCount <= 2) return 80;
-    const extra = totalItemCount - 2;
+    const realShippingCount = cart.reduce((count, item) => {
+      if (item.id.toString() === '1672') return count;
+      return count + item.quantity;
+    }, 0);
+    if (realShippingCount === 0) return 0;
+    if (realShippingCount <= 2) return 80;
+    const extra = realShippingCount - 2;
     return 80 + Math.floor(extra / 2) * 79 + (extra % 2) * 49;
   };
 
@@ -690,7 +695,14 @@ const Checkout: React.FC = () => {
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[11px] uppercase tracking-widest font-bold text-white">Home Delivery</span>
                   <span className="text-[11px] font-mono font-bold text-accent">
-                    ₹{totalItemCount <= 2 ? 80 : 80 + Math.floor((totalItemCount - 2) / 2) * 79 + ((totalItemCount - 2) % 2) * 49}
+                    ₹{(() => {
+                      const realShippingCount = cart.reduce((count, item) => {
+                        if (item.id.toString() === '1672') return count;
+                        return count + item.quantity;
+                      }, 0);
+                      if (realShippingCount === 0) return 0;
+                      return realShippingCount <= 2 ? 80 : 80 + Math.floor((realShippingCount - 2) / 2) * 79 + ((realShippingCount - 2) % 2) * 49;
+                    })()}
                   </span>
                 </div>
                 <p className="text-[10px] text-neutral-500 uppercase tracking-wider font-light leading-relaxed">
