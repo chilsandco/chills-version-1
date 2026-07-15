@@ -6,7 +6,17 @@ import {
   CheckCircle2, Package, Info, ShieldAlert
 } from 'lucide-react';
 import { useAuth } from '../AuthContext';
-import { Signal, SignalItem } from '../types';
+import { Signal, SignalItem, Product } from '../types';
+
+interface ReturnItemChoice {
+  productId: string;
+  quantity: number;
+  action: 'refund' | 'size_exchange' | 'style_exchange';
+  selectedSize?: string;
+  exchangeProductId?: string;
+  exchangeProductName?: string;
+  exchangeSize?: string;
+}
 
 const REASONS = [
   "Size Issue (Recommended)",
@@ -27,7 +37,8 @@ const ReturnRequest: React.FC = () => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [returnItems, setReturnItems] = useState<{ productId: string, quantity: number }[]>([]);
+  const [returnItems, setReturnItems] = useState<ReturnItemChoice[]>([]);
+  const [productsCatalog, setProductsCatalog] = useState<Product[]>([]);
   const [reason, setReason] = useState("");
   const [description, setDescription] = useState("");
   const [images, setImages] = useState<string[]>([]);
@@ -43,7 +54,11 @@ const ReturnRequest: React.FC = () => {
         if (response.ok) {
           setSignal(data);
           // Default: select all items for return
-          setReturnItems(data.items.map((i: SignalItem) => ({ productId: i.productId, quantity: i.quantity })));
+          setReturnItems(data.items.map((i: SignalItem) => ({ 
+            productId: i.productId, 
+            quantity: i.quantity,
+            action: 'refund'
+          })));
         } else {
           setError(data.message || "Failed to retrieve signal details.");
         }
@@ -54,7 +69,22 @@ const ReturnRequest: React.FC = () => {
       }
     };
 
-    if (token && id) fetchSignal();
+    const fetchCatalog = async () => {
+      try {
+        const res = await fetch('/api/products');
+        if (res.ok) {
+          const data = await res.json();
+          setProductsCatalog(data);
+        }
+      } catch (err) {
+        console.error("Failed to fetch products catalog:", err);
+      }
+    };
+
+    if (token && id) {
+      fetchSignal();
+      fetchCatalog();
+    }
   }, [id, token]);
 
   const handleItemToggle = (productId: string, quantity: number) => {
@@ -63,7 +93,7 @@ const ReturnRequest: React.FC = () => {
       if (exists) {
         return prev.filter(item => item.productId !== productId);
       } else {
-        return [...prev, { productId, quantity }];
+        return [...prev, { productId, quantity, action: 'refund' }];
       }
     });
   };
@@ -97,6 +127,28 @@ const ReturnRequest: React.FC = () => {
       alert("Please select at least one item to return.");
       return;
     }
+
+    // Validate exchange selections
+    for (const item of returnItems) {
+      const signalItemObj = signal?.items.find(i => i.productId === item.productId);
+      const name = signalItemObj?.name || 'Selected item';
+      
+      if (item.action === 'size_exchange' && !item.selectedSize) {
+        alert(`Please select a replacement size for ${name}.`);
+        return;
+      }
+      if (item.action === 'style_exchange') {
+        if (!item.exchangeProductId) {
+          alert(`Please select an alternative product for ${name}.`);
+          return;
+        }
+        if (!item.exchangeSize) {
+          alert(`Please select a size for the alternative product of ${name}.`);
+          return;
+        }
+      }
+    }
+
     if (['Damaged Product', 'Wrong Item Received', 'Quality Issue'].includes(reason) && images.length === 0) {
       alert("Evidence (images) is required for this return reason.");
       return;
@@ -247,33 +299,175 @@ const ReturnRequest: React.FC = () => {
                 <section className="space-y-6">
                   <h4 className="text-[10px] font-bold uppercase tracking-widest text-white/40 scale-95 origin-left">SELECT ITEMS FOR REVERSAL</h4>
                   <div className="space-y-4">
-                    {signal?.items.map((item) => (
-                      <div 
-                        key={item.productId} 
-                        onClick={() => handleItemToggle(item.productId, item.quantity)}
-                        className={`flex items-center gap-4 p-4 border transition-all cursor-pointer ${
-                          returnItems.some(i => i.productId === item.productId) 
-                          ? 'border-accent bg-accent/5' 
-                          : 'border-white/10 hover:border-white/20'
-                        }`}
-                      >
-                        <div className={`w-4 h-4 border flex items-center justify-center rounded-sm transition-colors ${
-                          returnItems.some(i => i.productId === item.productId) ? 'bg-accent border-accent' : 'border-white/20'
-                        }`}>
-                          {returnItems.some(i => i.productId === item.productId) && <CheckCircle2 size={10} className="text-black" />}
+                    {signal?.items.map((item) => {
+                      const isSelected = returnItems.some(i => i.productId === item.productId);
+                      const currentItemChoice = returnItems.find(i => i.productId === item.productId);
+                      return (
+                        <div 
+                          key={item.productId} 
+                          className={`border transition-all rounded-sm overflow-hidden ${
+                            isSelected 
+                            ? 'border-accent bg-accent/5' 
+                            : 'border-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          <div 
+                            onClick={() => handleItemToggle(item.productId, item.quantity)}
+                            className="flex items-center gap-4 p-4 cursor-pointer"
+                          >
+                            <div className={`w-4 h-4 border flex items-center justify-center rounded-sm transition-colors ${
+                              isSelected ? 'bg-accent border-accent' : 'border-white/20'
+                            }`}>
+                              {isSelected && <CheckCircle2 size={10} className="text-black" />}
+                            </div>
+                            <img 
+                              src={item.image || "https://picsum.photos/seed/placeholder/100/100"} 
+                              alt={item.name} 
+                              className="w-12 h-16 object-cover bg-white/5" 
+                              referrerPolicy="no-referrer"
+                            />
+                            <div className="flex-grow">
+                              <p className="text-[11px] font-bold uppercase tracking-widest leading-tight">{item.name}</p>
+                              <p className="text-[9px] text-white/40 uppercase tracking-widest mt-1">Quantity: {item.quantity}</p>
+                              <p className="text-[9px] text-accent/60 uppercase tracking-widest mt-0.5">Price: ₹{item.price}</p>
+                            </div>
+                          </div>
+
+                          {/* Options Panel (Shown only when selected) */}
+                          {isSelected && currentItemChoice && (
+                            <div 
+                              onClick={(e) => e.stopPropagation()} 
+                              className="border-t border-white/5 p-6 bg-black/40 space-y-6"
+                            >
+                              {/* Action Choice Buttons */}
+                              <div className="space-y-2">
+                                <label className="text-[9px] font-bold uppercase tracking-widest text-white/40">Select Preferred Resolution</label>
+                                <div className="grid grid-cols-3 gap-2">
+                                  {(['refund', 'size_exchange', 'style_exchange'] as const).map(act => (
+                                    <button
+                                      key={act}
+                                      type="button"
+                                      onClick={() => {
+                                        setReturnItems(prev => prev.map(pi => pi.productId === item.productId ? { ...pi, action: act } : pi));
+                                      }}
+                                      className={`py-3 text-center border text-[8px] font-bold uppercase tracking-widest transition-all ${
+                                        currentItemChoice.action === act 
+                                        ? 'border-accent bg-accent/10 text-accent' 
+                                        : 'border-white/10 hover:border-white/20 text-white/60'
+                                      }`}
+                                    >
+                                      {act === 'refund' ? 'Refund' : act === 'size_exchange' ? 'Size Swap' : 'Style Swap'}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+
+                              {/* Size Exchange Option */}
+                              {currentItemChoice.action === 'size_exchange' && (
+                                <div className="space-y-3">
+                                  <label className="text-[9px] font-bold uppercase tracking-widest text-accent">Select New Size</label>
+                                  <div className="flex flex-wrap gap-2">
+                                    {['S', 'M', 'L', 'XL', 'XXL'].map(sz => (
+                                      <button
+                                        key={sz}
+                                        type="button"
+                                        onClick={() => {
+                                          setReturnItems(prev => prev.map(pi => pi.productId === item.productId ? { ...pi, selectedSize: sz } : pi));
+                                        }}
+                                        className={`w-10 h-10 border text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center ${
+                                          currentItemChoice.selectedSize === sz 
+                                          ? 'bg-accent text-black border-accent' 
+                                          : 'border-white/10 hover:border-white/20 text-white/60'
+                                        }`}
+                                      >
+                                        {sz}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Style Swap Option */}
+                              {currentItemChoice.action === 'style_exchange' && (
+                                <div className="space-y-4">
+                                  <label className="text-[9px] font-bold uppercase tracking-widest text-accent">Choose Alternative Product (Same Price: ₹{item.price})</label>
+                                  {(() => {
+                                    const samePriceProducts = productsCatalog.filter(
+                                      p => p.price === item.price && p.id.toString() !== item.productId.toString()
+                                    );
+                                    
+                                    if (samePriceProducts.length === 0) {
+                                      return (
+                                        <p className="text-[9px] text-white/30 uppercase tracking-widest italic">No other products found at this price point.</p>
+                                      );
+                                    }
+
+                                    return (
+                                      <div className="space-y-4">
+                                        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
+                                          {samePriceProducts.map(altProd => {
+                                            const isAltSelected = currentItemChoice.exchangeProductId === altProd.id.toString();
+                                            return (
+                                              <div
+                                                key={altProd.id}
+                                                onClick={() => {
+                                                  setReturnItems(prev => prev.map(pi => pi.productId === item.productId ? { 
+                                                    ...pi, 
+                                                    exchangeProductId: altProd.id.toString(), 
+                                                    exchangeProductName: altProd.name,
+                                                    exchangeSize: undefined // reset selected size
+                                                  } : pi));
+                                                }}
+                                                className={`w-36 shrink-0 border p-3 cursor-pointer transition-all ${
+                                                  isAltSelected ? 'border-accent bg-accent/5' : 'border-white/5 hover:border-white/10'
+                                                }`}
+                                              >
+                                                <img 
+                                                  src={altProd.images?.[0] || "https://picsum.photos/seed/placeholder/100/100"} 
+                                                  alt={altProd.name} 
+                                                  className="w-full h-32 object-cover mb-2"
+                                                />
+                                                <p className="text-[8px] font-bold uppercase tracking-widest truncate">{altProd.name}</p>
+                                                <p className="text-[8px] text-white/40 uppercase tracking-widest mt-1">₹{altProd.price}</p>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+
+                                        {/* If alternative product selected, select size */}
+                                        {currentItemChoice.exchangeProductId && (
+                                          <div className="space-y-2 pt-2 border-t border-white/5">
+                                            <label className="text-[9px] font-bold uppercase tracking-widest text-accent">Select Size for {currentItemChoice.exchangeProductName}</label>
+                                            <div className="flex flex-wrap gap-2">
+                                              {['S', 'M', 'L', 'XL', 'XXL'].map(sz => (
+                                                <button
+                                                  key={sz}
+                                                  type="button"
+                                                  onClick={() => {
+                                                    setReturnItems(prev => prev.map(pi => pi.productId === item.productId ? { ...pi, exchangeSize: sz } : pi));
+                                                  }}
+                                                  className={`w-10 h-10 border text-[10px] font-bold uppercase tracking-widest transition-all flex items-center justify-center ${
+                                                    currentItemChoice.exchangeSize === sz 
+                                                    ? 'bg-accent text-black border-accent' 
+                                                    : 'border-white/10 hover:border-white/20 text-white/60'
+                                                  }`}
+                                                >
+                                                  {sz}
+                                                </button>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <img 
-                          src={item.image || "https://picsum.photos/seed/placeholder/100/100"} 
-                          alt={item.name} 
-                          className="w-12 h-16 object-cover bg-white/5" 
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="flex-grow">
-                          <p className="text-[11px] font-bold uppercase tracking-widest leading-tight">{item.name}</p>
-                          <p className="text-[9px] text-white/40 uppercase tracking-widest mt-1">Quantity: {item.quantity}</p>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </section>
 
@@ -398,9 +592,16 @@ const ReturnRequest: React.FC = () => {
                         returnItems.map(ri => {
                           const item = signal?.items.find(i => i.productId === ri.productId);
                           return (
-                            <div key={ri.productId} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
-                               <span className="text-[10px] uppercase tracking-widest text-white/70 truncate mr-4">{item?.name}</span>
-                               <span className="text-[10px] font-mono text-accent">x{ri.quantity}</span>
+                            <div key={ri.productId} className="py-3 border-b border-white/5 last:border-0 space-y-1">
+                               <div className="flex justify-between items-center">
+                                 <span className="text-[10px] font-bold uppercase tracking-widest text-white/70 truncate mr-4">{item?.name}</span>
+                                 <span className="text-[10px] font-mono text-accent">x{ri.quantity}</span>
+                               </div>
+                               <div className="text-[8px] uppercase tracking-widest text-white/40">
+                                 {ri.action === 'refund' && 'Action: Refund'}
+                                 {ri.action === 'size_exchange' && `Action: Exchange (Size: ${ri.selectedSize || 'None'})`}
+                                 {ri.action === 'style_exchange' && `Action: Swap (New: ${ri.exchangeProductName || 'None'} - ${ri.exchangeSize || 'None'})`}
+                               </div>
                             </div>
                           );
                         })

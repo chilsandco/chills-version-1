@@ -2343,9 +2343,24 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       console.log(`[CHILS & CO.] Processing return for order ${id} via RMA API`);
       const rmaSecretClean = rmaSecret.trim();
       const authHeader = "Basic " + Buffer.from(`secret_key:${rmaSecretClean}`).toString("base64");
+      let actionsSummary = "";
+      if (products && Array.isArray(products)) {
+        actionsSummary = products.map((p) => {
+          let actDesc = "Refund";
+          if (p.action === "size_exchange") {
+            actDesc = `Exchange (Size Swap to: ${p.selectedSize || "?"})`;
+          } else if (p.action === "style_exchange") {
+            actDesc = `Swap to: ${p.exchangeProductName || "Alternative product"} (Size: ${p.exchangeSize || "?"})`;
+          }
+          return `- Product ID: ${p.productId} | Qty: ${p.quantity} | Action: ${actDesc}`;
+        }).join("\n");
+      }
       const fullReason = `Reason: ${reason}
 Description: ${description}
-Images: ${images ? images.join(", ") : "None"}`;
+Images: ${images ? images.join(", ") : "None"}
+
+Return/Exchange Actions Chosen:
+${actionsSummary}`;
       const rmaPayload = {
         order_id: id.toString(),
         // Use string ID as shown in docs
@@ -3095,6 +3110,18 @@ function compileAdminNotificationHtml(order) {
 }
 function compileReturnRequestHtml(orderId, reason, description, products) {
   const signalId = toSignalId(orderId);
+  let itemsHtml = "";
+  if (products && Array.isArray(products)) {
+    itemsHtml = products.map((p) => {
+      let actionLabel = "Refund";
+      if (p.action === "size_exchange") {
+        actionLabel = `Exchange (Size: ${p.selectedSize || "?"})`;
+      } else if (p.action === "style_exchange") {
+        actionLabel = `Swap: ${p.exchangeProductName || "Alternative"} (Size: ${p.exchangeSize || "?"})`;
+      }
+      return `<li style="margin-bottom: 8px; color: #ccc;">Product ID: ${p.productId} (Qty: ${p.quantity}) &rarr; <strong style="color: #D4AF37;">${actionLabel}</strong></li>`;
+    }).join("");
+  }
   return `
 <!DOCTYPE html>
 <html>
@@ -3118,6 +3145,7 @@ function compileReturnRequestHtml(orderId, reason, description, products) {
           <span style="color: #666;">Status:</span> <span style="color: #ffcc00;">Under Review</span><br/>
           <span style="color: #666;">Reason:</span> <span style="color: #fff;">${reason}</span><br/>
           <span style="color: #666;">Details:</span> <span style="color: #aaa;">${description || "None"}</span>
+          ${itemsHtml ? `<br/><br/><span style="color: #666;">Items & Actions:</span><ul style="margin: 5px 0 0 0; padding-left: 20px; font-size: 11px;">${itemsHtml}</ul>` : ""}
         </div>
         <p style="font-size: 12px; line-height: 1.6; color: #666;">
           Your request is currently being audited. We will verify the status within 24-48 business hours.
@@ -3217,12 +3245,25 @@ async function triggerReturnRequestEmails(orderId, reason, description, products
     }
   }
   const adminSubject = `[ALERT] Reversal Requested // Signal #${signalId}`;
+  const itemsList = products && Array.isArray(products) ? products.map((p) => {
+    let actDesc = "Refund";
+    if (p.action === "size_exchange") {
+      actDesc = `Exchange (Size: ${p.selectedSize})`;
+    } else if (p.action === "style_exchange") {
+      actDesc = `Swap to: ${p.exchangeProductName} (Size: ${p.exchangeSize})`;
+    }
+    return `<li>Product ID: ${p.productId} | Qty: ${p.quantity} | Action: <strong>${actDesc}</strong></li>`;
+  }).join("") : "";
   const adminHtml = `
-    <h3>Return Request Submitted</h3>
+    <h3>Return/Exchange Request Submitted</h3>
     <p><strong>Order ID:</strong> ${orderId}</p>
     <p><strong>Signal ID:</strong> #${signalId}</p>
     <p><strong>Reason:</strong> ${reason}</p>
     <p><strong>Description:</strong> ${description || "None"}</p>
+    <h4>Items & Actions:</h4>
+    <ul>
+      ${itemsList}
+    </ul>
   `;
   await sendEmailViaBrevo("chilsandco@gmail.com", "Chils & Co. Admin", adminSubject, adminHtml);
 }
