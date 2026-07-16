@@ -329,6 +329,25 @@ const ProductDetail: React.FC = () => {
         return res.json();
       })
       .then(data => {
+        const isCombo = 
+          data.category === 'Combos' || 
+          data.categories?.includes('Combos') || 
+          data.name?.toUpperCase().includes('COMBO') ||
+          data.id?.toString().startsWith('combo');
+
+        if (isCombo) {
+          let selectId = data.id;
+          if (data.price === 999) selectId = 'combo-349';
+          else if (data.price === 1099) selectId = 'combo-399';
+          else if (data.price === 1149) selectId = 'combo-419';
+          else if (data.price === 1249) selectId = 'combo-449';
+          else if (data.price === 1499) selectId = 'combo-549';
+          else if (data.price === 1649) selectId = 'combo-599';
+
+          navigate(`/combos?select=${selectId}`);
+          return;
+        }
+
         setProduct(data);
         setLoading(false);
       })
