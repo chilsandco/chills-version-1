@@ -317,6 +317,11 @@ const ProductDetail: React.FC = () => {
   }, [product, selectedSize, selectedColor]);
 
   useEffect(() => {
+    if (id && id.startsWith('combo')) {
+      navigate(`/combos?select=${id}`);
+      return;
+    }
+
     setLoading(true);
     fetch(`/api/products/${id}`)
       .then(res => {

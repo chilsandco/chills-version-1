@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Check, ShoppingBag, Loader2, Info, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { useCart } from '../CartContext';
@@ -163,6 +163,9 @@ const PREDEFINED_COMBOS: PredefinedCombo[] = [
 
 const Combos: React.FC = () => {
   const { addComboToCart } = useCart();
+  const [searchParams] = useSearchParams();
+  const selectParam = searchParams.get('select');
+
   const [products, setProducts] = useState<Product[]>([]);
   const [comboMainProducts, setComboMainProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -181,13 +184,28 @@ const Combos: React.FC = () => {
       .then((res) => res.json())
       .then((data) => {
         if (Array.isArray(data)) {
-          setProducts(data.filter((p) => !p.id.startsWith('combo-')));
-          setComboMainProducts(data.filter((p) => p.id.startsWith('combo-')));
+          const standardProds = data.filter((p) => !p.id.startsWith('combo-'));
+          const comboProds = data.filter((p) => p.id.startsWith('combo-'));
+          setProducts(standardProds);
+          setComboMainProducts(comboProds);
+
+          // Handle pre-selected combo from query parameter
+          if (selectParam) {
+            const cleanId = selectParam.split('-').slice(0, 2).join('-');
+            const match = PREDEFINED_COMBOS.find(c => c.comboProductId === cleanId || c.id === selectParam);
+            if (match) {
+              setActiveCombo(match);
+              setSize1('M');
+              setSize2('M');
+              setSize3('M');
+              setOpenStoryIndex(null);
+            }
+          }
         }
       })
       .catch((err) => console.error('Error loading products for combos:', err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [selectParam]);
 
   // Helper to find a product in WooCommerce catalog matching a name
   const findProductByName = (name: string): Product | undefined => {
