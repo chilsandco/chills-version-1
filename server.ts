@@ -638,6 +638,99 @@ async function startServer() {
     };
   };
 
+  const COMBO_PRODUCTS = [
+    {
+      id: "combo-349",
+      name: "CORE STACK COMBO",
+      category: "Combos",
+      categories: ["Combos"],
+      price: 999,
+      description: "Build your essential collection. Select 1 Black, 1 Light, and 1 Dark tee from our ₹349 tier. Perfect for daily rotations.\n\nPremium 100% Cotton, regular fit.",
+      shortDescription: "3 Tees (1 Black, 1 Light, 1 Dark) from the ₹349 tier.",
+      concept: "Essential daily rotation system.",
+      material: "100% Premium Cotton.",
+      fit: "Regular fit.",
+      care: "Machine wash cold.",
+      images: ["https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=800"],
+      status: "Available"
+    },
+    {
+      id: "combo-399",
+      name: "EVERYDAY STACK COMBO",
+      category: "Combos",
+      categories: ["Combos"],
+      price: 1099,
+      description: "Upgrade your daily wear. Select 1 Black, 1 Light, and 1 Dark tee from our ₹399 tier.\n\nPremium heavyweight fabric.",
+      shortDescription: "3 Tees (1 Black, 1 Light, 1 Dark) from the ₹399 tier.",
+      concept: "Elevated everyday rotation system.",
+      material: "100% Heavyweight Cotton.",
+      fit: "Regular fit.",
+      care: "Machine wash cold.",
+      images: ["https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?w=800"],
+      status: "Available"
+    },
+    {
+      id: "combo-419",
+      name: "OVERSIZED STACK COMBO",
+      category: "Combos",
+      categories: ["Combos"],
+      price: 1149,
+      description: "Chill in comfort. Select 1 Black, 1 Light, and 1 Dark oversized tee from our ₹419 tier.\n\nOversized fit, dropped shoulders, heavyweight fabric.",
+      shortDescription: "3 Oversized Tees (1 Black, 1 Light, 1 Dark) from the ₹419 tier.",
+      concept: "Relaxed minimalist system.",
+      material: "100% Organic Heavyweight Cotton.",
+      fit: "Oversized, dropped shoulders.",
+      care: "Machine wash cold.",
+      images: ["https://images.unsplash.com/photo-1562157873-818bc0726f68?w=800"],
+      status: "Available"
+    },
+    {
+      id: "combo-449",
+      name: "CREATOR STACK COMBO",
+      category: "Combos",
+      categories: ["Combos"],
+      price: 1249,
+      description: "Designed for builders. Select 1 Black, 1 Light, and 1 Dark tee from our ₹449 creator series.\n\nHeavyweight technical cotton.",
+      shortDescription: "3 Tees (1 Black, 1 Light, 1 Dark) from the ₹449 tier.",
+      concept: "Creator and engineer oriented designs.",
+      material: "100% technical cotton.",
+      fit: "Oversized / Regular.",
+      care: "Machine wash cold.",
+      images: ["https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?w=800"],
+      status: "Available"
+    },
+    {
+      id: "combo-549",
+      name: "POLO STACK COMBO",
+      category: "Combos",
+      categories: ["Combos"],
+      price: 1499,
+      description: "Structured logic. Select 1 Black, 1 Light, and 1 Dark polo from our ₹549 technical polo series.\n\nClassic collar, minimalist technical structure.",
+      shortDescription: "3 Technical Polos (1 Black, 1 Light, 1 Dark) from the ₹549 tier.",
+      concept: "Clean collar minimalist system.",
+      material: "Premium Oxford technical pique.",
+      fit: "Regular polo fit.",
+      care: "Machine wash cold.",
+      images: ["https://images.unsplash.com/photo-1581655353564-df123a1eb820?w=800"],
+      status: "Available"
+    },
+    {
+      id: "combo-599",
+      name: "TWINTEX POLO STACK COMBO",
+      category: "Combos",
+      categories: ["Combos"],
+      price: 1649,
+      description: "Ultimate luxury. Select 1 Black, 1 Light, and 1 Dark polo from our ₹599 TwinTex series.\n\nDouble-faced structured knit.",
+      shortDescription: "3 TwinTex Polos (1 Black, 1 Light, 1 Dark) from the ₹599 tier.",
+      concept: "Double-knit high structure polo.",
+      material: "TwinTex double-faced structured cotton-poly.",
+      fit: "Tailored polo fit.",
+      care: "Machine wash cold.",
+      images: ["https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=800"],
+      status: "Available"
+    }
+  ];
+
   const mockProducts = [
     {
       id: "t1",
@@ -778,7 +871,7 @@ async function startServer() {
       const wc = getWooCommerce();
       if (!wc) {
         console.log("[CHILS & CO.] No WooCommerce credentials found. Serving mock data.");
-        return res.json(mockProducts);
+        return res.json([...mockProducts, ...COMBO_PRODUCTS]);
       }
       console.log(`[CHILS & CO.] Fetching products from WooCommerce: ${process.env.WOOCOMMERCE_URL}`);
       const response = await wcSafeCall(wc, "get", "products", { per_page: 50, status: 'publish' });
@@ -790,19 +883,21 @@ async function startServer() {
       if (!Array.isArray(response.data)) {
         console.warn("[CHILS & CO.] WooCommerce did not return an array. Data type:", typeof response.data);
         console.warn("[CHILS & CO.] Payload received:", JSON.stringify(response.data).substring(0, 200));
-        return res.json([]);
+        return res.json(COMBO_PRODUCTS);
       }
 
       console.log(`[CHILS & CO.] Successfully fetched ${response.data.length} products.`);
       const mappedProducts = response.data.map((p: any) => mapProduct(p, {}, swatchesData));
       
+      const allProducts = [...mappedProducts, ...COMBO_PRODUCTS];
+
       // Update cache
-      globalProductsCache = mappedProducts;
+      globalProductsCache = allProducts;
       lastProductsFetch = Date.now();
 
-      let productsToReturn = mappedProducts;
+      let productsToReturn = allProducts;
       if (req.query.show_test !== 'true') {
-        productsToReturn = mappedProducts.filter((p: any) => p.id.toString() !== '1672');
+        productsToReturn = allProducts.filter((p: any) => p.id.toString() !== '1672');
       }
       res.json(productsToReturn);
     } catch (error) {
@@ -813,14 +908,23 @@ async function startServer() {
 
   app.get("/api/products/:id", async (req, res) => {
     try {
+      const id = req.params.id;
+      if (id.startsWith("combo-")) {
+        const comboProduct = COMBO_PRODUCTS.find(p => p.id === id);
+        if (comboProduct) {
+          return res.json(comboProduct);
+        }
+        return res.status(404).json({ message: "Combo product not found" });
+      }
+
       const wc = getWooCommerce();
       if (!wc) {
-        const mockProduct = mockProducts.find(product => product.id === req.params.id);
+        const mockProduct = mockProducts.find(product => product.id === id);
         return mockProduct
           ? res.json(mockProduct)
           : res.status(404).json({ message: "Product not found (Mock Mode)" });
       }
-      const response = await wcSafeCall(wc, "get", `products/${req.params.id}`);
+      const response = await wcSafeCall(wc, "get", `products/${id}`);
       let productData = response.data;
       console.log(`[CHILS & CO. DEBUG] Product ${req.params.id} Type: '${productData.type}'`);
       
@@ -1180,35 +1284,69 @@ async function startServer() {
             postcode: customerDetails.pincode,
             country: "IN"
           },
-          line_items: lineItems.map((item: any) => {
+           line_items: lineItems.map((item: any) => {
             let variationId: number | undefined = undefined;
-            if (item.variations && Array.isArray(item.variations)) {
-              const match = item.variations.find((v: any) => {
-                const matchesSize = item.selectedSize ? (v.attributes?.size === item.selectedSize) : true;
-                const matchesColor = item.selectedColor ? (v.attributes?.color === item.selectedColor) : true;
-                return matchesSize && matchesColor;
+            let productIdNum = parseInt(item.id, 10);
+            const meta_data: any[] = [];
+
+            if (item.isCombo && item.comboItems) {
+              const comboSkuMap: Record<string, string> = {
+                'combo-349': 'COMBO-349-CORE',
+                'combo-399': 'COMBO-399-EVERYDAY',
+                'combo-419': 'COMBO-419-OVERSIZE',
+                'combo-449': 'COMBO-449-CREATOR',
+                'combo-549': 'COMBO-549-POLO',
+                'combo-599': 'COMBO-599-TWINTEX'
+              };
+              
+              const cleanComboId = item.id.split('-').slice(0, 2).join('-');
+              const targetSku = comboSkuMap[cleanComboId] || comboSkuMap[item.id];
+              const realComboProduct = globalProductsCache?.find((p: any) => 
+                !p.id.toString().startsWith('combo-') && 
+                (p.sku === targetSku || p.name?.toUpperCase() === item.name?.toUpperCase())
+              );
+
+              if (realComboProduct) {
+                productIdNum = parseInt(realComboProduct.id, 10);
+              } else {
+                productIdNum = 1672; // Fallback test ID in development
+                meta_data.push({ key: "Original Combo Name", value: item.name });
+              }
+
+              item.comboItems.forEach((ci: any, idx: number) => {
+                meta_data.push({
+                  key: `Tee ${idx + 1} (${ci.color || 'Option'})`,
+                  value: `${ci.name} - Size: ${ci.selectedSize}`
+                });
               });
-              if (match) {
-                variationId = parseInt(match.id, 10);
+            } else {
+              if (item.variations && Array.isArray(item.variations)) {
+                const match = item.variations.find((v: any) => {
+                  const matchesSize = item.selectedSize ? (v.attributes?.size === item.selectedSize) : true;
+                  const matchesColor = item.selectedColor ? (v.attributes?.color === item.selectedColor) : true;
+                  return matchesSize && matchesColor;
+                });
+                if (match) {
+                  variationId = parseInt(match.id, 10);
+                }
+              }
+
+              if (item.selectedSize) {
+                meta_data.push({ 
+                  key: item.sizeAttributeName || "pa_size", 
+                  value: item.selectedSize 
+                });
+              }
+              if (item.selectedColor) {
+                meta_data.push({ 
+                  key: item.colorAttributeName || "pa_color", 
+                  value: item.selectedColor 
+                });
               }
             }
 
-            const meta_data: any[] = [];
-            if (item.selectedSize) {
-              meta_data.push({ 
-                key: item.sizeAttributeName || "pa_size", 
-                value: item.selectedSize 
-              });
-            }
-            if (item.selectedColor) {
-              meta_data.push({ 
-                key: item.colorAttributeName || "pa_color", 
-                value: item.selectedColor 
-              });
-            }
-
             return {
-              product_id: parseInt(item.id, 10),
+              product_id: productIdNum,
               quantity: item.quantity,
               ...(variationId ? { variation_id: variationId } : {}),
               meta_data

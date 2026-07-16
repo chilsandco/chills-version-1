@@ -455,9 +455,65 @@ const Checkout: React.FC = () => {
                 {cart.length} unique {cart.length === 1 ? 'artifact' : 'artifacts'}
               </span>
             </div>
-            
             <div className="space-y-4">
               {cart.map(item => {
+                if (item.isCombo && item.comboItems) {
+                  return (
+                    <div key={item.id} className="p-5 border border-neutral-900 bg-neutral-950/40 rounded-sm space-y-4">
+                      {/* Combo Header */}
+                      <div className="flex justify-between items-start pb-4 border-b border-neutral-900">
+                        <div className="flex gap-4">
+                          <div className="w-16 h-20 bg-neutral-900 border border-neutral-800 overflow-hidden flex-shrink-0 rounded-sm">
+                            <img src={item.images[0]} alt={item.name} className="w-full h-full object-cover" />
+                          </div>
+                          <div>
+                            <span className="text-[8px] text-accent uppercase tracking-widest font-mono font-bold block mb-1">
+                              SYSTEM COMBO STACK
+                            </span>
+                            <h3 className="text-sm tracking-tight font-display font-medium uppercase text-white">{item.name}</h3>
+                            <span className="text-[10px] font-mono text-neutral-600 block mt-1">₹{item.price} each</span>
+                          </div>
+                        </div>
+                        <button type="button" onClick={() => removeFromCart(item.id)} className="text-neutral-700 hover:text-red-500 transition-colors p-1 cursor-pointer">
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+
+                      {/* Combo Sub-items */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 py-2">
+                        {item.comboItems.map((subItem, idx) => (
+                          <div key={idx} className="flex gap-3 items-center bg-black/45 border border-neutral-900 p-2.5 rounded-sm">
+                            <img src={subItem.image} alt={subItem.name} className="w-8 h-10 object-cover bg-neutral-900 border border-neutral-850 rounded-[1px] shrink-0" />
+                            <div className="min-w-0 flex-grow">
+                              <span className="text-[8px] text-neutral-500 uppercase tracking-wider block font-bold font-mono">TEE {idx + 1}</span>
+                              <h4 className="text-[10px] tracking-tight font-display font-medium uppercase text-neutral-300 truncate leading-tight mt-0.5">{subItem.name}</h4>
+                              <div className="flex items-center gap-1.5 mt-0.5 text-[8px] text-neutral-550 font-mono">
+                                <span>SIZE: {subItem.selectedSize}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Combo Controls */}
+                      <div className="flex justify-between items-center pt-3 border-t border-neutral-900">
+                        <div className="flex items-center bg-black border border-neutral-900/80 p-0.5 rounded-sm">
+                          <button type="button" onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer">
+                            <Minus size={8} />
+                          </button>
+                          <span className="w-6 text-center text-[9px] font-mono font-bold">{item.quantity.toString().padStart(2, '0')}</span>
+                          <button type="button" onClick={() => updateQuantity(item.id, item.quantity + 1)} className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer">
+                            <Plus size={8} />
+                          </button>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs font-mono tracking-tight font-bold text-white">₹{(item.price * item.quantity).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
                 const variationImage = item.selectedColor && item.variations
                   ? item.variations.find(v => v.attributes.color === item.selectedColor)?.images?.[0]
                   : null;

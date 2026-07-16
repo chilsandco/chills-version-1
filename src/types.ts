@@ -38,6 +38,15 @@ export interface CartItem extends Product {
   quantity: number;
   selectedSize?: string;
   selectedColor?: string;
+  isCombo?: boolean;
+  comboItems?: {
+    id: string;
+    name: string;
+    selectedSize: string;
+    selectedColor: string;
+    image: string;
+    price: number;
+  }[];
 }
 
 export interface Customer {
