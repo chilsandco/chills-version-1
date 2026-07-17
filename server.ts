@@ -871,7 +871,9 @@ async function startServer() {
       const wc = getWooCommerce();
       if (!wc) {
         console.log("[CHILS & CO.] No WooCommerce credentials found. Serving mock data.");
-        return res.json([...mockProducts, ...COMBO_PRODUCTS]);
+        // Temp disabled for research: serving mock data with combos
+        // return res.json([...mockProducts, ...COMBO_PRODUCTS]);
+        return res.json(mockProducts);
       }
       console.log(`[CHILS & CO.] Fetching products from WooCommerce: ${process.env.WOOCOMMERCE_URL}`);
       const response = await wcSafeCall(wc, "get", "products", { per_page: 50, status: 'publish' });
@@ -883,13 +885,17 @@ async function startServer() {
       if (!Array.isArray(response.data)) {
         console.warn("[CHILS & CO.] WooCommerce did not return an array. Data type:", typeof response.data);
         console.warn("[CHILS & CO.] Payload received:", JSON.stringify(response.data).substring(0, 200));
-        return res.json(COMBO_PRODUCTS);
+        // Temp disabled for research
+        // return res.json(COMBO_PRODUCTS);
+        return res.json([]);
       }
 
       console.log(`[CHILS & CO.] Successfully fetched ${response.data.length} products.`);
       const mappedProducts = response.data.map((p: any) => mapProduct(p, {}, swatchesData));
       
-      const allProducts = [...mappedProducts, ...COMBO_PRODUCTS];
+      // Temp disabled for research: Appending combo products
+      // const allProducts = [...mappedProducts, ...COMBO_PRODUCTS];
+      const allProducts = mappedProducts;
 
       // Update cache
       globalProductsCache = allProducts;
