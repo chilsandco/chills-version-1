@@ -317,10 +317,13 @@ const ProductDetail: React.FC = () => {
   }, [product, selectedSize, selectedColor]);
 
   useEffect(() => {
+    // Temp disabled for research: combo page redirection
+    /*
     if (id && id.startsWith('combo')) {
       navigate(`/combos?select=${id}`);
       return;
     }
+    */
 
     setLoading(true);
     fetch(`/api/products/${id}`)
@@ -329,6 +332,8 @@ const ProductDetail: React.FC = () => {
         return res.json();
       })
       .then(data => {
+        // Temp disabled for research: combo product redirection
+        /*
         const isCombo = 
           data.category === 'Combos' || 
           data.categories?.includes('Combos') || 
@@ -347,6 +352,7 @@ const ProductDetail: React.FC = () => {
           navigate(`/combos?select=${selectId}`);
           return;
         }
+        */
 
         setProduct(data);
         setLoading(false);
