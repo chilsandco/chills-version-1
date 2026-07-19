@@ -126,20 +126,28 @@ const Combos: React.FC = () => {
   };
 
   return (
-    <div className="pt-36 md:pt-40 pb-24 px-6 md:px-12 max-w-[1800px] mx-auto min-h-screen">
+    <div className="pt-28 md:pt-40 pb-24 px-6 md:px-12 max-w-[1800px] mx-auto min-h-screen">
       <SEO 
         title="Engineered Stacks | CHILS & CO." 
         description="Thoughtfully pre-curated wardrobe stacks. Built to work together. Save 10% on Chils engineered wardrobe setups."
       />
 
-      <header className="mb-16">
-        <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter mb-8 uppercase flex items-center gap-4 flex-wrap">
-          <Link to="/collection" className="text-neutral-500 hover:text-white transition-colors">Collection</Link>
-          <span className="text-neutral-700 font-light">|</span>
-          <span className="text-white">Combos</span>
-        </h1>
+      <header className="mb-8 md:mb-16">
+        {/* Breadcrumb — stays on one line on all screen sizes */}
+        <div className="flex items-center gap-3 md:gap-4 mb-6 md:mb-8 overflow-hidden">
+          <Link
+            to="/collection"
+            className="text-3xl md:text-6xl lg:text-7xl font-display font-bold tracking-tighter uppercase text-neutral-500 hover:text-white transition-colors whitespace-nowrap flex-shrink-0"
+          >
+            Collection
+          </Link>
+          <span className="text-neutral-700 font-light text-3xl md:text-6xl flex-shrink-0">|</span>
+          <span className="text-3xl md:text-6xl lg:text-7xl font-display font-bold tracking-tighter uppercase text-white whitespace-nowrap">
+            Combos
+          </span>
+        </div>
         
-        <div className="flex items-center gap-6 border-b border-neutral-900 pb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6 border-b border-neutral-900 pb-4">
           <span className="text-[10px] tracking-[0.25em] font-mono text-accent uppercase font-bold">
             SYSTEM OPTIMIZATIONS // MULTI-UNIT WARDROBES
           </span>
@@ -161,7 +169,12 @@ const Combos: React.FC = () => {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
+        {/* Mobile-only tap nudge */}
+        <div className="md:hidden flex items-center justify-center gap-2 mb-6 py-2.5 border border-dashed border-neutral-800 rounded-sm">
+          <span className="text-[9px] font-mono tracking-[0.25em] text-neutral-500 uppercase">Tap a stack to configure &amp; add to wardrobe</span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
           {combos.map((combo) => {
             // Resolve children products to display their details
             const childIds = combo.groupedProducts || [];
