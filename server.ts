@@ -1048,21 +1048,32 @@ async function startServer() {
         console.log("[CHILS & CO.] No WooCommerce credentials found. Serving mock data.");
         return res.json(mockProducts);
       }
-      console.log(`[CHILS & CO.] Fetching products from WooCommerce: ${process.env.WOOCOMMERCE_URL}`);
-      const response = await wcSafeCall(wc, "get", "products", { per_page: 50, status: 'publish' });
+      console.log(`[CHILS & CO.] Fetching ALL products from WooCommerce (paginated)...`);
       const swatchesData = await fetchSwatches();
-      
-      console.log(`[CHILS & CO.] WooCommerce Response Status: ${response.status}`);
-      
-      // Ensure response.data is an array before mapping
-      if (!Array.isArray(response.data)) {
-        console.warn("[CHILS & CO.] WooCommerce did not return an array. Data type:", typeof response.data);
-        console.warn("[CHILS & CO.] Payload received:", JSON.stringify(response.data).substring(0, 200));
-        return res.json([]);
+
+      // Paginated fetch — WooCommerce max is 100 per page
+      let allRawProducts: any[] = [];
+      let page = 1;
+      let hasMore = true;
+      while (hasMore) {
+        const response = await wcSafeCall(wc, "get", "products", {
+          per_page: 100,
+          page,
+          status: 'publish'
+        });
+        console.log(`[CHILS & CO.] Page ${page}: got ${Array.isArray(response.data) ? response.data.length : 0} products`);
+        if (!Array.isArray(response.data) || response.data.length === 0) {
+          hasMore = false;
+        } else {
+          allRawProducts = [...allRawProducts, ...response.data];
+          // If fewer than 100 returned, we've hit the last page
+          if (response.data.length < 100) hasMore = false;
+          else page++;
+        }
       }
 
-      console.log(`[CHILS & CO.] Successfully fetched ${response.data.length} products.`);
-      const mappedProducts = response.data.map((p: any) => mapProduct(p, {}, swatchesData));
+      console.log(`[CHILS & CO.] Total products fetched: ${allRawProducts.length}`);
+      const mappedProducts = allRawProducts.map((p: any) => mapProduct(p, {}, swatchesData));
       
       // Update cache
       globalProductsCache = mappedProducts;
