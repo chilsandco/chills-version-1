@@ -177,6 +177,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         {
           ...comboProduct,
           id: comboKey,
+          comboId: comboProduct.id,  // preserve original WooCommerce ID for navigation
           name: comboProduct.name,
           price: comboProduct.price,
           quantity: 1,

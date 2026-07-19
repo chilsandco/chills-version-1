@@ -464,7 +464,7 @@ const Checkout: React.FC = () => {
                       <div className="bg-accent/5 px-4 py-3 border-b border-accent/10 flex justify-between items-center">
                         <div>
                           <span className="text-[9px] font-mono tracking-widest text-accent uppercase block mb-0.5">CURATED WARDROBE STACK</span>
-                          <Link to={`/combos?id=${item.id}`} className="hover:text-accent transition-colors block">
+                          <Link to={`/combos?id=${item.comboId || item.id}`} className="hover:text-accent transition-colors block">
                             <h3 className="text-sm font-display font-bold uppercase text-white">{item.name}</h3>
                           </Link>
                         </div>
