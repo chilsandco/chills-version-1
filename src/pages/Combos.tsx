@@ -321,24 +321,50 @@ const Combos: React.FC = () => {
                     SELECT SIZE FOR ALL ITEMS
                   </span>
                   <div className="flex flex-wrap gap-2">
-                    {['S', 'M', 'L', 'XL', 'XXL'].map(s => {
-                      const isSel = globalSize === s;
-                      return (
-                        <button
-                          key={s}
-                          onClick={() => {
-                            setGlobalSize(s);
-                          }}
-                          className={`px-5 py-2.5 text-[10px] font-mono font-bold transition-all border ${
-                            isSel 
-                              ? 'border-accent bg-accent/5 text-accent font-bold' 
-                              : 'border-neutral-900 text-neutral-500 hover:border-neutral-800 hover:text-white'
-                          }`}
-                        >
-                          {s}
-                        </button>
-                      );
-                    })}
+                    {(() => {
+                      // Dynamically calculate sizes based on child products
+                      const childIds = selectedCombo.groupedProducts || [];
+                      let commonSizes = ['S', 'M', 'L', 'XL', 'XXL']; // Fallback
+
+                      if (childIds.length > 0) {
+                        const sizesArrays = childIds
+                          .map(id => products.find(p => p.id === id))
+                          .filter(Boolean)
+                          .map(child => child!.availableSizes && child!.availableSizes.length > 0 
+                            ? child!.availableSizes 
+                            : ['S', 'M', 'L', 'XL']
+                          );
+
+                        if (sizesArrays.length > 0) {
+                          // Find intersection of all child size arrays
+                          commonSizes = sizesArrays.reduce((common, current) => 
+                            common.filter(size => current.includes(size))
+                          );
+                        }
+                      }
+                      
+                      // If no common sizes are found, provide a fallback
+                      if (commonSizes.length === 0) commonSizes = ['S', 'M', 'L', 'XL'];
+
+                      return commonSizes.map(s => {
+                        const isSel = globalSize === s;
+                        return (
+                          <button
+                            key={s}
+                            onClick={() => {
+                              setGlobalSize(s);
+                            }}
+                            className={`px-5 py-2.5 text-[10px] font-mono font-bold transition-all border ${
+                              isSel 
+                                ? 'border-accent bg-accent/5 text-accent font-bold' 
+                                : 'border-neutral-900 text-neutral-500 hover:border-neutral-800 hover:text-white'
+                            }`}
+                          >
+                            {s}
+                          </button>
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
 
