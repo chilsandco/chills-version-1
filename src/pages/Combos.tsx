@@ -169,12 +169,13 @@ const Combos: React.FC = () => {
           </Link>
         </div>
       ) : (
-        {/* Mobile-only tap nudge */}
-        <div className="md:hidden flex items-center justify-center gap-2 mb-6 py-2.5 border border-dashed border-neutral-800 rounded-sm">
-          <span className="text-[9px] font-mono tracking-[0.25em] text-neutral-500 uppercase">Tap a stack to configure &amp; add to wardrobe</span>
-        </div>
+        <>
+          {/* Mobile-only tap nudge */}
+          <div className="md:hidden flex items-center justify-center gap-2 mb-6 py-2.5 border border-dashed border-neutral-800 rounded-sm">
+            <span className="text-[9px] font-mono tracking-[0.25em] text-neutral-500 uppercase">Tap a stack to configure &amp; add to wardrobe</span>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
           {combos.map((combo) => {
             // Resolve children products to display their details
             const childIds = combo.groupedProducts || [];
@@ -319,6 +320,7 @@ const Combos: React.FC = () => {
             );
           })}
         </div>
+        </>
       )}
 
       {/* Slide-over Customizer Panel */}
