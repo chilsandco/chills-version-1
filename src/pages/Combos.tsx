@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ShoppingBag, ArrowLeft, X, Sparkles, Check } from 'lucide-react';
+import { ShoppingBag, ArrowLeft, X, Sparkles, Check, Share2 } from 'lucide-react';
 import SEO from '../components/SEO';
 import { Product, CartItem } from '../types';
 import { useCart } from '../CartContext';
@@ -20,6 +20,7 @@ const Combos: React.FC = () => {
   const [selectedCombo, setSelectedCombo] = useState<Product | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, { size: string; color: string }>>({});
   const [addingState, setAddingState] = useState<'idle' | 'adding' | 'success'>('idle');
+  const [shareCopied, setShareCopied] = useState(false);
 
   // Fetch all products
   useEffect(() => {
@@ -76,6 +77,22 @@ const Combos: React.FC = () => {
   const handleCloseCombo = () => {
     setSelectedCombo(null);
     setSearchParams({});
+  };
+
+  const handleShare = async (combo: Product) => {
+    const url = `${window.location.origin}/combos?id=${combo.id}`;
+    const title = `${combo.name} — CHILS & CO.`;
+    const text = `Check out the ${combo.name} wardrobe stack on CHILS & CO. — 3 tees, 10% off.`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, text, url });
+      } catch (_) { /* user dismissed */ }
+    } else {
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    }
   };
 
   // Add all selected products in the combo to the cart
@@ -337,12 +354,24 @@ const Combos: React.FC = () => {
                   <span className="text-[10px] font-mono tracking-[0.3em] text-accent uppercase">
                     STACK CONFIGURATOR // DR-01
                   </span>
-                  <button 
-                    onClick={handleCloseCombo}
-                    className="text-neutral-500 hover:text-white transition-colors"
-                  >
-                    <X size={20} />
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => handleShare(selectedCombo)}
+                      className="flex items-center gap-1.5 text-neutral-500 hover:text-white transition-colors text-[9px] font-mono uppercase tracking-widest border border-neutral-800 hover:border-neutral-600 px-3 py-1.5 rounded-sm"
+                    >
+                      {shareCopied ? (
+                        <><Check size={12} className="text-accent" /><span className="text-accent">Copied!</span></>
+                      ) : (
+                        <><Share2 size={12} /><span>Share</span></>
+                      )}
+                    </button>
+                    <button 
+                      onClick={handleCloseCombo}
+                      className="text-neutral-500 hover:text-white transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
                 </div>
 
                 <h2 className="text-3xl font-display font-bold uppercase tracking-tight mb-3 text-white">
