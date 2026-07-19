@@ -21,6 +21,29 @@ const Combos: React.FC = () => {
   const [selectedCombo, setSelectedCombo] = useState<Product | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<Record<string, { size: string; color: string }>>({});
   const [addingState, setAddingState] = useState<'idle' | 'adding' | 'success'>('idle');
+  const drawerRef = useRef<HTMLDivElement>(null);
+  const addToCartBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Lock page scroll and redirect wheel to drawer when open
+  useEffect(() => {
+    if (!selectedCombo) {
+      document.body.style.overflow = '';
+      return;
+    }
+    document.body.style.overflow = 'hidden';
+
+    const handleWheel = (e: WheelEvent) => {
+      if (drawerRef.current) {
+        drawerRef.current.scrollTop += e.deltaY;
+        e.preventDefault();
+      }
+    };
+    window.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      window.removeEventListener('wheel', handleWheel);
+      document.body.style.overflow = '';
+    };
+  }, [selectedCombo]);
 
   // Fetch all products
   useEffect(() => {
@@ -117,11 +140,104 @@ const Combos: React.FC = () => {
       price: discountedTotal,
     }, subItems);
 
+    // Fly-to-cart animation
+    const cartIcon = document.getElementById('cart-icon');
+    const addBtn = addToCartBtnRef.current;
+
+    if (cartIcon && addBtn && subItems.length > 0) {
+      const btnRect = addBtn.getBoundingClientRect();
+      const cartRect = cartIcon.getBoundingClientRect();
+      const startX = btnRect.left + btnRect.width / 2;
+      const startY = btnRect.top + btnRect.height / 2;
+      const endX = cartRect.left + cartRect.width / 2;
+      const endY = cartRect.top + cartRect.height / 2;
+
+      // Inject keyframes once
+      const styleId = 'fly-to-cart-keyframes';
+      if (!document.getElementById(styleId)) {
+        const styleEl = document.createElement('style');
+        styleEl.id = styleId;
+        styleEl.textContent = `
+          @keyframes sparkle { 0% { transform:scale(0) rotate(0deg); opacity:1; } 50% { transform:scale(1) rotate(180deg); opacity:0.8; } 100% { transform:scale(0.5) rotate(360deg); opacity:0; } }
+          @keyframes trailFade { 0% { opacity:0.7; transform:scale(1); } 100% { opacity:0; transform:scale(0.3); } }
+          @keyframes cartGoldPulse { 0% { box-shadow:0 0 0 0 rgba(212,175,55,0.7); } 50% { box-shadow:0 0 20px 10px rgba(212,175,55,0.4); } 100% { box-shadow:0 0 0 0 rgba(212,175,55,0); } }
+        `;
+        document.head.appendChild(styleEl);
+      }
+
+      // Gold sparkle burst
+      for (let i = 0; i < 10; i++) {
+        const spark = document.createElement('div');
+        const angle = (i / 10) * 360;
+        const dist = 15 + Math.random() * 35;
+        const size = 4 + Math.random() * 5;
+        spark.style.cssText = `position:fixed;left:${startX + Math.cos(angle * Math.PI / 180) * dist - size / 2}px;top:${startY + Math.sin(angle * Math.PI / 180) * dist - size / 2}px;width:${size}px;height:${size}px;background:radial-gradient(circle,#d4af37,#fff8dc);border-radius:50%;pointer-events:none;z-index:10000;animation:sparkle ${0.4 + Math.random() * 0.3}s ease-out forwards;`;
+        document.body.appendChild(spark);
+        setTimeout(() => spark.remove(), 800);
+      }
+
+      // Stack of 3 mini thumbnails flying to cart
+      const thumbSize = 70;
+      const stackImages = subItems.slice(0, 3).map(s => s.image);
+      stackImages.forEach((imgSrc, stackIdx) => {
+        const offsetX = (stackIdx - 1) * 14;
+        const offsetY = stackIdx * 6;
+        const thumb = document.createElement('div');
+        thumb.style.cssText = `position:fixed;left:${startX - thumbSize / 2 + offsetX}px;top:${startY - thumbSize / 2 + offsetY}px;width:${thumbSize}px;height:${thumbSize}px;border-radius:6px;overflow:hidden;z-index:${9999 - stackIdx};pointer-events:none;box-shadow:0 0 20px 6px rgba(212,175,55,0.5);transform:rotate(${(stackIdx - 1) * 8}deg);`;
+        const img = document.createElement('img');
+        img.src = imgSrc;
+        img.referrerPolicy = 'no-referrer';
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover;';
+        thumb.appendChild(img);
+        document.body.appendChild(thumb);
+
+        const delay = stackIdx * 60;
+        const duration = 900;
+        const cpX = (startX + endX) / 2;
+        const cpY = Math.min(startY, endY) - 200;
+        const startTime = performance.now() + delay;
+
+        const animateFrame = (now: number) => {
+          if (now < startTime) { requestAnimationFrame(animateFrame); return; }
+          const t = Math.min((now - startTime) / duration, 1);
+          const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+          const bx = (1 - ease) * (1 - ease) * startX + 2 * (1 - ease) * ease * cpX + ease * ease * endX;
+          const by = (1 - ease) * (1 - ease) * startY + 2 * (1 - ease) * ease * cpY + ease * ease * endY;
+          const scaleVal = ease < 0.5 ? 0.3 + (1.0 - 0.3) * (ease / 0.5) : 1.0 - (1.0 - 0.2) * ((ease - 0.5) / 0.5);
+          const cur = thumbSize * scaleVal;
+          thumb.style.left = `${bx - cur / 2}px`;
+          thumb.style.top = `${by - cur / 2}px`;
+          thumb.style.width = `${cur}px`;
+          thumb.style.height = `${cur}px`;
+          thumb.style.opacity = `${1 - ease * 0.3}`;
+          thumb.style.transform = `rotate(${ease * 360 + (stackIdx - 1) * 8}deg)`;
+
+          if (t > 0.03 && t < 0.95 && Math.random() > 0.5) {
+            const trail = document.createElement('div');
+            const ts = cur * 0.35;
+            trail.style.cssText = `position:fixed;left:${bx - ts/2}px;top:${by - ts/2}px;width:${ts}px;height:${ts}px;border-radius:50%;pointer-events:none;z-index:9998;background:radial-gradient(circle,rgba(212,175,55,0.5),rgba(212,175,55,0) 70%);animation:trailFade 0.4s ease-out forwards;`;
+            document.body.appendChild(trail);
+            setTimeout(() => trail.remove(), 450);
+          }
+
+          if (t < 1) {
+            requestAnimationFrame(animateFrame);
+          } else {
+            thumb.remove();
+            if (stackIdx === stackImages.length - 1) {
+              window.dispatchEvent(new CustomEvent('pulse-cart'));
+              cartIcon.style.animation = 'cartGoldPulse 0.6s ease-out';
+              setTimeout(() => { cartIcon.style.animation = ''; }, 700);
+            }
+          }
+        };
+        requestAnimationFrame(animateFrame);
+      });
+    }
+
     setTimeout(() => {
       setAddingState('success');
-      setTimeout(() => {
-        handleCloseCombo();
-      }, 1200);
+      setTimeout(() => { handleCloseCombo(); }, 1200);
     }, 1000);
   };
 
@@ -338,6 +454,7 @@ const Combos: React.FC = () => {
 
             {/* Panel */}
             <motion.div
+              ref={drawerRef}
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
@@ -528,6 +645,7 @@ const Combos: React.FC = () => {
                 </div>
 
                 <button
+                  ref={addToCartBtnRef}
                   onClick={handleAddComboToCart}
                   disabled={addingState !== 'idle'}
                   className="w-full bg-white text-black hover:bg-accent hover:text-black py-5 text-[11px] tracking-[0.4em] font-bold uppercase transition-all duration-500 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
@@ -542,7 +660,7 @@ const Combos: React.FC = () => {
                         className="flex items-center gap-2"
                       >
                         <Sparkles size={14} className="animate-pulse" />
-                        <span>Add Stack to Wardrobe</span>
+                        <span>Add Stack to Cart</span>
                       </motion.div>
                     )}
 
