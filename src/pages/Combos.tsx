@@ -192,9 +192,11 @@ const Combos: React.FC = () => {
                   {/* Overlapping/overlapping stack images */}
                   <div className="relative w-full h-full flex items-center justify-center scale-90 group-hover:scale-95 transition-transform duration-700">
                     {children.map((child, index) => {
-                      // Custom staggered layout offsets and rotations
-                      const rotation = (index - (children.length - 1) / 2) * 6; // e.g. -6deg, 0deg, 6deg
-                      const translateX = (index - (children.length - 1) / 2) * 35; // e.g. -35px, 0px, 35px
+                      // Creative fanned layout so all 3 products are clearly visible
+                      const offsetMultiplier = index - (children.length - 1) / 2; // -1, 0, 1
+                      const rotation = offsetMultiplier * 12; // -12deg, 0deg, 12deg
+                      const translateX = offsetMultiplier * 60; // -60px, 0px, 60px
+                      const translateY = Math.abs(offsetMultiplier) * 15; // 15px, 0px, 15px
                       const zIndex = 5 + index;
 
                       return (
@@ -203,13 +205,14 @@ const Combos: React.FC = () => {
                           style={{
                             rotate: `${rotation}deg`,
                             x: `${translateX}px`,
+                            y: `${translateY}px`,
                             zIndex,
                           }}
                           variants={{
                             hover: {
-                              rotate: `${rotation / 5}deg`,
-                              x: `${translateX * 2.2}px`, // Expand out wide on hover
-                              y: -15
+                              rotate: `${rotation / 2}deg`,
+                              x: `${translateX * 2}px`, // Expand out wider on hover
+                              y: -20
                             }
                           }}
                           className="absolute w-[50%] aspect-[3/4] bg-neutral-900 border border-neutral-800 shadow-2xl rounded-md overflow-hidden transition-all duration-500"
@@ -356,16 +359,20 @@ const Combos: React.FC = () => {
                         </div>
                         
                         <div className="flex gap-4">
-                          <img 
-                            src={child.images[0]} 
-                            alt={child.name}
-                            className="w-20 aspect-[3/4] object-cover bg-neutral-900 border border-neutral-800 rounded-sm"
-                            referrerPolicy="no-referrer"
-                          />
+                          <Link to={`/product/${child.id}`} className="block">
+                            <img 
+                              src={child.images[0]} 
+                              alt={child.name}
+                              className="w-20 aspect-[3/4] object-cover bg-neutral-900 border border-neutral-800 rounded-sm hover:opacity-80 transition-opacity"
+                              referrerPolicy="no-referrer"
+                            />
+                          </Link>
                           <div className="flex-1">
-                            <h4 className="text-sm font-display font-bold uppercase text-white tracking-wide mb-1">
-                              {child.name}
-                            </h4>
+                            <Link to={`/product/${child.id}`} className="hover:text-accent transition-colors">
+                              <h4 className="text-sm font-display font-bold uppercase text-white tracking-wide mb-1">
+                                {child.name}
+                              </h4>
+                            </Link>
                             <p className="text-[10px] font-mono text-neutral-500 mb-4">
                               Individual Price: ₹{child.price}
                             </p>

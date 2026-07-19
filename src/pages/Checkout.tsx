@@ -476,17 +476,17 @@ const Checkout: React.FC = () => {
                         {/* Three Images Display */}
                         <div className="flex gap-3 pb-4 border-b border-white/5 overflow-x-auto">
                           {item.comboItems.map((sub, idx) => (
-                            <div key={sub.id + '_' + idx} className="relative w-16 h-20 bg-neutral-950 rounded-sm border border-white/5 overflow-hidden flex-shrink-0 group">
+                            <Link to={`/product/${sub.id}`} key={sub.id + '_' + idx} className="relative w-16 h-20 bg-neutral-950 rounded-sm border border-white/5 overflow-hidden flex-shrink-0 group">
                               <img 
                                 src={sub.image} 
                                 alt={sub.name} 
-                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-300"
+                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
                                 referrerPolicy="no-referrer"
                               />
                               <div className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 text-center">
                                 <span className="text-[7px] font-mono text-neutral-400 truncate block px-1">{sub.name}</span>
                               </div>
-                            </div>
+                            </Link>
                           ))}
                         </div>
 
@@ -495,7 +495,9 @@ const Checkout: React.FC = () => {
                           {item.comboItems.map((sub, idx) => (
                             <div key={sub.id + '_' + idx} className="flex justify-between items-center text-xs">
                               <div>
-                                <span className="font-display font-medium text-neutral-300 uppercase">{sub.name}</span>
+                                <Link to={`/product/${sub.id}`} className="hover:text-accent transition-colors">
+                                  <span className="font-display font-medium text-neutral-300 uppercase">{sub.name}</span>
+                                </Link>
                                 <div className="flex items-center gap-2 mt-0.5 text-[8px] text-neutral-500 font-mono">
                                   <span>SIZE: {sub.selectedSize}</span>
                                   <span className="w-1 h-1 bg-neutral-800 rounded-full" />
