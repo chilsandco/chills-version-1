@@ -73,7 +73,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'editoria
       className="group relative block overflow-hidden bg-neutral-950 perspective-1000 transition-shadow duration-500"
     >
       <Link 
-        to={`/product/${product.id}`} 
+        to={product.type === 'grouped' || product.category?.toLowerCase() === 'combos' || product.categories?.some(c => c.toLowerCase() === 'combos') ? `/combos?id=${product.id}` : `/product/${product.id}`} 
         className="block"
         data-cursor="inspect"
       >

@@ -22,6 +22,8 @@ export interface Product {
   colorSwatches?: Record<string, { type: 'color' | 'image' | 'label', value: string }>;
   colorAttributeName?: string;
   sizeAttributeName?: string;
+  type?: "simple" | "variable" | "grouped";
+  groupedProducts?: string[];
 }
 
 export interface ProductVariation {
@@ -34,10 +36,23 @@ export interface ProductVariation {
   images: string[];
 }
 
+export interface ComboSubItem {
+  id: string;
+  name: string;
+  selectedSize: string;
+  selectedColor: string;
+  image: string;
+  price: number;
+}
+
 export interface CartItem extends Product {
   quantity: number;
   selectedSize?: string;
   selectedColor?: string;
+  isCombo?: boolean;
+  comboItems?: ComboSubItem[];
+  comboId?: string;
+  comboName?: string;
 }
 
 export interface Customer {

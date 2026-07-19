@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { SlidersHorizontal, X, Search, RotateCcw, Check, Activity, Square, LayoutGrid } from 'lucide-react';
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
@@ -273,7 +273,11 @@ const Collection: React.FC = () => {
           </>
         ) : (
           <>
-            <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter mb-8 uppercase">Collection</h1>
+            <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter mb-8 uppercase flex items-center gap-4 flex-wrap">
+              <span className="text-white">Collection</span>
+              <span className="text-neutral-700 font-light">|</span>
+              <Link to="/combos" className="text-neutral-500 hover:text-white transition-colors">Combos</Link>
+            </h1>
             <div className="flex items-center justify-between border-b border-neutral-900 pb-4">
               {/* Horizontally Scrollable Categories */}
               <div className="overflow-hidden relative flex-1">

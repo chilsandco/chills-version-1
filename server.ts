@@ -634,28 +634,296 @@ async function startServer() {
       availableSizes: availableSizes.length > 0 ? availableSizes : (parentSizes.length > 0 ? parentSizes : undefined),
       colorSwatches: Object.keys(swatchesData).length > 0 ? swatchesData : undefined,
       colorAttributeName: matchedColorAttr ? matchedColorAttr.name : undefined,
-      sizeAttributeName: matchedSizeAttr ? matchedSizeAttr.name : undefined
+      sizeAttributeName: matchedSizeAttr ? matchedSizeAttr.name : undefined,
+      type: wcProduct.type || "simple",
+      groupedProducts: Array.isArray(wcProduct.grouped_products) 
+        ? wcProduct.grouped_products.map((id: any) => id.toString()) 
+        : undefined
     };
   };
 
   const mockProducts = [
     {
       id: "t1",
-      name: "SYNTAX OVERLOAD TEE",
+      name: "KERNEL PANIC TEE",
       category: "T-Shirts",
-      price: 1899,
-      description: "Heavyweight 240GSM cotton with a smooth, structured hand-feel.\n\nDesigned with an oversized shoulder line, high-definition screen printed graphics, and a breathable finish for regular wear.\n\n- 240GSM cotton construction\n- Oversized fit with dropped shoulders\n- Soft-touch breathable finish\n- Machine wash cold, inside out\n- Do not iron directly on print",
-      shortDescription: "A tribute to the late-night refactoring sessions where logic becomes art.\n\nThe graphic captures the moment when clean code, chaos, and momentum begin to look like the same thing.",
-      concept: "A tribute to the late-night refactoring sessions where logic becomes art.",
-      material: "100% Organic Cotton, 240 GSM.",
-      fit: "Oversized, dropped shoulders.",
-      care: "Machine wash cold, inside out. Do not iron on print.",
+      categories: ["T-Shirts"],
+      price: 399,
+      description: "A digital error translated into physical style. Soft combed cotton in a heavy weight, custom print detailing.",
+      shortDescription: "A crisp black signature developer print.",
+      concept: "System anomalies structured on fabric.",
+      material: "100% Combed Cotton, 220 GSM.",
+      fit: "Oversized Fit.",
+      care: "Wash cold, inside out.",
       images: [
-        "https://picsum.photos/seed/syntax1/1200/1600",
-        "https://picsum.photos/seed/syntax2/1200/1600"
+        "https://res.cloudinary.com/ddatd5ruz/image/upload/v1777715200/a50f35f2-0d3c-411b-8695-82ada5d97bd5_20260502_151543_0000_u5fzyj.png"
       ],
       status: "Available",
-      coCreator: "Uday Boya"
+      coCreator: "Uday Boya",
+      availableColors: ["Black"],
+      availableSizes: ["S", "M", "L", "XL"]
+    },
+    {
+      id: "t2",
+      name: "COLD RESET TEE",
+      category: "T-Shirts",
+      categories: ["T-Shirts"],
+      price: 399,
+      description: "Designed for standard comfort in a light grey colorway. Premium ring-spun weave.",
+      shortDescription: "A minimalist light grey essential.",
+      concept: "Starting fresh with pristine geometry.",
+      material: "90% Cotton, 10% Polyester, 220 GSM.",
+      fit: "Standard Fit.",
+      care: "Wash cold, flat dry.",
+      images: [
+        "https://res.cloudinary.com/ddatd5ruz/image/upload/v1777715200/a50f35f2-0d3c-411b-8695-82ada5d97bd5_20260502_151543_0000_u5fzyj.png"
+      ],
+      status: "Available",
+      coCreator: "Antigravity Team",
+      availableColors: ["Light Grey"],
+      availableSizes: ["S", "M", "L", "XL"]
+    },
+    {
+      id: "t3",
+      name: "EVERGREEN LOOP TEE",
+      category: "T-Shirts",
+      categories: ["T-Shirts"],
+      price: 399,
+      description: "A deep forest green representation of continuous execution. Clean typography on front chest.",
+      shortDescription: "A deep forest green graphic tee.",
+      concept: "The loop that never terminates.",
+      material: "100% Combed Cotton, 220 GSM.",
+      fit: "Oversized Fit.",
+      care: "Wash cold, tumble dry low.",
+      images: [
+        "https://res.cloudinary.com/ddatd5ruz/image/upload/v1777715200/a50f35f2-0d3c-411b-8695-82ada5d97bd5_20260502_151543_0000_u5fzyj.png"
+      ],
+      status: "Available",
+      coCreator: "Uday Boya",
+      availableColors: ["Green"],
+      availableSizes: ["S", "M", "L", "XL"]
+    },
+    {
+      id: "t4",
+      name: "AMBIENT NOISE TEE",
+      category: "T-Shirts",
+      categories: ["T-Shirts"],
+      price: 399,
+      description: "Muted color palettes showing waves of sound. Clean styling for focus-oriented developers.",
+      shortDescription: "Muted gray-blue soundwave tee.",
+      concept: "Filtering the sound of development.",
+      material: "100% Premium Cotton, 220 GSM.",
+      fit: "Oversized Fit.",
+      care: "Cold wash only.",
+      images: [
+        "https://res.cloudinary.com/ddatd5ruz/image/upload/v1777715200/a50f35f2-0d3c-411b-8695-82ada5d97bd5_20260502_151543_0000_u5fzyj.png"
+      ],
+      status: "Available",
+      coCreator: "Uday Boya",
+      availableColors: ["Gray-Blue"],
+      availableSizes: ["S", "M", "L", "XL"]
+    },
+    {
+      id: "t5",
+      name: "RED SHIFT TEE",
+      category: "T-Shirts",
+      categories: ["T-Shirts"],
+      price: 419,
+      description: "High-visibility red detailing reflecting motion and velocity.",
+      shortDescription: "A deep red graphic statement piece.",
+      concept: "Velocity-based wavelength displacement.",
+      material: "100% Cotton, 220 GSM.",
+      fit: "Relaxed Fit.",
+      care: "Iron inside out.",
+      images: [
+        "https://res.cloudinary.com/ddatd5ruz/image/upload/v1777715200/a50f35f2-0d3c-411b-8695-82ada5d97bd5_20260502_151543_0000_u5fzyj.png"
+      ],
+      status: "Available",
+      coCreator: "Designer Crew",
+      availableColors: ["Red"],
+      availableSizes: ["S", "M", "L", "XL", "2XL"]
+    },
+    {
+      id: "t6",
+      name: "POWER CYCLE TEE",
+      category: "T-Shirts",
+      categories: ["T-Shirts"],
+      price: 419,
+      description: "The binary restart button. Clean aesthetic showing structural power toggles.",
+      shortDescription: "White graphic tee with a structured power loop.",
+      concept: "Turn it off and on again.",
+      material: "100% Combed Cotton, 220 GSM.",
+      fit: "Oversized Fit.",
+      care: "Wash cold.",
+      images: [
+        "https://res.cloudinary.com/ddatd5ruz/image/upload/v1777715200/a50f35f2-0d3c-411b-8695-82ada5d97bd5_20260502_151543_0000_u5fzyj.png"
+      ],
+      status: "Available",
+      coCreator: "Uday Boya",
+      availableColors: ["White"],
+      availableSizes: ["S", "M", "L", "XL"]
+    },
+    {
+      id: "t7",
+      name: "FRIENDCHIP TEE",
+      category: "T-Shirts",
+      categories: ["T-Shirts"],
+      price: 419,
+      description: "Integrated circuit design depicting connections and camaraderie. Perfect for silicon engineers.",
+      shortDescription: "A microchip-themed charcoal tee.",
+      concept: "Camaraderie etched in silicon.",
+      material: "100% Ring-spun Cotton, 220 GSM.",
+      fit: "Relaxed Fit.",
+      care: "Wash inside out.",
+      images: [
+        "https://res.cloudinary.com/ddatd5ruz/image/upload/v1777715200/a50f35f2-0d3c-411b-8695-82ada5d97bd5_20260502_151543_0000_u5fzyj.png"
+      ],
+      status: "Available",
+      coCreator: "Antigravity Team",
+      availableColors: ["Charcoal"],
+      availableSizes: ["S", "M", "L", "XL"]
+    },
+    {
+      id: "t8",
+      name: "FOREST ORIGINAL TEE",
+      category: "T-Shirts",
+      categories: ["T-Shirts"],
+      price: 419,
+      description: "An earthy, organic green shade showing natural layout lines. Designed for creative engineers.",
+      shortDescription: "An earthy forest green logo tee.",
+      concept: "Where logic returns to the root.",
+      material: "100% Organic Cotton, 220 GSM.",
+      fit: "Standard Fit.",
+      care: "Dry flat, do not bleach.",
+      images: [
+        "https://res.cloudinary.com/ddatd5ruz/image/upload/v1777715200/a50f35f2-0d3c-411b-8695-82ada5d97bd5_20260502_151543_0000_u5fzyj.png"
+      ],
+      status: "Available",
+      coCreator: "Designer Crew",
+      availableColors: ["Forest Green"],
+      availableSizes: ["S", "M", "L", "XL"]
+    },
+    {
+      id: "t9",
+      name: "BRAIN TEE",
+      category: "T-Shirts",
+      categories: ["T-Shirts"],
+      price: 449,
+      description: "Neural pathways rendered in precise technical patterns.",
+      shortDescription: "A deep navy neural network print.",
+      concept: "Cognitive systems mapped to threads.",
+      material: "100% Combed Cotton, 240 GSM.",
+      fit: "Oversized Fit.",
+      care: "Wash cold.",
+      images: [
+        "https://res.cloudinary.com/ddatd5ruz/image/upload/v1777715200/a50f35f2-0d3c-411b-8695-82ada5d97bd5_20260502_151543_0000_u5fzyj.png"
+      ],
+      status: "Available",
+      coCreator: "Uday Boya",
+      availableColors: ["Navy"],
+      availableSizes: ["S", "M", "L", "XL", "2XL"]
+    },
+    {
+      id: "t10",
+      name: "CLOCKING BAD TEE",
+      category: "T-Shirts",
+      categories: ["T-Shirts"],
+      price: 449,
+      description: "For digital VLSI design experts who override standard clocking speeds.",
+      shortDescription: "VLSI clock tree statement print.",
+      concept: "Breaking the rules of time sync.",
+      material: "100% Cotton, 240 GSM.",
+      fit: "Oversized Fit.",
+      care: "Do not iron print.",
+      images: [
+        "https://res.cloudinary.com/ddatd5ruz/image/upload/v1777715200/a50f35f2-0d3c-411b-8695-82ada5d97bd5_20260502_151543_0000_u5fzyj.png"
+      ],
+      status: "Available",
+      coCreator: "Antigravity Team",
+      availableColors: ["Black"],
+      availableSizes: ["S", "M", "L", "XL"]
+    },
+    
+    // Grouped Combos (Curated Stacks)
+    {
+      id: "combo_core",
+      name: "CORE STACK",
+      category: "Combos",
+      categories: ["Combos"],
+      price: 949, // MRP is 1,047 (399 + 399 + 399 = 1197? Wait: 399 + 399 + 399 = 1197. Wait! 349 * 3 = 1047. Oh, let's keep price matching individual items or special rates)
+      description: "Three engineered T-shirts. One better wardrobe. Carefully pre-curated for daily rotation.",
+      shortDescription: "Kernel Panic (Black) + Cold Reset (Grey) + Evergreen Loop (Forest).",
+      concept: "A complete rotation of our signature system tees.",
+      material: "Curated Cotton Assembly.",
+      fit: "Standard & Oversized Fits.",
+      care: "Wash cold, dry flat.",
+      images: [
+        "https://res.cloudinary.com/ddatd5ruz/image/upload/v1777715200/a50f35f2-0d3c-411b-8695-82ada5d97bd5_20260502_151543_0000_u5fzyj.png",
+        "https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png"
+      ],
+      status: "Available",
+      type: "grouped",
+      groupedProducts: ["t1", "t2", "t3"]
+    },
+    {
+      id: "combo_builder",
+      name: "BUILDER STACK",
+      category: "Combos",
+      categories: ["Combos"],
+      price: 1079,
+      description: "The builders pack. Contains Kernel Panic, Ambient Noise, and Red Shift.",
+      shortDescription: "Kernel Panic (Black) + Ambient Noise (Gray-Blue) + Red Shift (Red).",
+      concept: "Built for compile loops and velocity shifts.",
+      material: "Premium Combed Cotton.",
+      fit: "Relaxed & Oversized Fits.",
+      care: "Wash separate.",
+      images: [
+        "https://res.cloudinary.com/ddatd5ruz/image/upload/v1777715200/a50f35f2-0d3c-411b-8695-82ada5d97bd5_20260502_151543_0000_u5fzyj.png",
+        "https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png"
+      ],
+      status: "Available",
+      type: "grouped",
+      groupedProducts: ["t1", "t4", "t5"]
+    },
+    {
+      id: "combo_creator",
+      name: "CREATOR STACK",
+      category: "Combos",
+      categories: ["Combos"],
+      price: 1079,
+      description: "Pre-assembled set including Power Cycle, FriendChip, and Forest Original.",
+      shortDescription: "Power Cycle (White) + FriendChip (Charcoal) + Forest Original (Forest Green).",
+      concept: "A combination of logic and natural tones.",
+      material: "Organic Cotton Selection.",
+      fit: "Relaxed & Standard Fits.",
+      care: "Wash cold.",
+      images: [
+        "https://res.cloudinary.com/ddatd5ruz/image/upload/v1777715200/a50f35f2-0d3c-411b-8695-82ada5d97bd5_20260502_151543_0000_u5fzyj.png",
+        "https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png"
+      ],
+      status: "Available",
+      type: "grouped",
+      groupedProducts: ["t6", "t7", "t8"]
+    },
+    {
+      id: "combo_vlsi",
+      name: "VLSI STACK",
+      category: "Combos",
+      categories: ["Combos"],
+      price: 1129,
+      description: "A premium semiconductor-themed wardrobe stack. Brain, Clocking Bad, and FriendChip T-Shirts.",
+      shortDescription: "Brain (Navy) + Clocking Bad (Black) + FriendChip (Charcoal).",
+      concept: "For clock tree builders and logic designers.",
+      material: "240GSM Heavyweight cotton.",
+      fit: "Oversized & Relaxed Fits.",
+      care: "Iron inside out.",
+      images: [
+        "https://res.cloudinary.com/ddatd5ruz/image/upload/v1777715200/a50f35f2-0d3c-411b-8695-82ada5d97bd5_20260502_151543_0000_u5fzyj.png",
+        "https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png"
+      ],
+      status: "Available",
+      type: "grouped",
+      groupedProducts: ["t9", "t10", "t7"]
     }
   ];
 
@@ -1204,6 +1472,12 @@ async function startServer() {
               meta_data.push({ 
                 key: item.colorAttributeName || "pa_color", 
                 value: item.selectedColor 
+              });
+            }
+            if (item.comboName) {
+              meta_data.push({
+                key: "Part of Combo",
+                value: item.comboName
               });
             }
 

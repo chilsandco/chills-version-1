@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { CartItem, Product } from './types';
+import { CartItem, Product, ComboSubItem } from './types';
 import { useAuth } from './AuthContext';
 
 interface CartContextType {
   cart: CartItem[];
   addToCart: (product: Product, size?: string, color?: string) => void;
+  addComboToCart: (comboProduct: Product, items: ComboSubItem[]) => void;
   removeFromCart: (productId: string, size?: string, color?: string) => void;
   updateQuantity: (productId: string, quantity: number, size?: string, color?: string) => void;
   clearCart: () => void;
@@ -139,6 +140,34 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateCartAndSync(newCart);
   };
 
+  const addComboToCart = (comboProduct: Product, items: ComboSubItem[]) => {
+    const comboKey = `${comboProduct.id}-${items.map(i => `${i.id}_${i.selectedSize}`).join('-')}`;
+    const existingIndex = cart.findIndex(item => item.id === comboKey);
+    let newCart: CartItem[];
+
+    if (existingIndex > -1) {
+      newCart = cart.map((item, idx) => 
+        idx === existingIndex ? { ...item, quantity: item.quantity + 1 } : item
+      );
+    } else {
+      newCart = [
+        ...cart,
+        {
+          ...comboProduct,
+          id: comboKey,
+          name: comboProduct.name,
+          price: comboProduct.price,
+          quantity: 1,
+          isCombo: true,
+          comboItems: items,
+          images: comboProduct.images
+        }
+      ];
+    }
+    
+    updateCartAndSync(newCart);
+  };
+
   const removeFromCart = (productId: string, size?: string, color?: string) => {
     const newCart = cart.filter(item => !(
       item.id === productId && 
@@ -171,7 +200,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, totalItems, totalPrice }}>
+    <CartContext.Provider value={{ cart, addToCart, addComboToCart, removeFromCart, updateQuantity, clearCart, totalItems, totalPrice }}>
       {children}
     </CartContext.Provider>
   );

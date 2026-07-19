@@ -563,6 +563,144 @@ const Home: React.FC = () => {
           </div>
         )}
 
+        {/* Engineered Stacks Section */}
+        {!loading && (
+          <div className="my-32 border-t border-neutral-900 pt-24">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-16">
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1.2 }}
+              >
+                <span className="text-accent text-[11px] tracking-[0.4em] font-mono uppercase font-bold mb-4 block">
+                  SYSTEM LEVEL OPTIMIZATION
+                </span>
+                <h2 className="text-4xl md:text-6xl font-display font-bold tracking-tighter uppercase">
+                  ENGINEERED STACKS
+                </h2>
+              </motion.div>
+              <motion.p
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1.2, delay: 0.2 }}
+                className="text-neutral-500 text-base max-w-md font-light leading-relaxed"
+              >
+                Three curated T-shirts. Built to work together. Save 10% when you buy a stack. Pre-curated combinations matching your technical identity.
+              </motion.p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
+              {/* Stack 1: Core Stack */}
+              <motion.div 
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1 }}
+                className="bg-neutral-950 p-8 border border-neutral-900 hover:border-accent/30 transition-all duration-500 group relative flex flex-col justify-between min-h-[420px]"
+              >
+                <div className="absolute top-0 right-0 w-6 h-6 border-t border-r border-accent/10 group-hover:border-accent/30 transition-colors" />
+                <div>
+                  <span className="text-accent text-[9px] font-mono tracking-widest uppercase block mb-2">Stack 01 // Essential Rotation</span>
+                  <h3 className="text-2xl font-display font-bold uppercase tracking-tight text-white mb-4">Core Stack</h3>
+                  <p className="text-xs text-neutral-400 mb-6 leading-relaxed">
+                    Kernel Panic (Black) + Cold Reset (Grey) + Evergreen Loop (Forest). Curated for daily rotations.
+                  </p>
+                  <ul className="space-y-2 mb-8 text-[11px] font-mono text-neutral-500">
+                    <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-neutral-800 rounded-full" /> 01 // KERNEL PANIC [BLACK]</li>
+                    <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-neutral-800 rounded-full" /> 02 // COLD RESET [LIGHT GREY]</li>
+                    <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-neutral-800 rounded-full" /> 03 // EVERGREEN LOOP [GREEN]</li>
+                  </ul>
+                </div>
+                <div className="flex items-baseline justify-between pt-6 border-t border-neutral-900 mt-auto">
+                  <div>
+                    <span className="text-xl font-display font-bold text-white font-mono">₹949</span>
+                    <span className="text-xs text-neutral-500 line-through ml-2 font-mono">₹1,047</span>
+                  </div>
+                  <Link to="/combos?id=combo_core" className="text-[10px] tracking-[0.2em] font-bold uppercase text-accent hover:text-white transition-colors">
+                    Configure &rarr;
+                  </Link>
+                </div>
+              </motion.div>
+
+              {/* Stack 2: Builder Stack */}
+              <motion.div 
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1, delay: 0.2 }}
+                className="bg-neutral-950 p-8 border border-neutral-900 hover:border-accent/30 transition-all duration-500 group relative flex flex-col justify-between min-h-[420px]"
+              >
+                <div className="absolute top-0 right-0 w-6 h-6 border-t border-r border-accent/10 group-hover:border-accent/30 transition-colors" />
+                <div>
+                  <span className="text-accent text-[9px] font-mono tracking-widest uppercase block mb-2">Stack 02 // Build & Compile</span>
+                  <h3 className="text-2xl font-display font-bold uppercase tracking-tight text-white mb-4">Builder Stack</h3>
+                  <p className="text-xs text-neutral-400 mb-6 leading-relaxed">
+                    Kernel Panic (Black) + Ambient Noise (Gray-Blue) + Red Shift (Red). High speed compilation style.
+                  </p>
+                  <ul className="space-y-2 mb-8 text-[11px] font-mono text-neutral-500">
+                    <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-neutral-800 rounded-full" /> 01 // KERNEL PANIC [BLACK]</li>
+                    <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-neutral-800 rounded-full" /> 02 // AMBIENT NOISE [GRAY-BLUE]</li>
+                    <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-neutral-800 rounded-full" /> 03 // RED SHIFT [RED]</li>
+                  </ul>
+                </div>
+                <div className="flex items-baseline justify-between pt-6 border-t border-neutral-900 mt-auto">
+                  <div>
+                    <span className="text-xl font-display font-bold text-white font-mono">₹1,079</span>
+                    <span className="text-xs text-neutral-500 line-through ml-2 font-mono">₹1,197</span>
+                  </div>
+                  <Link to="/combos?id=combo_builder" className="text-[10px] tracking-[0.2em] font-bold uppercase text-accent hover:text-white transition-colors">
+                    Configure &rarr;
+                  </Link>
+                </div>
+              </motion.div>
+
+              {/* Stack 3: Creator Stack */}
+              <motion.div 
+                initial={{ opacity: 0, y: 50 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 1, delay: 0.4 }}
+                className="bg-neutral-950 p-8 border border-neutral-900 hover:border-accent/30 transition-all duration-500 group relative flex flex-col justify-between min-h-[420px]"
+              >
+                <div className="absolute top-0 right-0 w-6 h-6 border-t border-r border-accent/10 group-hover:border-accent/30 transition-colors" />
+                <div>
+                  <span className="text-accent text-[9px] font-mono tracking-widest uppercase block mb-2">Stack 03 // Logic & Creative</span>
+                  <h3 className="text-2xl font-display font-bold uppercase tracking-tight text-white mb-4">Creator Stack</h3>
+                  <p className="text-xs text-neutral-400 mb-6 leading-relaxed">
+                    Power Cycle (White) + FriendChip (Charcoal) + Forest Original (Green). Balanced layouts.
+                  </p>
+                  <ul className="space-y-2 mb-8 text-[11px] font-mono text-neutral-500">
+                    <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-neutral-800 rounded-full" /> 01 // POWER CYCLE [WHITE]</li>
+                    <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-neutral-800 rounded-full" /> 02 // FRIENDCHIP [CHARCOAL]</li>
+                    <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-neutral-800 rounded-full" /> 03 // FOREST ORIGINAL [GREEN]</li>
+                  </ul>
+                </div>
+                <div className="flex items-baseline justify-between pt-6 border-t border-neutral-900 mt-auto">
+                  <div>
+                    <span className="text-xl font-display font-bold text-white font-mono">₹1,079</span>
+                    <span className="text-xs text-neutral-500 line-through ml-2 font-mono">₹1,197</span>
+                  </div>
+                  <Link to="/combos?id=combo_creator" className="text-[10px] tracking-[0.2em] font-bold uppercase text-accent hover:text-white transition-colors">
+                    Configure &rarr;
+                  </Link>
+                </div>
+              </motion.div>
+            </div>
+
+            <div className="flex justify-center mb-12">
+              <Link 
+                to="/combos" 
+                className="group relative px-12 py-5 border border-accent/30 text-accent text-[11px] tracking-[0.4em] font-bold uppercase transition-all duration-500 hover:border-accent hover:bg-accent hover:text-black rounded-sm overflow-hidden flex items-center gap-4"
+              >
+                Explore Curated Stacks
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform duration-500" />
+              </Link>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col md:flex-row justify-between items-end gap-12">
           <motion.div
             initial={{ opacity: 0, x: -60, filter: 'blur(10px)' }}
