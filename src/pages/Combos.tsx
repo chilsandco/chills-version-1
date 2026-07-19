@@ -13,7 +13,8 @@ const Combos: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const comboIdParam = searchParams.get('id');
 
-  const { addMultipleToCart } = useCart();
+  const { addComboToCart } = useCart();
+  const [globalSize, setGlobalSize] = useState<string>('M');
 
   // Customizer Drawer State
   const [selectedCombo, setSelectedCombo] = useState<Product | null>(null);
@@ -52,6 +53,7 @@ const Combos: React.FC = () => {
   // Resolve child products and initialize default selections
   const handleOpenCombo = (combo: Product, allProducts: Product[] = products) => {
     setSelectedCombo(combo);
+    setGlobalSize('M');
     
     // Resolve child items of the combo
     const childIds = combo.groupedProducts || [];
@@ -61,7 +63,7 @@ const Combos: React.FC = () => {
       const child = allProducts.find(p => p.id === id);
       if (child) {
         defaults[id] = {
-          size: child.availableSizes && child.availableSizes.length > 0 ? child.availableSizes[0] : 'M',
+          size: 'M',
           color: child.availableColors && child.availableColors.length > 0 ? child.availableColors[0] : 'Black'
         };
       }
@@ -82,37 +84,37 @@ const Combos: React.FC = () => {
     setAddingState('adding');
 
     const childIds = selectedCombo.groupedProducts || [];
-    const itemsToAdd: any[] = [];
+    const subItems: any[] = [];
+    let regularTotal = 0;
     
-    // Add each child product to the cart with metadata linking it to the combo
     childIds.forEach(id => {
       const child = products.find(p => p.id === id);
       if (child) {
-        const option = selectedOptions[id] || { size: 'M', color: 'Black' };
-        
-        // Pass the combo details down as custom properties
-        const comboProduct: Product = {
-          ...child,
-          name: child.name, // Keep child name
-        };
+        const option = selectedOptions[id] || { size: globalSize, color: 'Black' };
+        const variationImage = option.color && child.variations
+          ? child.variations.find(v => v.attributes.color === option.color)?.images?.[0]
+          : null;
+        const itemImage = variationImage || child.images[0];
 
-        const productWithComboMetadata = {
-          ...comboProduct,
-          comboId: selectedCombo.id,
-          comboName: selectedCombo.name
-        };
-
-        itemsToAdd.push({
-          product: productWithComboMetadata,
-          size: option.size,
-          color: option.color
+        regularTotal += child.price;
+        subItems.push({
+          id: child.id,
+          name: child.name,
+          selectedSize: globalSize,
+          selectedColor: option.color,
+          image: itemImage,
+          price: child.price,
+          variations: child.variations
         });
       }
     });
 
-    if (itemsToAdd.length > 0) {
-      addMultipleToCart(itemsToAdd);
-    }
+    const discountedTotal = Math.round(regularTotal * 0.9);
+
+    addComboToCart({
+      ...selectedCombo,
+      price: discountedTotal,
+    }, subItems);
 
     setTimeout(() => {
       setAddingState('success');
@@ -175,6 +177,7 @@ const Combos: React.FC = () => {
                 key={combo.id}
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
+                whileHover="hover"
                 transition={{ duration: 0.8 }}
                 className="group cursor-pointer flex flex-col h-full bg-neutral-950/40 border border-neutral-900 hover:border-accent/25 rounded-sm p-6 transition-all duration-500 relative"
                 onClick={() => handleOpenCombo(combo)}
@@ -190,8 +193,8 @@ const Combos: React.FC = () => {
                   <div className="relative w-full h-full flex items-center justify-center scale-90 group-hover:scale-95 transition-transform duration-700">
                     {children.map((child, index) => {
                       // Custom staggered layout offsets and rotations
-                      const rotation = (index - (children.length - 1) / 2) * 8; // e.g. -8deg, 0deg, 8deg
-                      const translateX = (index - (children.length - 1) / 2) * 20; // e.g. -20px, 0px, 20px
+                      const rotation = (index - (children.length - 1) / 2) * 6; // e.g. -6deg, 0deg, 6deg
+                      const translateX = (index - (children.length - 1) / 2) * 35; // e.g. -35px, 0px, 35px
                       const zIndex = 5 + index;
 
                       return (
@@ -204,13 +207,12 @@ const Combos: React.FC = () => {
                           }}
                           variants={{
                             hover: {
-                              rotate: `${rotation / 2.5}deg`,
-                              x: `${translateX * 2.5}px`,
-                              y: -10
+                              rotate: `${rotation / 5}deg`,
+                              x: `${translateX * 2.2}px`, // Expand out wide on hover
+                              y: -15
                             }
                           }}
-                          whileHover="hover"
-                          className="absolute w-[60%] aspect-[3/4] bg-neutral-900 border border-neutral-800 shadow-2xl rounded-md overflow-hidden transition-all duration-500"
+                          className="absolute w-[50%] aspect-[3/4] bg-neutral-900 border border-neutral-800 shadow-2xl rounded-md overflow-hidden transition-all duration-500"
                         >
                           <img 
                             src={child.images[0]} 
@@ -310,6 +312,33 @@ const Combos: React.FC = () => {
                   {selectedCombo.description}
                 </p>
 
+                {/* Global Size Selector */}
+                <div className="mb-8 p-5 bg-neutral-900/30 border border-neutral-900 rounded-sm">
+                  <span className="text-[10px] font-mono text-accent tracking-[0.2em] uppercase block mb-3 font-bold">
+                    SELECT SIZE FOR ALL ITEMS
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {['S', 'M', 'L', 'XL', 'XXL'].map(s => {
+                      const isSel = globalSize === s;
+                      return (
+                        <button
+                          key={s}
+                          onClick={() => {
+                            setGlobalSize(s);
+                          }}
+                          className={`px-5 py-2.5 text-[10px] font-mono font-bold transition-all border ${
+                            isSel 
+                              ? 'border-accent bg-accent/5 text-accent font-bold' 
+                              : 'border-neutral-900 text-neutral-500 hover:border-neutral-800 hover:text-white'
+                          }`}
+                        >
+                          {s}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* Sub items layout */}
                 <div className="space-y-8">
                   {(selectedCombo.groupedProducts || []).map((id, index) => {
@@ -341,33 +370,7 @@ const Combos: React.FC = () => {
                               Individual Price: ₹{child.price}
                             </p>
 
-                            {/* Size Selection */}
-                            <div className="mb-4">
-                              <span className="text-[9px] font-mono text-neutral-600 tracking-widest uppercase block mb-2">
-                                SELECT SIZE
-                              </span>
-                              <div className="flex flex-wrap gap-2">
-                                {availableSizes.map(s => {
-                                  const isSel = option.size === s;
-                                  return (
-                                    <button
-                                      key={s}
-                                      onClick={() => setSelectedOptions(prev => ({
-                                        ...prev,
-                                        [id]: { ...prev[id], size: s }
-                                      }))}
-                                      className={`px-3 py-1.5 text-[9px] font-mono font-bold transition-all border ${
-                                        isSel 
-                                          ? 'border-accent bg-accent/5 text-accent font-bold' 
-                                          : 'border-neutral-900 text-neutral-500 hover:border-neutral-800 hover:text-white'
-                                      }`}
-                                    >
-                                      {s}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
+                            {/* Size selection is handled globally at stack level */}
 
                             {/* Color Selection (if multiple) */}
                             {availableColors.length > 1 && (

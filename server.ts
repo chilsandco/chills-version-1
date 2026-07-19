@@ -1398,9 +1398,30 @@ async function startServer() {
         return res.status(401).json({ message: "Identity validation failed: A registered profile is required to check out." });
       }
 
+      // Flatten the lineItems first so that combo items are expanded into their individual products!
+      const flattenedLineItems: any[] = [];
+      lineItems.forEach((item: any) => {
+        if (item.isCombo && Array.isArray(item.comboItems)) {
+          item.comboItems.forEach((sub: any) => {
+            flattenedLineItems.push({
+              id: sub.id,
+              name: sub.name,
+              price: sub.price,
+              quantity: item.quantity, // Inherit quantity of the combo stack
+              selectedSize: sub.selectedSize,
+              selectedColor: sub.selectedColor,
+              comboName: item.name, // Link to the combo name
+              variations: sub.variations, // Use the sub-item's variations!
+            });
+          });
+        } else {
+          flattenedLineItems.push(item);
+        }
+      });
+
       if (wc) {
         const isPickup = shippingMethod === "pickup";
-        const realShippingCount = lineItems.reduce((sum: number, item: any) => {
+        const realShippingCount = flattenedLineItems.reduce((sum: number, item: any) => {
           if (item.id && item.id.toString() === "1672") return sum;
           return sum + item.quantity;
         }, 0);
@@ -1448,7 +1469,7 @@ async function startServer() {
             postcode: customerDetails.pincode,
             country: "IN"
           },
-          line_items: lineItems.map((item: any) => {
+          line_items: flattenedLineItems.map((item: any) => {
             let variationId: number | undefined = undefined;
             if (item.variations && Array.isArray(item.variations)) {
               const match = item.variations.find((v: any) => {

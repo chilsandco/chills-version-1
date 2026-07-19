@@ -43,6 +43,7 @@ export interface ComboSubItem {
   selectedColor: string;
   image: string;
   price: number;
+  variations?: ProductVariation[];
 }
 
 export interface CartItem extends Product {
