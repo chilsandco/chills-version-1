@@ -232,6 +232,42 @@ const Combos: React.FC = () => {
                       );
                     })}
                   </div>
+
+                  {/* Hover Preview Strip — slides up from bottom of image on hover */}
+                  <motion.div
+                    variants={{
+                      hover: { opacity: 1, y: 0 }
+                    }}
+                    initial={{ opacity: 0, y: '100%' }}
+                    transition={{ duration: 0.3, ease: 'easeOut' }}
+                    className="absolute bottom-0 left-0 right-0 bg-black/95 backdrop-blur-md border-t border-neutral-800 px-4 py-3 z-40 pointer-events-none"
+                  >
+                    <p className="text-[8px] font-mono tracking-[0.2em] text-neutral-500 uppercase mb-2.5">STACK INCLUDES</p>
+                    <div className="flex gap-2">
+                      {children.map((child, idx) => (
+                        <div key={child.id} className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="w-8 h-10 flex-shrink-0 rounded-[2px] overflow-hidden border border-neutral-800">
+                            <img
+                              src={child.images[0]}
+                              alt={child.name}
+                              className="w-full h-full object-cover"
+                              referrerPolicy="no-referrer"
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[8px] font-mono text-white uppercase truncate leading-tight">{child.name}</p>
+                            <p className="text-[7px] font-mono text-neutral-600 mt-0.5">₹{child.price}</p>
+                          </div>
+                          {idx < children.length - 1 && (
+                            <span className="text-neutral-700 text-[10px] flex-shrink-0">+</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-2 pt-2 border-t border-neutral-900 flex items-center justify-center">
+                      <span className="text-[7px] font-mono tracking-[0.2em] text-accent uppercase">Click to configure →</span>
+                    </div>
+                  </motion.div>
                 </div>
 
                 <div className="mt-auto space-y-4">
@@ -264,43 +300,8 @@ const Combos: React.FC = () => {
                     </span>
                   </div>
                 </div>
-
-                {/* Hover Preview Strip — slides up from bottom on hover */}
-                <motion.div
-                  variants={{
-                    hover: { opacity: 1, y: 0, pointerEvents: 'none' }
-                  }}
-                  initial={{ opacity: 0, y: 12 }}
-                  transition={{ duration: 0.25, ease: 'easeOut' }}
-                  className="absolute bottom-0 left-0 right-0 bg-black/90 backdrop-blur-md border-t border-neutral-800 px-4 py-3 z-30 pointer-events-none"
-                >
-                  <p className="text-[8px] font-mono tracking-[0.2em] text-neutral-500 uppercase mb-2.5">STACK INCLUDES</p>
-                  <div className="flex gap-3">
-                    {children.map((child, idx) => (
-                      <div key={child.id} className="flex items-center gap-2 flex-1 min-w-0">
-                        <div className="w-8 h-10 flex-shrink-0 rounded-[2px] overflow-hidden border border-neutral-800">
-                          <img
-                            src={child.images[0]}
-                            alt={child.name}
-                            className="w-full h-full object-cover"
-                            referrerPolicy="no-referrer"
-                          />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-[8px] font-mono text-white uppercase truncate leading-tight">{child.name}</p>
-                          <p className="text-[7px] font-mono text-neutral-600 mt-0.5">₹{child.price}</p>
-                        </div>
-                        {idx < children.length - 1 && (
-                          <span className="text-neutral-800 text-[10px] flex-shrink-0">+</span>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-2.5 pt-2 border-t border-neutral-900 flex items-center justify-center gap-1.5">
-                    <span className="text-[7px] font-mono tracking-[0.2em] text-accent uppercase">Click to configure →</span>
-                  </div>
-                </motion.div>
               </motion.div>
+
             );
           })}
         </div>
