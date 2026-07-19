@@ -5,7 +5,6 @@ import { useAuth } from './AuthContext';
 interface CartContextType {
   cart: CartItem[];
   addToCart: (product: Product, size?: string, color?: string) => void;
-  addComboToCart: (comboProduct: Product, comboItems: NonNullable<CartItem['comboItems']>) => void;
   removeFromCart: (productId: string, size?: string, color?: string) => void;
   updateQuantity: (productId: string, quantity: number, size?: string, color?: string) => void;
   clearCart: () => void;
@@ -140,34 +139,6 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateCartAndSync(newCart);
   };
 
-  const addComboToCart = (comboProduct: Product, comboItems: NonNullable<CartItem['comboItems']>) => {
-    const comboKey = `combo-${comboProduct.id}-${comboItems.map(ci => `${ci.id}_${ci.selectedSize}`).join('-')}`;
-    
-    const existingIndex = cart.findIndex(item => 
-      item.isCombo && 
-      item.id === comboKey
-    );
-
-    let newCart: CartItem[];
-    if (existingIndex > -1) {
-      newCart = cart.map((item, idx) => 
-        idx === existingIndex ? { ...item, quantity: item.quantity + 1 } : item
-      );
-    } else {
-      newCart = [
-        ...cart,
-        {
-          ...comboProduct,
-          id: comboKey,
-          quantity: 1,
-          isCombo: true,
-          comboItems
-        }
-      ];
-    }
-    updateCartAndSync(newCart);
-  };
-
   const removeFromCart = (productId: string, size?: string, color?: string) => {
     const newCart = cart.filter(item => !(
       item.id === productId && 
@@ -200,7 +171,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const totalPrice = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, addComboToCart, removeFromCart, updateQuantity, clearCart, totalItems, totalPrice }}>
+    <CartContext.Provider value={{ cart, addToCart, removeFromCart, updateQuantity, clearCart, totalItems, totalPrice }}>
       {children}
     </CartContext.Provider>
   );

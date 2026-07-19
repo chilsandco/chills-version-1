@@ -150,7 +150,6 @@ const Navbar: React.FC = () => {
 
   const navLinks = [
     { name: 'COLLECTION', path: '/collection' },
-    // { name: 'COMBOS', path: '/combos' },
     { name: 'THE BESPOKE', path: '/bespoke' },
     { name: 'CO-CREATOR', path: '/co-creator' },
     { name: 'CUSTOM STUDIO', path: '/customize' },
