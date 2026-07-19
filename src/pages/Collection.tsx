@@ -279,11 +279,11 @@ const Collection: React.FC = () => {
           </>
         ) : (
           <>
-            <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter mb-8 uppercase flex items-center gap-4 flex-wrap">
-              <span className="text-white">Collection</span>
-              <span className="text-neutral-700 font-light">|</span>
-              <Link to="/combos" className="text-neutral-500 hover:text-white transition-colors">Combos</Link>
-            </h1>
+            <div className="flex items-center gap-3 md:gap-4 mb-6 md:mb-8 overflow-hidden">
+              <span className="text-3xl md:text-6xl lg:text-7xl font-display font-bold tracking-tighter uppercase text-white whitespace-nowrap flex-shrink-0">Collection</span>
+              <span className="text-neutral-700 font-light text-3xl md:text-6xl flex-shrink-0">|</span>
+              <Link to="/combos" className="text-3xl md:text-6xl lg:text-7xl font-display font-bold tracking-tighter uppercase text-neutral-500 hover:text-white transition-colors whitespace-nowrap">Combos</Link>
+            </div>
             <div className="flex items-center justify-between border-b border-neutral-900 pb-4">
               {/* Horizontally Scrollable Categories */}
               <div className="overflow-hidden relative flex-1">
