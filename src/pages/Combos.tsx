@@ -13,7 +13,7 @@ const Combos: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const comboIdParam = searchParams.get('id');
 
-  const { addToCart } = useCart();
+  const { addMultipleToCart } = useCart();
 
   // Customizer Drawer State
   const [selectedCombo, setSelectedCombo] = useState<Product | null>(null);
@@ -82,6 +82,7 @@ const Combos: React.FC = () => {
     setAddingState('adding');
 
     const childIds = selectedCombo.groupedProducts || [];
+    const itemsToAdd: any[] = [];
     
     // Add each child product to the cart with metadata linking it to the combo
     childIds.forEach(id => {
@@ -95,21 +96,23 @@ const Combos: React.FC = () => {
           name: child.name, // Keep child name
         };
 
-        // Call CartContext addToCart with custom properties injected
-        // To register this as part of a combo, we temporarily extend the cart item
-        const originalAddToCart = addToCart;
-        
-        // Since original addToCart takes (product, size, color) and pushes to state,
-        // we can customize the product object passed into it so it includes comboId and comboName!
         const productWithComboMetadata = {
           ...comboProduct,
           comboId: selectedCombo.id,
           comboName: selectedCombo.name
         };
 
-        originalAddToCart(productWithComboMetadata, option.size, option.color);
+        itemsToAdd.push({
+          product: productWithComboMetadata,
+          size: option.size,
+          color: option.color
+        });
       }
     });
+
+    if (itemsToAdd.length > 0) {
+      addMultipleToCart(itemsToAdd);
+    }
 
     setTimeout(() => {
       setAddingState('success');
