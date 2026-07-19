@@ -163,6 +163,9 @@ const Combos: React.FC = () => {
 
             // Sum up standard prices to show comparison
             const regularTotal = children.reduce((sum, c) => sum + c.price, 0);
+            
+            // Calculate 10% discount for the stack
+            const comboPrice = Math.round(regularTotal * 0.9);
 
             return (
               <motion.div
@@ -240,7 +243,7 @@ const Combos: React.FC = () => {
                   <div className="pt-4 border-t border-neutral-900 flex justify-between items-baseline">
                     <div className="flex items-baseline gap-3">
                       <span className="text-2xl font-display font-bold text-white font-mono">
-                        ₹{combo.price.toLocaleString()}
+                        ₹{comboPrice.toLocaleString()}
                       </span>
                       {regularTotal > 0 && (
                         <span className="text-sm text-neutral-500 line-through font-mono">
@@ -409,17 +412,22 @@ const Combos: React.FC = () => {
                       INTEGRATED TOTAL
                     </span>
                     <div className="flex items-baseline gap-3">
-                      <span className="text-3xl font-display font-bold text-white font-mono">
-                        ₹{selectedCombo.price.toLocaleString()}
-                      </span>
-                      <span className="text-sm text-neutral-500 line-through font-mono">
-                        ₹{
-                          (selectedCombo.groupedProducts || [])
-                            .map(id => products.find(p => p.id === id)?.price || 0)
-                            .reduce((a, b) => a + b, 0)
-                            .toLocaleString()
-                        }
-                      </span>
+                      {(() => {
+                        const regularTotal = (selectedCombo.groupedProducts || [])
+                          .map(id => products.find(p => p.id === id)?.price || 0)
+                          .reduce((a, b) => a + b, 0);
+                        const comboPrice = Math.round(regularTotal * 0.9);
+                        return (
+                          <>
+                            <span className="text-3xl font-display font-bold text-white font-mono">
+                              ₹{comboPrice.toLocaleString()}
+                            </span>
+                            <span className="text-sm text-neutral-500 line-through font-mono">
+                              ₹{regularTotal.toLocaleString()}
+                            </span>
+                          </>
+                        );
+                      })()}
                     </div>
                   </div>
                   <span className="text-[10px] font-mono text-accent tracking-widest bg-accent/5 border border-accent/25 px-3 py-1 rounded-sm uppercase">
