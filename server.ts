@@ -1481,10 +1481,15 @@ async function startServer() {
               });
             }
 
+            const lineItemPrice = item.price * item.quantity;
+            const discountedPrice = item.comboName ? Math.round(lineItemPrice * 0.9) : lineItemPrice;
+
             return {
               product_id: parseInt(item.id, 10),
               quantity: item.quantity,
               ...(variationId ? { variation_id: variationId } : {}),
+              total: discountedPrice.toString(),
+              subtotal: lineItemPrice.toString(),
               meta_data
             };
           }),

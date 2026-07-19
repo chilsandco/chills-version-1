@@ -457,64 +457,153 @@ const Checkout: React.FC = () => {
             </div>
             
             <div className="space-y-4">
-              {cart.map(item => {
-                const variationImage = item.selectedColor && item.variations
-                  ? item.variations.find(v => v.attributes.color === item.selectedColor)?.images?.[0]
-                  : null;
-                const itemImage = variationImage || item.images[0];
+              {(() => {
+                const standardItems = cart.filter(i => !i.comboId);
+                const comboGroups = cart.filter(i => i.comboId).reduce((groups: any, item) => {
+                  const key = item.comboId;
+                  if (!groups[key]) groups[key] = { comboName: item.comboName, items: [] };
+                  groups[key].items.push(item);
+                  return groups;
+                }, {});
 
                 return (
-                <div key={`${item.id}-${item.selectedSize}-${item.selectedColor || ''}`} className="flex gap-6 p-4 border border-white/5 bg-neutral-950/10 rounded-sm group relative">
-                  <Link to={`/product/${item.id}`} className="w-16 h-20 bg-neutral-950 overflow-hidden relative flex-shrink-0 block rounded-sm">
-                    <img 
-                        src={itemImage} 
-                        alt={item.name} 
-                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-102 transition-all duration-500" 
-                        referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                  </Link>
-                  <div className="flex-grow flex flex-col py-0.5 justify-between">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <Link to={`/product/${item.id}`} className="hover:text-accent transition-colors">
-                          <h3 className="text-sm tracking-tight font-display font-medium uppercase mb-0.5">{item.name}</h3>
-                        </Link>
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <span className="text-[8px] text-neutral-600 uppercase tracking-widest font-bold font-mono">CAT_{item.category?.toUpperCase()}</span>
-                          <span className="w-1 h-1 bg-neutral-800 rounded-full" />
-                          <span className="text-[8px] text-accent uppercase tracking-[0.2em] font-bold font-mono">SIZE: {item.selectedSize || 'OS'}</span>
-                          {item.selectedColor && (
-                            <>
-                              <span className="w-1 h-1 bg-neutral-800 rounded-full" />
-                              <span className="text-[8px] text-accent uppercase tracking-[0.2em] font-bold font-mono">COLOR: {item.selectedColor}</span>
-                            </>
-                          )}
+                  <>
+                    {/* Render Combo Groups */}
+                    {Object.entries(comboGroups).map(([comboId, group]: [string, any]) => {
+                      const groupTotal = group.items.reduce((sum: number, i: any) => sum + i.price * i.quantity, 0);
+                      const discountedTotal = Math.round(groupTotal * 0.9);
+                      
+                      return (
+                        <div key={comboId} className="border border-accent/20 bg-neutral-950/40 rounded-sm overflow-hidden">
+                          <div className="bg-accent/5 px-4 py-3 border-b border-accent/10 flex justify-between items-center">
+                            <div>
+                              <span className="text-[9px] font-mono tracking-widest text-accent uppercase block mb-0.5">CURATED STACK</span>
+                              <h3 className="text-sm font-display font-bold uppercase text-white">{group.comboName}</h3>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[9px] font-mono tracking-widest text-emerald-500 uppercase block mb-0.5">10% SAVINGS</span>
+                              <span className="text-xs font-mono font-bold text-white">₹{discountedTotal.toLocaleString()}</span>
+                            </div>
+                          </div>
+                          <div className="p-4 space-y-4">
+                            {group.items.map((item: any) => {
+                              const variationImage = item.selectedColor && item.variations
+                                ? item.variations.find((v:any) => v.attributes.color === item.selectedColor)?.images?.[0]
+                                : null;
+                              const itemImage = variationImage || item.images[0];
+                              
+                              return (
+                                <div key={`${item.id}-${item.selectedSize}-${item.selectedColor || ''}`} className="flex gap-4 group relative items-center">
+                                  <Link to={`/product/${item.id}`} className="w-12 h-16 bg-neutral-950 overflow-hidden relative flex-shrink-0 block rounded-sm border border-white/5">
+                                    <img 
+                                        src={itemImage} 
+                                        alt={item.name} 
+                                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all duration-500" 
+                                        referrerPolicy="no-referrer"
+                                    />
+                                  </Link>
+                                  <div className="flex-grow flex flex-col justify-between py-0.5">
+                                    <div className="flex justify-between items-start">
+                                      <div>
+                                        <h4 className="text-[11px] font-display font-medium uppercase text-neutral-300">{item.name}</h4>
+                                        <div className="flex items-center gap-2 mt-1">
+                                          <span className="text-[8px] text-neutral-500 uppercase tracking-widest font-mono">SIZE: {item.selectedSize || 'OS'}</span>
+                                          {item.selectedColor && (
+                                            <>
+                                              <span className="w-1 h-1 bg-neutral-800 rounded-full" />
+                                              <span className="text-[8px] text-neutral-500 uppercase tracking-widest font-mono">COLOR: {item.selectedColor}</span>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <button type="button" onClick={() => removeFromCart(item.id, item.selectedSize, item.selectedColor)} className="text-neutral-700 hover:text-red-500 transition-colors p-1 cursor-pointer">
+                                          <Trash2 size={12} />
+                                      </button>
+                                    </div>
+                                    <div className="flex justify-between items-center mt-2">
+                                      <div className="flex items-center bg-black border border-neutral-900/80 p-0.5 rounded-sm">
+                                        <button type="button" onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedSize, item.selectedColor)} className="w-4 h-4 flex items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer">
+                                            <Minus size={8} />
+                                        </button>
+                                        <span className="w-5 text-center text-[9px] font-mono font-bold">{item.quantity}</span>
+                                        <button type="button" onClick={() => updateQuantity(item.id, item.quantity + 1, item.selectedSize, item.selectedColor)} className="w-4 h-4 flex items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer">
+                                            <Plus size={8} />
+                                        </button>
+                                      </div>
+                                      <span className="text-[9px] font-mono tracking-tight text-neutral-500 line-through">₹{(item.price * item.quantity).toLocaleString()}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                      <button type="button" onClick={() => removeFromCart(item.id, item.selectedSize, item.selectedColor)} className="text-neutral-700 hover:text-red-500 transition-colors p-1 -mt-1 cursor-pointer">
-                          <Trash2 size={13} />
-                      </button>
-                    </div>
+                      );
+                    })}
 
-                    <div className="flex justify-between items-center mt-2">
-                      <div className="flex items-center bg-black border border-neutral-900/80 p-0.5 rounded-sm">
-                        <button type="button" onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedSize, item.selectedColor)} className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer">
-                            <Minus size={8} />
-                        </button>
-                        <span className="w-6 text-center text-[9px] font-mono font-bold">{item.quantity.toString().padStart(2, '0')}</span>
-                        <button type="button" onClick={() => updateQuantity(item.id, item.quantity + 1, item.selectedSize, item.selectedColor)} className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer">
-                            <Plus size={8} />
-                        </button>
-                      </div>
-                      <div className="text-right">
-                        <span className="text-[8px] text-neutral-600 font-mono tracking-tighter block">₹{item.price.toLocaleString()} EACH</span>
-                        <p className="text-xs font-mono tracking-tight font-bold text-white">₹{(item.price * item.quantity).toLocaleString()}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ); })}
+                    {/* Render Standard Items */}
+                    {standardItems.map((item: any) => {
+                      const variationImage = item.selectedColor && item.variations
+                        ? item.variations.find((v:any) => v.attributes.color === item.selectedColor)?.images?.[0]
+                        : null;
+                      const itemImage = variationImage || item.images[0];
+
+                      return (
+                        <div key={`${item.id}-${item.selectedSize}-${item.selectedColor || ''}`} className="flex gap-6 p-4 border border-white/5 bg-neutral-950/10 rounded-sm group relative">
+                          <Link to={`/product/${item.id}`} className="w-16 h-20 bg-neutral-950 overflow-hidden relative flex-shrink-0 block rounded-sm">
+                            <img 
+                                src={itemImage} 
+                                alt={item.name} 
+                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-102 transition-all duration-500" 
+                                referrerPolicy="no-referrer"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+                          </Link>
+                          <div className="flex-grow flex flex-col py-0.5 justify-between">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <Link to={`/product/${item.id}`} className="hover:text-accent transition-colors">
+                                  <h3 className="text-sm tracking-tight font-display font-medium uppercase mb-0.5">{item.name}</h3>
+                                </Link>
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <span className="text-[8px] text-neutral-600 uppercase tracking-widest font-bold font-mono">CAT_{item.category?.toUpperCase() || 'SYS'}</span>
+                                  <span className="w-1 h-1 bg-neutral-800 rounded-full" />
+                                  <span className="text-[8px] text-accent uppercase tracking-[0.2em] font-bold font-mono">SIZE: {item.selectedSize || 'OS'}</span>
+                                  {item.selectedColor && (
+                                    <>
+                                      <span className="w-1 h-1 bg-neutral-800 rounded-full" />
+                                      <span className="text-[8px] text-accent uppercase tracking-[0.2em] font-bold font-mono">COLOR: {item.selectedColor}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              <button type="button" onClick={() => removeFromCart(item.id, item.selectedSize, item.selectedColor)} className="text-neutral-700 hover:text-red-500 transition-colors p-1 -mt-1 cursor-pointer">
+                                  <Trash2 size={13} />
+                              </button>
+                            </div>
+
+                            <div className="flex justify-between items-center mt-2">
+                              <div className="flex items-center bg-black border border-neutral-900/80 p-0.5 rounded-sm">
+                                <button type="button" onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedSize, item.selectedColor)} className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer">
+                                    <Minus size={8} />
+                                </button>
+                                <span className="w-6 text-center text-[9px] font-mono font-bold">{item.quantity.toString().padStart(2, '0')}</span>
+                                <button type="button" onClick={() => updateQuantity(item.id, item.quantity + 1, item.selectedSize, item.selectedColor)} className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer">
+                                    <Plus size={8} />
+                                </button>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-[8px] text-neutral-600 font-mono tracking-tighter block">₹{item.price.toLocaleString()} EACH</span>
+                                <p className="text-xs font-mono tracking-tight font-bold text-white">₹{(item.price * item.quantity).toLocaleString()}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </>
+                );
+              })()}
             </div>
           </section>
 

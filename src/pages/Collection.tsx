@@ -126,6 +126,11 @@ const Collection: React.FC = () => {
   // Apply all active filters to the collection
   const filteredProducts = React.useMemo(() => {
     return products.filter(p => {
+      // 0. Exclude Combos from collection page
+      if (p.type === 'grouped' || p.category === 'Combos' || (p.categories || []).includes('Combos')) {
+        return false;
+      }
+
       // 1. Creator filter (from query param)
       if (creatorQuery && p.coCreator?.toLowerCase() !== creatorQuery.toLowerCase()) {
         return false;
@@ -171,9 +176,10 @@ const Collection: React.FC = () => {
   const categories = React.useMemo(() => {
     const allCats = new Set<string>();
     products.forEach(p => {
+      if (p.type === 'grouped' || p.category === 'Combos' || (p.categories || []).includes('Combos')) return;
       const productCats = p.categories || [p.category];
       productCats.forEach(c => {
-        if (c) allCats.add(c);
+        if (c && c !== 'Combos') allCats.add(c);
       });
     });
     return ['All', ...Array.from(allCats)];
