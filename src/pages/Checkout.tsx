@@ -40,7 +40,13 @@ const Checkout: React.FC = () => {
   const { cart, updateQuantity, removeFromCart, totalPrice } = useCart();
 
   // Total items in cart for packaging intelligence
-  const totalItemCount = cart.reduce((count, item) => count + item.quantity, 0);
+  // Combos count as their actual tee count (3), not as 1 cart item
+  const totalItemCount = cart.reduce((count, item) => {
+    if (item.isCombo && item.comboItems && item.comboItems.length > 0) {
+      return count + (item.comboItems.length * item.quantity);
+    }
+    return count + item.quantity;
+  }, 0);
   const { triggerCheckout, isProcessing, error, setError } = useCheckout();
   const { user, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
@@ -56,7 +62,10 @@ const Checkout: React.FC = () => {
   const getShippingFee = () => {
     if (shippingMethod !== 'delivery') return 0;
     const realShippingCount = cart.reduce((count, item) => {
-      if (item.id.toString() === '1672') return count;
+      if (item.id.toString() === '1672') return count; // exclude packaging product
+      if (item.isCombo && item.comboItems && item.comboItems.length > 0) {
+        return count + (item.comboItems.length * item.quantity);
+      }
       return count + item.quantity;
     }, 0);
     if (realShippingCount === 0) return 0;
