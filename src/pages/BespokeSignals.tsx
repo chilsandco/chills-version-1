@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { useAuth } from '../AuthContext';
 import { Activity, Clock, User, Mail, Shield, Download } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 const BespokeSignals: React.FC = () => {
   const [waitlist, setWaitlist] = useState<any[]>([]);
@@ -35,27 +35,46 @@ const BespokeSignals: React.FC = () => {
     fetchWaitlist();
   }, [token, authLoading]);
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
     if (waitlist.length === 0) return;
 
-    // Prepare data for export
-    const dataToExport = waitlist.map(customer => ({
-      ID: customer.id,
-      'Registered Email': customer.email,
-      'Billing/Waitlist Email': customer.billing_email || customer.email,
-      'Pseudo Name': customer.pseudo_name || 'N/A',
-      'Co-Creator': customer.is_co_creator ? 'Yes' : 'No',
-      'Registration Date': new Date(customer.date_created).toLocaleDateString(),
-      Status: 'Waitlisted'
-    }));
+    // Create workbook and worksheet
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Waitlist');
 
-    // Create worksheet
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Waitlist");
+    // Define columns
+    worksheet.columns = [
+      { header: 'ID', key: 'id', width: 10 },
+      { header: 'Registered Email', key: 'email', width: 30 },
+      { header: 'Billing/Waitlist Email', key: 'billing_email', width: 30 },
+      { header: 'Pseudo Name', key: 'pseudo_name', width: 20 },
+      { header: 'Co-Creator', key: 'is_co_creator', width: 12 },
+      { header: 'Registration Date', key: 'date_created', width: 20 },
+      { header: 'Status', key: 'status', width: 12 },
+    ];
 
-    // Generate and download file
-    XLSX.writeFile(workbook, `Chils_Bespoke_Waitlist_${new Date().toISOString().split('T')[0]}.xlsx`);
+    // Add rows
+    waitlist.forEach(customer => {
+      worksheet.addRow({
+        id: customer.id,
+        email: customer.email,
+        billing_email: customer.billing_email || customer.email,
+        pseudo_name: customer.pseudo_name || 'N/A',
+        is_co_creator: customer.is_co_creator ? 'Yes' : 'No',
+        date_created: new Date(customer.date_created).toLocaleDateString(),
+        status: 'Waitlisted',
+      });
+    });
+
+    // Generate buffer and trigger download
+    const buffer = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Chils_Bespoke_Waitlist_${new Date().toISOString().split('T')[0]}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   if (loading || authLoading) {
