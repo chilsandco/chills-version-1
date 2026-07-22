@@ -1,19 +1,13 @@
 RewriteEngine On
 RewriteBase /
-# Exclude invoice print routes from WP rewrite
+
+# Exclude invoice print routes from rewrite
 RewriteCond %{QUERY_STRING} (^|&)print-order= [NC]
 RewriteRule ^ - [L]
 
-# Force SSL (Optional, recommended)
-# RewriteCond %{HTTPS} off
-# RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+# Force SSL
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-# Proxy all requests to the Node.js application
-# ---------------------------------------------------------
-# IMPORTANT FOR HOSTINGER USERS:
-# If you are using Hostinger's "Node.js" selector in the panel, 
-# you DO NOT need the RewriteRule below. Hostinger handles the proxying for you.
-# Using this rule might cause 503 errors if the port or module isn't correctly configured.
-
-# Only uncomment if you are NOT using the Node.js Manager:
-# RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
+# Proxy all requests to the Node.js application on port 3000
+RewriteRule ^(.*)$ http://127.0.0.1:3000/$1 [P,L]
