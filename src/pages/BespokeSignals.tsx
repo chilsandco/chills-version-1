@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { useAuth } from '../AuthContext';
 import { Activity, Clock, User, Mail, Shield, Download } from 'lucide-react';
-import ExcelJS from 'exceljs';
+import writeXlsxFile from 'write-excel-file';
 
 const BespokeSignals: React.FC = () => {
   const [waitlist, setWaitlist] = useState<any[]>([]);
@@ -38,43 +38,22 @@ const BespokeSignals: React.FC = () => {
   const exportToExcel = async () => {
     if (waitlist.length === 0) return;
 
-    // Create workbook and worksheet
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Waitlist');
-
-    // Define columns
-    worksheet.columns = [
-      { header: 'ID', key: 'id', width: 10 },
-      { header: 'Registered Email', key: 'email', width: 30 },
-      { header: 'Billing/Waitlist Email', key: 'billing_email', width: 30 },
-      { header: 'Pseudo Name', key: 'pseudo_name', width: 20 },
-      { header: 'Co-Creator', key: 'is_co_creator', width: 12 },
-      { header: 'Registration Date', key: 'date_created', width: 20 },
-      { header: 'Status', key: 'status', width: 12 },
+    // Define column schema
+    const schema = [
+      { column: 'ID', type: Number, value: (c: any) => c.id, width: 10 },
+      { column: 'Registered Email', type: String, value: (c: any) => c.email, width: 30 },
+      { column: 'Billing/Waitlist Email', type: String, value: (c: any) => c.billing_email || c.email, width: 30 },
+      { column: 'Pseudo Name', type: String, value: (c: any) => c.pseudo_name || 'N/A', width: 20 },
+      { column: 'Co-Creator', type: String, value: (c: any) => c.is_co_creator ? 'Yes' : 'No', width: 12 },
+      { column: 'Registration Date', type: String, value: (c: any) => new Date(c.date_created).toLocaleDateString(), width: 20 },
+      { column: 'Status', type: String, value: () => 'Waitlisted', width: 12 },
     ];
 
-    // Add rows
-    waitlist.forEach(customer => {
-      worksheet.addRow({
-        id: customer.id,
-        email: customer.email,
-        billing_email: customer.billing_email || customer.email,
-        pseudo_name: customer.pseudo_name || 'N/A',
-        is_co_creator: customer.is_co_creator ? 'Yes' : 'No',
-        date_created: new Date(customer.date_created).toLocaleDateString(),
-        status: 'Waitlisted',
-      });
+    // Generate and download xlsx file
+    await writeXlsxFile(waitlist, {
+      schema,
+      fileName: `Chils_Bespoke_Waitlist_${new Date().toISOString().split('T')[0]}.xlsx`,
     });
-
-    // Generate buffer and trigger download
-    const buffer = await workbook.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Chils_Bespoke_Waitlist_${new Date().toISOString().split('T')[0]}.xlsx`;
-    a.click();
-    URL.revokeObjectURL(url);
   };
 
   if (loading || authLoading) {
