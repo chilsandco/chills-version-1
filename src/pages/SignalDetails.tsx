@@ -254,9 +254,23 @@ const SignalDetails: React.FC = () => {
                     </div>
                     <div className="space-y-1">
                       <p className="text-accent">SWAPPED TARGET:</p>
-                      <p className="text-white uppercase tracking-tight font-bold">
-                        {swap.swapProductName} <span className="text-accent">(SIZE: {swap.swapSize})</span>
-                      </p>
+                      <div className="flex gap-4 items-center mt-2">
+                        {swap.swapProductImage ? (
+                          <img 
+                            src={swap.swapProductImage} 
+                            alt={swap.swapProductName} 
+                            className="w-12 h-16 object-cover bg-neutral-900 border border-white/5 flex-shrink-0"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : (
+                          <div className="w-12 h-16 bg-neutral-900 flex items-center justify-center flex-shrink-0 border border-white/5">
+                            <Package size={16} className="text-neutral-700" />
+                          </div>
+                        )}
+                        <p className="text-white uppercase tracking-tight font-bold text-xs">
+                          {swap.swapProductName} <span className="text-accent font-mono block text-[10px] mt-1">SIZE: {swap.swapSize}</span>
+                        </p>
+                      </div>
                     </div>
                     <div className="pt-2 border-t border-neutral-900 flex justify-between items-center text-[10px]">
                       {swap.type === 'refund' ? (

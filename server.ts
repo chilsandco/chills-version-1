@@ -3463,8 +3463,7 @@ async function startServer() {
         }
 
         const updatePayload: any = {
-          meta_data: updatedMeta,
-          note: noteText
+          meta_data: updatedMeta
         };
 
         if (refundDeltaTotal > 0) {
@@ -3474,13 +3473,24 @@ async function startServer() {
 
         try {
           await wcSafeCall(wc, "put", `orders/${orderId}`, updatePayload);
-          console.log(`[CHILS & CO.] WooCommerce Order metadata & notes logged for RMA ${orderId} (Status updated: ${!!updatePayload.status})`);
+          console.log(`[CHILS & CO.] WooCommerce Order metadata logged for RMA ${orderId} (Status updated: ${!!updatePayload.status})`);
         } catch (statusErr: any) {
           console.warn(`[CHILS & CO.] WooCommerce status 'refund-requested' failed or rejected by API:`, statusErr.message || statusErr);
           // Fallback: update without changing status
           delete updatePayload.status;
           await wcSafeCall(wc, "put", `orders/${orderId}`, updatePayload);
           console.log(`[CHILS & CO.] WooCommerce metadata updated successfully without status change.`);
+        }
+
+        // Post order notes to the notes sub-resource
+        try {
+          await wcSafeCall(wc, "post", `orders/${orderId}/notes`, {
+            note: noteText,
+            customer_note: false
+          });
+          console.log(`[CHILS & CO.] Detailed audit note posted to WooCommerce order ${orderId} notes.`);
+        } catch (noteErr: any) {
+          console.error(`[CHILS & CO.] Failed to post order note to WooCommerce order ${orderId}:`, noteErr.message || noteErr);
         }
       } catch (err) {
         console.error("[CHILS & CO.] Failed to write WooCommerce RMA metadata/notes:", err);
@@ -3505,14 +3515,20 @@ async function startServer() {
       const orderResponse = await wcSafeCall(wc, "get", `orders/${id}`);
       const order = orderResponse.data;
 
-      const getProductPrice = async (productId: string): Promise<number> => {
+      const getProductDetails = async (productId: string): Promise<{ price: number; image: string | null }> => {
         const cached = globalProductsCache?.find((p: any) => p.id.toString() === productId.toString());
-        if (cached) return parseFloat(cached.price.toString());
+        if (cached) return { 
+          price: parseFloat(cached.price.toString()), 
+          image: cached.images?.[0] || null 
+        };
         try {
           const res = await wcSafeCall(wc, "get", `products/${productId}`);
-          return parseFloat(res.data.price.toString());
+          return { 
+            price: parseFloat(res.data.price.toString()), 
+            image: res.data.images?.[0]?.src || null 
+          };
         } catch (err) {
-          console.error(`Failed to fetch product price for ${productId}:`, err);
+          console.error(`Failed to fetch product details for ${productId}:`, err);
           throw new Error(`Swap product not found.`);
         }
       };
@@ -3528,9 +3544,9 @@ async function startServer() {
               throw new Error(`Original product ${p.productId} not found in order.`);
             }
             const originalPrice = parseFloat(originalItem.price.toString());
-            const altPrice = await getProductPrice(p.exchangeProductId);
+            const altDetails = await getProductDetails(p.exchangeProductId);
             
-            const itemDelta = altPrice - originalPrice;
+            const itemDelta = altDetails.price - originalPrice;
             const itemDeltaTotal = itemDelta * p.quantity;
             netDelta += itemDeltaTotal;
 
@@ -3540,6 +3556,7 @@ async function startServer() {
               swapProductId: p.exchangeProductId,
               swapProductName: p.exchangeProductName || "Alternative Product",
               swapSize: p.exchangeSize || "Unknown",
+              swapProductImage: altDetails.image,
               quantity: p.quantity,
               delta: Math.abs(itemDeltaTotal),
               type: itemDeltaTotal >= 0 ? "charge" : "refund"

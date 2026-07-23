@@ -127,6 +127,7 @@ export interface RmaSwapItem {
   swapProductId: string;
   swapProductName: string;
   swapSize: string;
+  swapProductImage?: string | null;
   quantity: number;
   delta: number;
   type: 'refund' | 'charge';
