@@ -133,17 +133,31 @@ const Checkout: React.FC = () => {
     }
 
     const storedForm = localStorage.getItem(`chils_checkout_form_${userSuffix}`);
+    let cachedData: any = {};
     if (storedForm) {
       try {
-        const parsed = JSON.parse(storedForm);
-        if (parsed.phone) {
-          parsed.phone = sanitizePhoneNumber(parsed.phone);
-        }
-        setFormData(prev => ({ ...prev, ...parsed }));
+        cachedData = JSON.parse(storedForm);
       } catch (e) {
         console.error("Failed to parse persisted form", e);
       }
     }
+
+    setFormData(prev => {
+      const freshName = user ? (user.firstName || user.first_name || '') : '';
+      const freshLastName = user ? (user.lastName || user.last_name || '') : '';
+      const freshEmail = user ? (user.email || '') : '';
+      const freshPhone = user ? sanitizePhoneNumber(user.billing?.phone || (user as any).phone || '') : '';
+
+      return {
+        ...prev,
+        ...cachedData,
+        // Prioritize fresh profile details over local storage cache on load/mount
+        firstName: freshName || cachedData.firstName || prev.firstName || '',
+        lastName: freshLastName || cachedData.lastName || prev.lastName || '',
+        email: freshEmail || cachedData.email || prev.email || '',
+        phone: freshPhone || cachedData.phone || prev.phone || ''
+      };
+    });
   }, [user?.id]);
 
   // Persist form data changes
@@ -156,7 +170,7 @@ const Checkout: React.FC = () => {
     return () => clearTimeout(timeout);
   }, [formData.firstName, formData.lastName, formData.email, formData.phone, user?.id]);
 
-  // Pre-fill user data
+  // Pre-fill user data if they were empty
   useEffect(() => {
     if (user) {
       setFormData(prev => ({
@@ -167,7 +181,7 @@ const Checkout: React.FC = () => {
         phone: prev.phone || sanitizePhoneNumber(user.billing?.phone || (user as any).phone || '')
       }));
     }
-  }, [user]);
+  }, [user?.id]);
 
   // Sync selected address to form data for final submission
   useEffect(() => {
