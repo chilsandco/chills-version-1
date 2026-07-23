@@ -1011,12 +1011,12 @@ async function startServer() {
         },
         orderKey: order.order_key,
         rmaSwaps: (() => {
-          const rmaSwapInfoStr = getMeta("_rma_swap_info");
+          const rmaSwapInfoStr = getMeta("rma_swap_info") || getMeta("_rma_swap_info");
           if (rmaSwapInfoStr) {
             try {
               return typeof rmaSwapInfoStr === 'string' ? JSON.parse(rmaSwapInfoStr) : rmaSwapInfoStr;
             } catch (e) {
-              console.error("Failed to parse _rma_swap_info:", e);
+              console.error("Failed to parse rma_swap_info:", e);
             }
           }
           return null;
@@ -3422,11 +3422,11 @@ async function startServer() {
       try {
         const orderRes = await wcSafeCall(wc, "get", `orders/${orderId}`);
         const currentMeta = orderRes.data.meta_data || [];
-        let updatedMeta = currentMeta.filter((m: any) => !["_rma_swap_info", "_rma_refund_delta_amount"].includes(m.key));
+        let updatedMeta = currentMeta.filter((m: any) => !["_rma_swap_info", "_rma_refund_delta_amount", "rma_swap_info", "rma_refund_delta_amount"].includes(m.key));
         
         if (swapInfoList && swapInfoList.length > 0) {
           updatedMeta.push({
-            key: "_rma_swap_info",
+            key: "rma_swap_info",
             value: JSON.stringify(swapInfoList)
           });
         }
@@ -3438,7 +3438,7 @@ async function startServer() {
 
         if (refundDeltaTotal > 0) {
           updatedMeta.push({
-            key: "_rma_refund_delta_amount",
+            key: "rma_refund_delta_amount",
             value: refundDeltaTotal.toString()
           });
         }
