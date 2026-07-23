@@ -994,6 +994,12 @@ async function startServer() {
           // WC V3 often includes image object in line_items if configured
           image: item.image?.src || null 
         })),
+        billing: {
+          first_name: order.billing?.first_name || "",
+          last_name: order.billing?.last_name || "",
+          email: order.billing?.email || "",
+          phone: order.billing?.phone || ""
+        },
         shipping: {
           address: order.shipping ? `${order.shipping.address_1 || ""}${order.shipping.address_1 && order.shipping.city ? ", " : ""}${order.shipping.city || ""}` : "No address provided",
           method: shippingLines[0]?.method_title || "Standard Delivery",
@@ -2966,6 +2972,83 @@ async function startServer() {
     } catch (error) {
       console.warn("[CHILS & CO.] Recovery failed for auth meta", error);
       res.json(req.user);
+    }
+  });
+
+  // Update authenticated user's profile (name, email, phone)
+  app.put("/api/auth/me", authenticateToken, async (req: any, res) => {
+    try {
+      const { first_name, last_name, email, phone } = req.body;
+
+      // Basic validation
+      if (!first_name?.trim() || !last_name?.trim()) {
+        return res.status(400).json({ message: "First name and last name are required." });
+      }
+      if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+        return res.status(400).json({ message: "A valid email address is required." });
+      }
+      const sanitizedPhone = (phone || "").replace(/\D/g, "").slice(-10);
+
+      const wc = getWooCommerce();
+      if (!wc) {
+        // No WooCommerce — update local token user only
+        return res.json({ ...req.user, first_name: first_name.trim(), last_name: last_name.trim(), email: email.toLowerCase().trim() });
+      }
+
+      const customerId = req.user?.id || req.user?.data?.user?.id;
+      if (!customerId) {
+        return res.status(400).json({ message: "Unable to resolve customer identity." });
+      }
+
+      // Update WooCommerce customer record
+      const updatePayload: any = {
+        first_name: first_name.trim(),
+        last_name: last_name.trim(),
+        email: email.toLowerCase().trim(),
+        billing: {
+          first_name: first_name.trim(),
+          last_name: last_name.trim(),
+          email: email.toLowerCase().trim()
+        }
+      };
+      if (sanitizedPhone) {
+        updatePayload.billing.phone = sanitizedPhone;
+      }
+
+      const response = await wcSafeCall(wc, "put", `customers/${customerId}`, updatePayload);
+      const updatedCustomer = response.data;
+
+      // Build the response in the same shape as GET /api/auth/me
+      const getMetaValue = (metaData: any[], key: string) => {
+        const match = metaData?.find((m: any) => {
+          const k = String(m.key).toLowerCase();
+          return k === key || k === `_${key}` || k === key.replace(/_/g, '-');
+        });
+        return match?.value;
+      };
+      const isTrue = (val: any) => {
+        if (val === true || val === 1 || val === '1') return true;
+        if (typeof val === 'string') {
+          const v = val.trim().toLowerCase();
+          return v === 'true' || v === 'yes' || v === 'on' || v === 'active';
+        }
+        return false;
+      };
+
+      return res.json({
+        ...req.user,
+        ...updatedCustomer,
+        onWaitlist: isTrue(getMetaValue(updatedCustomer.meta_data, "bespoke_waitlist")),
+        bespokeUnlocked: isTrue(getMetaValue(updatedCustomer.meta_data, "bespoke_unlocked")),
+        coCreatorInterest: isTrue(getMetaValue(updatedCustomer.meta_data, "co_creator_interest")),
+        pseudoName: getMetaValue(updatedCustomer.meta_data, "pseudo_name") || "",
+        id: updatedCustomer.id,
+        email: (updatedCustomer.email || email).toLowerCase()
+      });
+    } catch (error: any) {
+      console.error("[CHILS & CO.] Profile update failed:", error);
+      const msg = error.response?.data?.message || "Profile update failed. Please try again.";
+      res.status(500).json({ message: msg });
     }
   });
 

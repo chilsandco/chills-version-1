@@ -70,7 +70,19 @@ export interface Customer {
   pseudoName?: string;
   wishlist?: Product[];
   cart?: CartItem[];
+  billing?: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    phone?: string;
+    address_1?: string;
+    city?: string;
+    state?: string;
+    postcode?: string;
+    country?: string;
+  };
 }
+
 
 export interface SignalItem {
   productId: string;
@@ -90,6 +102,12 @@ export interface Signal {
   currency: string;
   items: SignalItem[];
   dateCompleted?: string;
+  billing?: {
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    phone?: string;
+  };
   shipping: {
     address: string;
     method: string;
@@ -101,6 +119,7 @@ export interface Signal {
   };
   orderKey?: string;
 }
+
 
 export interface ProductReview {
   id: number;

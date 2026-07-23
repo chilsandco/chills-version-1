@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Activity, Box, MapPin, CreditCard, ChevronLeft, Package, Sparkles, ShieldAlert, RefreshCcw, CheckCircle2 } from 'lucide-react';
+import { Activity, Box, MapPin, CreditCard, ChevronLeft, Package, Sparkles, ShieldAlert, RefreshCcw, CheckCircle2, User } from 'lucide-react';
 import { Signal } from '../types';
 import { useAuth } from '../AuthContext';
 
@@ -386,6 +386,46 @@ const SignalDetails: React.FC = () => {
               <p className="text-[10px] font-bold uppercase tracking-widest">{signal.shipping.method}</p>
             </div>
           </section>
+
+          {signal.billing && (signal.billing.email || signal.billing.phone) && (
+            <section className="bg-neutral-950 border border-neutral-900 p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <User size={14} className="text-accent" />
+                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase">Contact Node</h3>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Full Identity</span>
+                  <p className="text-xs uppercase font-bold tracking-widest text-white">
+                    {signal.billing.first_name} {signal.billing.last_name}
+                  </p>
+                </div>
+                {signal.billing.email && (
+                  <div>
+                    <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Transmission Mail</span>
+                    <p className="text-xs font-mono tracking-wider text-neutral-400">{signal.billing.email}</p>
+                  </div>
+                )}
+                {signal.billing.phone && (
+                  <div>
+                    <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Telemetry Contact</span>
+                    <p className="text-xs font-mono tracking-widest text-neutral-400">{signal.billing.phone}</p>
+                  </div>
+                )}
+                <div className="pt-4 border-t border-neutral-900">
+                  <p className="text-[9px] text-neutral-500 uppercase tracking-widest leading-relaxed mb-3 italic">
+                    These contact parameters were registered at checkout for this transmission.
+                  </p>
+                  <Link 
+                    to="/auth"
+                    className="inline-flex items-center gap-1.5 text-[9px] font-bold tracking-widest uppercase text-accent hover:text-white transition-colors"
+                  >
+                    Update Node Identity ↗
+                  </Link>
+                </div>
+              </div>
+            </section>
+          )}
 
           <section className="bg-neutral-950 border border-neutral-900 p-8">
             <div className="flex items-center gap-3 mb-6">

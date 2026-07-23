@@ -160,7 +160,7 @@ const Orders: React.FC = () => {
 };
 
 const Auth: React.FC = () => {
-  const { login: authLogin, user, logout, isAuthenticated, token } = useAuth();
+  const { login: authLogin, user, logout, isAuthenticated, token, updateUser } = useAuth();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect');
   const [isRegister, setIsRegister] = useState(true);
@@ -247,6 +247,29 @@ const Auth: React.FC = () => {
   });
   const [saveLoading, setSaveLoading] = useState(false);
 
+  // --- Profile state & bindings ---
+  const [activeTab, setActiveTab] = useState<'profile' | 'orders'>('orders');
+  const [profileForm, setProfileForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: ''
+  });
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const [profileSuccess, setProfileSuccess] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setProfileForm({
+        first_name: user.first_name || user.firstName || '',
+        last_name: user.last_name || user.lastName || '',
+        email: user.email || '',
+        phone: user.billing?.phone || (user as any).phone || ''
+      });
+    }
+  }, [user]);
+
   const adminEmails = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
   const isAdmin = user ? adminEmails.some(email => email.toLowerCase() === user.email.toLowerCase()) : false;
 
@@ -268,6 +291,35 @@ const Auth: React.FC = () => {
     }
     if (sessionKey && sessionStorage.getItem(sessionKey) === 'true') return true;
     return false;
+  };
+
+  const handleProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileLoading(true);
+    setProfileError(null);
+    setProfileSuccess(false);
+
+    try {
+      const response = await fetch('/api/auth/me', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(profileForm)
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to update identity profile.');
+      }
+      updateUser(data);
+      setProfileSuccess(true);
+      setTimeout(() => setProfileSuccess(false), 3000);
+    } catch (err: any) {
+      setProfileError(err.message);
+    } finally {
+      setProfileLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -459,8 +511,7 @@ const Auth: React.FC = () => {
               </div>
             </div>
           </motion.div>
-
-          {/* Orders Section */}
+          {/* Orders/Profile Section */}
           <div className="lg:col-span-2">
             {showSettingsEditor ? (
                <motion.div 
@@ -541,14 +592,132 @@ const Auth: React.FC = () => {
                  </div>
                </motion.div>
             ) : (
-              <>
-                <div className="mb-10">
-                  <h4 className="text-3xl font-display font-bold tracking-tighter mb-2">ORDERS ARCHIVE</h4>
-                  <p className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-medium">Historical logs and status of your active transmissions.</p>
-                </div>
-                
-                <Orders />
-              </>
+               <>
+                 {/* Tab Switcher */}
+                 <div className="flex gap-8 border-b border-white/10 mb-10">
+                   <button 
+                     onClick={() => setActiveTab('orders')}
+                     className={`pb-4 text-xs font-bold tracking-[0.2em] uppercase transition-colors relative ${
+                       activeTab === 'orders' ? 'text-white' : 'text-white/40 hover:text-white/80'
+                     }`}
+                   >
+                     ORDERS ARCHIVE
+                     {activeTab === 'orders' && (
+                       <motion.div 
+                         layoutId="activeTabUnderline"
+                         className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent"
+                       />
+                     )}
+                   </button>
+                   <button 
+                     onClick={() => setActiveTab('profile')}
+                     className={`pb-4 text-xs font-bold tracking-[0.2em] uppercase transition-colors relative ${
+                       activeTab === 'profile' ? 'text-white' : 'text-white/40 hover:text-white/80'
+                     }`}
+                   >
+                     IDENTITY PROFILE
+                     {activeTab === 'profile' && (
+                       <motion.div 
+                         layoutId="activeTabUnderline"
+                         className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent"
+                       />
+                     )}
+                   </button>
+                 </div>
+
+                 {activeTab === 'orders' ? (
+                   <>
+                     <div className="mb-10">
+                       <h4 className="text-3xl font-display font-bold tracking-tighter mb-2">ORDERS ARCHIVE</h4>
+                       <p className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-medium">Historical logs and status of your active transmissions.</p>
+                     </div>
+                     
+                     <Orders />
+                   </>
+                 ) : (
+                   <motion.div
+                     initial={{ opacity: 0, y: 10 }}
+                     animate={{ opacity: 1, y: 0 }}
+                     className="bg-neutral-950 border border-white/10 p-8 md:p-12 rounded-sm"
+                   >
+                     <div className="mb-10">
+                       <h4 className="text-3xl font-display font-bold tracking-tighter mb-2">IDENTITY SETTINGS</h4>
+                       <p className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-medium">Configure your credentials and contact nodes.</p>
+                     </div>
+
+                     <form onSubmit={handleProfileSubmit} className="space-y-6">
+                       {profileError && (
+                         <div className="bg-red-500/10 border border-red-500/20 p-4 flex items-center gap-3 text-red-500 text-sm">
+                           <AlertCircle size={18} />
+                           <span>{profileError}</span>
+                         </div>
+                       )}
+
+                       {profileSuccess && (
+                         <div className="bg-green-500/10 border border-green-500/20 p-4 flex items-center gap-3 text-green-500 text-sm">
+                           <CheckCircle2 size={18} />
+                           <span>Identity successfully updated.</span>
+                         </div>
+                       )}
+
+                       <div className="grid grid-cols-2 gap-4">
+                         <div className="space-y-2">
+                           <label className="text-[10px] tracking-widest text-white/40 uppercase font-bold">First Name</label>
+                           <input 
+                             type="text" 
+                             required
+                             className="w-full bg-white/5 border border-white/10 px-4 py-4 text-sm focus:border-accent outline-none transition-colors"
+                             value={profileForm.first_name}
+                             onChange={e => setProfileForm({...profileForm, first_name: e.target.value})}
+                           />
+                         </div>
+                         <div className="space-y-2">
+                           <label className="text-[10px] tracking-widest text-white/40 uppercase font-bold">Last Name</label>
+                           <input 
+                             type="text" 
+                             required
+                             className="w-full bg-white/5 border border-white/10 px-4 py-4 text-sm focus:border-accent outline-none transition-colors"
+                             value={profileForm.last_name}
+                             onChange={e => setProfileForm({...profileForm, last_name: e.target.value})}
+                           />
+                         </div>
+                       </div>
+
+                       <div className="space-y-2">
+                         <label className="text-[10px] tracking-widest text-white/40 uppercase font-bold">Email Address</label>
+                         <input 
+                           type="email" 
+                           required
+                           className="w-full bg-white/5 border border-white/10 px-4 py-4 text-sm focus:border-accent outline-none transition-colors"
+                           value={profileForm.email}
+                           onChange={e => setProfileForm({...profileForm, email: e.target.value})}
+                         />
+                       </div>
+
+                       <div className="space-y-2">
+                         <label className="text-[10px] tracking-widest text-white/40 uppercase font-bold">Phone Number</label>
+                         <input 
+                           type="text" 
+                           placeholder="Enter 10-digit phone"
+                           className="w-full bg-white/5 border border-white/10 px-4 py-4 text-sm focus:border-accent outline-none transition-colors"
+                           value={profileForm.phone}
+                           onChange={e => setProfileForm({...profileForm, phone: e.target.value})}
+                         />
+                       </div>
+
+                       <div className="pt-6">
+                         <button 
+                           type="submit"
+                           disabled={profileLoading}
+                           className="w-full bg-white text-black py-5 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-accent transition-colors disabled:opacity-50"
+                         >
+                           {profileLoading ? 'TRANSMITTING...' : 'SYNC IDENTITY'}
+                         </button>
+                       </div>
+                     </form>
+                   </motion.div>
+                 )}
+               </>
             )}
           </div>
         </div>
