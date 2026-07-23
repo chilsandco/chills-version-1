@@ -3541,6 +3541,82 @@ async function startServer() {
         } catch (noteErr: any) {
           console.error(`[CHILS & CO.] Failed to post order note to WooCommerce order ${orderId}:`, noteErr.message || noteErr);
         }
+
+        // Create a new Exchange/Swap Order in WooCommerce if swap items exist
+        if (swapInfoList && swapInfoList.length > 0) {
+          try {
+            const parentOrder = orderRes.data;
+
+            // Construct line items for the new exchange order
+            const lineItems: any[] = [];
+            let totalExchangeCredit = 0;
+
+            for (const s of swapInfoList) {
+              const altRes = await wcSafeCall(wc, "get", `products/${s.swapProductId}`);
+              lineItems.push({
+                product_id: parseInt(s.swapProductId, 10),
+                quantity: s.quantity,
+                name: `${s.swapProductName} (Size: ${s.swapSize})`
+              });
+
+              const originalItem = parentOrder.line_items.find((item: any) => item.product_id.toString() === s.originalProductId.toString());
+              const originalPrice = originalItem ? parseFloat(originalItem.price.toString()) : parseFloat(altRes.data.price.toString());
+              totalExchangeCredit += originalPrice * s.quantity;
+            }
+
+            // Calculate total swapped items standard cost
+            let totalSwappedCost = 0;
+            for (const s of swapInfoList) {
+              const altRes = await wcSafeCall(wc, "get", `products/${s.swapProductId}`);
+              const altPrice = parseFloat(altRes.data.price.toString());
+              totalSwappedCost += altPrice * s.quantity;
+            }
+
+            // Clamp the exchange credit to not exceed the swapped items cost
+            const exchangeCreditClamped = Math.min(totalExchangeCredit, totalSwappedCost);
+            const feeLines = [{
+              name: `Exchange Credit (from Signal #${toSignalId(orderId)})`,
+              total: `-${exchangeCreditClamped.toFixed(2)}`,
+              tax_status: "none"
+            }];
+
+            const exchangeOrderPayload = {
+              payment_method: "phonepe",
+              payment_method_title: "PhonePe (Swap Upgrade)",
+              set_paid: true,
+              status: "processing",
+              customer_id: parentOrder.customer_id,
+              billing: parentOrder.billing,
+              shipping: parentOrder.shipping,
+              line_items: lineItems,
+              fee_lines: feeLines,
+              meta_data: [
+                { key: "parent_exchange_order_id", value: orderId.toString() },
+                { key: "rma_swap_info", value: JSON.stringify(swapInfoList) }
+              ]
+            };
+
+            console.log(`[CHILS & CO.] Creating WooCommerce Exchange Order for parent Order ${orderId}...`);
+            const newOrderRes = await wcSafeCall(wc, "post", "orders", exchangeOrderPayload);
+            const newOrder = newOrderRes.data;
+            console.log(`[CHILS & CO.] Exchange Order created successfully: ID #${newOrder.id}`);
+
+            // Add a note on the parent order pointing to the new exchange order
+            await wcSafeCall(wc, "post", `orders/${orderId}/notes`, {
+              note: `Reversal Style Swap completed. Exchange Order #${newOrder.id} has been generated for fulfillment.`,
+              customer_note: false
+            });
+
+            // Add a note on the new exchange order pointing to the parent order
+            await wcSafeCall(wc, "post", `orders/${newOrder.id}/notes`, {
+              note: `This order was generated as a style swap exchange from parent Signal #${toSignalId(orderId)}.`,
+              customer_note: false
+            });
+
+          } catch (exchangeErr: any) {
+            console.error("[CHILS & CO.] Failed to create WooCommerce Exchange Order:", exchangeErr.message || exchangeErr);
+          }
+        }
       } catch (err) {
         console.error("[CHILS & CO.] Failed to write WooCommerce RMA metadata/notes:", err);
       }
