@@ -118,6 +118,18 @@ export interface Signal {
     etd?: string | null;
   };
   orderKey?: string;
+  rmaSwaps?: RmaSwapItem[] | null;
+}
+
+export interface RmaSwapItem {
+  originalProductId: string;
+  originalProductName: string;
+  swapProductId: string;
+  swapProductName: string;
+  swapSize: string;
+  quantity: number;
+  delta: number;
+  type: 'refund' | 'charge';
 }
 
 

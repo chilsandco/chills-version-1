@@ -1009,7 +1009,18 @@ async function startServer() {
           trackingUrl: tracking.trackingUrl,
           etd: tracking.etd
         },
-        orderKey: order.order_key
+        orderKey: order.order_key,
+        rmaSwaps: (() => {
+          const rmaSwapInfoStr = getMeta("_rma_swap_info");
+          if (rmaSwapInfoStr) {
+            try {
+              return typeof rmaSwapInfoStr === 'string' ? JSON.parse(rmaSwapInfoStr) : rmaSwapInfoStr;
+            } catch (e) {
+              console.error("Failed to parse _rma_swap_info:", e);
+            }
+          }
+          return null;
+        })()
       };
     } catch (err) {
       console.error("[CHILS & CO.] Error mapping order to signal:", err);
@@ -1796,6 +1807,26 @@ async function startServer() {
             const orderId = fullTransactionId?.split('_')[0];
             const wc = getWooCommerce();
 
+            if (fullTransactionId?.startsWith('RMA_')) {
+              console.log(`[CHILS & CO.] SDK callback for RMA Swap Delta. Tx: ${fullTransactionId}`);
+              if (payload.state === "COMPLETED") {
+                const cachedData = getPendingSwap(fullTransactionId);
+                if (cachedData) {
+                  await executeWooCommerceRmaSubmit(
+                    orderId, 
+                    cachedData.reason, 
+                    cachedData.description, 
+                    cachedData.products, 
+                    cachedData.images, 
+                    cachedData.swapInfo,
+                    transactionId
+                  );
+                  removePendingSwap(fullTransactionId);
+                }
+              }
+              return res.status(200).send("OK");
+            }
+
             if (payload.state === "COMPLETED") {
               console.log(`[CHILS & CO.] SDK verified COMPLETED for order: ${orderId}`);
               if (wc && orderId) {
@@ -1859,6 +1890,28 @@ async function startServer() {
         
         // Extract original Order ID
         const orderId = fullTransactionId?.split('_')[0];
+
+        if (fullTransactionId?.startsWith('RMA_')) {
+          console.log(`[CHILS & CO.] Manual callback verified success for RMA Swap Delta. Tx: ${fullTransactionId}`);
+          const cachedData = getPendingSwap(fullTransactionId);
+          if (cachedData) {
+            try {
+              await executeWooCommerceRmaSubmit(
+                orderId, 
+                cachedData.reason, 
+                cachedData.description, 
+                cachedData.products, 
+                cachedData.images, 
+                cachedData.swapInfo,
+                transactionId
+              );
+              removePendingSwap(fullTransactionId);
+            } catch (err) {
+              console.error(`[CHILS & CO.] Manual RMA webhook processing failure:`, err);
+            }
+          }
+          return res.status(200).send("OK");
+        }
         
         console.log(`[CHILS & CO.] Payment CONFIRMED for Order: ${orderId}. Full ID: ${fullTransactionId}. Trans ID: ${transactionId}`);
         
@@ -1886,6 +1939,12 @@ async function startServer() {
         const fullTransactionId = decodedResponse.data?.merchantTransactionId || decodedResponse.merchantTransactionId;
         const orderId = fullTransactionId?.split('_')[0];
         const reason = decodedResponse.message || decodedResponse.code || "Unknown Error";
+
+        if (fullTransactionId?.startsWith('RMA_')) {
+          console.log(`[CHILS & CO.] Manual callback failure for RMA transaction: ${fullTransactionId}`);
+          removePendingSwap(fullTransactionId);
+          return res.status(200).send("OK");
+        }
 
         console.log(`[CHILS & CO.] Payment FAILED/CANCELLED for Order: ${orderId}. Reason: ${reason}`);
 
@@ -3256,92 +3315,273 @@ async function startServer() {
         orderKey: order.order_key
       });
     } catch (error) {
-      console.error("[CHILS & CO.] Public Status Error:", error);
       res.status(404).json({ message: "Signal not found in system archives." });
     }
   });
+
+  const PENDING_SWAPS_FILE = path.join(process.cwd(), "pending_swaps.json");
+
+  const savePendingSwap = (txId: string, payload: any) => {
+    let pending: any = {};
+    if (fs.existsSync(PENDING_SWAPS_FILE)) {
+      try {
+        pending = JSON.parse(fs.readFileSync(PENDING_SWAPS_FILE, "utf8"));
+      } catch (e) {
+        pending = {};
+      }
+    }
+    pending[txId] = payload;
+    fs.writeFileSync(PENDING_SWAPS_FILE, JSON.stringify(pending, null, 2), "utf8");
+  };
+
+  const getPendingSwap = (txId: string) => {
+    if (!fs.existsSync(PENDING_SWAPS_FILE)) return null;
+    try {
+      const pending = JSON.parse(fs.readFileSync(PENDING_SWAPS_FILE, "utf8"));
+      return pending[txId] || null;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const removePendingSwap = (txId: string) => {
+    if (!fs.existsSync(PENDING_SWAPS_FILE)) return;
+    try {
+      const pending = JSON.parse(fs.readFileSync(PENDING_SWAPS_FILE, "utf8"));
+      delete pending[txId];
+      fs.writeFileSync(PENDING_SWAPS_FILE, JSON.stringify(pending, null, 2), "utf8");
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const executeWooCommerceRmaSubmit = async (
+    orderId: string, 
+    reason: string, 
+    description: string, 
+    products: any[], 
+    images: any[], 
+    swapInfoList: any[],
+    paidTxId?: string
+  ) => {
+    const rmaSecret = process.env.RMA_API_SECRET || "wps_e48738cedfb75d113a6e3f11a6dc18ff5ca4b9b4";
+    const rawWpUrl = process.env.WOOCOMMERCE_URL || "https://chilsandco.com";
+    const wpUrl = rawWpUrl.endsWith('/') ? rawWpUrl.slice(0, -1) : rawWpUrl;
+    const rmaSecretClean = rmaSecret.trim();
+    const authHeader = 'Basic ' + Buffer.from(`secret_key:${rmaSecretClean}`).toString('base64');
+    const wc = getWooCommerce();
+
+    let actionsSummary = "";
+    if (products && Array.isArray(products)) {
+      actionsSummary = products.map((p: any) => {
+        let actDesc = "Refund";
+        if (p.action === "size_exchange") {
+          actDesc = `Exchange (Size Swap to: ${p.selectedSize || '?'})`;
+        } else if (p.action === "style_exchange") {
+          actDesc = `Swap to: ${p.exchangeProductName || 'Alternative product'} (Size: ${p.exchangeSize || '?'})`;
+        }
+        return `- Product ID: ${p.productId} | Qty: ${p.quantity} | Action: ${actDesc}`;
+      }).join('\n');
+    }
+
+    const fullReason = `Reason: ${reason}\nDescription: ${description}\nImages: ${images ? images.join(', ') : 'None'}\n\nReturn/Exchange Actions Chosen:\n${actionsSummary}`;
+    
+    const rmaPayload: any = {
+      order_id: orderId.toString(),
+      reason: fullReason,
+    };
+
+    if (products && products.length > 0) {
+      rmaPayload.products = JSON.stringify(products.map((p: any) => ({
+        product_id: parseInt(p.productId, 10),
+        qty: parseInt(p.quantity, 10)
+      })));
+    }
+
+    console.log(`[CHILS & CO.] Transmitting payload to: ${wpUrl}/wp-json/rma/refund-request`);
+
+    const rmaResponse = await fetch(`${wpUrl}/wp-json/rma/refund-request?secret_key=${rmaSecretClean}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader,
+        'secret_key': rmaSecretClean,
+        'wps-rma-secret-key': rmaSecretClean,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      },
+      body: JSON.stringify(rmaPayload)
+    });
+
+    if (!rmaResponse.ok) {
+      const text = await rmaResponse.text();
+      console.error(`[CHILS & CO.] RMA Rejection: ${rmaResponse.status} - ${text}`);
+      throw new Error(`RMA API failed: ${text}`);
+    }
+
+    if (wc) {
+      try {
+        const orderRes = await wcSafeCall(wc, "get", `orders/${orderId}`);
+        const currentMeta = orderRes.data.meta_data || [];
+        const updatedMeta = currentMeta.filter((m: any) => m.key !== "_rma_swap_info");
+        
+        if (swapInfoList && swapInfoList.length > 0) {
+          updatedMeta.push({
+            key: "_rma_swap_info",
+            value: JSON.stringify(swapInfoList)
+          });
+        }
+
+        let noteText = "";
+        if (swapInfoList && swapInfoList.length > 0) {
+          const swapLines = swapInfoList.map((s: any) => {
+            const detail = `${s.originalProductName} swapped for ${s.swapProductName} (${s.swapSize})`;
+            const diff = s.type === "refund" ? `Refund Delta Due: ₹${s.delta}` : `Additional Paid: ₹${s.delta}`;
+            return `- ${detail} | ${diff}`;
+          }).join('\n');
+
+          noteText = `Reversal Style Swap initiated.\n\nSwap Specifications:\n${swapLines}\n`;
+          if (paidTxId) {
+            noteText += `\nDelta payment verified successfully. Transaction ID: ${paidTxId}`;
+          } else {
+            const refundDeltaTotal = swapInfoList.filter((s: any) => s.type === "refund").reduce((acc, curr) => acc + curr.delta, 0);
+            if (refundDeltaTotal > 0) {
+              noteText += `\nDelta refund pending: ₹${refundDeltaTotal} to be refunded to source account.`;
+            }
+          }
+        } else {
+          noteText = `Standard return initiated.\nReason: ${reason}`;
+        }
+
+        await wcSafeCall(wc, "put", `orders/${orderId}`, {
+          meta_data: updatedMeta,
+          note: noteText
+        });
+        console.log(`[CHILS & CO.] WooCommerce Order metadata & notes logged for RMA ${orderId}`);
+      } catch (err) {
+        console.error("[CHILS & CO.] Failed to write WooCommerce RMA metadata/notes:", err);
+      }
+    }
+
+    triggerReturnRequestEmails(orderId, reason, description, products).catch(err => {
+      console.error("[CHILS & CO. EMAIL] Return emails failed:", err);
+    });
+  };
 
   app.post("/api/orders/:id/return", authenticateToken, async (req: any, res) => {
     try {
       const { id } = req.params;
       const { reason, description, products, images } = req.body;
-      const rmaSecret = process.env.RMA_API_SECRET || "wps_e48738cedfb75d113a6e3f11a6dc18ff5ca4b9b4";
-      const rawWpUrl = process.env.WOOCOMMERCE_URL || "https://chilsandco.com";
-      const wpUrl = rawWpUrl.endsWith('/') ? rawWpUrl.slice(0, -1) : rawWpUrl;
-
-      console.log(`[CHILS & CO.] Processing return for order ${id} via RMA API`);
-
-      const rmaSecretClean = rmaSecret.trim();
-      const authHeader = 'Basic ' + Buffer.from(`secret_key:${rmaSecretClean}`).toString('base64');
       
-      // Construct detailed per-product return actions
-      let actionsSummary = "";
-      if (products && Array.isArray(products)) {
-        actionsSummary = products.map((p: any) => {
-          let actDesc = "Refund";
-          if (p.action === "size_exchange") {
-            actDesc = `Exchange (Size Swap to: ${p.selectedSize || '?'})`;
-          } else if (p.action === "style_exchange") {
-            actDesc = `Swap to: ${p.exchangeProductName || 'Alternative product'} (Size: ${p.exchangeSize || '?'})`;
-          }
-          return `- Product ID: ${p.productId} | Qty: ${p.quantity} | Action: ${actDesc}`;
-        }).join('\n');
-      }
+      console.log(`[CHILS & CO.] Initiating return logic for order ${id}`);
 
-      // Construct a unified reason string that includes description and images since the API is basic
-      const fullReason = `Reason: ${reason}\nDescription: ${description}\nImages: ${images ? images.join(', ') : 'None'}\n\nReturn/Exchange Actions Chosen:\n${actionsSummary}`;
+      const wc = getWooCommerce();
+      if (!wc) throw new Error("WooCommerce not configured.");
 
-      const rmaPayload: any = {
-        order_id: id.toString(), // Use string ID as shown in docs
-        reason: fullReason,
+      const orderResponse = await wcSafeCall(wc, "get", `orders/${id}`);
+      const order = orderResponse.data;
+
+      const getProductPrice = async (productId: string): Promise<number> => {
+        const cached = globalProductsCache?.find((p: any) => p.id.toString() === productId.toString());
+        if (cached) return parseFloat(cached.price.toString());
+        try {
+          const res = await wcSafeCall(wc, "get", `products/${productId}`);
+          return parseFloat(res.data.price.toString());
+        } catch (err) {
+          console.error(`Failed to fetch product price for ${productId}:`, err);
+          throw new Error(`Swap product not found.`);
+        }
       };
 
-      // If specific products are selected for return
-      if (products && products.length > 0) {
-        // The RMA API requires products as a stringified JSON array
-        rmaPayload.products = JSON.stringify(products.map((p: any) => ({
-          product_id: parseInt(p.productId, 10),
-          qty: parseInt(p.quantity, 10)
-        })));
+      let netDelta = 0;
+      const swapInfoList: any[] = [];
+
+      if (products && Array.isArray(products)) {
+        for (const p of products) {
+          if (p.action === "style_exchange") {
+            const originalItem = order.line_items.find((item: any) => item.product_id.toString() === p.productId.toString());
+            if (!originalItem) {
+              throw new Error(`Original product ${p.productId} not found in order.`);
+            }
+            const originalPrice = parseFloat(originalItem.price.toString());
+            const altPrice = await getProductPrice(p.exchangeProductId);
+            
+            const itemDelta = altPrice - originalPrice;
+            const itemDeltaTotal = itemDelta * p.quantity;
+            netDelta += itemDeltaTotal;
+
+            swapInfoList.push({
+              originalProductId: p.productId,
+              originalProductName: originalItem.name,
+              swapProductId: p.exchangeProductId,
+              swapProductName: p.exchangeProductName || "Alternative Product",
+              swapSize: p.exchangeSize || "Unknown",
+              quantity: p.quantity,
+              delta: Math.abs(itemDeltaTotal),
+              type: itemDeltaTotal >= 0 ? "charge" : "refund"
+            });
+          }
+        }
       }
 
-      console.log(`[CHILS & CO.] Transmitting payload to: ${wpUrl}/wp-json/rma/refund-request`);
+      if (netDelta > 0) {
+        const phonePeClient = getPhonePeClient();
+        if (!phonePeClient) {
+          throw new Error("Payment gateway configuration error.");
+        }
 
-      // Using Fetch with additional headers to simulate a standard browser/curl request
-      // We keep the query param for redundancy as some WP setups require it for REST auth
-      const rmaResponse = await fetch(`${wpUrl}/wp-json/rma/refund-request?secret_key=${rmaSecretClean}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': authHeader,
-          'secret_key': rmaSecretClean, // Direct header option
-          'wps-rma-secret-key': rmaSecretClean, // Common plugin-specific variant
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-        },
-        body: JSON.stringify(rmaPayload)
-      });
+        const timestamp = Date.now();
+        const merchantTransactionId = `RMA_${id}_${timestamp}`;
 
-      const responseText = await rmaResponse.text();
-      let rmaData;
-      try {
-        rmaData = JSON.parse(responseText);
-      } catch (e) {
-        rmaData = { message: responseText };
+        savePendingSwap(merchantTransactionId, {
+          reason,
+          description,
+          products,
+          images,
+          swapInfo: swapInfoList
+        });
+
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+        const host = req.headers['host'] || req.get('host') || "www.chilsandco.com";
+        const isStrictProd = process.env.PHONEPE_ENV?.toUpperCase() === "PRODUCTION";
+        const siteUrl = "https://www.chilsandco.com"; 
+        const currentOrigin = (isStrictProd && host.includes('chilsandco.com')) 
+          ? `${protocol}://${host}` 
+          : (isStrictProd ? siteUrl : `${protocol}://${host}`);
+
+        const redirectUrl = `${currentOrigin}/console/orders?rma_success=true&tx=${merchantTransactionId}`;
+        const callbackUrl = process.env.PHONEPE_CALLBACK_URL || `${currentOrigin}/api/checkout/phonepe/callback`;
+        const amountPaise = Math.max(100, Math.round(Number(netDelta) * 100));
+
+        console.log(`[CHILS & CO.] Generating PhonePe request for RMA swap upgrade balance: ${netDelta}`);
+
+        const requestBuilder = StandardCheckoutPayRequest.builder()
+          .merchantOrderId(merchantTransactionId.toString())
+          .amount(amountPaise)
+          .redirectUrl(redirectUrl)
+          .message(`Swap Upgrade delta for Order #${id}`);
+
+        if (typeof (requestBuilder as any).callbackUrl === "function") {
+          (requestBuilder as any).callbackUrl(callbackUrl);
+        }
+
+        const payRequest = requestBuilder.build();
+        const payResponse = await phonePeClient.pay(payRequest);
+
+        return res.json({
+          success: true,
+          requiresPayment: true,
+          paymentUrl: payResponse.redirectUrl
+        });
+      } else {
+        await executeWooCommerceRmaSubmit(id, reason, description, products, images, swapInfoList);
+        return res.json({
+          success: true,
+          requiresPayment: false,
+          message: "Transmission verified. Return request logged."
+        });
       }
-
-      if (!rmaResponse.ok) {
-        console.error(`[CHILS & CO.] RMA Rejection: ${rmaResponse.status} - ${responseText}`);
-        throw new Error(rmaData.message || `RMA API failed with status ${rmaResponse.status}`);
-      }
-
-      // Asynchronously trigger Return Request Emails (non-blocking)
-      triggerReturnRequestEmails(id, reason, description, products).catch(err => {
-        console.error("[CHILS & CO. EMAIL] Return request emails failed:", err);
-      });
-
-      res.json({ success: true, message: "Transmission verified. Return request logged.", data: rmaData });
     } catch (error: any) {
-      console.error("[CHILS & CO.] Return Request Error:", error);
+      console.error("[CHILS & CO.] Return request failure:", error);
       res.status(500).json({ message: error.message || "Failed to process return request" });
     }
   });

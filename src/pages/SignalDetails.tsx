@@ -204,7 +204,7 @@ const SignalDetails: React.FC = () => {
                     <div>
                       <p className={`text-[11px] font-bold uppercase tracking-widest mb-1 ${
                         step.status === 'completed' 
-                          ? 'text-white/40' 
+                           ? 'text-white/40' 
                           : step.status === 'failed' 
                             ? 'text-red-500' 
                             : 'text-neutral-600'
@@ -225,6 +225,56 @@ const SignalDetails: React.FC = () => {
                 )}
               </div>
             </section>
+          )}
+
+          {/* Reversal Swaps Protocol Card */}
+          {signal.rmaSwaps && signal.rmaSwaps.length > 0 && (
+            <motion.section 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-neutral-950 border border-neutral-900 p-8 md:p-10 space-y-8"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
+                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase text-accent font-mono">
+                  REVERSAL SWAPS // TRANSACTION LOGS
+                </h3>
+              </div>
+              
+              <div className="space-y-6">
+                {signal.rmaSwaps.map((swap, idx) => (
+                  <div key={idx} className="pb-6 border-b border-neutral-900 last:border-0 last:pb-0 space-y-3 font-mono text-[11px]">
+                    <div className="flex justify-between items-center text-[10px]">
+                      <span className="text-white uppercase font-bold">SWAP ACTION PROTOCOL</span>
+                      <span className="text-green-500 font-bold tracking-widest">// INITIATED</span>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-neutral-500">ORIGINAL SIGNAL:</p>
+                      <p className="text-white uppercase tracking-tight">{swap.originalProductName}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-accent">SWAPPED TARGET:</p>
+                      <p className="text-white uppercase tracking-tight font-bold">
+                        {swap.swapProductName} <span className="text-accent">(SIZE: {swap.swapSize})</span>
+                      </p>
+                    </div>
+                    <div className="pt-2 border-t border-neutral-900 flex justify-between items-center text-[10px]">
+                      {swap.type === 'refund' ? (
+                        <>
+                          <span className="text-green-500 font-bold uppercase">DELTA AMOUNT REFUND DUE:</span>
+                          <span className="text-green-500 font-bold text-xs font-sans">₹{swap.delta.toLocaleString()}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-accent font-bold uppercase">DELTA AMOUNT PAID:</span>
+                          <span className="text-accent font-bold text-xs font-sans">₹{swap.delta.toLocaleString()}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.section>
           )}
 
           <section className="bg-neutral-950 border border-neutral-900 p-8">

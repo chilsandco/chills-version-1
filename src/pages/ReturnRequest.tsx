@@ -44,6 +44,40 @@ const ReturnRequest: React.FC = () => {
   const [images, setImages] = useState<string[]>([]);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
 
+  const balanceSheet = React.useMemo(() => {
+    let refundTotal = 0;
+    let extraChargeTotal = 0;
+
+    returnItems.forEach(ri => {
+      const item = signal?.items.find(i => i.productId === ri.productId);
+      if (!item) return;
+
+      if (ri.action === 'refund') {
+        refundTotal += item.price * ri.quantity;
+      } else if (ri.action === 'style_exchange' && ri.exchangeProductId) {
+        const altProd = productsCatalog.find(p => p.id.toString() === ri.exchangeProductId);
+        if (altProd) {
+          const diff = altProd.price - item.price;
+          if (diff > 0) {
+            extraChargeTotal += diff * ri.quantity;
+          } else if (diff < 0) {
+            refundTotal += Math.abs(diff) * ri.quantity;
+          }
+        }
+      }
+    });
+
+    const netBalance = refundTotal - extraChargeTotal; // positive means net refund, negative means net charge
+
+    return {
+      refundTotal,
+      extraChargeTotal,
+      netBalance,
+      isNetRefund: netBalance >= 0,
+      absoluteBalance: Math.abs(netBalance)
+    };
+  }, [returnItems, signal, productsCatalog]);
+
   useEffect(() => {
     const fetchSignal = async () => {
       try {
@@ -175,7 +209,12 @@ const ReturnRequest: React.FC = () => {
       });
 
       if (response.ok) {
-        setSuccess(true);
+        const data = await response.json();
+        if (data.requiresPayment && data.paymentUrl) {
+          window.location.href = data.paymentUrl;
+        } else {
+          setSuccess(true);
+        }
       } else {
         const data = await response.json();
         setError(data.message || "Failed to initiate return signal.");
@@ -390,23 +429,27 @@ const ReturnRequest: React.FC = () => {
                               {/* Style Swap Option */}
                               {currentItemChoice.action === 'style_exchange' && (
                                 <div className="space-y-4">
-                                  <label className="text-[9px] font-bold uppercase tracking-widest text-accent">Choose Alternative Product (Same Price: ₹{item.price})</label>
+                                  <label className="text-[9px] font-bold uppercase tracking-widest text-accent">Choose Alternative Product</label>
                                   {(() => {
-                                    const samePriceProducts = productsCatalog.filter(
-                                      p => p.price === item.price && p.id.toString() !== item.productId.toString()
+                                    const alternativeProducts = productsCatalog.filter(
+                                      p => p.id.toString() !== item.productId.toString() &&
+                                           p.type !== 'grouped' && 
+                                           p.category !== 'Combos' && 
+                                           !(p.categories || []).includes('Combos')
                                     );
                                     
-                                    if (samePriceProducts.length === 0) {
+                                    if (alternativeProducts.length === 0) {
                                       return (
-                                        <p className="text-[9px] text-white/30 uppercase tracking-widest italic">No other products found at this price point.</p>
+                                        <p className="text-[9px] text-white/30 uppercase tracking-widest italic">No alternative products found.</p>
                                       );
                                     }
 
                                     return (
                                       <div className="space-y-4">
                                         <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin">
-                                          {samePriceProducts.map(altProd => {
+                                          {alternativeProducts.map(altProd => {
                                             const isAltSelected = currentItemChoice.exchangeProductId === altProd.id.toString();
+                                            const priceDiff = altProd.price - item.price;
                                             return (
                                               <div
                                                 key={altProd.id}
@@ -415,7 +458,7 @@ const ReturnRequest: React.FC = () => {
                                                     ...pi, 
                                                     exchangeProductId: altProd.id.toString(), 
                                                     exchangeProductName: altProd.name,
-                                                    exchangeSize: undefined // reset selected size
+                                                    exchangeSize: undefined 
                                                   } : pi));
                                                 }}
                                                 className={`w-36 shrink-0 border p-3 cursor-pointer transition-all ${
@@ -429,6 +472,13 @@ const ReturnRequest: React.FC = () => {
                                                 />
                                                 <p className="text-[8px] font-bold uppercase tracking-widest truncate">{altProd.name}</p>
                                                 <p className="text-[8px] text-white/40 uppercase tracking-widest mt-1">₹{altProd.price}</p>
+                                                {priceDiff === 0 ? (
+                                                  <p className="text-[7px] text-neutral-500 uppercase tracking-widest font-mono font-bold mt-0.5">// Same Price</p>
+                                                ) : priceDiff > 0 ? (
+                                                  <p className="text-[7px] text-accent uppercase tracking-widest font-mono font-bold mt-0.5">// +₹{priceDiff} to pay</p>
+                                                ) : (
+                                                  <p className="text-[7px] text-green-500 uppercase tracking-widest font-mono font-bold mt-0.5">// -₹{Math.abs(priceDiff)} refund</p>
+                                                )}
                                               </div>
                                             );
                                           })}
@@ -607,6 +657,36 @@ const ReturnRequest: React.FC = () => {
                         })
                       )}
                     </div>
+                    {returnItems.length > 0 && (
+                      <div className="mt-8 pt-8 border-t border-white/10 space-y-4 font-mono text-[10px]">
+                        <h6 className="text-[9px] text-neutral-500 uppercase tracking-widest font-bold font-sans mb-2">REVERSAL PROTOCOL BALANCE</h6>
+                        {balanceSheet.refundTotal > 0 && (
+                          <div className="flex justify-between items-center text-green-500">
+                            <span>TOTAL REFUND VALUE:</span>
+                            <span>₹{balanceSheet.refundTotal.toLocaleString()}</span>
+                          </div>
+                        )}
+                        {balanceSheet.extraChargeTotal > 0 && (
+                          <div className="flex justify-between items-center text-accent">
+                            <span>TOTAL UPGRADE UPCHARGE:</span>
+                            <span>₹{balanceSheet.extraChargeTotal.toLocaleString()}</span>
+                          </div>
+                        )}
+                        <div className="border-t border-neutral-900 pt-4 flex justify-between items-center text-[11px] font-bold">
+                          {balanceSheet.isNetRefund ? (
+                            <>
+                              <span className="text-green-500">ESTIMATED NET REFUND:</span>
+                              <span className="text-green-500 font-display text-base">₹{balanceSheet.absoluteBalance.toLocaleString()}</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-accent">DUE AT SECURE CHECKOUT:</span>
+                              <span className="text-accent font-display text-base">₹{balanceSheet.absoluteBalance.toLocaleString()}</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    )}
                     {reason && (
                       <div className="mt-8 pt-8 border-t border-white/10">
                         <p className="text-[8px] text-white/30 uppercase tracking-[0.2em] mb-2 font-bold">DECLARED REASON</p>
