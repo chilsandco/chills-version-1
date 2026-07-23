@@ -1804,7 +1804,7 @@ async function startServer() {
             const payload = callbackResponse.payload as any;
             const fullTransactionId = payload.originalMerchantOrderId || payload.merchantOrderId;
             const transactionId = payload.paymentDetails?.[0]?.transactionId || payload.transactionId || payload.orderId;
-            const orderId = fullTransactionId?.split('_')[0];
+            const orderId = fullTransactionId?.startsWith('RMA_') ? fullTransactionId.split('_')[1] : fullTransactionId?.split('_')[0];
             const wc = getWooCommerce();
 
             if (fullTransactionId?.startsWith('RMA_')) {
@@ -1889,7 +1889,7 @@ async function startServer() {
         const transactionId = decodedResponse.data?.transactionId;
         
         // Extract original Order ID
-        const orderId = fullTransactionId?.split('_')[0];
+        const orderId = fullTransactionId?.startsWith('RMA_') ? fullTransactionId.split('_')[1] : fullTransactionId?.split('_')[0];
 
         if (fullTransactionId?.startsWith('RMA_')) {
           console.log(`[CHILS & CO.] Manual callback verified success for RMA Swap Delta. Tx: ${fullTransactionId}`);
@@ -1937,7 +1937,7 @@ async function startServer() {
       } else {
         // Handle failure or cancellation
         const fullTransactionId = decodedResponse.data?.merchantTransactionId || decodedResponse.merchantTransactionId;
-        const orderId = fullTransactionId?.split('_')[0];
+        const orderId = fullTransactionId?.startsWith('RMA_') ? fullTransactionId.split('_')[1] : fullTransactionId?.split('_')[0];
         const reason = decodedResponse.message || decodedResponse.code || "Unknown Error";
 
         if (fullTransactionId?.startsWith('RMA_')) {

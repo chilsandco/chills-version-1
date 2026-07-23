@@ -320,6 +320,18 @@ const SignalDetails: React.FC = () => {
                         {item.name}
                       </Link>
                       <p className="text-[10px] text-neutral-600 uppercase tracking-widest">Quantity: {item.quantity}</p>
+                      {(() => {
+                        const swapDetail = signal.rmaSwaps?.find((s: any) => s.originalProductId.toString() === item.productId.toString());
+                        if (swapDetail) {
+                          return (
+                            <div className="mt-2 flex items-center gap-1.5 text-accent text-[8px] uppercase tracking-widest font-mono font-bold">
+                              <RefreshCcw size={10} className="animate-spin-slow" />
+                              Swapped for: {swapDetail.swapProductName} ({swapDetail.swapSize})
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                   </div>
                   <p className={`font-mono text-xs ${isRefunded ? 'line-through text-white/20' : ''}`}>₹{item.total.toLocaleString()}</p>
