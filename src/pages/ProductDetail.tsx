@@ -191,7 +191,6 @@ const ProductDetail: React.FC = () => {
   const [isDescOpen, setIsDescOpen] = useState(false);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [selectedCompareProduct, setSelectedCompareProduct] = useState<Product | null>(null);
   
   const { user, token } = useAuth();
   
@@ -352,7 +351,6 @@ const ProductDetail: React.FC = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
     setIsExpanded(false);
-    setSelectedCompareProduct(null);
   }, [id]);
 
   useEffect(() => {
@@ -485,13 +483,13 @@ const ProductDetail: React.FC = () => {
 
   // Prevent scrolling when modal is open
   useEffect(() => {
-    if (selectedImage || isDescOpen || showReviewModal || selectedCompareProduct) {
+    if (selectedImage || isDescOpen || showReviewModal) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
     }
     return () => { document.body.style.overflow = 'unset'; };
-  }, [selectedImage, isDescOpen, showReviewModal, selectedCompareProduct]);
+  }, [selectedImage, isDescOpen, showReviewModal]);
 
 
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -1568,22 +1566,7 @@ const ProductDetail: React.FC = () => {
                 >
                   {recommendedProducts.slice(0, 5).map(({ product: altProd }) => (
                     <div key={altProd.id} className="w-[280px] sm:w-[320px] shrink-0 relative group/rec">
-                      
                       <ProductCard product={altProd} viewMode="archive" />
-                      
-                      {/* Compare Spec Overlay Button */}
-                      <div className="absolute bottom-24 left-4 z-20">
-                        <button
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setSelectedCompareProduct(altProd);
-                          }}
-                          className="bg-black/90 hover:bg-accent hover:text-black border border-white/10 hover:border-accent px-3 py-1.5 text-[8px] font-mono text-white tracking-widest uppercase transition-all duration-300 cursor-pointer rounded-[2px]"
-                        >
-                          // Compare Specs
-                        </button>
-                      </div>
                     </div>
                   ))}
                   {recommendedProducts.length > 5 && (
@@ -1617,20 +1600,6 @@ const ProductDetail: React.FC = () => {
                     {recommendedProducts.map(({ product: altProd }) => (
                       <div key={altProd.id} className="relative group/rec bg-neutral-950 border border-white/5">
                         <ProductCard product={altProd} viewMode="archive" />
-
-                        {/* Compare Spec Overlay Button */}
-                        <div className="absolute bottom-24 left-4 z-20">
-                          <button
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setSelectedCompareProduct(altProd);
-                            }}
-                            className="bg-black/90 hover:bg-accent hover:text-black border border-white/10 hover:border-accent px-3 py-1.5 text-[8px] font-mono text-white tracking-widest uppercase transition-all duration-300 cursor-pointer rounded-[2px]"
-                          >
-                            // Compare Specs
-                          </button>
-                        </div>
                       </div>
                     ))}
                   </div>
@@ -2117,114 +2086,6 @@ const ProductDetail: React.FC = () => {
             <div className="absolute bottom-12 text-center text-[10px] tracking-[0.4em] text-white/40 uppercase pointer-events-none">
               {product.name} — Surface Inspection
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Technical Spec Comparison Overlay */}
-      <AnimatePresence>
-        {selectedCompareProduct && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/95 backdrop-blur-xl"
-            onClick={() => setSelectedCompareProduct(null)}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="bg-neutral-950 border border-neutral-900 p-8 md:p-10 max-w-2xl w-full relative"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button 
-                onClick={() => setSelectedCompareProduct(null)}
-                className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors cursor-pointer"
-              >
-                <X size={20} />
-              </button>
-
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
-                <h2 className="text-[11px] tracking-[0.4em] font-bold uppercase text-accent font-mono">
-                  TELEMETRY COMPARISON // MATRIX SCAN
-                </h2>
-              </div>
-
-              {/* Side by side comparison grid */}
-              <div className="grid grid-cols-3 gap-6 font-mono text-[11px] text-neutral-400">
-                {/* Header Row */}
-                <div className="col-span-1" />
-                <div className="text-center border-b border-neutral-900 pb-3">
-                  <p className="text-[9px] text-neutral-500 uppercase font-bold mb-1">Active Signal</p>
-                  <p className="text-white font-display uppercase tracking-tight text-xs truncate max-w-[150px]">{product.name}</p>
-                </div>
-                <div className="text-center border-b border-neutral-900 pb-3">
-                  <p className="text-[9px] text-accent uppercase font-bold mb-1">Swap Target</p>
-                  <p className="text-accent font-display uppercase tracking-tight text-xs truncate max-w-[150px]">{selectedCompareProduct.name}</p>
-                </div>
-
-                {/* Price Row */}
-                <div className="text-neutral-500 font-bold py-2 border-b border-neutral-900">PRICE</div>
-                <div className="text-center py-2 text-white border-b border-neutral-900">₹{product.price.toLocaleString()}</div>
-                <div className="text-center py-2 text-accent border-b border-neutral-900">
-                  ₹{selectedCompareProduct.price.toLocaleString()}
-                  <span className="text-[8px] text-neutral-500 block">
-                    {selectedCompareProduct.price === product.price 
-                      ? "(= EXACT PRICE)" 
-                      : selectedCompareProduct.price > product.price 
-                        ? `(+₹${(selectedCompareProduct.price - product.price).toLocaleString()})`
-                        : `(-₹${(product.price - selectedCompareProduct.price).toLocaleString()})`
-                    }
-                  </span>
-                </div>
-
-                {/* Category Row */}
-                <div className="text-neutral-500 font-bold py-2 border-b border-neutral-900">CATEGORY</div>
-                <div className="text-center py-2 text-white border-b border-neutral-900">{product.category}</div>
-                <div className="text-center py-2 text-white border-b border-neutral-900">{selectedCompareProduct.category}</div>
-
-                {/* Fit Row */}
-                <div className="text-neutral-500 font-bold py-2 border-b border-neutral-900">FIT STYLE</div>
-                <div className="text-center py-2 text-white border-b border-neutral-900">{product.fit || "STANDARD"}</div>
-                <div className="text-center py-2 text-white border-b border-neutral-900">{selectedCompareProduct.fit || "STANDARD"}</div>
-
-                {/* Material Row */}
-                <div className="text-neutral-500 font-bold py-2 border-b border-neutral-900">MATERIAL</div>
-                <div className="text-center py-2 text-white border-b border-neutral-900 line-clamp-1">{product.material || "100% COTTON"}</div>
-                <div className="text-center py-2 text-white border-b border-neutral-900 line-clamp-1">{selectedCompareProduct.material || "100% COTTON"}</div>
-
-                {/* Co-Creator Row */}
-                <div className="text-neutral-500 font-bold py-2 border-b border-neutral-900">CREATOR</div>
-                <div className="text-center py-2 text-white border-b border-neutral-900">{product.coCreator || "CHILS SYSTEM"}</div>
-                <div className="text-center py-2 text-white border-b border-neutral-900">{selectedCompareProduct.coCreator || "CHILS SYSTEM"}</div>
-
-                {/* Care instructions Row */}
-                <div className="text-neutral-500 font-bold py-2 border-b border-neutral-900">CARE</div>
-                <div className="text-center py-2 text-white border-b border-neutral-900 line-clamp-1">{product.care || "HAND WASH"}</div>
-                <div className="text-center py-2 text-white border-b border-neutral-900 line-clamp-1">{selectedCompareProduct.care || "HAND WASH"}</div>
-              </div>
-
-              <div className="mt-8 flex gap-4">
-                <button
-                  onClick={() => {
-                    setSelectedCompareProduct(null);
-                    navigate(`/product/${selectedCompareProduct.id}`);
-                  }}
-                  className="flex-1 bg-white text-black hover:bg-neutral-200 py-4 text-[10px] tracking-[0.2em] font-bold uppercase transition-colors cursor-pointer rounded-[2px]"
-                >
-                  DEPLOY TARGET SIGNAL
-                </button>
-                <button
-                  onClick={() => setSelectedCompareProduct(null)}
-                  className="flex-1 border border-neutral-900 hover:border-neutral-700 py-4 text-[10px] tracking-[0.2em] font-bold uppercase text-neutral-500 hover:text-white transition-colors cursor-pointer rounded-[2px]"
-                >
-                  ABORT COMPARISON
-                </button>
-              </div>
-            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
