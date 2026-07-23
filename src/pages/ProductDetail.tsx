@@ -379,48 +379,53 @@ const ProductDetail: React.FC = () => {
            !(p.categories || []).includes('Combos')
     );
     
-    const scored = candidates.map(alt => {
+    // Group A: Same Category (Strict Matches)
+    const groupA = candidates.filter(p => p.category === product.category);
+    // Sort Group A: closest fit match and closest price difference
+    groupA.sort((a, b) => {
+      // 1. Fit matching (styling)
+      const aFitMatch = a.fit && product.fit && a.fit.toLowerCase() === product.fit.toLowerCase() ? 1 : 0;
+      const bFitMatch = b.fit && product.fit && b.fit.toLowerCase() === product.fit.toLowerCase() ? 1 : 0;
+      if (aFitMatch !== bFitMatch) {
+        return bFitMatch - aFitMatch; // Put fit matches first
+      }
+      
+      // 2. Price proximity (closest price first)
+      const aPriceDiff = Math.abs(a.price - product.price);
+      const bPriceDiff = Math.abs(b.price - product.price);
+      return aPriceDiff - bPriceDiff;
+    });
+
+    // Group B: Different Categories (Broader matches)
+    const groupB = candidates.filter(p => p.category !== product.category);
+    // Sort Group B broadly
+    groupB.sort((a, b) => {
+      const aCreatorMatch = product.coCreator && a.coCreator === product.coCreator ? 1 : 0;
+      const bCreatorMatch = product.coCreator && b.coCreator === product.coCreator ? 1 : 0;
+      if (aCreatorMatch !== bCreatorMatch) {
+        return bCreatorMatch - aCreatorMatch;
+      }
+      return Math.abs(a.price - product.price) - Math.abs(b.price - product.price);
+    });
+
+    // Combine Group A and Group B
+    const mapScored = (alt: Product) => {
       let score = 0;
+      if (alt.category === product.category) score += 45;
+      if (product.coCreator && alt.coCreator === product.coCreator) score += 25;
       
-      // 1. Same category gets a major boost
-      if (alt.category === product.category) {
-        score += 45;
-      }
-      
-      // 2. Same co-creator gets a boost
-      if (product.coCreator && alt.coCreator === product.coCreator) {
-        score += 25;
-      }
-      
-      // 3. Price proximity
       const priceDiffRatio = Math.abs(alt.price - product.price) / product.price;
       if (priceDiffRatio <= 0.05) score += 20;
       else if (priceDiffRatio <= 0.15) score += 15;
       else if (priceDiffRatio <= 0.3) score += 10;
       
-      // 4. Same Fit
-      if (alt.fit && product.fit && alt.fit.toLowerCase() === product.fit.toLowerCase()) {
-        score += 10;
-      }
-      
-      // Normalize score between 60% and 99%
+      if (alt.fit && product.fit && alt.fit.toLowerCase() === product.fit.toLowerCase()) score += 10;
       const telemetryMatch = Math.min(Math.max(Math.round(score + 50), 60), 99);
       
-      return {
-        product: alt,
-        score: telemetryMatch
-      };
-    });
-    
-    // Prioritize products in the same category first, then order by telemetry match score descending
-    return scored.sort((a, b) => {
-      const aSameCat = a.product.category === product.category ? 1 : 0;
-      const bSameCat = b.product.category === product.category ? 1 : 0;
-      if (aSameCat !== bSameCat) {
-        return bSameCat - aSameCat;
-      }
-      return b.score - a.score;
-    });
+      return { product: alt, score: telemetryMatch };
+    };
+
+    return [...groupA.map(mapScored), ...groupB.map(mapScored)];
   }, [product, allProducts]);
 
   const handleSubmitReview = async (e: React.FormEvent) => {
