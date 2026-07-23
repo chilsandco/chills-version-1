@@ -1566,29 +1566,9 @@ const ProductDetail: React.FC = () => {
                   exit={{ opacity: 0, y: -10 }}
                   className="flex gap-6 overflow-x-auto pb-6 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-800"
                 >
-                  {recommendedProducts.slice(0, 5).map(({ product: altProd, score }) => (
+                  {recommendedProducts.slice(0, 5).map(({ product: altProd }) => (
                     <div key={altProd.id} className="w-[280px] sm:w-[320px] shrink-0 relative group/rec">
-                      {/* Telemetry Match Tag */}
-                      <div className="absolute top-4 left-4 z-20 bg-black/80 px-2.5 py-1 border border-accent/30 text-[9px] font-mono text-accent">
-                        {score}% COMPATIBILITY
-                      </div>
                       
-                      {/* Technical Quick Spec Hover Layer */}
-                      <div className="absolute inset-x-4 top-14 z-20 opacity-0 group-hover/rec:opacity-100 transition-opacity duration-300 pointer-events-none bg-black/90 border border-neutral-800 p-3 flex flex-col gap-1.5 font-mono text-[9px] text-neutral-400">
-                        <div className="flex justify-between border-b border-neutral-900 pb-1">
-                          <span className="text-neutral-500">FIT:</span>
-                          <span className="text-white">{altProd.fit || "STANDARD"}</span>
-                        </div>
-                        <div className="flex justify-between border-b border-neutral-900 pb-1">
-                          <span className="text-neutral-500">MATERIAL:</span>
-                          <span className="text-white truncate max-w-[120px]">{altProd.material || "100% COTTON"}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-neutral-500">PRICE:</span>
-                          <span className="text-accent">₹{altProd.price.toLocaleString()}</span>
-                        </div>
-                      </div>
-
                       <ProductCard product={altProd} viewMode="archive" />
                       
                       {/* Compare Spec Overlay Button */}
@@ -1634,29 +1614,8 @@ const ProductDetail: React.FC = () => {
                     className="absolute left-0 right-0 h-[2px] bg-accent/80 shadow-[0_0_15px_#d4af37] z-30 pointer-events-none"
                   />
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {recommendedProducts.map(({ product: altProd, score }) => (
+                    {recommendedProducts.map(({ product: altProd }) => (
                       <div key={altProd.id} className="relative group/rec bg-neutral-950 border border-white/5">
-                        {/* Telemetry Match Tag */}
-                        <div className="absolute top-4 left-4 z-20 bg-black/80 px-2.5 py-1 border border-accent/30 text-[9px] font-mono text-accent">
-                          {score}% COMPATIBILITY
-                        </div>
-
-                        {/* Technical Quick Spec Hover Layer */}
-                        <div className="absolute inset-x-4 top-14 z-20 opacity-0 group-hover/rec:opacity-100 transition-opacity duration-300 pointer-events-none bg-black/90 border border-neutral-800 p-3 flex flex-col gap-1.5 font-mono text-[9px] text-neutral-400">
-                          <div className="flex justify-between border-b border-neutral-900 pb-1">
-                            <span className="text-neutral-500">FIT:</span>
-                            <span className="text-white">{altProd.fit || "STANDARD"}</span>
-                          </div>
-                          <div className="flex justify-between border-b border-neutral-900 pb-1">
-                            <span className="text-neutral-500">MATERIAL:</span>
-                            <span className="text-white truncate max-w-[120px]">{altProd.material || "100% COTTON"}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-neutral-500">PRICE:</span>
-                            <span className="text-accent">₹{altProd.price.toLocaleString()}</span>
-                          </div>
-                        </div>
-
                         <ProductCard product={altProd} viewMode="archive" />
 
                         {/* Compare Spec Overlay Button */}
