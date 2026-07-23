@@ -3355,6 +3355,55 @@ async function startServer() {
     }
   };
 
+  app.get("/api/orders/rma/reconcile/:txId", async (req, res) => {
+    try {
+      const { txId } = req.params;
+      if (!txId.startsWith("RMA_")) {
+        return res.status(400).json({ message: "Invalid transaction ID." });
+      }
+
+      console.log(`[CHILS & CO.] Reconciling RMA Delta Payment for transaction: ${txId}`);
+
+      // Verify transaction with PhonePe
+      const statusData = await verifyPhonePeTransaction(txId);
+      if (!statusData) {
+        return res.status(404).json({ message: "Transaction not found." });
+      }
+
+      const isSuccess = statusData.success && statusData.code === "PAYMENT_SUCCESS";
+      const transactionId = statusData.data?.transactionId || txId;
+      const orderId = txId.split('_')[1];
+
+      if (isSuccess) {
+        const cachedData = getPendingSwap(txId);
+        if (cachedData) {
+          console.log(`[CHILS & CO.] Pull-based reconciliation verified COMPLETED for RMA: ${txId}. Submitting return...`);
+          await executeWooCommerceRmaSubmit(
+            orderId,
+            cachedData.reason,
+            cachedData.description,
+            cachedData.products,
+            cachedData.images,
+            cachedData.swapInfo,
+            transactionId
+          );
+          removePendingSwap(txId);
+          return res.json({ success: true, message: "RMA swap processed successfully." });
+        } else {
+          // If already processed and removed from cache
+          console.log(`[CHILS & CO.] RMA ${txId} already processed (no cache payload found).`);
+          return res.json({ success: true, message: "RMA swap already processed." });
+        }
+      } else {
+        console.log(`[CHILS & CO.] RMA ${txId} payment not successful yet: ${statusData.message}`);
+        return res.json({ success: false, message: `Payment not verified: ${statusData.message}` });
+      }
+    } catch (error: any) {
+      console.error("[CHILS & CO.] RMA Reconciliation Error:", error);
+      res.status(500).json({ message: error.message || "Failed to reconcile RMA swap." });
+    }
+  });
+
   const executeWooCommerceRmaSubmit = async (
     orderId: string, 
     reason: string, 

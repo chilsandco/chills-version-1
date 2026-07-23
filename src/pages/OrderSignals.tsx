@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowUpRight, Activity, Clock, Box, Package } from 'lucide-react';
 import { Signal } from '../types';
 import { useAuth } from '../AuthContext';
@@ -10,6 +10,47 @@ const OrderSignals: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const { user, token } = useAuth();
   const navigate = useNavigate();
+
+  const [searchParams] = useSearchParams();
+  const txId = searchParams.get('tx');
+  const rmaSuccess = searchParams.get('rma_success');
+  const [reconcilingRma, setReconcilingRma] = useState(false);
+  const [reconcileMessage, setReconcileMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (rmaSuccess === 'true' && txId && token) {
+      const reconcileRma = async () => {
+        setReconcilingRma(true);
+        setReconcileMessage("Verifying swap payment signal with clearinghouse...");
+        try {
+          const res = await fetch(`/api/orders/rma/reconcile/${txId}`);
+          const data = await res.json();
+          if (data.success) {
+            setReconcileMessage("Reversal request successfully authorized and logged.");
+            // Re-fetch the orders list
+            const fetchRes = await fetch('/api/orders', {
+              headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const freshData = await fetchRes.json();
+            if (Array.isArray(freshData)) {
+              setSignals(freshData);
+            }
+          } else {
+            setReconcileMessage(`Authorization pending: ${data.message}`);
+          }
+        } catch (e) {
+          console.error("Failed to reconcile RMA:", e);
+          setReconcileMessage("Payment verified. Fetching transaction update...");
+        } finally {
+          setTimeout(() => {
+            setReconcilingRma(false);
+            setReconcileMessage(null);
+          }, 4000);
+        }
+      };
+      reconcileRma();
+    }
+  }, [rmaSuccess, txId, token]);
 
   useEffect(() => {
     const fetchSignals = async () => {
@@ -79,6 +120,16 @@ const OrderSignals: React.FC = () => {
 
   return (
     <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen">
+      {reconcileMessage && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 p-4 border border-accent/20 bg-accent/5 font-mono text-[9px] uppercase tracking-widest text-accent flex items-center gap-3"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+          {reconcileMessage}
+        </motion.div>
+      )}
       <header className="mb-16">
         <div className="flex items-center gap-3 mb-4">
           <Activity className="text-accent" size={16} />
