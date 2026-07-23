@@ -3422,7 +3422,7 @@ async function startServer() {
       try {
         const orderRes = await wcSafeCall(wc, "get", `orders/${orderId}`);
         const currentMeta = orderRes.data.meta_data || [];
-        const updatedMeta = currentMeta.filter((m: any) => m.key !== "_rma_swap_info");
+        let updatedMeta = currentMeta.filter((m: any) => !["_rma_swap_info", "_rma_refund_delta_amount"].includes(m.key));
         
         if (swapInfoList && swapInfoList.length > 0) {
           updatedMeta.push({
@@ -3432,6 +3432,17 @@ async function startServer() {
         }
 
         let noteText = "";
+        const refundDeltaTotal = swapInfoList && swapInfoList.length > 0
+          ? swapInfoList.filter((s: any) => s.type === "refund").reduce((acc, curr) => acc + curr.delta, 0)
+          : 0;
+
+        if (refundDeltaTotal > 0) {
+          updatedMeta.push({
+            key: "_rma_refund_delta_amount",
+            value: refundDeltaTotal.toString()
+          });
+        }
+
         if (swapInfoList && swapInfoList.length > 0) {
           const swapLines = swapInfoList.map((s: any) => {
             const detail = `${s.originalProductName} swapped for ${s.swapProductName} (${s.swapSize})`;
@@ -3443,7 +3454,6 @@ async function startServer() {
           if (paidTxId) {
             noteText += `\nDelta payment verified successfully. Transaction ID: ${paidTxId}`;
           } else {
-            const refundDeltaTotal = swapInfoList.filter((s: any) => s.type === "refund").reduce((acc, curr) => acc + curr.delta, 0);
             if (refundDeltaTotal > 0) {
               noteText += `\nDelta refund pending: ₹${refundDeltaTotal} to be refunded to source account.`;
             }
@@ -3452,11 +3462,26 @@ async function startServer() {
           noteText = `Standard return initiated.\nReason: ${reason}`;
         }
 
-        await wcSafeCall(wc, "put", `orders/${orderId}`, {
+        const updatePayload: any = {
           meta_data: updatedMeta,
           note: noteText
-        });
-        console.log(`[CHILS & CO.] WooCommerce Order metadata & notes logged for RMA ${orderId}`);
+        };
+
+        if (refundDeltaTotal > 0) {
+          updatePayload.status = "refund-requested";
+          console.log(`[CHILS & CO.] Setting WooCommerce order status to 'refund-requested' with refund delta: ₹${refundDeltaTotal}`);
+        }
+
+        try {
+          await wcSafeCall(wc, "put", `orders/${orderId}`, updatePayload);
+          console.log(`[CHILS & CO.] WooCommerce Order metadata & notes logged for RMA ${orderId} (Status updated: ${!!updatePayload.status})`);
+        } catch (statusErr: any) {
+          console.warn(`[CHILS & CO.] WooCommerce status 'refund-requested' failed or rejected by API:`, statusErr.message || statusErr);
+          // Fallback: update without changing status
+          delete updatePayload.status;
+          await wcSafeCall(wc, "put", `orders/${orderId}`, updatePayload);
+          console.log(`[CHILS & CO.] WooCommerce metadata updated successfully without status change.`);
+        }
       } catch (err) {
         console.error("[CHILS & CO.] Failed to write WooCommerce RMA metadata/notes:", err);
       }
