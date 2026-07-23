@@ -12,6 +12,7 @@ import SizeGuide from '../components/SizeGuide';
 import SEO from '../components/SEO';
 import { useAuth } from '../AuthContext';
 import { ProductReview } from '../types';
+import ProductCard from '../components/ProductCard';
 
 
 interface MagnifiedImageCardProps {
@@ -188,6 +189,9 @@ const ProductDetail: React.FC = () => {
   const [colorError, setColorError] = useState(false);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [isDescOpen, setIsDescOpen] = useState(false);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [selectedCompareProduct, setSelectedCompareProduct] = useState<Product | null>(null);
   
   const { user, token } = useAuth();
   
@@ -345,6 +349,82 @@ const ProductDetail: React.FC = () => {
       });
   }, [id, navigate]);
 
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    setIsExpanded(false);
+    setSelectedCompareProduct(null);
+  }, [id]);
+
+  useEffect(() => {
+    fetch('/api/products')
+      .then(res => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
+      .then(data => {
+        if (Array.isArray(data)) {
+          setAllProducts(data);
+        }
+      })
+      .catch(err => console.error("Error fetching products catalog:", err));
+  }, []);
+
+  // Recommendation logic prioritizing same-category items, sorted by match percentage
+  const recommendedProducts = React.useMemo(() => {
+    if (!product || !allProducts.length) return [];
+    
+    // Filter out the current product and grouped products/combos
+    const candidates = allProducts.filter(
+      p => p.id.toString() !== product.id.toString() && 
+           p.type !== 'grouped' && 
+           p.category !== 'Combos' && 
+           !(p.categories || []).includes('Combos')
+    );
+    
+    const scored = candidates.map(alt => {
+      let score = 0;
+      
+      // 1. Same category gets a major boost
+      if (alt.category === product.category) {
+        score += 45;
+      }
+      
+      // 2. Same co-creator gets a boost
+      if (product.coCreator && alt.coCreator === product.coCreator) {
+        score += 25;
+      }
+      
+      // 3. Price proximity
+      const priceDiffRatio = Math.abs(alt.price - product.price) / product.price;
+      if (priceDiffRatio <= 0.05) score += 20;
+      else if (priceDiffRatio <= 0.15) score += 15;
+      else if (priceDiffRatio <= 0.3) score += 10;
+      
+      // 4. Same Fit
+      if (alt.fit && product.fit && alt.fit.toLowerCase() === product.fit.toLowerCase()) {
+        score += 10;
+      }
+      
+      // Normalize score between 60% and 99%
+      const telemetryMatch = Math.min(Math.max(Math.round(score + 50), 60), 99);
+      
+      return {
+        product: alt,
+        score: telemetryMatch
+      };
+    });
+    
+    // Prioritize products in the same category first, then order by telemetry match score descending
+    return scored.sort((a, b) => {
+      const aSameCat = a.product.category === product.category ? 1 : 0;
+      const bSameCat = b.product.category === product.category ? 1 : 0;
+      if (aSameCat !== bSameCat) {
+        return bSameCat - aSameCat;
+      }
+      return b.score - a.score;
+    });
+  }, [product, allProducts]);
+
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!rating || !reviewText.trim() || !reviewerName.trim() || !reviewerEmail.trim()) {
@@ -405,13 +485,13 @@ const ProductDetail: React.FC = () => {
 
   // Prevent scrolling when modal is open
   useEffect(() => {
-    if (selectedImage || isDescOpen || showReviewModal) {
+    if (selectedImage || isDescOpen || showReviewModal || selectedCompareProduct) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
     }
     return () => { document.body.style.overflow = 'unset'; };
-  }, [selectedImage, isDescOpen, showReviewModal]);
+  }, [selectedImage, isDescOpen, showReviewModal, selectedCompareProduct]);
 
 
   const [isAddingToCart, setIsAddingToCart] = useState(false);
@@ -1461,6 +1541,156 @@ const ProductDetail: React.FC = () => {
         </div>
       </div>
 
+      {/* SYSTEM SCAN // ALTERNATIVE SIGNALS */}
+      {recommendedProducts.length > 0 && (
+        <div className="mt-24 pt-16 border-t border-neutral-900">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
+            <div className="flex items-center gap-3">
+              <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
+              <h2 className="text-[12px] tracking-[0.4em] font-bold uppercase text-accent font-mono">
+                SYSTEM SCAN // ALTERNATIVE SIGNALS
+              </h2>
+            </div>
+            <div className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest">
+              MATCH TELEMETRY: ACTIVE
+            </div>
+          </div>
+
+          <div className="relative">
+            <AnimatePresence mode="wait">
+              {!isExpanded ? (
+                <motion.div
+                  key="slider"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="flex gap-6 overflow-x-auto pb-6 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-800"
+                >
+                  {recommendedProducts.slice(0, 5).map(({ product: altProd, score }) => (
+                    <div key={altProd.id} className="w-[280px] sm:w-[320px] shrink-0 relative group/rec">
+                      {/* Telemetry Match Tag */}
+                      <div className="absolute top-4 left-4 z-20 bg-black/80 px-2.5 py-1 border border-accent/30 text-[9px] font-mono text-accent">
+                        {score}% COMPATIBILITY
+                      </div>
+                      
+                      {/* Technical Quick Spec Hover Layer */}
+                      <div className="absolute inset-x-4 top-14 z-20 opacity-0 group-hover/rec:opacity-100 transition-opacity duration-300 pointer-events-none bg-black/90 border border-neutral-800 p-3 flex flex-col gap-1.5 font-mono text-[9px] text-neutral-400">
+                        <div className="flex justify-between border-b border-neutral-900 pb-1">
+                          <span className="text-neutral-500">FIT:</span>
+                          <span className="text-white">{altProd.fit || "STANDARD"}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-neutral-900 pb-1">
+                          <span className="text-neutral-500">MATERIAL:</span>
+                          <span className="text-white truncate max-w-[120px]">{altProd.material || "100% COTTON"}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-neutral-500">PRICE:</span>
+                          <span className="text-accent">₹{altProd.price.toLocaleString()}</span>
+                        </div>
+                      </div>
+
+                      <ProductCard product={altProd} viewMode="archive" />
+                      
+                      {/* Compare Spec Overlay Button */}
+                      <div className="absolute bottom-24 left-4 z-20">
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedCompareProduct(altProd);
+                          }}
+                          className="bg-black/90 hover:bg-accent hover:text-black border border-white/10 hover:border-accent px-3 py-1.5 text-[8px] font-mono text-white tracking-widest uppercase transition-all duration-300 cursor-pointer rounded-[2px]"
+                        >
+                          // Compare Specs
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {recommendedProducts.length > 5 && (
+                    <div className="w-[200px] shrink-0 border border-dashed border-neutral-800 hover:border-accent/40 flex flex-col items-center justify-center text-center p-6 bg-neutral-950/40 hover:bg-neutral-950 transition-colors">
+                      <button
+                        onClick={() => setIsExpanded(true)}
+                        className="text-[10px] font-mono font-bold tracking-[0.2em] text-neutral-400 hover:text-accent uppercase transition-colors cursor-pointer"
+                      >
+                        + SCAN MORE <br />
+                        <span className="text-[8px] text-neutral-600">({recommendedProducts.length - 5} Signals)</span>
+                      </button>
+                    </div>
+                  )}
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="grid"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="relative"
+                >
+                  {/* Laser scan line overlay */}
+                  <motion.div 
+                    initial={{ top: "0%" }}
+                    animate={{ top: "100%" }}
+                    transition={{ duration: 1.2, ease: "easeInOut" }}
+                    className="absolute left-0 right-0 h-[2px] bg-accent/80 shadow-[0_0_15px_#d4af37] z-30 pointer-events-none"
+                  />
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {recommendedProducts.map(({ product: altProd, score }) => (
+                      <div key={altProd.id} className="relative group/rec bg-neutral-950 border border-white/5">
+                        {/* Telemetry Match Tag */}
+                        <div className="absolute top-4 left-4 z-20 bg-black/80 px-2.5 py-1 border border-accent/30 text-[9px] font-mono text-accent">
+                          {score}% COMPATIBILITY
+                        </div>
+
+                        {/* Technical Quick Spec Hover Layer */}
+                        <div className="absolute inset-x-4 top-14 z-20 opacity-0 group-hover/rec:opacity-100 transition-opacity duration-300 pointer-events-none bg-black/90 border border-neutral-800 p-3 flex flex-col gap-1.5 font-mono text-[9px] text-neutral-400">
+                          <div className="flex justify-between border-b border-neutral-900 pb-1">
+                            <span className="text-neutral-500">FIT:</span>
+                            <span className="text-white">{altProd.fit || "STANDARD"}</span>
+                          </div>
+                          <div className="flex justify-between border-b border-neutral-900 pb-1">
+                            <span className="text-neutral-500">MATERIAL:</span>
+                            <span className="text-white truncate max-w-[120px]">{altProd.material || "100% COTTON"}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-neutral-500">PRICE:</span>
+                            <span className="text-accent">₹{altProd.price.toLocaleString()}</span>
+                          </div>
+                        </div>
+
+                        <ProductCard product={altProd} viewMode="archive" />
+
+                        {/* Compare Spec Overlay Button */}
+                        <div className="absolute bottom-24 left-4 z-20">
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setSelectedCompareProduct(altProd);
+                            }}
+                            className="bg-black/90 hover:bg-accent hover:text-black border border-white/10 hover:border-accent px-3 py-1.5 text-[8px] font-mono text-white tracking-widest uppercase transition-all duration-300 cursor-pointer rounded-[2px]"
+                          >
+                            // Compare Specs
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-8 flex justify-center">
+                    <button
+                      onClick={() => setIsExpanded(false)}
+                      className="border border-neutral-800 hover:border-white px-8 py-3 text-[9px] font-mono text-neutral-400 hover:text-white tracking-[0.2em] uppercase transition-all duration-300 cursor-pointer"
+                    >
+                      [ COLLAPSE SCAN GRID ]
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      )}
+
       {/* Product Reviews & Ratings Section */}
       <div id="reviews-section" className="mt-24 pt-16 border-t border-neutral-900">
         <div className="flex items-center gap-3 mb-10">
@@ -1928,6 +2158,114 @@ const ProductDetail: React.FC = () => {
             <div className="absolute bottom-12 text-center text-[10px] tracking-[0.4em] text-white/40 uppercase pointer-events-none">
               {product.name} — Surface Inspection
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Technical Spec Comparison Overlay */}
+      <AnimatePresence>
+        {selectedCompareProduct && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/95 backdrop-blur-xl"
+            onClick={() => setSelectedCompareProduct(null)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className="bg-neutral-950 border border-neutral-900 p-8 md:p-10 max-w-2xl w-full relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button 
+                onClick={() => setSelectedCompareProduct(null)}
+                className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="flex items-center gap-3 mb-8">
+                <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
+                <h2 className="text-[11px] tracking-[0.4em] font-bold uppercase text-accent font-mono">
+                  TELEMETRY COMPARISON // MATRIX SCAN
+                </h2>
+              </div>
+
+              {/* Side by side comparison grid */}
+              <div className="grid grid-cols-3 gap-6 font-mono text-[11px] text-neutral-400">
+                {/* Header Row */}
+                <div className="col-span-1" />
+                <div className="text-center border-b border-neutral-900 pb-3">
+                  <p className="text-[9px] text-neutral-500 uppercase font-bold mb-1">Active Signal</p>
+                  <p className="text-white font-display uppercase tracking-tight text-xs truncate max-w-[150px]">{product.name}</p>
+                </div>
+                <div className="text-center border-b border-neutral-900 pb-3">
+                  <p className="text-[9px] text-accent uppercase font-bold mb-1">Swap Target</p>
+                  <p className="text-accent font-display uppercase tracking-tight text-xs truncate max-w-[150px]">{selectedCompareProduct.name}</p>
+                </div>
+
+                {/* Price Row */}
+                <div className="text-neutral-500 font-bold py-2 border-b border-neutral-900">PRICE</div>
+                <div className="text-center py-2 text-white border-b border-neutral-900">₹{product.price.toLocaleString()}</div>
+                <div className="text-center py-2 text-accent border-b border-neutral-900">
+                  ₹{selectedCompareProduct.price.toLocaleString()}
+                  <span className="text-[8px] text-neutral-500 block">
+                    {selectedCompareProduct.price === product.price 
+                      ? "(= EXACT PRICE)" 
+                      : selectedCompareProduct.price > product.price 
+                        ? `(+₹${(selectedCompareProduct.price - product.price).toLocaleString()})`
+                        : `(-₹${(product.price - selectedCompareProduct.price).toLocaleString()})`
+                    }
+                  </span>
+                </div>
+
+                {/* Category Row */}
+                <div className="text-neutral-500 font-bold py-2 border-b border-neutral-900">CATEGORY</div>
+                <div className="text-center py-2 text-white border-b border-neutral-900">{product.category}</div>
+                <div className="text-center py-2 text-white border-b border-neutral-900">{selectedCompareProduct.category}</div>
+
+                {/* Fit Row */}
+                <div className="text-neutral-500 font-bold py-2 border-b border-neutral-900">FIT STYLE</div>
+                <div className="text-center py-2 text-white border-b border-neutral-900">{product.fit || "STANDARD"}</div>
+                <div className="text-center py-2 text-white border-b border-neutral-900">{selectedCompareProduct.fit || "STANDARD"}</div>
+
+                {/* Material Row */}
+                <div className="text-neutral-500 font-bold py-2 border-b border-neutral-900">MATERIAL</div>
+                <div className="text-center py-2 text-white border-b border-neutral-900 line-clamp-1">{product.material || "100% COTTON"}</div>
+                <div className="text-center py-2 text-white border-b border-neutral-900 line-clamp-1">{selectedCompareProduct.material || "100% COTTON"}</div>
+
+                {/* Co-Creator Row */}
+                <div className="text-neutral-500 font-bold py-2 border-b border-neutral-900">CREATOR</div>
+                <div className="text-center py-2 text-white border-b border-neutral-900">{product.coCreator || "CHILS SYSTEM"}</div>
+                <div className="text-center py-2 text-white border-b border-neutral-900">{selectedCompareProduct.coCreator || "CHILS SYSTEM"}</div>
+
+                {/* Care instructions Row */}
+                <div className="text-neutral-500 font-bold py-2 border-b border-neutral-900">CARE</div>
+                <div className="text-center py-2 text-white border-b border-neutral-900 line-clamp-1">{product.care || "HAND WASH"}</div>
+                <div className="text-center py-2 text-white border-b border-neutral-900 line-clamp-1">{selectedCompareProduct.care || "HAND WASH"}</div>
+              </div>
+
+              <div className="mt-8 flex gap-4">
+                <button
+                  onClick={() => {
+                    setSelectedCompareProduct(null);
+                    navigate(`/product/${selectedCompareProduct.id}`);
+                  }}
+                  className="flex-1 bg-white text-black hover:bg-neutral-200 py-4 text-[10px] tracking-[0.2em] font-bold uppercase transition-colors cursor-pointer rounded-[2px]"
+                >
+                  DEPLOY TARGET SIGNAL
+                </button>
+                <button
+                  onClick={() => setSelectedCompareProduct(null)}
+                  className="flex-1 border border-neutral-900 hover:border-neutral-700 py-4 text-[10px] tracking-[0.2em] font-bold uppercase text-neutral-500 hover:text-white transition-colors cursor-pointer rounded-[2px]"
+                >
+                  ABORT COMPARISON
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
