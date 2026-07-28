@@ -119,6 +119,7 @@ export interface Signal {
   };
   orderKey?: string;
   rmaSwaps?: RmaSwapItem[] | null;
+  parentExchangeOrderId?: string | null;
 }
 
 export interface RmaSwapItem {

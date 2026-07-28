@@ -812,14 +812,17 @@ async function startServer() {
         };
       };
       const tracking = getTrackingInfo();
+      const parentExchangeOrderId = getMeta("parent_exchange_order_id") || null;
+      const totalVal = parentExchangeOrderId ? lineItems.reduce((acc, item) => acc + parseFloat(item.price || "0") * parseInt(item.quantity || "1", 10), 0) : parseFloat(order.total || "0");
       return {
         id: (order.id || "").toString(),
         signalId: toSignalId(order.id),
         status: order.status || "pending",
         date: order.date_created || (/* @__PURE__ */ new Date()).toISOString(),
         dateCompleted: order.date_completed || null,
-        total: parseFloat(order.total || "0"),
+        total: totalVal,
         currency: order.currency || "INR",
+        parentExchangeOrderId,
         items: lineItems.map((item) => ({
           productId: (item.product_id || "").toString(),
           name: item.name || "Unknown Item",
@@ -3085,6 +3088,10 @@ Reason: ${reason}`;
       if (!wc) throw new Error("WooCommerce not configured.");
       const orderResponse = await wcSafeCall(wc, "get", `orders/${id}`);
       const order = orderResponse.data;
+      const parentExchangeOrderId = order.meta_data?.find((m) => m.key === "parent_exchange_order_id" || m.key === "_parent_exchange_order_id")?.value;
+      if (parentExchangeOrderId) {
+        return res.status(400).json({ message: "Style exchange is limited to 1 cycle. This order was generated via a swap and is not eligible for another reversal." });
+      }
       const getProductDetails = async (productId) => {
         const cached = globalProductsCache?.find((p) => p.id.toString() === productId.toString());
         if (cached) return {

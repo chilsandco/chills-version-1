@@ -345,6 +345,15 @@ const SignalDetails: React.FC = () => {
               {!isRefunded && signal.status === 'completed' && (
                 <div className="pt-4 border-t border-white/5">
                   {(() => {
+                    if (signal.parentExchangeOrderId) {
+                      return (
+                        <div className="w-full bg-neutral-900/10 border border-neutral-900/20 text-neutral-600 p-4 text-[9px] tracking-[0.2em] font-bold uppercase flex items-center justify-center gap-2 cursor-not-allowed">
+                          <ShieldAlert size={12} className="opacity-30" />
+                          Style exchange is limited to 1 cycle for this piece
+                        </div>
+                      );
+                    }
+
                     const now = new Date();
                     const deliveryDate = signal.dateCompleted ? new Date(signal.dateCompleted) : new Date(signal.date);
                     const diffHours = (now.getTime() - deliveryDate.getTime()) / (1000 * 60 * 60);

@@ -977,14 +977,20 @@ async function startServer() {
 
       const tracking = getTrackingInfo();
 
+      const parentExchangeOrderId = getMeta("parent_exchange_order_id") || null;
+      const totalVal = parentExchangeOrderId
+        ? lineItems.reduce((acc: number, item: any) => acc + (parseFloat(item.price || "0") * parseInt(item.quantity || "1", 10)), 0)
+        : parseFloat(order.total || "0");
+
       return {
         id: (order.id || "").toString(),
         signalId: toSignalId(order.id),
         status: order.status || "pending",
         date: order.date_created || new Date().toISOString(),
         dateCompleted: order.date_completed || null,
-        total: parseFloat(order.total || "0"),
+        total: totalVal,
         currency: order.currency || "INR",
+        parentExchangeOrderId,
         items: lineItems.map((item: any) => ({
           productId: (item.product_id || "").toString(),
           name: item.name || "Unknown Item",
@@ -3680,6 +3686,12 @@ async function startServer() {
 
       const orderResponse = await wcSafeCall(wc, "get", `orders/${id}`);
       const order = orderResponse.data;
+
+      // Restrict return requests to 1 cycle by checking if this is already an exchange order
+      const parentExchangeOrderId = order.meta_data?.find((m: any) => m.key === "parent_exchange_order_id" || m.key === "_parent_exchange_order_id")?.value;
+      if (parentExchangeOrderId) {
+        return res.status(400).json({ message: "Style exchange is limited to 1 cycle. This order was generated via a swap and is not eligible for another reversal." });
+      }
 
       const getProductDetails = async (productId: string): Promise<{ price: number; image: string | null }> => {
         const cached = globalProductsCache?.find((p: any) => p.id.toString() === productId.toString());

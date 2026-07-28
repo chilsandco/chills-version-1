@@ -86,6 +86,10 @@ const ReturnRequest: React.FC = () => {
         });
         const data = await response.json();
         if (response.ok) {
+          if (data.parentExchangeOrderId) {
+            setError("Style exchange is limited to 1 cycle. This order was generated via a swap and is not eligible for another reversal.");
+            return;
+          }
           setSignal(data);
           // Default: select all items for return
           setReturnItems(data.items.map((i: SignalItem) => ({ 
