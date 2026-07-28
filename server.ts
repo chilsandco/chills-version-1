@@ -1812,16 +1812,25 @@ async function startServer() {
               if (payload.state === "COMPLETED") {
                 const cachedData = getPendingSwap(fullTransactionId);
                 if (cachedData) {
-                  await executeWooCommerceRmaSubmit(
-                    orderId, 
-                    cachedData.reason, 
-                    cachedData.description, 
-                    cachedData.products, 
-                    cachedData.images, 
-                    cachedData.swapInfo,
-                    transactionId
-                  );
-                  removePendingSwap(fullTransactionId);
+                  if (activeRmaSubmissions.has(fullTransactionId)) {
+                    console.log(`[CHILS & CO.] RMA ${fullTransactionId} already processing. Ignoring duplicate SDK callback.`);
+                    return res.status(200).send("OK");
+                  }
+                  activeRmaSubmissions.add(fullTransactionId);
+                  try {
+                    await executeWooCommerceRmaSubmit(
+                      orderId, 
+                      cachedData.reason, 
+                      cachedData.description, 
+                      cachedData.products, 
+                      cachedData.images, 
+                      cachedData.swapInfo,
+                      transactionId
+                    );
+                    removePendingSwap(fullTransactionId);
+                  } finally {
+                    activeRmaSubmissions.delete(fullTransactionId);
+                  }
                 }
               }
               return res.status(200).send("OK");
@@ -1895,6 +1904,11 @@ async function startServer() {
           console.log(`[CHILS & CO.] Manual callback verified success for RMA Swap Delta. Tx: ${fullTransactionId}`);
           const cachedData = getPendingSwap(fullTransactionId);
           if (cachedData) {
+            if (activeRmaSubmissions.has(fullTransactionId)) {
+              console.log(`[CHILS & CO.] RMA ${fullTransactionId} already processing. Ignoring duplicate manual callback.`);
+              return res.status(200).send("OK");
+            }
+            activeRmaSubmissions.add(fullTransactionId);
             try {
               await executeWooCommerceRmaSubmit(
                 orderId, 
@@ -1908,6 +1922,8 @@ async function startServer() {
               removePendingSwap(fullTransactionId);
             } catch (err) {
               console.error(`[CHILS & CO.] Manual RMA webhook processing failure:`, err);
+            } finally {
+              activeRmaSubmissions.delete(fullTransactionId);
             }
           }
           return res.status(200).send("OK");
@@ -3320,6 +3336,7 @@ async function startServer() {
   });
 
   const PENDING_SWAPS_FILE = path.join(process.cwd(), "pending_swaps.json");
+  const activeRmaSubmissions = new Set<string>();
 
   const savePendingSwap = (txId: string, payload: any) => {
     let pending: any = {};
@@ -3377,18 +3394,28 @@ async function startServer() {
       if (isSuccess) {
         const cachedData = getPendingSwap(txId);
         if (cachedData) {
-          console.log(`[CHILS & CO.] Pull-based reconciliation verified COMPLETED for RMA: ${txId}. Submitting return...`);
-          await executeWooCommerceRmaSubmit(
-            orderId,
-            cachedData.reason,
-            cachedData.description,
-            cachedData.products,
-            cachedData.images,
-            cachedData.swapInfo,
-            transactionId
-          );
-          removePendingSwap(txId);
-          return res.json({ success: true, message: "RMA swap processed successfully." });
+          if (activeRmaSubmissions.has(txId)) {
+            console.log(`[CHILS & CO.] RMA ${txId} is already being processed. Ignoring duplicate reconciliation request.`);
+            return res.json({ success: true, message: "RMA swap is already being processed." });
+          }
+          activeRmaSubmissions.add(txId);
+
+          try {
+            console.log(`[CHILS & CO.] Pull-based reconciliation verified COMPLETED for RMA: ${txId}. Submitting return...`);
+            await executeWooCommerceRmaSubmit(
+              orderId,
+              cachedData.reason,
+              cachedData.description,
+              cachedData.products,
+              cachedData.images,
+              cachedData.swapInfo,
+              transactionId
+            );
+            removePendingSwap(txId);
+            return res.json({ success: true, message: "RMA swap processed successfully." });
+          } finally {
+            activeRmaSubmissions.delete(txId);
+          }
         } else {
           // If already processed and removed from cache
           console.log(`[CHILS & CO.] RMA ${txId} already processed (no cache payload found).`);
@@ -3419,6 +3446,20 @@ async function startServer() {
     const rmaSecretClean = rmaSecret.trim();
     const authHeader = 'Basic ' + Buffer.from(`secret_key:${rmaSecretClean}`).toString('base64');
     const wc = getWooCommerce();
+
+    // Check if the parent order notes already record this transaction ID to prevent duplicate submissions
+    if (paidTxId && wc) {
+      try {
+        const notesRes = await wcSafeCall(wc, "get", `orders/${orderId}/notes`);
+        const hasNote = Array.isArray(notesRes.data) && notesRes.data.some((n: any) => n.note?.includes(paidTxId));
+        if (hasNote) {
+          console.log(`[CHILS & CO.] RMA Delta Payment transaction ${paidTxId} was already logged in parent order ${orderId}. Skipping duplicate RMA processing.`);
+          return;
+        }
+      } catch (noteCheckErr: any) {
+        console.warn(`[CHILS & CO.] RMA duplicate note verification failed:`, noteCheckErr.message || noteCheckErr);
+      }
+    }
 
     let actionsSummary = "";
     if (products && Array.isArray(products)) {
@@ -4414,7 +4455,8 @@ function getPhonePeClient() {
     merchantId,
     clientSecret,
     clientVersion,
-    env
+    env,
+    false
   );
 }
 
