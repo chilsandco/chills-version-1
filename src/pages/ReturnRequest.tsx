@@ -19,7 +19,7 @@ interface ReturnItemChoice {
 }
 
 const REASONS = [
-  "Size Issue (Recommended)",
+  "Size Issue",
   "Damaged Product",
   "Wrong Item Received",
   "Quality Issue",
