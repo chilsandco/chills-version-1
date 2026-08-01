@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Activity, Box, MapPin, CreditCard, ChevronLeft, Package, Sparkles, ShieldAlert, RefreshCcw, CheckCircle2, User } from 'lucide-react';
+import { Activity, Box, MapPin, CreditCard, ChevronLeft, Package, Sparkles, ShieldAlert, RefreshCcw, CheckCircle2, User, MessageSquare } from 'lucide-react';
 import { Signal } from '../types';
 import { useAuth } from '../AuthContext';
 
@@ -320,6 +320,15 @@ const SignalDetails: React.FC = () => {
                         {item.name}
                       </Link>
                       <p className="text-[10px] text-neutral-600 uppercase tracking-widest">Quantity: {item.quantity}</p>
+                      {!isRefunded && (
+                        <Link 
+                          to={`/product/${item.productId}?writeReview=true`}
+                          className="mt-2 text-[9px] font-mono tracking-widest text-accent hover:text-white uppercase flex items-center gap-1.5 transition-colors"
+                        >
+                          <MessageSquare size={10} />
+                          Write Review / Transmit Signal
+                        </Link>
+                      )}
                       {(() => {
                         const swapDetail = signal.rmaSwaps?.find((s: any) => s.originalProductId.toString() === item.productId.toString());
                         if (swapDetail) {

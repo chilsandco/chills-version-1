@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Product } from '../types';
 import { useCart } from '../CartContext';
 import { useWishlist } from '../WishlistContext';
@@ -180,6 +180,7 @@ const sizeAdvisories: Record<string, { fit: string; chest: string; length: strin
 const ProductDetail: React.FC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -352,6 +353,21 @@ const ProductDetail: React.FC = () => {
     window.scrollTo(0, 0);
     setIsExpanded(false);
   }, [id]);
+
+  useEffect(() => {
+    if (!loading && searchParams.get('writeReview') === 'true') {
+      setShowReviewModal(true);
+      const timer = setTimeout(() => {
+        scrollToReviews();
+      }, 150);
+      
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('writeReview');
+      setSearchParams(newParams, { replace: true });
+      
+      return () => clearTimeout(timer);
+    }
+  }, [loading, searchParams, setSearchParams]);
 
   useEffect(() => {
     fetch('/api/products')
@@ -1008,8 +1024,8 @@ const ProductDetail: React.FC = () => {
                 </div>
                 <span className="text-[10px] font-mono tracking-widest text-neutral-500 group-hover:text-accent transition-colors uppercase">
                   {totalReviews > 0 
-                    ? `${averageRating.toFixed(1)} / 5.0 (${totalReviews} Transmission${totalReviews > 1 ? 's' : ''})`
-                    : "0.0 / 5.0 (0 Transmissions)"
+                    ? `${averageRating.toFixed(1)} / 5.0 (${totalReviews} Customer Review${totalReviews > 1 ? 's' : ''})`
+                    : "0.0 / 5.0 (0 Customer Reviews)"
                   }
                 </span>
               </button>
@@ -1629,7 +1645,7 @@ const ProductDetail: React.FC = () => {
         <div className="flex items-center gap-3 mb-10">
           <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
           <h2 className="text-[12px] tracking-[0.4em] font-bold uppercase text-accent font-mono">
-            TRANSMISSION REPORT // CLIENT FEEDBACK
+            CUSTOMER REVIEWS // TRANSMISSION REPORT
           </h2>
         </div>
 
@@ -1662,7 +1678,7 @@ const ProductDetail: React.FC = () => {
               </div>
 
               <p className="text-[10px] font-mono tracking-widest text-neutral-500 uppercase mb-6">
-                Based on {totalReviews} deployment{totalReviews !== 1 ? 's' : ''}
+                Based on {totalReviews} verified review{totalReviews !== 1 ? 's' : ''}
               </p>
 
               {/* Star Breakdown Bars */}
@@ -1689,7 +1705,7 @@ const ProductDetail: React.FC = () => {
                 onClick={() => setShowReviewModal(true)}
                 className="w-full border border-accent/30 hover:border-accent bg-accent/5 hover:bg-accent/10 py-4 text-[11px] tracking-[0.25em] font-bold uppercase text-accent hover:text-white transition-all duration-300 rounded-[1px] cursor-pointer"
               >
-                TRANSMIT SIGNAL
+                WRITE A REVIEW / TRANSMIT SIGNAL
               </button>
             </div>
           </div>
@@ -1804,7 +1820,7 @@ const ProductDetail: React.FC = () => {
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
                 <h2 className="text-[11px] tracking-[0.4em] font-bold uppercase text-accent font-mono">
-                  TRANSMIT FEEDBACK SIGNAL
+                  WRITE A REVIEW // TRANSMIT SIGNAL
                 </h2>
               </div>
 
@@ -1822,10 +1838,10 @@ const ProductDetail: React.FC = () => {
                       <Check size={20} />
                     </div>
                     <h3 className="text-sm font-bold tracking-[0.2em] uppercase text-white font-mono">
-                      SIGNAL BROADCAST SUCCESSFUL
+                      REVIEW SUBMITTED SUCCESSFULLY
                     </h3>
                     <p className="text-[11px] text-neutral-400 leading-relaxed font-light">
-                      Your transmission details have been recorded and embedded in the database.
+                      Your review has been recorded and embedded in the database. Thank you for your feedback!
                     </p>
                   </div>
                 ) : (
@@ -1834,7 +1850,7 @@ const ProductDetail: React.FC = () => {
                       {/* Name */}
                       <div>
                         <label className="block text-[9px] font-mono tracking-[0.2em] text-neutral-500 uppercase mb-2 font-bold">
-                          Client Signature / Pseudonym
+                          Your Name / Pseudonym (Client Signature)
                         </label>
                         <input
                           type="text"
@@ -1850,7 +1866,7 @@ const ProductDetail: React.FC = () => {
                       {/* Email */}
                       <div>
                         <label className="block text-[9px] font-mono tracking-[0.2em] text-neutral-500 uppercase mb-2 font-bold">
-                          Secure Email (Unpublished)
+                          Your Email (Secure & Unpublished)
                         </label>
                         <input
                           type="email"
@@ -1867,7 +1883,7 @@ const ProductDetail: React.FC = () => {
                     {/* Star Rating Select */}
                     <div>
                       <label className="block text-[9px] font-mono tracking-[0.2em] text-neutral-500 uppercase mb-2 font-bold">
-                        Signal Strength (Rating)
+                        Product Rating (1-5 Stars)
                       </label>
                       <div className="flex items-center gap-1">
                         {[1, 2, 3, 4, 5].map((star) => (
@@ -1929,7 +1945,7 @@ const ProductDetail: React.FC = () => {
                     {/* Review text */}
                     <div>
                       <label className="block text-[9px] font-mono tracking-[0.2em] text-neutral-500 uppercase mb-2 font-bold">
-                        Decoded Transmission / Feedback
+                        Your Review / Feedback (Transmission Details)
                       </label>
                       <textarea
                         required
@@ -1946,7 +1962,7 @@ const ProductDetail: React.FC = () => {
                       disabled={submitLoading}
                       className="w-full bg-white text-black hover:bg-neutral-200 py-4 text-[11px] tracking-[0.3em] font-bold uppercase transition-all duration-300 disabled:opacity-50 cursor-pointer rounded-[1px]"
                     >
-                      {submitLoading ? "TRANSMITTING SIGNAL..." : "BROADCAST TRANSMISSION"}
+                      {submitLoading ? "TRANSMITTING REVIEW..." : "SUBMIT REVIEW / BROADCAST SIGNAL"}
                     </button>
                   </>
                 )}
