@@ -163,7 +163,7 @@ const OrderSuccess: React.FC = () => {
   }, [orderId, signalId, fullOrderId]);
 
   useEffect(() => {
-    if (!cartCleared.current && orderInfo && ['processing', 'completed'].includes(orderInfo.status)) {
+    if (!cartCleared.current && orderInfo && ['processing', 'completed', 'dispatched', 'Dispatched', 'shipping', 'delivered'].includes(orderInfo.status)) {
       cartCleared.current = true;
       clearCart();
     }
@@ -184,7 +184,7 @@ const OrderSuccess: React.FC = () => {
     );
   }
 
-  const isSuccessful = orderInfo ? ['processing', 'completed'].includes(orderInfo.status) : false;
+  const isSuccessful = orderInfo ? ['processing', 'completed', 'dispatched', 'Dispatched', 'shipping', 'delivered'].includes(orderInfo.status) : false;
   const isPending = orderInfo ? ['pending', 'on-hold'].includes(orderInfo.status) : false;
   const isFailed = orderInfo ? ['failed', 'cancelled', 'refunded'].includes(orderInfo.status) : false;
 

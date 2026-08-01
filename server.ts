@@ -4033,7 +4033,7 @@ async function startServer() {
       const normalStatus = String(trackingStatus).toLowerCase().trim();
 
       if (['shipped', 'dispatched', 'out_for_delivery', 'out-for-delivery', 'in-transit', 'in transit'].some(s => normalStatus.includes(s))) {
-        updatedStatus = "shipping";
+        updatedStatus = "dispatched";
       } else if (['delivered'].some(s => normalStatus.includes(s))) {
         updatedStatus = "completed";
       }

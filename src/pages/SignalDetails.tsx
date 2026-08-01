@@ -61,7 +61,7 @@ const SignalDetails: React.FC = () => {
   const isRefunded = signal.status === 'refunded';
   const isFailed = ['failed', 'cancelled', 'refunded'].includes(signal.status);
   const isPending = ['pending', 'on-hold'].includes(signal.status);
-  const isSuccessful = ['processing', 'completed', 'shipping', 'delivered'].includes(signal.status);
+  const isSuccessful = ['processing', 'completed', 'shipping', 'delivered', 'dispatched', 'Dispatched'].includes(signal.status);
 
   const steps = [
     { 
@@ -72,8 +72,8 @@ const SignalDetails: React.FC = () => {
           : "Order Received", 
       status: ['failed', 'cancelled'].includes(signal.status) ? 'failed' : 'completed' 
     },
-    { label: "Processing", status: (signal.status === 'processing' || signal.status === 'completed' || isRefunded) ? 'completed' : 'pending' },
-    { label: "Dispatched", status: (signal.status === 'shipping' || !!signal.shipping?.awb || signal.status === 'completed' || isRefunded) ? 'completed' : 'pending' },
+    { label: "Processing", status: (['processing', 'dispatched', 'Dispatched', 'shipping', 'completed'].includes(signal.status) || isRefunded) ? 'completed' : 'pending' },
+    { label: "Dispatched", status: (['dispatched', 'Dispatched', 'shipping', 'completed'].includes(signal.status) || !!signal.shipping?.awb || isRefunded) ? 'completed' : 'pending' },
     { label: "Delivered", status: (signal.status === 'completed' || isRefunded) ? 'completed' : 'pending' },
   ];
 

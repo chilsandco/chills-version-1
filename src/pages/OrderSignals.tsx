@@ -116,7 +116,7 @@ const OrderSignals: React.FC = () => {
 
   const hasWaitlistBadge = isFlagActive(user?.onWaitlist);
   const hasCoCreatorBadge = isFlagActive(user?.coCreatorInterest, 'chils_cocreator_interest');
-  const paidStatuses = ['processing', 'completed', 'shipping', 'delivered'];
+  const paidStatuses = ['processing', 'completed', 'shipping', 'delivered', 'dispatched', 'Dispatched'];
 
   return (
     <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen">
