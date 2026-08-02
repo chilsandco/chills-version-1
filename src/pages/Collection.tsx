@@ -4,6 +4,7 @@ import { SlidersHorizontal, X, Search, RotateCcw, Check, Activity, Square, Layou
 import ProductCard from '../components/ProductCard';
 import SEO from '../components/SEO';
 import { Product } from '../types';
+import { parseSearchQuery } from '../components/SearchOverlay';
 
 
 const Collection: React.FC = () => {
@@ -171,8 +172,23 @@ const Collection: React.FC = () => {
       }
 
       // 6. Search query filter
-      if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false;
+      if (searchQuery) {
+        const { textQuery, priceMax, priceMin } = parseSearchQuery(searchQuery);
+
+        if (textQuery) {
+          const matchesName = p.name.toLowerCase().includes(textQuery);
+          const matchesCategory = p.category?.toLowerCase().includes(textQuery);
+          const matchesDesc = p.description?.toLowerCase().includes(textQuery);
+          if (!matchesName && !matchesCategory && !matchesDesc) {
+            return false;
+          }
+        }
+        if (priceMax !== null && p.price > priceMax) {
+          return false;
+        }
+        if (priceMin !== null && p.price < priceMin) {
+          return false;
+        }
       }
 
       return true;
@@ -228,8 +244,23 @@ const Collection: React.FC = () => {
       }
 
       // 5. Search query filter
-      if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-        return false;
+      if (searchQuery) {
+        const { textQuery, priceMax, priceMin } = parseSearchQuery(searchQuery);
+
+        if (textQuery) {
+          const matchesName = p.name.toLowerCase().includes(textQuery);
+          const matchesCategory = p.category?.toLowerCase().includes(textQuery);
+          const matchesDesc = p.description?.toLowerCase().includes(textQuery);
+          if (!matchesName && !matchesCategory && !matchesDesc) {
+            return false;
+          }
+        }
+        if (priceMax !== null && p.price > priceMax) {
+          return false;
+        }
+        if (priceMin !== null && p.price < priceMin) {
+          return false;
+        }
       }
 
       return true;

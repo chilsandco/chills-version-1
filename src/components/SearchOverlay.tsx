@@ -18,6 +18,51 @@ const SEARCH_SUGGESTIONS = [
   'Signature'
 ];
 
+export const parseSearchQuery = (rawQuery: string) => {
+  let cleanQuery = rawQuery.replace(/[₹$,]/g, '').toLowerCase().trim();
+  let priceMax: number | null = null;
+  let priceMin: number | null = null;
+
+  // Match "under X", "below X", "less than X", "< X", "<= X"
+  const underRegex = /(?:under|below|less\s+than|<\s*=?)\s*(\d+)/i;
+  const matchUnder = cleanQuery.match(underRegex);
+  if (matchUnder) {
+    priceMax = parseFloat(matchUnder[1]);
+    cleanQuery = cleanQuery.replace(matchUnder[0], '');
+  }
+
+  // Match "above X", "over X", "more than X", "> X", ">= X"
+  const overRegex = /(?:above|over|more\s+than|>\s*=?)\s*(\d+)/i;
+  const matchOver = cleanQuery.match(overRegex);
+  if (matchOver) {
+    priceMin = parseFloat(matchOver[1]);
+    cleanQuery = cleanQuery.replace(matchOver[0], '');
+  }
+
+  // If no explicit threshold yet, check if there's a standalone number or end number
+  if (priceMax === null && priceMin === null) {
+    const numberRegex = /^\s*(\d+)\s*$/;
+    const matchNumber = cleanQuery.match(numberRegex);
+    if (matchNumber) {
+      priceMax = parseFloat(matchNumber[1]);
+      cleanQuery = '';
+    } else {
+      const endNumberRegex = /\b(\d+)\b\s*$/;
+      const matchEndNumber = cleanQuery.match(endNumberRegex);
+      if (matchEndNumber) {
+        priceMax = parseFloat(matchEndNumber[1]);
+        cleanQuery = cleanQuery.replace(matchEndNumber[0], '');
+      }
+    }
+  }
+
+  return {
+    textQuery: cleanQuery.replace(/\s+/g, ' ').trim(),
+    priceMax,
+    priceMin
+  };
+};
+
 const SearchOverlay: React.FC<SearchOverlayProps> = ({ isOpen, onClose }) => {
   const [query, setQuery] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
@@ -77,11 +122,30 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ isOpen, onClose }) => {
       return;
     }
 
+    const { textQuery, priceMax, priceMin } = parseSearchQuery(query);
+
     const filtered = products.filter((product) => {
-      const matchesName = product.name.toLowerCase().includes(query.toLowerCase());
-      const matchesCategory = product.category?.toLowerCase().includes(query.toLowerCase());
-      const matchesDesc = product.description?.toLowerCase().includes(query.toLowerCase());
-      return matchesName || matchesCategory || matchesDesc;
+      // 1. Text filter
+      if (textQuery) {
+        const matchesName = product.name.toLowerCase().includes(textQuery);
+        const matchesCategory = product.category?.toLowerCase().includes(textQuery);
+        const matchesDesc = product.description?.toLowerCase().includes(textQuery);
+        if (!matchesName && !matchesCategory && !matchesDesc) {
+          return false;
+        }
+      }
+
+      // 2. Price Max filter
+      if (priceMax !== null && product.price > priceMax) {
+        return false;
+      }
+
+      // 3. Price Min filter
+      if (priceMin !== null && product.price < priceMin) {
+        return false;
+      }
+
+      return true;
     });
 
     setResults(filtered);
