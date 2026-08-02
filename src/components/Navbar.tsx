@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShoppingBag, Menu, X, Heart } from 'lucide-react';
+import { ShoppingBag, Menu, X, Heart, Search } from 'lucide-react';
+import SearchOverlay from './SearchOverlay';
 import { useCart } from '../CartContext';
 import { useWishlist } from '../WishlistContext';
 import { useAuth } from '../AuthContext';
@@ -101,6 +102,7 @@ const Navbar: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const location = useLocation();
   const [pulse, setPulse] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const isProductPage = location.pathname.startsWith('/product/');
 
   useEffect(() => {
@@ -246,6 +248,19 @@ const Navbar: React.FC = () => {
 
         {/* Right: Icons */}
         <div className="flex items-center gap-6">
+          <button 
+            onClick={() => setIsSearchOpen(true)}
+            className="hover:opacity-50 transition-opacity text-accent cursor-pointer flex items-center justify-center"
+            aria-label="Search products"
+          >
+            <motion.div
+              whileHover={{ scale: 1.1, y: -2 }}
+              whileTap={{ scale: 0.9 }}
+            >
+              <Search size={20} strokeWidth={1.5} />
+            </motion.div>
+          </button>
+          
           <Link to="/wishlist" className="relative hover:opacity-50 transition-opacity text-accent">
             <motion.div
               whileHover={{ scale: 1.1, y: -2 }}
@@ -341,12 +356,29 @@ const Navbar: React.FC = () => {
 
                 <div className="h-px bg-white/10 my-3" />
 
-                {/* Wishlist & Account Links */}
+                {/* Wishlist, Account & Search Links */}
                 <div className="flex flex-col gap-4 mt-1">
                   <motion.div
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: 0.03 * (allLinks.length), duration: 0.3 }}
+                  >
+                    <button
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        setIsSearchOpen(true);
+                      }}
+                      className="flex items-center gap-3 py-2 text-sm font-medium tracking-[0.15em] text-neutral-300 hover:text-accent transition-colors w-full text-left cursor-pointer"
+                    >
+                      <Search size={18} className="text-accent" />
+                      <span>SEARCH</span>
+                    </button>
+                  </motion.div>
+
+                  <motion.div
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.03 * (allLinks.length + 1), duration: 0.3 }}
                   >
                     <Link
                       to="/wishlist"
@@ -361,7 +393,7 @@ const Navbar: React.FC = () => {
                   <motion.div
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.03 * (allLinks.length + 1), duration: 0.3 }}
+                    transition={{ delay: 0.03 * (allLinks.length + 2), duration: 0.3 }}
                   >
                     <Link
                       to="/auth"
@@ -384,6 +416,7 @@ const Navbar: React.FC = () => {
           </>
         )}
       </AnimatePresence>
+      <SearchOverlay isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </motion.nav>
   );
 };

@@ -15,6 +15,7 @@ const Collection: React.FC = () => {
   const [filter, setFilter] = useState('All');
   const [searchParams, setSearchParams] = useSearchParams();
   const creatorQuery = searchParams.get('creator');
+  const searchQuery = searchParams.get('search') || '';
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -169,9 +170,14 @@ const Collection: React.FC = () => {
         }
       }
 
+      // 6. Search query filter
+      if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+
       return true;
     });
-  }, [products, creatorQuery, filter, selectedSizes, maxPrice, inStockOnly]);
+  }, [products, creatorQuery, filter, selectedSizes, maxPrice, inStockOnly, searchQuery]);
 
   const categories = React.useMemo(() => {
     const allCats = new Set<string>();
@@ -221,6 +227,11 @@ const Collection: React.FC = () => {
         }
       }
 
+      // 5. Search query filter
+      if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+
       return true;
     });
 
@@ -234,7 +245,7 @@ const Collection: React.FC = () => {
       });
     });
     return counts;
-  }, [products, creatorQuery, maxPrice, inStockOnly, selectedSizes]);
+  }, [products, creatorQuery, maxPrice, inStockOnly, selectedSizes, searchQuery]);
 
   const filteredCategories = React.useMemo(() => {
     if (!searchTerm.trim()) return categories;
@@ -248,8 +259,9 @@ const Collection: React.FC = () => {
     return filter !== 'All' || 
       selectedSizes.length > 0 || 
       inStockOnly || 
-      maxPrice < maxPriceBoundary;
-  }, [filter, selectedSizes, inStockOnly, maxPrice, products]);
+      maxPrice < maxPriceBoundary ||
+      !!searchQuery;
+  }, [filter, selectedSizes, inStockOnly, maxPrice, products, searchQuery]);
 
 
   return (
@@ -282,6 +294,28 @@ const Collection: React.FC = () => {
             <h1 className="text-3xl md:text-6xl lg:text-7xl font-display font-bold tracking-tighter uppercase text-white whitespace-nowrap mb-6 md:mb-8">
               Collection
             </h1>
+            {searchQuery && (
+              <div className="flex items-center gap-4 mb-6 animate-fade-in flex-wrap">
+                <span className="text-[10px] tracking-[0.25em] font-mono text-accent uppercase font-bold">
+                  SEARCH MATRIX // "{searchQuery}"
+                </span>
+                <span className="text-[9px] font-mono text-neutral-500 uppercase">
+                  ({filteredProducts.length} results)
+                </span>
+                <button
+                  onClick={() => {
+                    setSearchParams(prev => {
+                      const newParams = new URLSearchParams(prev);
+                      newParams.delete('search');
+                      return newParams;
+                    });
+                  }}
+                  className="text-[9px] tracking-[0.2em] font-mono font-bold uppercase text-neutral-400 hover:text-white px-3 py-1 border border-neutral-800 hover:border-white transition-all duration-300 cursor-pointer active:scale-95 flex items-center gap-1.5"
+                >
+                  Clear <X size={10} />
+                </button>
+              </div>
+            )}
             <div className="flex items-center justify-between border-b border-neutral-900 pb-4">
               {/* Horizontally Scrollable Categories */}
               <div className="overflow-hidden relative flex-1">
@@ -589,6 +623,11 @@ const Collection: React.FC = () => {
               if (products.length > 0) {
                 setMaxPrice(Math.max(...products.map(p => p.price)));
               }
+              setSearchParams(prev => {
+                const newParams = new URLSearchParams(prev);
+                newParams.delete('search');
+                return newParams;
+              });
               setIsDrawerOpen(false);
             }}
             disabled={!isFilterDirty}
