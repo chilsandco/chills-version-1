@@ -1437,39 +1437,10 @@ const ProductDetail: React.FC = () => {
             )}
           </div>
 
-          {/* Details & Specs Container (Moved Below Actions) */}
+          {/* Details & Specs Container */}
           <div className="space-y-6 pt-6 border-t border-neutral-900/50">
-            {/* Precision Metrics */}
-            <div className="flex gap-12 py-4 border-b border-neutral-900/50">
-              <div>
-                <p className="text-[9px] tracking-[0.2em] font-bold uppercase text-neutral-500 mb-1">Signals Deployed</p>
-                <p className="text-xl font-display font-bold tracking-tighter text-accent">
-                  {product.totalSales || 0}
-                </p>
-              </div>
-            </div>
-
-
-            {/* Signal Protocol */}
-            <div className="py-6 border-b border-neutral-900/50">
-              <motion.div
-                initial={{ opacity: 0, y: 5 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 1.2, ease: "easeOut" }}
-                viewport={{ once: true }}
-              >
-                <h3 className="text-[11px] tracking-[0.3em] font-bold uppercase mb-4 text-accent">Signal Protocol</h3>
-                <div className="space-y-4 text-neutral-500 text-[12px] leading-relaxed tracking-wide font-light">
-                  <p className="text-neutral-200">Each piece carries a coded message.</p>
-                  <p>Your signal is not selected. It is assigned.</p>
-                  <p>At dispatch, the system embeds a unique output into your garment. No two drops are identical.</p>
-                  <p className="text-[10px] text-neutral-600 uppercase tracking-[0.2em] pt-2 border-t border-neutral-900/10 inline-block">— Decoded on arrival.</p>
-                </div>
-              </motion.div>
-            </div>
-
             {/* Garment Intelligence */}
-            <div className="py-6 space-y-5">
+            <div className="py-2 space-y-5">
               <div className="flex items-center gap-3">
                 <div className="h-px flex-1 bg-neutral-900" />
                 <h3 className="text-[10px] font-bold uppercase tracking-[0.32em] text-neutral-500">Garment Intelligence</h3>
@@ -1496,7 +1467,7 @@ const ProductDetail: React.FC = () => {
                   <h3 className="text-[11px] font-bold uppercase tracking-[0.3em] text-accent">Product Details</h3>
                   <button
                     onClick={() => setIsDescOpen(true)}
-                    className="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-500 transition-colors hover:text-white"
+                    className="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-500 transition-colors hover:text-white cursor-pointer"
                   >
                     Full Intel
                   </button>
@@ -1555,6 +1526,34 @@ const ProductDetail: React.FC = () => {
                   </div>
                 </div>
               </div>
+            </div>
+
+            {/* Precision Metrics */}
+            <div className="flex gap-12 py-4 border-t border-b border-neutral-900/50">
+              <div>
+                <p className="text-[9px] tracking-[0.2em] font-bold uppercase text-neutral-500 mb-1">Signals Deployed</p>
+                <p className="text-xl font-display font-bold tracking-tighter text-accent">
+                  {product.totalSales || 0}
+                </p>
+              </div>
+            </div>
+
+            {/* Signal Protocol */}
+            <div className="py-4 border-b border-neutral-900/50">
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1.2, ease: "easeOut" }}
+                viewport={{ once: true }}
+              >
+                <h3 className="text-[11px] tracking-[0.3em] font-bold uppercase mb-4 text-accent">Signal Protocol</h3>
+                <div className="space-y-4 text-neutral-500 text-[12px] leading-relaxed tracking-wide font-light">
+                  <p className="text-neutral-200">Each piece carries a coded message.</p>
+                  <p>Your signal is not selected. It is assigned.</p>
+                  <p>At dispatch, the system embeds a unique output into your garment. No two drops are identical.</p>
+                  <p className="text-[10px] text-neutral-600 uppercase tracking-[0.2em] pt-2 border-t border-neutral-900/10 inline-block">— Decoded on arrival.</p>
+                </div>
+              </motion.div>
             </div>
           </div>
         </div>
