@@ -3,13 +3,11 @@
  * Customer Dispatched Order Email — Chils & Co.
  *
  * Drop this file at:
- * yourtheme/woocommerce/emails/customer-dispatched.php
- * (or customer-dispatched-order.php depending on the plugin)
+ * yourtheme/woocommerce/emails/customer-dispatched-order.php
+ * (or reference it inside your custom email class hook)
  *
- * Same fix as processing email — removed:
- *   use Automattic\WooCommerce\Utilities\FeaturesUtil;
- * That line causes a fatal PHP error when included inside WooCommerce's
- * email dispatcher and silently prevents the email from sending.
+ * Removed: use Automattic\WooCommerce\Utilities\FeaturesUtil;
+ * (prevents fatal PHP errors inside WooCommerce's email dispatcher)
  *
  * @package WooCommerce\Templates\Emails
  * @version 10.4.0
@@ -19,10 +17,20 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// Safety guard for order object (crucial for admin email previews)
+if ( ! isset( $order ) || ! is_a( $order, 'WC_Order' ) ) {
+	$recent_orders = wc_get_orders( array( 'limit' => 1 ) );
+	if ( ! empty( $recent_orders ) ) {
+		$order = $recent_orders[0];
+	} else {
+		return;
+	}
+}
+
 /*
  * ── BLOCK "WooCommerce Print Invoice & Delivery Note" plugin links ──────────
  * Removes Invoice, Receipt, Packing Slip and Delivery Note links that the
- * plugin injects into all three email hooks below.
+ * plugin injects into email hooks.
  */
 add_action( 'woocommerce_email_order_details',    'chilsco_remove_print_links_dispatched', 1 );
 add_action( 'woocommerce_email_order_meta',       'chilsco_remove_print_links_dispatched', 1 );
@@ -30,7 +38,7 @@ add_action( 'woocommerce_email_customer_details', 'chilsco_remove_print_links_di
 
 if ( ! function_exists( 'chilsco_remove_print_links_dispatched' ) ) {
 	function chilsco_remove_print_links_dispatched() {
-		$classes = array( 'WooCommerce_PDF_IPS_Main', 'WPO_WCPDF', 'WPO_WCPDF_Email', 'WCPDF_Main' );
+		$classes = array( 'WooCommerce_PDF_IPS_Main', 'WPO_WCPDF', 'WCPDF_Main' );
 		$methods = array( 'add_order_document_links', 'email_order_details_links', 'add_pdf_link_to_email' );
 		foreach ( $classes as $class ) {
 			if ( ! class_exists( $class ) ) {
@@ -154,7 +162,7 @@ $first_name = $order->get_billing_first_name();
       <div style="background:#080808;border:1px solid #1a1a1a;border-top:none;padding:28px;margin:0 auto 12px;max-width:360px;">
 
         <div style="color:#C5A048;font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:18px;">
-          Items Ordered
+          In-Transit Items
         </div>
 
         <?php
@@ -206,7 +214,7 @@ $first_name = $order->get_billing_first_name();
       <!-- ── CTA BUTTON ─────────────────────────────────── -->
       <a href="<?php echo esc_url( $order->get_view_order_url() ); ?>"
          style="display:inline-block;background:#C5A048;color:#000000;text-decoration:none;padding:18px 42px;font-size:12px;font-weight:800;letter-spacing:3px;text-transform:uppercase;">
-        VIEW YOUR ORDER →
+        TRACK / VIEW ORDER →
       </a>
 
       <!-- ── PERSONAL SIGN-OFF ──────────────────────────── -->

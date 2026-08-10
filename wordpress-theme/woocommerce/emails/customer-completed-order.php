@@ -5,10 +5,8 @@
  * Drop this file at:
  * yourtheme/woocommerce/emails/customer-completed-order.php
  *
- * Same fix as processing email — removed:
- *   use Automattic\WooCommerce\Utilities\FeaturesUtil;
- * That line causes a fatal PHP error when included inside WooCommerce's
- * email dispatcher and silently prevents the email from sending.
+ * Removed: use Automattic\WooCommerce\Utilities\FeaturesUtil;
+ * (prevents fatal PHP errors inside WooCommerce's email dispatcher)
  *
  * @package WooCommerce\Templates\Emails
  * @version 10.4.0
@@ -16,6 +14,16 @@
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
+}
+
+// Safety guard for order object (crucial for admin email previews)
+if ( ! isset( $order ) || ! is_a( $order, 'WC_Order' ) ) {
+	$recent_orders = wc_get_orders( array( 'limit' => 1 ) );
+	if ( ! empty( $recent_orders ) ) {
+		$order = $recent_orders[0];
+	} else {
+		return;
+	}
 }
 
 /*
@@ -29,7 +37,7 @@ add_action( 'woocommerce_email_customer_details', 'chilsco_remove_print_links_co
 
 if ( ! function_exists( 'chilsco_remove_print_links_completed' ) ) {
 	function chilsco_remove_print_links_completed() {
-		$classes = array( 'WooCommerce_PDF_IPS_Main', 'WPO_WCPDF', 'WPO_WCPDF_Email', 'WCPDF_Main' );
+		$classes = array( 'WooCommerce_PDF_IPS_Main', 'WPO_WCPDF', 'WCPDF_Main' );
 		$methods = array( 'add_order_document_links', 'email_order_details_links', 'add_pdf_link_to_email' );
 		foreach ( $classes as $class ) {
 			if ( ! class_exists( $class ) ) {
@@ -48,43 +56,10 @@ if ( ! function_exists( 'chilsco_remove_print_links_completed' ) ) {
 do_action( 'woocommerce_email_header', $email_heading, $email );
 
 $first_name = $order->get_billing_first_name();
-
-// ── CUSTOM LOGIC FOR PICKUP VS DELIVERY ─────────────────────────────────────
-$shipping_methods = $order->get_shipping_methods();
-$is_pickup        = false;
-
-foreach ( $shipping_methods as $shipping_method ) {
-	if ( 'local_pickup' === $shipping_method->get_method_id() ) {
-		$is_pickup = true;
-		break;
-	}
-}
-
-// Fallback to metadata check
-if ( ! $is_pickup ) {
-	$delivery_method = $order->get_meta( 'Delivery Method' );
-	if ( 'Collect in Store' === $delivery_method ) {
-		$is_pickup = true;
-	}
-}
-
-if ( $is_pickup ) {
-	$badge_text    = 'Collected';
-	$headline_sub  = 'Order Collected';
-	$headline_main = 'Thanks for stopping by.';
-	$desc_text     = 'Your order has been collected in store.<br>We hope you enjoy your new gear! Wear it well — you earned it.<br><br>Here\'s a summary of what you collected.';
-	$footer_text   = 'Order Collected.';
-} else {
-	$badge_text    = 'Delivered';
-	$headline_sub  = 'Order Delivered';
-	$headline_main = 'It has arrived.';
-	$desc_text     = 'Your order has been successfully delivered.<br>We hope you enjoy your new gear! Wear it well — you earned it.<br><br>Here\'s a summary of what was delivered.';
-	$footer_text   = 'Order Delivered.';
-}
 ?>
 
 <!-- ═══════════════════════════════════════════════════════
-     CHILS & CO. — COMPLETED ORDER EMAIL (DYNAMIC)
+     CHILS & CO. — COMPLETED ORDER EMAIL
 ════════════════════════════════════════════════════════════ -->
 <div style="background:#000000;padding:40px 20px;">
   <div style="max-width:600px;margin:0 auto;background:#000000;border:1px solid #111111;">
@@ -103,11 +78,11 @@ if ( $is_pickup ) {
     <div style="padding:10px 40px 10px;text-align:center;">
 
       <div style="color:#C5A048;font-size:12px;font-weight:bold;letter-spacing:4px;text-transform:uppercase;margin-bottom:15px;">
-        <?php echo esc_html( $headline_sub ); ?>
+        Order Delivered
       </div>
 
       <div style="font-size:32px;font-weight:700;color:#ffffff;margin-bottom:24px;">
-        <?php echo esc_html( $headline_main ); ?>
+        It's all yours.
       </div>
 
       <div style="color:#b3b3b3;font-size:16px;line-height:1.9;max-width:420px;margin:0 auto 35px;">
@@ -117,7 +92,10 @@ if ( $is_pickup ) {
           Hey,
         <?php endif; ?>
         <br><br>
-        <?php echo wp_kses_post( $desc_text ); ?>
+        Your order has officially been delivered and completed. 
+        Wear it well — you earned it.
+        <br><br>
+        Here is a summary of your delivered items.
       </div>
 
       <!-- ── ORDER IDENTITY BOX ────────────────────────── -->
@@ -152,7 +130,7 @@ if ( $is_pickup ) {
           <tr>
             <td style="color:#7a7a7a;font-size:11px;letter-spacing:2px;text-transform:uppercase;">Status</td>
             <td align="right" style="font-size:11px;font-weight:800;color:#C5A048;letter-spacing:2px;text-transform:uppercase;">
-              <?php echo esc_html( $badge_text ); ?>
+              Completed
             </td>
           </tr>
         </table>
@@ -179,11 +157,11 @@ if ( $is_pickup ) {
 
       </div><!-- /Order Identity box -->
 
-      <!-- ── ITEMS ORDERED BOX ──────────────────────────── -->
+      <!-- ── ITEMS DELIVERED BOX ────────────────────────── -->
       <div style="background:#080808;border:1px solid #1a1a1a;border-top:none;padding:28px;margin:0 auto 12px;max-width:360px;">
 
         <div style="color:#C5A048;font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:18px;">
-          Items Ordered
+          Delivered Items
         </div>
 
         <?php
@@ -216,11 +194,11 @@ if ( $is_pickup ) {
       </div><!-- /Items box -->
 
       <!-- ── SHIPPING ADDRESS BOX ───────────────────────── -->
-      <?php if ( ! $is_pickup && $order->get_shipping_address_1() ) : ?>
+      <?php if ( $order->get_shipping_address_1() ) : ?>
       <div style="background:#080808;border:1px solid #1a1a1a;border-top:none;padding:28px;margin:0 auto 35px;max-width:360px;text-align:left;">
 
         <div style="color:#C5A048;font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:14px;">
-          Shipping To
+          Delivered To
         </div>
 
         <div style="color:#b3b3b3;font-size:13px;line-height:1.8;">
@@ -240,7 +218,7 @@ if ( $is_pickup ) {
 
       <!-- ── PERSONAL SIGN-OFF ──────────────────────────── -->
       <div style="margin-top:40px;color:#7a7a7a;font-size:13px;line-height:1.8;">
-        If anything doesn't look right, just reply to this email.<br>
+        If anything isn't right with your delivery, just reply to this email.<br>
         A real person from Chils & Co. will get back to you.
       </div>
 
@@ -255,7 +233,7 @@ if ( $is_pickup ) {
     <!-- ── FOOTER ─────────────────────────────────────── -->
     <div style="border-top:1px solid #111111;background:#050505;padding:40px 20px;text-align:center;">
       <div style="color:#555555;font-size:11px;letter-spacing:2px;text-transform:uppercase;">
-        <?php echo esc_html( $footer_text ); ?>
+        Order Completed.
       </div>
       <div style="color:#333333;font-size:10px;margin-top:12px;">
         © CHILS & CO.

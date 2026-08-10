@@ -454,17 +454,34 @@ async function startServer() {
       return name === "size" || name === "pa_size" || name === "sizes" || name === "pa_sizes";
     });
     const parentSizes = (matchedSizeAttr?.options || []).map(decodeEntities);
+    const categoryList = categories.map((c) => decodeEntities(c.name || "")).filter(Boolean);
+    const matchedFitAttr = attributes.find((a) => {
+      const name = (a.name || "").toLowerCase();
+      const slug = (a.slug || "").toLowerCase();
+      return name === "fit" || name === "pa_fit" || slug === "pa_fit" || slug === "fit" || name === "fitting" || name === "pa_fitting";
+    });
+    const attrFitOption = matchedFitAttr?.options?.[0] ? decodeEntities(matchedFitAttr.options[0]).trim() : null;
+    const categoryFitMatch = categoryList.find((cat) => {
+      const lower = cat.toLowerCase();
+      return lower.includes("drop shoulder") || lower.includes("oversized") || lower.includes("oversize") || lower.includes("regular fit") || lower.includes("relaxed fit") || lower.includes("slim fit") || lower.includes("boxy fit") || lower.includes("standard fit") || lower.includes("custom fit") || lower.endsWith(" fit");
+    });
+    let resolvedFit = attrFitOption || categoryFitMatch || "Regular Fit";
+    if (resolvedFit.toLowerCase().includes("drop shoulder") || resolvedFit.toLowerCase().includes("oversiz")) {
+      resolvedFit = "Drop Shoulder / Oversized";
+    } else if (resolvedFit.toLowerCase().includes("regular fit")) {
+      resolvedFit = "Regular Fit";
+    }
     return {
       id: (wcProduct.id || "").toString(),
       name: decodeEntities(wcProduct.name || "Unknown Product"),
       category: decodeEntities(categories[0]?.name || "Uncategorized"),
-      categories: categories.map((c) => decodeEntities(c.name || "")).filter(Boolean),
+      categories: categoryList,
       price: parseFloat(wcProduct.price || "0"),
       description: longDescription || shortDescription,
       shortDescription: shortDescription || longDescription,
       concept: attributes.find((a) => a.name?.toLowerCase() === "concept")?.options?.[0] || "A precise exploration of form and function.",
       material: attributes.find((a) => a.name?.toLowerCase() === "material")?.options?.[0] || "Premium technical fabric.",
-      fit: attributes.find((a) => a.name?.toLowerCase() === "fit")?.options?.[0] || "Regular fit.",
+      fit: resolvedFit,
       care: attributes.find((a) => a.name?.toLowerCase() === "care")?.options?.[0] || "Machine wash cold.",
       images: images.map((img) => {
         const src = img.src;
