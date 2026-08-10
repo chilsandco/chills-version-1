@@ -1488,44 +1488,6 @@ const ProductDetail: React.FC = () => {
                   </div>
                 )}
               </div>
-
-              {/* Reversal Protocol */}
-              <div className="border border-neutral-900 bg-black p-5 space-y-4">
-                <div className="flex items-center justify-between gap-4">
-                  <h3 className="text-[11px] font-bold uppercase tracking-[0.3em] text-accent flex items-center gap-2">
-                    <RotateCcw size={13} />
-                    Reversal Protocol
-                  </h3>
-                  <Link 
-                    to="/returns-refunds" 
-                    className="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-500 transition-colors hover:text-white flex items-center gap-1"
-                  >
-                    Policy Intel <ExternalLink size={10} />
-                  </Link>
-                </div>
-                <div className="space-y-3 text-[12px] font-light leading-relaxed tracking-wide text-neutral-400">
-                  <p>
-                    Every garment is eligible for a refund or size exchange within <strong className="text-white">7 days of delivery</strong>.
-                  </p>
-                  <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-mono pt-1">
-                    How to execute a return:
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                    <div className="p-3 bg-neutral-950 border border-neutral-900">
-                      <span className="text-[9px] font-mono text-accent block mb-1">01 / ARCHIVE</span>
-                      <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-normal">Go to your Orders Archive console.</p>
-                    </div>
-                    <div className="p-3 bg-neutral-950 border border-neutral-900">
-                      <span className="text-[9px] font-mono text-accent block mb-1">02 / TRANSMISSION</span>
-                      <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-normal">Select the delivered order signal.</p>
-                    </div>
-                    <div className="p-3 bg-neutral-950 border border-neutral-900">
-                      <span className="text-[9px] font-mono text-accent block mb-1">03 / INITIATE</span>
-                      <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-normal">Click "Initiate Reversal" to request.</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
 
             {/* Precision Metrics */}
@@ -1554,6 +1516,44 @@ const ProductDetail: React.FC = () => {
                   <p className="text-[10px] text-neutral-600 uppercase tracking-[0.2em] pt-2 border-t border-neutral-900/10 inline-block">— Decoded on arrival.</p>
                 </div>
               </motion.div>
+            </div>
+
+            {/* Reversal Protocol */}
+            <div className="border border-neutral-900 bg-black p-5 space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <h3 className="text-[11px] font-bold uppercase tracking-[0.3em] text-accent flex items-center gap-2">
+                  <RotateCcw size={13} />
+                  Reversal Protocol
+                </h3>
+                <Link 
+                  to="/returns-refunds" 
+                  className="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-500 transition-colors hover:text-white flex items-center gap-1"
+                >
+                  Policy Intel <ExternalLink size={10} />
+                </Link>
+              </div>
+              <div className="space-y-3 text-[12px] font-light leading-relaxed tracking-wide text-neutral-400">
+                <p>
+                  Every garment is eligible for a refund or size exchange within <strong className="text-white">7 days of delivery</strong>.
+                </p>
+                <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-mono pt-1">
+                  How to execute a return:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                  <div className="p-3 bg-neutral-950 border border-neutral-900">
+                    <span className="text-[9px] font-mono text-accent block mb-1">01 / ARCHIVE</span>
+                    <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-normal">Go to your Orders Archive console.</p>
+                  </div>
+                  <div className="p-3 bg-neutral-950 border border-neutral-900">
+                    <span className="text-[9px] font-mono text-accent block mb-1">02 / TRANSMISSION</span>
+                    <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-normal">Select the delivered order signal.</p>
+                  </div>
+                  <div className="p-3 bg-neutral-950 border border-neutral-900">
+                    <span className="text-[9px] font-mono text-accent block mb-1">03 / INITIATE</span>
+                    <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-normal">Click "Initiate Reversal" to request.</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
