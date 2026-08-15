@@ -6,7 +6,7 @@ import {
   Settings, CheckCircle2, AlertTriangle, Package, Tag, Globe, Truck, List, Edit3, CheckSquare, Square
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import writeXlsxFile from 'write-excel-file';
+
 
 interface Product {
   id: string;
@@ -215,7 +215,6 @@ const AmazonConsole: React.FC = () => {
 
   // Compile spreadsheet rows & columns matching Amazon Seller Apparel flat file (Handles both Single & Bulk)
   const handleExport = async (targetProducts: Product[]) => {
-    // Filter to only export products that have enriched data
     const exportable = targetProducts.filter(p => !!enrichedData[p.id]);
 
     if (exportable.length === 0) {
@@ -223,199 +222,45 @@ const AmazonConsole: React.FC = () => {
       return;
     }
 
-    const brand = globalSettings?.amazonBrandName || 'CHILS & CO.';
-    const manufacturer = globalSettings?.amazonManufacturer || 'CHILS & CO.';
-    const origin = globalSettings?.amazonOriginCountry || 'India';
-    const fulfillment = globalSettings?.amazonFulfillmentChannel || 'Merchant Fulfilled';
-    const handling = globalSettings?.amazonHandlingTime || '5';
-    const pkgLength = globalSettings?.amazonDefaultPkgLength || '35';
-    const pkgWidth = globalSettings?.amazonDefaultPkgWidth || '25';
-    const pkgHeight = globalSettings?.amazonDefaultPkgHeight || '5';
-    const pkgWeight = globalSettings?.amazonDefaultPkgWeight || '500';
-    const importer = globalSettings?.amazonImporterContact || '';
-    const packer = globalSettings?.amazonPackerContact || '';
-
-    const schema = [
-      { column: 'Feed Product Type', type: String, value: (r: any) => r.feed_product_type, width: 15 },
-      { column: 'Seller SKU', type: String, value: (r: any) => r.item_sku, width: 20 },
-      { column: 'Brand Name', type: String, value: (r: any) => r.brand_name, width: 15 },
-      { column: 'Item Name', type: String, value: (r: any) => r.item_name, width: 45 },
-      { column: 'Update Delete', type: String, value: (r: any) => r.update_delete, width: 12 },
-      { column: 'Product Description', type: String, value: (r: any) => r.product_description, width: 40 },
-      { column: 'Standard Price', type: Number, value: (r: any) => r.standard_price, width: 12 },
-      { column: 'Quantity', type: Number, value: (r: any) => r.quantity, width: 10 },
-      { column: 'Part Number', type: String, value: (r: any) => r.part_number, width: 20 },
-      { column: 'Manufacturer', type: String, value: (r: any) => r.manufacturer, width: 15 },
-      { column: 'Model Name', type: String, value: (r: any) => r.model_name, width: 15 },
-      { column: 'Bullet Point 1', type: String, value: (r: any) => r.bullet_point1, width: 35 },
-      { column: 'Bullet Point 2', type: String, value: (r: any) => r.bullet_point2, width: 35 },
-      { column: 'Bullet Point 3', type: String, value: (r: any) => r.bullet_point3, width: 35 },
-      { column: 'Bullet Point 4', type: String, value: (r: any) => r.bullet_point4, width: 35 },
-      { column: 'Bullet Point 5', type: String, value: (r: any) => r.bullet_point5, width: 35 },
-      { column: 'Search Terms', type: String, value: (r: any) => r.generic_keywords, width: 35 },
-      { column: 'Parentage', type: String, value: (r: any) => r.parentage, width: 10 },
-      { column: 'Parent SKU', type: String, value: (r: any) => r.parent_sku, width: 20 },
-      { column: 'Relationship Type', type: String, value: (r: any) => r.relationship_type, width: 15 },
-      { column: 'Variation Theme', type: String, value: (r: any) => r.variation_theme, width: 15 },
-      { column: 'Color Name', type: String, value: (r: any) => r.color_name, width: 15 },
-      { column: 'Color Map', type: String, value: (r: any) => r.color_map, width: 15 },
-      { column: 'Size Name', type: String, value: (r: any) => r.size_name, width: 10 },
-      { column: 'Size Map', type: String, value: (r: any) => r.size_map, width: 10 },
-      { column: 'Fabric Type', type: String, value: (r: any) => r.fabric_type, width: 15 },
-      { column: 'Material Composition', type: String, value: (r: any) => r.material_composition, width: 15 },
-      { column: 'Care Instructions', type: String, value: (r: any) => r.care_instructions, width: 15 },
-      { column: 'Sleeve Length Description', type: String, value: (r: any) => r.sleeve_length_description, width: 15 },
-      { column: 'Closure Type', type: String, value: (r: any) => r.closure_type, width: 15 },
-      { column: 'Apparel Fabric Weight Class', type: String, value: (r: any) => r.apparel_fabric_weight_class, width: 15 },
-      { column: 'Garment Size Country', type: String, value: (r: any) => r.garment_size_country, width: 15 },
-      { column: 'Shoulder to Bottom Hem Length', type: Number, value: (r: any) => r.shoulder_to_bottom_hem_length, width: 12 },
-      { column: 'Shoulder to Bottom Hem Length Unit', type: String, value: (r: any) => r.shoulder_to_bottom_hem_length_unit, width: 12 },
-      { column: 'Apparel Fabric Stretch', type: String, value: (r: any) => r.apparel_fabric_stretch, width: 15 },
-      { column: 'Fit to Size Sentiment', type: String, value: (r: any) => r.fit_to_size_sentiment, width: 15 },
-      { column: 'Item Weight', type: Number, value: (r: any) => r.item_weight, width: 12 },
-      { column: 'Item Weight Unit', type: String, value: (r: any) => r.item_weight_unit, width: 12 },
-      { column: 'Country of Origin', type: String, value: (r: any) => r.country_of_origin, width: 15 },
-      { column: 'Importer Address', type: String, value: (r: any) => r.importer_address, width: 35 },
-      { column: 'Packer Address', type: String, value: (r: any) => r.packer_address, width: 35 },
-      { column: 'Fulfillment Channel', type: String, value: (r: any) => r.fulfillment_channel, width: 15 },
-      { column: 'Handling Time', type: Number, value: (r: any) => r.handling_time, width: 12 },
-      { column: 'Package Length', type: Number, value: (r: any) => r.package_length, width: 12 },
-      { column: 'Package Width', type: Number, value: (r: any) => r.package_width, width: 12 },
-      { column: 'Package Height', type: Number, value: (r: any) => r.package_height, width: 12 },
-      { column: 'Package Weight', type: Number, value: (r: any) => r.package_weight, width: 12 },
-    ];
-
-    const rows: any[] = [];
-
-    exportable.forEach(product => {
-      const data = enrichedData[product.id];
-      const parentSku = `P-${product.id}`;
-
-      // 1. Create Parent Row
-      rows.push({
-        feed_product_type: 'apparel',
-        item_sku: parentSku,
-        brand_name: brand,
-        item_name: product.name,
-        update_delete: 'Update',
-        product_description: product.description,
-        standard_price: null,
-        quantity: null,
-        part_number: parentSku,
-        manufacturer: manufacturer,
-        model_name: data.modelName,
-        bullet_point1: data.bulletPoints[0] || '',
-        bullet_point2: data.bulletPoints[1] || '',
-        bullet_point3: data.bulletPoints[2] || '',
-        bullet_point4: data.bulletPoints[3] || '',
-        bullet_point5: data.bulletPoints[4] || '',
-        generic_keywords: data.genericKeywords,
-        parentage: 'parent',
-        parent_sku: '',
-        relationship_type: '',
-        variation_theme: 'SizeColor',
-        color_name: '',
-        color_map: '',
-        size_name: '',
-        size_map: '',
-        fabric_type: data.apparelFabricWeightClass === 'Heavyweight' ? 'French Terry' : 'Cotton Knit',
-        material_composition: product.material || '100% Cotton',
-        care_instructions: product.care || 'Machine Wash',
-        sleeve_length_description: data.sleeveLengthDescription,
-        closure_type: data.closureType,
-        apparel_fabric_weight_class: data.apparelFabricWeightClass,
-        garment_size_country: 'India',
-        shoulder_to_bottom_hem_length: 70,
-        shoulder_to_bottom_hem_length_unit: 'Centimentres',
-        apparel_fabric_stretch: data.apparelFabricStretch,
-        fit_to_size_sentiment: data.fitToSizeSentiment,
-        item_weight: data.itemWeightGrams,
-        item_weight_unit: 'Grams',
-        country_of_origin: origin,
-        importer_address: importer,
-        packer_address: packer,
-        fulfillment_channel: fulfillment,
-        handling_time: parseInt(handling, 10),
-        package_length: parseInt(pkgLength, 10),
-        package_width: parseInt(pkgWidth, 10),
-        package_height: parseInt(pkgHeight, 10),
-        package_weight: parseInt(pkgWeight, 10),
-      });
-
-      // 2. Create Child Rows for Variations
-      if (product.variations && product.variations.length > 0) {
-        product.variations.forEach(v => {
-          const color = v.attributes.color || 'Oversized';
-          const size = v.attributes.size || 'Regular';
-          const childSku = `C-${product.id}-${color.replace(/\s+/g, '')}-${size}`;
-          const mappedColor = data.colorMap[color] || 'Multicolour';
-
-          rows.push({
-            feed_product_type: 'apparel',
-            item_sku: childSku,
-            brand_name: brand,
-            item_name: `${product.name} (Color: ${color}, Size: ${size})`,
-            update_delete: 'Update',
-            product_description: product.description,
-            standard_price: v.price || product.price,
-            quantity: v.stockQuantity,
-            part_number: childSku,
-            manufacturer: manufacturer,
-            model_name: data.modelName,
-            bullet_point1: data.bulletPoints[0] || '',
-            bullet_point2: data.bulletPoints[1] || '',
-            bullet_point3: data.bulletPoints[2] || '',
-            bullet_point4: data.bulletPoints[3] || '',
-            bullet_point5: data.bulletPoints[4] || '',
-            generic_keywords: data.genericKeywords,
-            parentage: 'child',
-            parent_sku: parentSku,
-            relationship_type: 'Variation',
-            variation_theme: 'SizeColor',
-            color_name: color,
-            color_map: mappedColor,
-            size_name: size,
-            size_map: size,
-            fabric_type: data.apparelFabricWeightClass === 'Heavyweight' ? 'French Terry' : 'Cotton Knit',
-            material_composition: product.material || '100% Cotton',
-            care_instructions: product.care || 'Machine Wash',
-            sleeve_length_description: data.sleeveLengthDescription,
-            closure_type: data.closureType,
-            apparel_fabric_weight_class: data.apparelFabricWeightClass,
-            garment_size_country: 'India',
-            shoulder_to_bottom_hem_length: 70,
-            shoulder_to_bottom_hem_length_unit: 'Centimentres',
-            apparel_fabric_stretch: data.apparelFabricStretch,
-            fit_to_size_sentiment: data.fitToSizeSentiment,
-            item_weight: data.itemWeightGrams,
-            item_weight_unit: 'Grams',
-            country_of_origin: origin,
-            importer_address: importer,
-            packer_address: packer,
-            fulfillment_channel: fulfillment,
-            handling_time: parseInt(handling, 10),
-            package_length: parseInt(pkgLength, 10),
-            package_width: parseInt(pkgWidth, 10),
-            package_height: parseInt(pkgHeight, 10),
-            package_weight: parseInt(pkgWeight, 10),
-          });
-        });
-      }
-    });
+    showNotification('success', 'Generating macro-enabled Amazon Product Spreadsheet...');
 
     try {
-      const fileName = exportable.length === 1 
-        ? `Amazon_Listing_Feed_${exportable[0].name.replace(/\s+/g, '_')}.xlsx`
-        : `Amazon_Bulk_Listing_Feed_${new Date().toISOString().split('T')[0]}.xlsx`;
-
-      await writeXlsxFile(rows, {
-        schema,
-        fileName,
+      const res = await fetch('/api/amazon/export', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          products: exportable,
+          enrichedData
+        })
       });
-      showNotification('success', `Spreadsheet generated with ${rows.length} rows (parents + variations).`);
-    } catch (err) {
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ message: 'Spreadsheet export failed on server.' }));
+        throw new Error(errorData.message || 'Export failed on server.');
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      const fileName = exportable.length === 1 
+        ? `Amazon_Listing_Feed_${exportable[0].name.replace(/\s+/g, '_')}.xlsm`
+        : `Amazon_Bulk_Listing_Feed_${new Date().toISOString().split('T')[0]}.xlsm`;
+
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      showNotification('success', 'Spreadsheet downloaded successfully!');
+    } catch (err: any) {
       console.error(err);
-      showNotification('error', 'Spreadsheet export failed.');
+      showNotification('error', err.message || 'Spreadsheet export failed.');
     }
   };
 
