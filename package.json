@@ -41,7 +41,8 @@
     "tailwind-merge": "^3.5.0",
     "use-places-autocomplete": "^4.0.1",
     "vite": "^6.4.1",
-    "write-excel-file": "^1.4.27"
+    "write-excel-file": "^1.4.27",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",
