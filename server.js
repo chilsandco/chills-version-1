@@ -3348,8 +3348,8 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       if (!fs.existsSync(templatePath)) {
         return res.status(500).json({ message: "Amazon blank template file is missing on the server." });
       }
-      console.log(`[AMAZON EXPORT] Loading workbook template natively via SheetJS...`);
-      const XLSX = await import("xlsx");
+      const XLSXModule = await import("xlsx");
+      const XLSX = XLSXModule.default || XLSXModule;
       const wb = XLSX.readFile(templatePath, { bookVBA: true });
       const sheetName = wb.SheetNames.find((name) => name.toLowerCase() === "template") || wb.SheetNames[0];
       const ws = wb.Sheets[sheetName];
