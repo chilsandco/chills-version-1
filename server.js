@@ -3280,29 +3280,30 @@ You must return a single JSON object with the following fields:
 
 Format your response strictly as a single JSON object. Ensure the keys and values match the requested schema exactly.
 `;
-      console.log(`[AMAZON ENRICH] Dispatching direct HTTP POST to v1beta/interactions...`);
+      console.log(`[AMAZON ENRICH] Dispatching direct HTTP POST to stable generateContent API...`);
       const apiRes = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/interactions?key=${geminiKey2}`,
+        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey2}`,
         {
-          model: "gemini-3.5-flash",
-          input: prompt
+          contents: [
+            {
+              parts: [
+                {
+                  text: prompt
+                }
+              ]
+            }
+          ],
+          generationConfig: {
+            responseMimeType: "application/json"
+          }
         },
         {
           headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": geminiKey2
+            "Content-Type": "application/json"
           }
         }
       );
-      const extractOutputText = (body) => {
-        if (!body || !Array.isArray(body.steps)) return "{}";
-        const modelOutputs = body.steps.filter((step) => step.type === "model_output");
-        if (modelOutputs.length === 0) return "{}";
-        const lastOutput = modelOutputs[modelOutputs.length - 1];
-        if (!Array.isArray(lastOutput.content)) return "{}";
-        return lastOutput.content.filter((item) => item.type === "text").map((item) => item.text).join("");
-      };
-      const responseText = extractOutputText(apiRes.data);
+      const responseText = apiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
       let cleanJson = responseText.trim();
       if (cleanJson.startsWith("```")) {
         cleanJson = cleanJson.replace(/^```[a-zA-Z]*\n/, "");
