@@ -3240,8 +3240,8 @@ Reason: ${reason}`;
       if (!productId) {
         return res.status(400).json({ message: "Product ID is required." });
       }
-      const geminiKey = process.env.GEMINI_API_KEY;
-      if (!geminiKey) {
+      const geminiKey2 = process.env.GEMINI_API_KEY;
+      if (!geminiKey2) {
         return res.status(400).json({ message: "GEMINI_API_KEY is not configured in system environment variables." });
       }
       const wc = getWooCommerce();
@@ -3282,7 +3282,7 @@ Format your response strictly as a single JSON object. Ensure the keys and value
 `;
       console.log(`[AMAZON ENRICH] Dispatching direct HTTP POST to v1beta/interactions...`);
       const apiRes = await axios.post(
-        `https://generativelanguage.googleapis.com/v1beta/interactions?key=${geminiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/interactions?key=${geminiKey2}`,
         {
           model: "gemini-3.5-flash",
           input: prompt
@@ -3290,7 +3290,7 @@ Format your response strictly as a single JSON object. Ensure the keys and value
         {
           headers: {
             "Content-Type": "application/json",
-            "x-goog-api-key": geminiKey
+            "x-goog-api-key": geminiKey2
           }
         }
       );
@@ -3317,10 +3317,11 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       const errMsg = errObj.error?.message || error.message || "";
       const statusCode = error.response?.status || 500;
       const isRateLimit = statusCode === 429 || errMsg.includes("429") || errMsg.toLowerCase().includes("quota") || errMsg.toLowerCase().includes("rate limit");
+      const keySnippet = geminiKey ? `${geminiKey.substring(0, 6)}...${geminiKey.substring(geminiKey.length - 4)}` : "None";
       if (isRateLimit) {
-        res.status(429).json({ message: errMsg || "Upstream Gemini API rate limit exceeded." });
+        res.status(429).json({ message: `${errMsg} (Using API Key: ${keySnippet})` });
       } else {
-        res.status(statusCode).json({ message: errMsg || "Failed to enrich product details using AI." });
+        res.status(statusCode).json({ message: `${errMsg} (Using API Key: ${keySnippet})` });
       }
     }
   });

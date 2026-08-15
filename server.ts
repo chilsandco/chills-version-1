@@ -3983,10 +3983,12 @@ Format your response strictly as a single JSON object. Ensure the keys and value
                           errMsg.toLowerCase().includes("quota") ||
                           errMsg.toLowerCase().includes("rate limit");
       
+      const keySnippet = geminiKey ? `${geminiKey.substring(0, 6)}...${geminiKey.substring(geminiKey.length - 4)}` : "None";
+      
       if (isRateLimit) {
-        res.status(429).json({ message: errMsg || "Upstream Gemini API rate limit exceeded." });
+        res.status(429).json({ message: `${errMsg} (Using API Key: ${keySnippet})` });
       } else {
-        res.status(statusCode).json({ message: errMsg || "Failed to enrich product details using AI." });
+        res.status(statusCode).json({ message: `${errMsg} (Using API Key: ${keySnippet})` });
       }
     }
   });
