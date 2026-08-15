@@ -2,5 +2,16 @@
   "mobileLink": "+91 7842 07 0404",
   "address": "3rd Floor, Plot No. 38 & 39\nMatrusri Nagar, Miyapur\nHyderabad, Telangana – 500049\nIndia",
   "coordinates": "17.4948, 78.3444",
-  "email": "hello.chilsandco@gmail.com"
+  "email": "hello.chilsandco@gmail.com",
+  "amazonBrandName": "CHILS & CO.",
+  "amazonManufacturer": "CHILS & CO.",
+  "amazonImporterContact": "CHILS & CO., 3rd Floor, Plot No. 38 & 39, Matrusri Nagar, Miyapur, Hyderabad, Telangana – 500049, Contact: +91 7842 07 0404",
+  "amazonPackerContact": "CHILS & CO., 3rd Floor, Plot No. 38 & 39, Matrusri Nagar, Miyapur, Hyderabad, Telangana – 500049, Contact: +91 7842 07 0404",
+  "amazonOriginCountry": "India",
+  "amazonFulfillmentChannel": "Merchant Fulfilled",
+  "amazonHandlingTime": "5",
+  "amazonDefaultPkgLength": "35",
+  "amazonDefaultPkgWidth": "25",
+  "amazonDefaultPkgHeight": "5",
+  "amazonDefaultPkgWeight": "500"
 }

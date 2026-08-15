@@ -161,6 +161,7 @@ const Navbar: React.FC = () => {
 
   const adminLinks = isAdmin ? [
     { name: 'SIGNALS', path: '/console/bespoke' },
+    { name: 'AMAZON', path: '/console/amazon' },
     { name: 'CONFIG', path: '/admin/config' }
   ] : [];
 
@@ -212,7 +213,7 @@ const Navbar: React.FC = () => {
             <Link 
               key={link.name} 
               to={link.path} 
-              className={`text-[11px] tracking-[0.2em] font-medium transition-opacity ${link.name === 'SIGNALS' ? 'text-accent hover:opacity-100' : 'text-neutral-400 hover:text-white'}`}
+              className={`text-[11px] tracking-[0.2em] font-medium transition-opacity ${link.name === 'SIGNALS' || link.name === 'AMAZON' ? 'text-accent hover:opacity-100' : 'text-neutral-400 hover:text-white'}`}
             >
               {link.name}
             </Link>
@@ -346,7 +347,7 @@ const Navbar: React.FC = () => {
                       to={link.path}
                       onClick={() => setIsMenuOpen(false)}
                       className={`block py-3 text-lg font-display font-semibold tracking-[0.2em] transition-all hover:pl-2 ${
-                        link.name === 'SIGNALS' ? 'text-accent font-bold' : 'text-neutral-300 hover:text-accent'
+                        link.name === 'SIGNALS' || link.name === 'AMAZON' ? 'text-accent font-bold' : 'text-neutral-300 hover:text-accent'
                       }`}
                     >
                       {link.name}

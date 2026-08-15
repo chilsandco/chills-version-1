@@ -25,6 +25,7 @@ import Auth from './pages/Auth';
 import Bespoke from './pages/Bespoke';
 import BespokeSignals from './pages/BespokeSignals';
 import AdminConfig from './pages/AdminConfig';
+import AmazonConsole from './pages/AmazonConsole';
 import CoCreator from './pages/CoCreator';
 import SocialVault from './pages/SignalNetwork';
 import CustomStudio from './pages/CustomStudio';
@@ -67,6 +68,7 @@ export default function App() {
                   <Route path="/customize" element={<CustomStudio />} />
                   <Route path="/social-vault" element={<SocialVault />} />
                   <Route path="/console/bespoke" element={<BespokeSignals />} />
+                  <Route path="/console/amazon" element={<AmazonConsole />} />
                   <Route path="/admin/config" element={<AdminConfig />} />
                 </Routes>
               </main>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Save, AlertCircle, CheckCircle2, ArrowLeft, Phone, MapPin, Mail, Navigation } from 'lucide-react';
+import { Save, AlertCircle, CheckCircle2, ArrowLeft, Phone, MapPin, Mail, Navigation, Package, Tag, Globe, Truck } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 
@@ -15,7 +15,18 @@ const AdminConfig: React.FC = () => {
     mobileLink: "",
     address: "",
     coordinates: "",
-    email: ""
+    email: "",
+    amazonBrandName: "",
+    amazonManufacturer: "",
+    amazonImporterContact: "",
+    amazonPackerContact: "",
+    amazonOriginCountry: "",
+    amazonFulfillmentChannel: "",
+    amazonHandlingTime: "",
+    amazonDefaultPkgLength: "",
+    amazonDefaultPkgWidth: "",
+    amazonDefaultPkgHeight: "",
+    amazonDefaultPkgWeight: ""
   });
 
   const adminEmails = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com', 'chilsandco.com@gmail.com'];
@@ -142,6 +153,159 @@ const AdminConfig: React.FC = () => {
                   placeholder="Street\nCity\nState - Zip"
                   className="w-full bg-black border border-neutral-900 p-4 font-mono text-sm focus:border-accent outline-none resize-none h-full"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Amazon Seller Configuration Section */}
+          <div className="border-t border-neutral-900 pt-12">
+            <div className="flex items-center gap-4 mb-8">
+              <div className="w-12 h-12 bg-accent/10 rounded-full flex items-center justify-center">
+                <Package className="text-accent" size={24} />
+              </div>
+              <div>
+                <h2 className="text-2xl font-display font-bold tracking-tighter uppercase">Amazon Seller Configuration</h2>
+                <p className="text-[10px] text-neutral-500 uppercase tracking-[0.3em] mt-1 font-bold">Global Default Attributes & Compliance Nodes</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-12 p-10 bg-neutral-950 border border-neutral-900">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-neutral-500">
+                    <Tag size={12} className="text-accent" /> Amazon Brand Name
+                  </label>
+                  <input 
+                    type="text" 
+                    value={settings.amazonBrandName || ""}
+                    onChange={e => setSettings({...settings, amazonBrandName: e.target.value})}
+                    placeholder="CHILS & CO."
+                    className="w-full bg-black border border-neutral-900 p-4 font-mono text-sm focus:border-accent outline-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-neutral-500">
+                    <Tag size={12} className="text-accent" /> Amazon Manufacturer
+                  </label>
+                  <input 
+                    type="text" 
+                    value={settings.amazonManufacturer || ""}
+                    onChange={e => setSettings({...settings, amazonManufacturer: e.target.value})}
+                    placeholder="CHILS & CO."
+                    className="w-full bg-black border border-neutral-900 p-4 font-mono text-sm focus:border-accent outline-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-neutral-500">
+                    <Globe size={12} className="text-accent" /> Country of Origin
+                  </label>
+                  <input 
+                    type="text" 
+                    value={settings.amazonOriginCountry || ""}
+                    onChange={e => setSettings({...settings, amazonOriginCountry: e.target.value})}
+                    placeholder="India"
+                    className="w-full bg-black border border-neutral-900 p-4 font-mono text-sm focus:border-accent outline-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-neutral-500">
+                    <Truck size={12} className="text-accent" /> Fulfillment Channel
+                  </label>
+                  <select 
+                    value={settings.amazonFulfillmentChannel || "Merchant Fulfilled"}
+                    onChange={e => setSettings({...settings, amazonFulfillmentChannel: e.target.value})}
+                    className="w-full bg-black border border-neutral-900 p-4 font-mono text-sm focus:border-accent outline-none text-white appearance-none"
+                  >
+                    <option value="Merchant Fulfilled">Merchant Fulfilled (Self Ship / Easy Ship)</option>
+                    <option value="Amazon Fulfilled">Fulfilled by Amazon (FBA)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-neutral-500">
+                    <Truck size={12} className="text-accent" /> Handling Time (Days)
+                  </label>
+                  <input 
+                    type="number" 
+                    value={settings.amazonHandlingTime || ""}
+                    onChange={e => setSettings({...settings, amazonHandlingTime: e.target.value})}
+                    placeholder="5"
+                    className="w-full bg-black border border-neutral-900 p-4 font-mono text-sm focus:border-accent outline-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-neutral-500">
+                    <Package size={12} className="text-accent" /> Default Package Weight (Grams)
+                  </label>
+                  <input 
+                    type="number" 
+                    value={settings.amazonDefaultPkgWeight || ""}
+                    onChange={e => setSettings({...settings, amazonDefaultPkgWeight: e.target.value})}
+                    placeholder="500"
+                    className="w-full bg-black border border-neutral-900 p-4 font-mono text-sm focus:border-accent outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-6 flex flex-col justify-between">
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-neutral-500">
+                    <MapPin size={12} className="text-accent" /> Importer Contact Information
+                  </label>
+                  <textarea 
+                    value={settings.amazonImporterContact || ""}
+                    onChange={e => setSettings({...settings, amazonImporterContact: e.target.value})}
+                    rows={3}
+                    placeholder="Importer Name, Address, Contact"
+                    className="w-full bg-black border border-neutral-900 p-4 font-mono text-sm focus:border-accent outline-none resize-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-neutral-500">
+                    <MapPin size={12} className="text-accent" /> Packer Contact Information
+                  </label>
+                  <textarea 
+                    value={settings.amazonPackerContact || ""}
+                    onChange={e => setSettings({...settings, amazonPackerContact: e.target.value})}
+                    rows={3}
+                    placeholder="Packer Name, Address, Contact"
+                    className="w-full bg-black border border-neutral-900 p-4 font-mono text-sm focus:border-accent outline-none resize-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-neutral-500">
+                    <Package size={12} className="text-accent" /> Default Package Dimensions (L x W x H in cm)
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <input 
+                      type="number" 
+                      value={settings.amazonDefaultPkgLength || ""}
+                      onChange={e => setSettings({...settings, amazonDefaultPkgLength: e.target.value})}
+                      placeholder="L (35)"
+                      className="bg-black border border-neutral-900 p-4 font-mono text-sm focus:border-accent outline-none text-center"
+                    />
+                    <input 
+                      type="number" 
+                      value={settings.amazonDefaultPkgWidth || ""}
+                      onChange={e => setSettings({...settings, amazonDefaultPkgWidth: e.target.value})}
+                      placeholder="W (25)"
+                      className="bg-black border border-neutral-900 p-4 font-mono text-sm focus:border-accent outline-none text-center"
+                    />
+                    <input 
+                      type="number" 
+                      value={settings.amazonDefaultPkgHeight || ""}
+                      onChange={e => setSettings({...settings, amazonDefaultPkgHeight: e.target.value})}
+                      placeholder="H (5)"
+                      className="bg-black border border-neutral-900 p-4 font-mono text-sm focus:border-accent outline-none text-center"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
           </div>

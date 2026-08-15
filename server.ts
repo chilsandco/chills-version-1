@@ -12,6 +12,7 @@ import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest, CallbackType } from 'pg-sdk-node';
 import { NextFunction } from 'express';
+import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
@@ -276,7 +277,18 @@ async function startServer() {
     mobileLink: "+91 7842 07 0404",
     address: "3rd Floor, Plot No. 38 & 39\nMatrusri Nagar, Miyapur\nHyderabad, Telangana – 500049\nIndia",
     coordinates: "17.4948, 78.3444",
-    email: "hello.chilsandco@gmail.com"
+    email: "hello.chilsandco@gmail.com",
+    amazonBrandName: "CHILS & CO.",
+    amazonManufacturer: "CHILS & CO.",
+    amazonImporterContact: "CHILS & CO., 3rd Floor, Plot No. 38 & 39, Matrusri Nagar, Miyapur, Hyderabad, Telangana – 500049, Contact: +91 7842 07 0404",
+    amazonPackerContact: "CHILS & CO., 3rd Floor, Plot No. 38 & 39, Matrusri Nagar, Miyapur, Hyderabad, Telangana – 500049, Contact: +91 7842 07 0404",
+    amazonOriginCountry: "India",
+    amazonFulfillmentChannel: "Merchant Fulfilled",
+    amazonHandlingTime: "5",
+    amazonDefaultPkgLength: "35",
+    amazonDefaultPkgWidth: "25",
+    amazonDefaultPkgHeight: "5",
+    amazonDefaultPkgWeight: "500"
   };
 
   app.get("/api/settings", (req, res) => {
@@ -3859,6 +3871,86 @@ async function startServer() {
     } catch (error) {
       console.error("[CHILS & CO.] Settings Update Error:", error);
       res.status(500).json({ message: "Failed to calibrate settings nodes." });
+    }
+  });
+
+  app.post("/api/amazon/enrich", authenticateToken, async (req: any, res) => {
+    try {
+      const adminEmails = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
+      const isAdmin = adminEmails.some(email => email.toLowerCase() === req.user.email.toLowerCase());
+      if (!isAdmin) {
+        return res.status(403).json({ message: "Higher clearance required for catalog sync operations." });
+      }
+
+      const { productId } = req.body;
+      if (!productId) {
+        return res.status(400).json({ message: "Product ID is required." });
+      }
+
+      const geminiKey = process.env.GEMINI_API_KEY;
+      if (!geminiKey) {
+        return res.status(400).json({ message: "GEMINI_API_KEY is not configured in system environment variables." });
+      }
+
+      const wc = getWooCommerce();
+      if (!wc) {
+        return res.status(400).json({ message: "WooCommerce API is not configured." });
+      }
+
+      console.log(`[AMAZON ENRICH] Fetching product #${productId} from WooCommerce...`);
+      const response = await wcSafeCall(wc, "get", `products/${productId}`);
+      const rawProduct = response.data;
+      const swatchesData = await fetchSwatches().catch(() => ({}));
+      const mappedProduct = mapProduct(rawProduct, {}, swatchesData);
+
+      console.log(`[AMAZON ENRICH] Querying Gemini AI to extract attributes for: ${mappedProduct.name}`);
+      const ai = new GoogleGenAI({ apiKey: geminiKey });
+      
+      const prompt = `
+You are an expert e-commerce listing optimizer specializing in Amazon Seller Central listings.
+Analyze the following WooCommerce product details and extract/generate the structured Amazon apparel attributes.
+
+Product Title: ${mappedProduct.name}
+Description: ${mappedProduct.description}
+Short Description: ${mappedProduct.shortDescription}
+Category: ${mappedProduct.category}
+Material: ${mappedProduct.material}
+Fit: ${mappedProduct.fit}
+Care: ${mappedProduct.care}
+
+Your task is to generate the following attributes in JSON format:
+- "bulletPoints": an array of exactly 5 sentences. Each bullet point should highlight a specific feature of the garment in uppercase lead-in format (e.g. "HEAVYWEIGHT FABRIC: Crafted from 240 GSM...").
+- "genericKeywords": a string of search-relevant terms separated by semicolons (e.g. "oversized sweatshirt; graphic hoodies; premium street wear").
+- "modelName": the core model name of the garment (e.g. "Claude Culprit").
+- "collectionName": the collection name (e.g. "Claude Culprit" or "Bespoke").
+- "sleeveLengthDescription": one of ["Long Sleeve", "Short Sleeve", "Sleeveless", "3/4 Sleeve"].
+- "closureType": one of ["Pull-On", "Button", "Zipper", "Drawstring"].
+- "apparelFabricWeightClass": one of ["Heavyweight", "Medium weight", "Lightweight"].
+- "apparelFabricStretch": one of ["Low Stretch", "Non-Stretch", "Medium Stretch", "High Stretch"].
+- "fitToSizeSentiment": one of ["Runs Large", "True to Size", "Runs Small"].
+- "itemWeightGrams": an estimated item weight as an integer (e.g. 450).
+- "colorMap": a mapping object that maps each of the product's raw colors to one of Amazon's standard color maps: ["Black", "Grey", "White", "Blue", "Red", "Green", "Yellow", "Orange", "Pink", "Purple", "Brown", "Beige", "Multicolour"].
+  Raw Colors found in product: ${JSON.stringify(mappedProduct.availableColors || [])}
+
+Format your response strictly as a single JSON object. Ensure the keys and values match the requested schema exactly.
+`;
+
+      const aiResponse = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json'
+        }
+      });
+
+      const responseText = aiResponse.text || aiResponse.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+      const enrichedData = JSON.parse(responseText);
+
+      console.log("[AMAZON ENRICH] Enrichment successful:", enrichedData);
+      res.json({ success: true, product: mappedProduct, enrichedAttributes: enrichedData });
+    } catch (error: any) {
+      console.error("[AMAZON ENRICH] Error:", error.message || error);
+      res.status(500).json({ message: error.message || "Failed to enrich product details using AI." });
     }
   });
 
