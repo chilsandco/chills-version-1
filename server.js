@@ -11,7 +11,6 @@ import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest, CallbackType } from "pg-sdk-node";
-import { GoogleGenAI } from "@google/genai";
 dotenv.config();
 var IS_PROD = process.env.NODE_ENV === "production";
 var JWT_SECRET = process.env.JWT_SECRET || "X1jtvpOK_J<.x%yEe3pm^pGN6!BwN_TLv@ibyA4Ix)3$+IA8I@=^G-5BRRqB9H_M";
@@ -3255,24 +3254,21 @@ Reason: ${reason}`;
       const swatchesData = await fetchSwatches().catch(() => ({}));
       const mappedProduct = mapProduct(rawProduct, {}, swatchesData);
       console.log(`[AMAZON ENRICH] Querying Gemini AI to extract attributes for: ${mappedProduct.name}`);
-      const ai = new GoogleGenAI({ apiKey: geminiKey });
-      const prompt = `
-You are an expert e-commerce listing optimizer specializing in Amazon Seller Central listings.
-Analyze the following WooCommerce product details and extract/generate the structured Amazon apparel attributes.
+      const prompt = `You are an expert system that extracts and optimizes e-commerce product listings for Amazon Seller Central inventory feeds.
+Your task is to analyze the following product catalog details (WooCommerce source) and generate standard Amazon listing specifications matching the exact JSON schema defined below.
 
-Product Title: ${mappedProduct.name}
-Description: ${mappedProduct.description}
-Short Description: ${mappedProduct.shortDescription}
-Category: ${mappedProduct.category}
-Material: ${mappedProduct.material}
-Fit: ${mappedProduct.fit}
-Care: ${mappedProduct.care}
+Source Product Details:
+- WooCommerce Title: "${mappedProduct.name}"
+- WooCommerce Categories: ${JSON.stringify(mappedProduct.categories || [])}
+- Description: "${mappedProduct.description || mappedProduct.shortDescription || ""}"
+- Material: "${mappedProduct.material || ""}"
+- Care: "${mappedProduct.care || ""}"
 
-Your task is to generate the following attributes in JSON format:
-- "bulletPoints": an array of exactly 5 sentences. Each bullet point should highlight a specific feature of the garment in uppercase lead-in format (e.g. "HEAVYWEIGHT FABRIC: Crafted from 240 GSM...").
-- "genericKeywords": a string of search-relevant terms separated by semicolons (e.g. "oversized sweatshirt; graphic hoodies; premium street wear").
-- "modelName": the core model name of the garment (e.g. "Claude Culprit").
-- "collectionName": the collection name (e.g. "Claude Culprit" or "Bespoke").
+You must return a single JSON object with the following fields:
+- "bulletPoints": an array of exactly 5 elements. Each element must be a high-quality product highlight (max 100 characters). Each highlight must begin with a 1-3 word lead-in in ALL CAPS followed by a colon and the description (e.g. "HEAVYWEIGHT FABRIC: Made of premium 240 GSM cotton").
+- "genericKeywords": a string of search terms/keywords separated by semicolons (max 250 bytes).
+- "modelName": a clean model name (e.g. "Claude Culprit Sweatshirt").
+- "collectionName": a clean collection name (e.g. "Autumn/Winter 2026").
 - "sleeveLengthDescription": one of ["Long Sleeve", "Short Sleeve", "Sleeveless", "3/4 Sleeve"].
 - "closureType": one of ["Pull-On", "Button", "Zipper", "Drawstring"].
 - "apparelFabricWeightClass": one of ["Heavyweight", "Medium weight", "Lightweight"].
@@ -3284,11 +3280,29 @@ Your task is to generate the following attributes in JSON format:
 
 Format your response strictly as a single JSON object. Ensure the keys and values match the requested schema exactly.
 `;
-      const interaction = await ai.interactions.create({
-        model: "gemini-3.5-flash",
-        input: prompt
-      });
-      const responseText = interaction.output_text || "{}";
+      console.log(`[AMAZON ENRICH] Dispatching direct HTTP POST to v1beta/interactions...`);
+      const apiRes = await axios.post(
+        `https://generativelanguage.googleapis.com/v1beta/interactions?key=${geminiKey}`,
+        {
+          model: "gemini-3.5-flash",
+          input: prompt
+        },
+        {
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": geminiKey
+          }
+        }
+      );
+      const extractOutputText = (body) => {
+        if (!body || !Array.isArray(body.steps)) return "{}";
+        const modelOutputs = body.steps.filter((step) => step.type === "model_output");
+        if (modelOutputs.length === 0) return "{}";
+        const lastOutput = modelOutputs[modelOutputs.length - 1];
+        if (!Array.isArray(lastOutput.content)) return "{}";
+        return lastOutput.content.filter((item) => item.type === "text").map((item) => item.text).join("");
+      };
+      const responseText = extractOutputText(apiRes.data);
       let cleanJson = responseText.trim();
       if (cleanJson.startsWith("```")) {
         cleanJson = cleanJson.replace(/^```[a-zA-Z]*\n/, "");
@@ -3298,13 +3312,15 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       console.log("[AMAZON ENRICH] Enrichment successful:", enrichedData);
       res.json({ success: true, product: mappedProduct, enrichedAttributes: enrichedData });
     } catch (error) {
-      console.error("[AMAZON ENRICH] Error:", error.message || error);
-      const errMsg = error.message || "";
-      const isRateLimit = error.status === 429 || errMsg.includes("429") || errMsg.toLowerCase().includes("quota") || errMsg.toLowerCase().includes("rate limit");
+      console.error("[AMAZON ENRICH] Error:", error.response?.data || error.message || error);
+      const errObj = error.response?.data || {};
+      const errMsg = errObj.error?.message || error.message || "";
+      const statusCode = error.response?.status || 500;
+      const isRateLimit = statusCode === 429 || errMsg.includes("429") || errMsg.toLowerCase().includes("quota") || errMsg.toLowerCase().includes("rate limit");
       if (isRateLimit) {
-        res.status(429).json({ message: error.message || "Upstream Gemini API rate limit exceeded." });
+        res.status(429).json({ message: errMsg || "Upstream Gemini API rate limit exceeded." });
       } else {
-        res.status(500).json({ message: error.message || "Failed to enrich product details using AI." });
+        res.status(statusCode).json({ message: errMsg || "Failed to enrich product details using AI." });
       }
     }
   });
