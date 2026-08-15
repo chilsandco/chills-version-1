@@ -3936,7 +3936,7 @@ Format your response strictly as a single JSON object. Ensure the keys and value
 `;
 
       const aiResponse = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-1.5-flash',
         contents: prompt,
         config: {
           responseMimeType: 'application/json'

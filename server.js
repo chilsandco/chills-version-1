@@ -3285,7 +3285,7 @@ Your task is to generate the following attributes in JSON format:
 Format your response strictly as a single JSON object. Ensure the keys and values match the requested schema exactly.
 `;
       const aiResponse = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-1.5-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json"
