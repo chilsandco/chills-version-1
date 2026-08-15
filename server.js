@@ -3377,50 +3377,95 @@ Format your response strictly as a single JSON object. Ensure the keys and value
         const parentSku = `P-${prodId}`;
         const parentCols = {
           0: parentSku,
+          // Col 1 SKU
           1: "SHIRT",
+          // Col 2 Product Type
           2: "full_update",
+          // Col 3 Listing Action
           3: "parent",
+          // Col 4 Parentage Level
           5: "SIZE/COLOR",
+          // Col 6 Variation Theme Name
           6: product.name,
+          // Col 7 Item Name
           8: brand,
+          // Col 9 Brand Name
           19: enrich.modelName,
+          // Col 20 Model Name
           20: manufacturer,
-          33: product.description,
-          34: enrich.bulletPoints?.[0] || "",
-          35: enrich.bulletPoints?.[1] || "",
-          36: enrich.bulletPoints?.[2] || "",
-          37: enrich.bulletPoints?.[3] || "",
-          38: enrich.bulletPoints?.[4] || "",
-          39: enrich.genericKeywords,
-          47: "unisex-adult",
-          48: "unisex",
-          49: "adult",
-          55: product.material || "100% Cotton",
-          58: enrich.apparelFabricWeightClass === "Heavyweight" ? "French Terry" : "Cotton Knit",
-          67: parentSku,
-          71: product.care || "Machine Wash",
-          106: importer,
-          111: packer,
-          120: enrich.sleeveLengthDescription || "Long Sleeve",
-          122: enrich.closureType || "Pull-On",
-          132: enrich.apparelFabricWeightClass || "Heavyweight",
-          133: "India",
-          134: 70,
-          135: "Centimeters",
-          136: enrich.apparelFabricStretch || "Low Stretch",
-          137: enrich.fitToSizeSentiment || "True to Size",
-          141: enrich.itemWeightGrams || 450,
-          142: "Grams",
-          144: "New",
-          192: parseInt(pkgLength, 10),
+          // Col 21 Manufacturer
+          31: product.description,
+          // Col 32 Product Description
+          32: enrich.bulletPoints?.[0] || "",
+          // Col 33 Bullet Point 1
+          33: enrich.bulletPoints?.[1] || "",
+          // Col 34 Bullet Point 2
+          34: enrich.bulletPoints?.[2] || "",
+          // Col 35 Bullet Point 3
+          35: enrich.bulletPoints?.[3] || "",
+          // Col 36 Bullet Point 4
+          36: enrich.bulletPoints?.[4] || "",
+          // Col 37 Bullet Point 5
+          37: enrich.genericKeywords,
+          // Col 38 Generic Keywords
+          45: "unisex-adult",
+          // Col 46 Department Name
+          46: "unisex",
+          // Col 47 Target Gender
+          47: "adult",
+          // Col 48 Age Range Description
+          53: product.material || "100% Cotton",
+          // Col 54 Material
+          56: enrich.apparelFabricWeightClass === "Heavyweight" ? "French Terry" : "Cotton Knit",
+          // Col 57 Fabric Type
+          65: parentSku,
+          // Col 66 Part Number
+          69: product.care || "Machine Wash",
+          // Col 70 Care Instructions
+          104: importer,
+          // Col 105 Importer Contact
+          109: packer,
+          // Col 110 Packer Contact
+          118: enrich.sleeveLengthDescription || "Long Sleeve",
+          // Col 119 Sleeve Length Description
+          120: enrich.closureType || "Pull-On",
+          // Col 121 Closure Type
+          130: enrich.apparelFabricWeightClass || "Heavyweight",
+          // Col 131 Weight Class
+          131: "India",
+          // Col 132 Garment Size Country
+          132: 70,
+          // Col 133 Shoulder to bottom hem length
+          133: "Centimeters",
+          // Col 134 Shoulder to bottom hem length unit
+          134: enrich.apparelFabricStretch || "Low Stretch",
+          // Col 135 Stretch
+          135: enrich.fitToSizeSentiment || "True to Size",
+          // Col 136 Fit Sentiment
+          139: enrich.itemWeightGrams || 450,
+          // Col 140 Item Weight
+          140: "Grams",
+          // Col 141 Item Weight Unit
+          142: "New",
+          // Col 143 Item Condition
+          190: parseInt(pkgLength, 10),
+          // Col 191 Package Length
+          191: "Centimeters",
+          // Col 192 Package Length Unit
+          192: parseInt(pkgWidth, 10),
+          // Col 193 Package Width
           193: "Centimeters",
-          194: parseInt(pkgWidth, 10),
+          // Col 194 Package Width Unit
+          194: parseInt(pkgHeight, 10),
+          // Col 195 Package Height
           195: "Centimeters",
-          196: parseInt(pkgHeight, 10),
-          197: "Centimeters",
-          198: parseInt(pkgWeight, 10),
-          199: "Grams",
-          200: origin
+          // Col 196 Package Height Unit
+          196: parseInt(pkgWeight, 10),
+          // Col 197 Package Weight
+          197: "Grams",
+          // Col 198 Package Weight Unit
+          198: origin
+          // Col 199 Country of Origin
         };
         for (const [colIdxStr, val] of Object.entries(parentCols)) {
           writeCell(currentRow, parseInt(colIdxStr, 10), val);
@@ -3435,60 +3480,115 @@ Format your response strictly as a single JSON object. Ensure the keys and value
           const mappedColor = enrich.colorMap?.[color] || "Multicolour";
           const childCols = {
             0: childSku,
+            // Col 1 SKU
             1: "SHIRT",
+            // Col 2 Product Type
             2: "full_update",
+            // Col 3 Listing Action
             3: "child",
+            // Col 4 Parentage Level
             4: parentSku,
+            // Col 5 Parent SKU
             5: "SIZE/COLOR",
+            // Col 6 Theme Name
             6: `${product.name} (Color: ${color}, Size: ${size})`,
+            // Col 7 Item Name
             8: brand,
+            // Col 9 Brand Name
             19: enrich.modelName,
+            // Col 20 Model Name
             20: manufacturer,
-            33: product.description,
-            34: enrich.bulletPoints?.[0] || "",
-            35: enrich.bulletPoints?.[1] || "",
-            36: enrich.bulletPoints?.[2] || "",
-            37: enrich.bulletPoints?.[3] || "",
-            38: enrich.bulletPoints?.[4] || "",
-            39: enrich.genericKeywords,
-            47: "unisex-adult",
-            48: "unisex",
-            49: "adult",
-            50: "ASIAN",
-            51: "ALPHA",
-            52: size,
-            54: "Regular",
-            55: product.material || "100% Cotton",
-            58: enrich.apparelFabricWeightClass === "Heavyweight" ? "French Terry" : "Cotton Knit",
-            64: mappedColor,
-            65: color,
-            67: childSku,
-            71: product.care || "Machine Wash",
-            106: importer,
-            111: packer,
-            120: enrich.sleeveLengthDescription || "Long Sleeve",
-            122: enrich.closureType || "Pull-On",
-            132: enrich.apparelFabricWeightClass || "Heavyweight",
-            133: "India",
-            134: 70,
-            135: "Centimeters",
-            136: enrich.apparelFabricStretch || "Low Stretch",
-            137: enrich.fitToSizeSentiment || "True to Size",
-            141: enrich.itemWeightGrams || 450,
-            142: "Grams",
-            144: "New",
-            171: v.stockQuantity || 0,
-            172: parseInt(handling, 10),
-            175: parseFloat(v.price || product.price),
-            192: parseInt(pkgLength, 10),
+            // Col 21 Manufacturer
+            31: product.description,
+            // Col 32 Product Description
+            32: enrich.bulletPoints?.[0] || "",
+            // Col 33 Bullet Point 1
+            33: enrich.bulletPoints?.[1] || "",
+            // Col 34 Bullet Point 2
+            34: enrich.bulletPoints?.[2] || "",
+            // Col 35 Bullet Point 3
+            35: enrich.bulletPoints?.[3] || "",
+            // Col 36 Bullet Point 4
+            36: enrich.bulletPoints?.[4] || "",
+            // Col 37 Bullet Point 5
+            37: enrich.genericKeywords,
+            // Col 38 Generic Keywords
+            45: "unisex-adult",
+            // Col 46 Department Name
+            46: "unisex",
+            // Col 47 Target Gender
+            47: "adult",
+            // Col 48 Age Range Description
+            48: "ASIAN",
+            // Col 49 Shirt Size System
+            49: "ALPHA",
+            // Col 50 Shirt Size Class
+            50: size,
+            // Col 51 Shirt Size Value
+            52: "Regular",
+            // Col 53 Shirt Body Type
+            53: product.material || "100% Cotton",
+            // Col 54 Material
+            56: enrich.apparelFabricWeightClass === "Heavyweight" ? "French Terry" : "Cotton Knit",
+            // Col 57 Fabric Type
+            62: mappedColor,
+            // Col 63 Color Map
+            63: color,
+            // Col 64 Color
+            65: childSku,
+            // Col 66 Part Number
+            69: product.care || "Machine Wash",
+            // Col 70 Care Instructions
+            104: importer,
+            // Col 105 Importer Contact
+            109: packer,
+            // Col 110 Packer Contact
+            118: enrich.sleeveLengthDescription || "Long Sleeve",
+            // Col 119 Sleeve Length Description
+            120: enrich.closureType || "Pull-On",
+            // Col 121 Closure Type
+            130: enrich.apparelFabricWeightClass || "Heavyweight",
+            // Col 131 Weight Class
+            131: "India",
+            // Col 132 Garment Size Country
+            132: 70,
+            // Col 133 Shoulder to bottom hem length
+            133: "Centimeters",
+            // Col 134 Shoulder to bottom hem length unit
+            134: enrich.apparelFabricStretch || "Low Stretch",
+            // Col 135 Stretch
+            135: enrich.fitToSizeSentiment || "True to Size",
+            // Col 136 Fit Sentiment
+            139: enrich.itemWeightGrams || 450,
+            // Col 140 Item Weight
+            140: "Grams",
+            // Col 141 Item Weight Unit
+            142: "New",
+            // Col 143 Item Condition
+            169: v.stockQuantity || 0,
+            // Col 170 Quantity (IN)
+            170: parseInt(handling, 10),
+            // Col 171 Handling Time (IN)
+            173: parseFloat(v.price || product.price),
+            // Col 174 Your Price INR
+            190: parseInt(pkgLength, 10),
+            // Col 191 Package Length
+            191: "Centimeters",
+            // Col 192 Package Length Unit
+            192: parseInt(pkgWidth, 10),
+            // Col 193 Package Width
             193: "Centimeters",
-            194: parseInt(pkgWidth, 10),
+            // Col 194 Package Width Unit
+            194: parseInt(pkgHeight, 10),
+            // Col 195 Package Height
             195: "Centimeters",
-            196: parseInt(pkgHeight, 10),
-            197: "Centimeters",
-            198: parseInt(pkgWeight, 10),
-            199: "Grams",
-            200: origin
+            // Col 196 Package Height Unit
+            196: parseInt(pkgWeight, 10),
+            // Col 197 Package Weight
+            197: "Grams",
+            // Col 198 Package Weight Unit
+            198: origin
+            // Col 199 Country of Origin
           };
           for (const [colIdxStr, val] of Object.entries(childCols)) {
             writeCell(currentRow, parseInt(colIdxStr, 10), val);
