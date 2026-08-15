@@ -171,44 +171,87 @@ const AmazonConsole: React.FC = () => {
     }
   };
 
-  // Bulk AI Enrichment for all checked products
+  // Bulk AI Enrichment with automatic rate-limit throttling and backoff retry
   const handleBulkEnrich = async () => {
     if (selectedIds.size === 0) return;
     setEnriching(true);
     setBulkProgress({ current: 0, total: selectedIds.size });
-    showNotification('success', `Starting bulk AI enrichment for ${selectedIds.size} products...`);
+    showNotification('success', `Starting AI enrichment with rate-limit throttling...`);
 
     const idList = Array.from(selectedIds);
     let completed = 0;
 
-    for (const id of idList) {
-      try {
-        const p = products.find(prod => prod.id === id);
-        console.log(`[BULK ENRICH] Enriching #${id} (${p?.name})...`);
-        
-        const res = await fetch('/api/amazon/enrich', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ productId: id })
-        });
-        const data = await res.json();
-        if (data.success) {
-          setEnrichedData(prev => ({
-            ...prev,
-            [id as string]: data.enrichedAttributes
-          }));
-        }
-      } catch (err) {
-        console.error(`[BULK ENRICH] Failed for #${id}:`, err);
+    for (let i = 0; i < idList.length; i++) {
+      const id = idList[i];
+      
+      // Throttling: Wait 4.5 seconds between requests to stay under 15 RPM free tier limit
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, 4500));
       }
+
+      let success = false;
+      let retries = 0;
+      const maxRetries = 2;
+
+      while (!success && retries <= maxRetries) {
+        try {
+          const res = await fetch('/api/amazon/enrich', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ productId: id })
+          });
+
+          // Handle Rate Limit (429) specifically
+          if (res.status === 429 || res.status === 500) {
+            const data = await res.json().catch(() => ({}));
+            const isRateLimit = res.status === 429 || 
+                                (data.message && data.message.toLowerCase().includes('quota')) ||
+                                (data.message && data.message.toLowerCase().includes('429')) ||
+                                (data.message && data.message.toLowerCase().includes('rate limit'));
+            
+            if (isRateLimit && retries < maxRetries) {
+              retries++;
+              const waitTime = 15000 * retries; // 15s first retry, then 30s second retry
+              showNotification('error', `Rate limit reached. Pausing for ${waitTime / 1000}s before retry...`);
+              await new Promise(resolve => setTimeout(resolve, waitTime));
+              continue; // Retry the request loop
+            }
+          }
+
+          if (!res.ok) {
+            const errorMsg = await res.json().catch(() => ({ message: `Http ${res.status}` }));
+            throw new Error(errorMsg.message || 'AI enrichment failed.');
+          }
+
+          const data = await res.json();
+          if (data.success) {
+            setEnrichedData(prev => ({
+              ...prev,
+              [id as string]: data.enrichedAttributes
+            }));
+            success = true;
+          } else {
+            throw new Error(data.message || 'AI enrichment failed.');
+          }
+        } catch (err: any) {
+          console.error(`[BULK ENRICH] Attempt ${retries} failed for #${id}:`, err);
+          retries++;
+          if (retries <= maxRetries) {
+            const waitTime = 5000 * retries;
+            showNotification('error', `Error occurred: ${err.message || 'Retrying...'}`);
+            await new Promise(resolve => setTimeout(resolve, waitTime));
+          }
+        }
+      }
+
       completed++;
       setBulkProgress({ current: completed, total: idList.length });
     }
 
-    showNotification('success', `Enriched ${completed} products successfully.`);
+    showNotification('success', `Bulk enrichment complete: ${completed} items processed.`);
     setEnriching(false);
     setBulkProgress(null);
   };

@@ -3299,7 +3299,13 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       res.json({ success: true, product: mappedProduct, enrichedAttributes: enrichedData });
     } catch (error) {
       console.error("[AMAZON ENRICH] Error:", error.message || error);
-      res.status(500).json({ message: error.message || "Failed to enrich product details using AI." });
+      const errMsg = error.message || "";
+      const isRateLimit = error.status === 429 || errMsg.includes("429") || errMsg.toLowerCase().includes("quota") || errMsg.toLowerCase().includes("rate limit");
+      if (isRateLimit) {
+        res.status(429).json({ message: error.message || "Upstream Gemini API rate limit exceeded." });
+      } else {
+        res.status(500).json({ message: error.message || "Failed to enrich product details using AI." });
+      }
     }
   });
   app.post("/api/amazon/export", authenticateToken, async (req, res) => {
