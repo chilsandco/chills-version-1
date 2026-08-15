@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../AuthContext';
 import { 
   ArrowLeft, Activity, Cpu, Sparkles, FileSpreadsheet, Download, RefreshCw, 
-  Settings, CheckCircle2, AlertTriangle, Package, Tag, Globe, Truck, List, Edit3
+  Settings, CheckCircle2, AlertTriangle, Package, Tag, Globe, Truck, List, Edit3, CheckSquare, Square
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import writeXlsxFile from 'write-excel-file';
@@ -55,10 +55,12 @@ const AmazonConsole: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [enriching, setEnriching] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [enrichedData, setEnrichedData] = useState<Record<string, EnrichedAttributes>>({});
   const [globalSettings, setGlobalSettings] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<'identity' | 'description' | 'specifications' | 'compliance' | 'variations'>('identity');
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null);
+  const [bulkProgress, setBulkProgress] = useState<{ current: number, total: number } | null>(null);
 
   // Load WooCommerce products & Global settings
   useEffect(() => {
@@ -116,7 +118,29 @@ const AmazonConsole: React.FC = () => {
     );
   }
 
-  // Trigger Gemini AI enrichment
+  // Checkbox toggle helpers
+  const handleToggleSelect = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedIds.size === products.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(products.map(p => p.id)));
+    }
+  };
+
+  // Trigger Gemini AI enrichment for single product
   const handleEnrich = async (productId: string) => {
     setEnriching(true);
     showNotification('success', 'AI scanning WooCommerce product description...');
@@ -147,27 +171,70 @@ const AmazonConsole: React.FC = () => {
     }
   };
 
-  // Compile spreadsheet rows & columns matching Amazon Seller Apparel flat file
-  const handleExport = async (product: Product) => {
-    const data = enrichedData[product.id];
-    if (!data) {
-      showNotification('error', 'Please run AI Auto-fill first to generate necessary attributes.');
+  // Bulk AI Enrichment for all checked products
+  const handleBulkEnrich = async () => {
+    if (selectedIds.size === 0) return;
+    setEnriching(true);
+    setBulkProgress({ current: 0, total: selectedIds.size });
+    showNotification('success', `Starting bulk AI enrichment for ${selectedIds.size} products...`);
+
+    const idList = Array.from(selectedIds);
+    let completed = 0;
+
+    for (const id of idList) {
+      try {
+        const p = products.find(prod => prod.id === id);
+        console.log(`[BULK ENRICH] Enriching #${id} (${p?.name})...`);
+        
+        const res = await fetch('/api/amazon/enrich', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ productId: id })
+        });
+        const data = await res.json();
+        if (data.success) {
+          setEnrichedData(prev => ({
+            ...prev,
+            [id as string]: data.enrichedAttributes
+          }));
+        }
+      } catch (err) {
+        console.error(`[BULK ENRICH] Failed for #${id}:`, err);
+      }
+      completed++;
+      setBulkProgress({ current: completed, total: idList.length });
+    }
+
+    showNotification('success', `Enriched ${completed} products successfully.`);
+    setEnriching(false);
+    setBulkProgress(null);
+  };
+
+  // Compile spreadsheet rows & columns matching Amazon Seller Apparel flat file (Handles both Single & Bulk)
+  const handleExport = async (targetProducts: Product[]) => {
+    // Filter to only export products that have enriched data
+    const exportable = targetProducts.filter(p => !!enrichedData[p.id]);
+
+    if (exportable.length === 0) {
+      showNotification('error', 'None of the selected products have been enriched by AI yet. Run AI enrichment first.');
       return;
     }
 
-    const brand = globalSettings.amazonBrandName || 'CHILS & CO.';
-    const manufacturer = globalSettings.amazonManufacturer || 'CHILS & CO.';
-    const origin = globalSettings.amazonOriginCountry || 'India';
-    const fulfillment = globalSettings.amazonFulfillmentChannel || 'Merchant Fulfilled';
-    const handling = globalSettings.amazonHandlingTime || '5';
-    const pkgLength = globalSettings.amazonDefaultPkgLength || '35';
-    const pkgWidth = globalSettings.amazonDefaultPkgWidth || '25';
-    const pkgHeight = globalSettings.amazonDefaultPkgHeight || '5';
-    const pkgWeight = globalSettings.amazonDefaultPkgWeight || '500';
-    const importer = globalSettings.amazonImporterContact || '';
-    const packer = globalSettings.amazonPackerContact || '';
+    const brand = globalSettings?.amazonBrandName || 'CHILS & CO.';
+    const manufacturer = globalSettings?.amazonManufacturer || 'CHILS & CO.';
+    const origin = globalSettings?.amazonOriginCountry || 'India';
+    const fulfillment = globalSettings?.amazonFulfillmentChannel || 'Merchant Fulfilled';
+    const handling = globalSettings?.amazonHandlingTime || '5';
+    const pkgLength = globalSettings?.amazonDefaultPkgLength || '35';
+    const pkgWidth = globalSettings?.amazonDefaultPkgWidth || '25';
+    const pkgHeight = globalSettings?.amazonDefaultPkgHeight || '5';
+    const pkgWeight = globalSettings?.amazonDefaultPkgWeight || '500';
+    const importer = globalSettings?.amazonImporterContact || '';
+    const packer = globalSettings?.amazonPackerContact || '';
 
-    // Schema definition for write-excel-file
     const schema = [
       { column: 'Feed Product Type', type: String, value: (r: any) => r.feed_product_type, width: 15 },
       { column: 'Seller SKU', type: String, value: (r: any) => r.item_sku, width: 20 },
@@ -219,126 +286,133 @@ const AmazonConsole: React.FC = () => {
     ];
 
     const rows: any[] = [];
-    const parentSku = `P-${product.id}`;
 
-    // 1. Create Parent Row (acts as container for variations)
-    rows.push({
-      feed_product_type: 'apparel',
-      item_sku: parentSku,
-      brand_name: brand,
-      item_name: product.name,
-      update_delete: 'Update',
-      product_description: product.description,
-      standard_price: null,
-      quantity: null,
-      part_number: parentSku,
-      manufacturer: manufacturer,
-      model_name: data.modelName,
-      bullet_point1: data.bulletPoints[0] || '',
-      bullet_point2: data.bulletPoints[1] || '',
-      bullet_point3: data.bulletPoints[2] || '',
-      bullet_point4: data.bulletPoints[3] || '',
-      bullet_point5: data.bulletPoints[4] || '',
-      generic_keywords: data.genericKeywords,
-      parentage: 'parent',
-      parent_sku: '',
-      relationship_type: '',
-      variation_theme: 'SizeColor',
-      color_name: '',
-      color_map: '',
-      size_name: '',
-      size_map: '',
-      fabric_type: data.apparelFabricWeightClass === 'Heavyweight' ? 'French Terry' : 'Cotton Knit',
-      material_composition: product.material || '100% Cotton',
-      care_instructions: product.care || 'Machine Wash',
-      sleeve_length_description: data.sleeveLengthDescription,
-      closure_type: data.closureType,
-      apparel_fabric_weight_class: data.apparelFabricWeightClass,
-      garment_size_country: 'India',
-      shoulder_to_bottom_hem_length: 70,
-      shoulder_to_bottom_hem_length_unit: 'Centimentres',
-      apparel_fabric_stretch: data.apparelFabricStretch,
-      fit_to_size_sentiment: data.fitToSizeSentiment,
-      item_weight: data.itemWeightGrams,
-      item_weight_unit: 'Grams',
-      country_of_origin: origin,
-      importer_address: importer,
-      packer_address: packer,
-      fulfillment_channel: fulfillment,
-      handling_time: parseInt(handling, 10),
-      package_length: parseInt(pkgLength, 10),
-      package_width: parseInt(pkgWidth, 10),
-      package_height: parseInt(pkgHeight, 10),
-      package_weight: parseInt(pkgWeight, 10),
+    exportable.forEach(product => {
+      const data = enrichedData[product.id];
+      const parentSku = `P-${product.id}`;
+
+      // 1. Create Parent Row
+      rows.push({
+        feed_product_type: 'apparel',
+        item_sku: parentSku,
+        brand_name: brand,
+        item_name: product.name,
+        update_delete: 'Update',
+        product_description: product.description,
+        standard_price: null,
+        quantity: null,
+        part_number: parentSku,
+        manufacturer: manufacturer,
+        model_name: data.modelName,
+        bullet_point1: data.bulletPoints[0] || '',
+        bullet_point2: data.bulletPoints[1] || '',
+        bullet_point3: data.bulletPoints[2] || '',
+        bullet_point4: data.bulletPoints[3] || '',
+        bullet_point5: data.bulletPoints[4] || '',
+        generic_keywords: data.genericKeywords,
+        parentage: 'parent',
+        parent_sku: '',
+        relationship_type: '',
+        variation_theme: 'SizeColor',
+        color_name: '',
+        color_map: '',
+        size_name: '',
+        size_map: '',
+        fabric_type: data.apparelFabricWeightClass === 'Heavyweight' ? 'French Terry' : 'Cotton Knit',
+        material_composition: product.material || '100% Cotton',
+        care_instructions: product.care || 'Machine Wash',
+        sleeve_length_description: data.sleeveLengthDescription,
+        closure_type: data.closureType,
+        apparel_fabric_weight_class: data.apparelFabricWeightClass,
+        garment_size_country: 'India',
+        shoulder_to_bottom_hem_length: 70,
+        shoulder_to_bottom_hem_length_unit: 'Centimentres',
+        apparel_fabric_stretch: data.apparelFabricStretch,
+        fit_to_size_sentiment: data.fitToSizeSentiment,
+        item_weight: data.itemWeightGrams,
+        item_weight_unit: 'Grams',
+        country_of_origin: origin,
+        importer_address: importer,
+        packer_address: packer,
+        fulfillment_channel: fulfillment,
+        handling_time: parseInt(handling, 10),
+        package_length: parseInt(pkgLength, 10),
+        package_width: parseInt(pkgWidth, 10),
+        package_height: parseInt(pkgHeight, 10),
+        package_weight: parseInt(pkgWeight, 10),
+      });
+
+      // 2. Create Child Rows for Variations
+      if (product.variations && product.variations.length > 0) {
+        product.variations.forEach(v => {
+          const color = v.attributes.color || 'Oversized';
+          const size = v.attributes.size || 'Regular';
+          const childSku = `C-${product.id}-${color.replace(/\s+/g, '')}-${size}`;
+          const mappedColor = data.colorMap[color] || 'Multicolour';
+
+          rows.push({
+            feed_product_type: 'apparel',
+            item_sku: childSku,
+            brand_name: brand,
+            item_name: `${product.name} (Color: ${color}, Size: ${size})`,
+            update_delete: 'Update',
+            product_description: product.description,
+            standard_price: v.price || product.price,
+            quantity: v.stockQuantity,
+            part_number: childSku,
+            manufacturer: manufacturer,
+            model_name: data.modelName,
+            bullet_point1: data.bulletPoints[0] || '',
+            bullet_point2: data.bulletPoints[1] || '',
+            bullet_point3: data.bulletPoints[2] || '',
+            bullet_point4: data.bulletPoints[3] || '',
+            bullet_point5: data.bulletPoints[4] || '',
+            generic_keywords: data.genericKeywords,
+            parentage: 'child',
+            parent_sku: parentSku,
+            relationship_type: 'Variation',
+            variation_theme: 'SizeColor',
+            color_name: color,
+            color_map: mappedColor,
+            size_name: size,
+            size_map: size,
+            fabric_type: data.apparelFabricWeightClass === 'Heavyweight' ? 'French Terry' : 'Cotton Knit',
+            material_composition: product.material || '100% Cotton',
+            care_instructions: product.care || 'Machine Wash',
+            sleeve_length_description: data.sleeveLengthDescription,
+            closure_type: data.closureType,
+            apparel_fabric_weight_class: data.apparelFabricWeightClass,
+            garment_size_country: 'India',
+            shoulder_to_bottom_hem_length: 70,
+            shoulder_to_bottom_hem_length_unit: 'Centimentres',
+            apparel_fabric_stretch: data.apparelFabricStretch,
+            fit_to_size_sentiment: data.fitToSizeSentiment,
+            item_weight: data.itemWeightGrams,
+            item_weight_unit: 'Grams',
+            country_of_origin: origin,
+            importer_address: importer,
+            packer_address: packer,
+            fulfillment_channel: fulfillment,
+            handling_time: parseInt(handling, 10),
+            package_length: parseInt(pkgLength, 10),
+            package_width: parseInt(pkgWidth, 10),
+            package_height: parseInt(pkgHeight, 10),
+            package_weight: parseInt(pkgWeight, 10),
+          });
+        });
+      }
     });
 
-    // 2. Create Child Rows for each variation
-    if (product.variations && product.variations.length > 0) {
-      product.variations.forEach(v => {
-        const color = v.attributes.color || 'Oversized';
-        const size = v.attributes.size || 'Regular';
-        const childSku = `C-${product.id}-${color.replace(/\s+/g, '')}-${size}`;
-        const mappedColor = data.colorMap[color] || 'Multicolour';
-
-        rows.push({
-          feed_product_type: 'apparel',
-          item_sku: childSku,
-          brand_name: brand,
-          item_name: `${product.name} (Color: ${color}, Size: ${size})`,
-          update_delete: 'Update',
-          product_description: product.description,
-          standard_price: v.price || product.price,
-          quantity: v.stockQuantity,
-          part_number: childSku,
-          manufacturer: manufacturer,
-          model_name: data.modelName,
-          bullet_point1: data.bulletPoints[0] || '',
-          bullet_point2: data.bulletPoints[1] || '',
-          bullet_point3: data.bulletPoints[2] || '',
-          bullet_point4: data.bulletPoints[3] || '',
-          bullet_point5: data.bulletPoints[4] || '',
-          generic_keywords: data.genericKeywords,
-          parentage: 'child',
-          parent_sku: parentSku,
-          relationship_type: 'Variation',
-          variation_theme: 'SizeColor',
-          color_name: color,
-          color_map: mappedColor,
-          size_name: size,
-          size_map: size,
-          fabric_type: data.apparelFabricWeightClass === 'Heavyweight' ? 'French Terry' : 'Cotton Knit',
-          material_composition: product.material || '100% Cotton',
-          care_instructions: product.care || 'Machine Wash',
-          sleeve_length_description: data.sleeveLengthDescription,
-          closure_type: data.closureType,
-          apparel_fabric_weight_class: data.apparelFabricWeightClass,
-          garment_size_country: 'India',
-          shoulder_to_bottom_hem_length: 70,
-          shoulder_to_bottom_hem_length_unit: 'Centimentres',
-          apparel_fabric_stretch: data.apparelFabricStretch,
-          fit_to_size_sentiment: data.fitToSizeSentiment,
-          item_weight: data.itemWeightGrams,
-          item_weight_unit: 'Grams',
-          country_of_origin: origin,
-          importer_address: importer,
-          packer_address: packer,
-          fulfillment_channel: fulfillment,
-          handling_time: parseInt(handling, 10),
-          package_length: parseInt(pkgLength, 10),
-          package_width: parseInt(pkgWidth, 10),
-          package_height: parseInt(pkgHeight, 10),
-          package_weight: parseInt(pkgWeight, 10),
-        });
-      });
-    }
-
     try {
-      // Export spreadsheet
+      const fileName = exportable.length === 1 
+        ? `Amazon_Listing_Feed_${exportable[0].name.replace(/\s+/g, '_')}.xlsx`
+        : `Amazon_Bulk_Listing_Feed_${new Date().toISOString().split('T')[0]}.xlsx`;
+
       await writeXlsxFile(rows, {
         schema,
-        fileName: `Amazon_Listing_Feed_${product.name.replace(/\s+/g, '_')}.xlsx`,
+        fileName,
       });
-      showNotification('success', 'Spreadsheet generated and downloaded.');
+      showNotification('success', `Spreadsheet generated with ${rows.length} rows (parents + variations).`);
     } catch (err) {
       console.error(err);
       showNotification('error', 'Spreadsheet export failed.');
@@ -419,18 +493,79 @@ const AmazonConsole: React.FC = () => {
         </div>
       </header>
 
+      {/* Bulk Progress Banner */}
+      {bulkProgress && (
+        <div className="mb-8 p-4 bg-accent/5 border border-accent/10 flex items-center justify-between rounded-lg">
+          <div className="flex items-center gap-3">
+            <RefreshCw className="animate-spin text-accent" size={14} />
+            <span className="font-mono text-[10px] uppercase tracking-widest text-accent font-bold">
+              Bulk AI Enrichment in Progress: {bulkProgress.current} / {bulkProgress.total} Complete
+            </span>
+          </div>
+          <div className="w-1/3 bg-neutral-900 h-1.5 rounded-full overflow-hidden">
+            <div 
+              className="bg-accent h-full transition-all duration-300"
+              style={{ width: `${(bulkProgress.current / bulkProgress.total) * 100}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
         {/* Left Side: Product Catalog List */}
         <div className="lg:col-span-5 border border-neutral-900 bg-neutral-950/40 p-8 rounded-xl space-y-6">
           <div className="flex items-center justify-between border-b border-neutral-900 pb-4">
-            <h3 className="text-[11px] font-bold uppercase tracking-widest text-neutral-500">WooCommerce Catalog ({products.length})</h3>
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={handleToggleSelectAll}
+                className="text-accent hover:opacity-80 flex items-center justify-center"
+              >
+                {selectedIds.size === products.length ? (
+                  <CheckSquare size={16} />
+                ) : (
+                  <Square size={16} className="text-neutral-700" />
+                )}
+              </button>
+              <h3 className="text-[11px] font-bold uppercase tracking-widest text-neutral-500">
+                WooCommerce Catalog ({selectedIds.size}/{products.length} Selected)
+              </h3>
+            </div>
             <List size={14} className="text-neutral-700" />
           </div>
+
+          {/* Bulk Action Controls */}
+          {selectedIds.size > 0 && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-4 bg-neutral-900/60 border border-neutral-800 rounded-lg flex items-center justify-between gap-4"
+            >
+              <span className="text-[9px] font-mono text-neutral-400 uppercase tracking-widest">{selectedIds.size} Item(s) Queued</span>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleBulkEnrich}
+                  disabled={enriching}
+                  className="px-4 py-2 bg-white text-black font-bold text-[9px] uppercase tracking-widest flex items-center gap-1 hover:bg-accent disabled:opacity-50"
+                >
+                  <Sparkles size={10} />
+                  AI Enrich
+                </button>
+                <button
+                  onClick={() => handleExport(products.filter(p => selectedIds.has(p.id)))}
+                  className="px-4 py-2 bg-accent text-black font-bold text-[9px] uppercase tracking-widest flex items-center gap-1"
+                >
+                  <FileSpreadsheet size={10} />
+                  Export Bulk
+                </button>
+              </div>
+            </motion.div>
+          )}
 
           <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
             {products.map(product => {
               const enriched = !!enrichedData[product.id];
               const isSelected = selectedProduct?.id === product.id;
+              const isChecked = selectedIds.has(product.id);
 
               return (
                 <motion.div
@@ -443,6 +578,18 @@ const AmazonConsole: React.FC = () => {
                       : 'border-neutral-900 hover:border-neutral-800 bg-neutral-950/20'
                   }`}
                 >
+                  {/* Selection Checkbox */}
+                  <div 
+                    onClick={(e) => handleToggleSelect(product.id, e)}
+                    className="flex items-center justify-center text-accent"
+                  >
+                    {isChecked ? (
+                      <CheckSquare size={16} />
+                    ) : (
+                      <Square size={16} className="text-neutral-800 hover:text-neutral-600" />
+                    )}
+                  </div>
+
                   <div className="w-16 h-16 bg-neutral-900 border border-neutral-800 flex-shrink-0 rounded-md overflow-hidden flex items-center justify-center">
                     {product.images?.[0] ? (
                       <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
@@ -523,7 +670,7 @@ const AmazonConsole: React.FC = () => {
                       <motion.button
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
-                        onClick={() => handleExport(selectedProduct)}
+                        onClick={() => handleExport([selectedProduct])}
                         className="px-6 py-3 bg-accent text-black font-bold text-[10px] uppercase tracking-widest flex items-center gap-2"
                       >
                         <FileSpreadsheet size={12} />
@@ -791,7 +938,7 @@ const AmazonConsole: React.FC = () => {
                                 const size = v.attributes.size || 'Regular';
                                 return (
                                   <div key={v.id} className="grid grid-cols-4 p-3 hover:bg-neutral-950 transition-colors">
-                                    <span className="font-bold text-neutral-400">C-{selectedProduct.id}-{color.replace(/\s+/g, '')}-{size}</span>
+                                    <span className="font-bold text-neutral-400">C-{selectedProduct.id}-{color.replace(/\s+/g, '')}-${size}</span>
                                     <span>{color}</span>
                                     <span>{size}</span>
                                     <span className="text-right text-accent font-bold">₹{v.price || selectedProduct.price}</span>
