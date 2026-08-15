@@ -213,6 +213,8 @@ async function startServer() {
     address: "3rd Floor, Plot No. 38 & 39\nMatrusri Nagar, Miyapur\nHyderabad, Telangana \u2013 500049\nIndia",
     coordinates: "17.4948, 78.3444",
     email: "hello.chilsandco@gmail.com",
+    groqApiKey: "",
+    geminiApiKey: "",
     amazonBrandName: "CHILS & CO.",
     amazonManufacturer: "CHILS & CO.",
     amazonImporterContact: "CHILS & CO., 3rd Floor, Plot No. 38 & 39, Matrusri Nagar, Miyapur, Hyderabad, Telangana \u2013 500049, Contact: +91 7842 07 0404",
@@ -3230,6 +3232,7 @@ Reason: ${reason}`;
     }
   });
   app.post("/api/amazon/enrich", authenticateToken, async (req, res) => {
+    let groqKey = "";
     try {
       const adminEmails = ["chilsandco@gmail.com", "chilsandco.com@gmail.com"];
       const isAdmin = adminEmails.some((email) => email.toLowerCase() === req.user.email.toLowerCase());
@@ -3240,9 +3243,10 @@ Reason: ${reason}`;
       if (!productId) {
         return res.status(400).json({ message: "Product ID is required." });
       }
-      const groqKey2 = process.env.GROQ_API_KEY;
-      if (!groqKey2) {
-        return res.status(400).json({ message: "GROQ_API_KEY is not configured in system environment variables." });
+      const settings = fs.existsSync(SETTINGS_FILE) ? JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf-8")) : DEFAULT_SETTINGS;
+      groqKey = settings.groqApiKey || process.env.GROQ_API_KEY;
+      if (!groqKey) {
+        return res.status(400).json({ message: "GROQ_API_KEY is not configured. Please save your Groq API Key in your Admin panel settings." });
       }
       const wc = getWooCommerce();
       if (!wc) {
@@ -3299,7 +3303,7 @@ Format your response strictly as a single JSON object. Ensure the keys and value
         {
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${groqKey2}`
+            "Authorization": `Bearer ${groqKey}`
           }
         }
       );

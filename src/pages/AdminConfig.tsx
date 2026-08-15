@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Save, AlertCircle, CheckCircle2, ArrowLeft, Phone, MapPin, Mail, Navigation, Package, Tag, Globe, Truck } from 'lucide-react';
+import { Save, AlertCircle, CheckCircle2, ArrowLeft, Phone, MapPin, Mail, Navigation, Package, Tag, Globe, Truck, Cpu, Sparkles } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 
@@ -16,6 +16,8 @@ const AdminConfig: React.FC = () => {
     address: "",
     coordinates: "",
     email: "",
+    groqApiKey: "",
+    geminiApiKey: "",
     amazonBrandName: "",
     amazonManufacturer: "",
     amazonImporterContact: "",
@@ -171,6 +173,32 @@ const AdminConfig: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-12 p-10 bg-neutral-950 border border-neutral-900">
               <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-neutral-500">
+                    <Cpu size={12} className="text-accent" /> Groq API Key (Overrides Env Variable)
+                  </label>
+                  <input 
+                    type="password" 
+                    value={settings.groqApiKey || ""}
+                    onChange={e => setSettings({...settings, groqApiKey: e.target.value})}
+                    placeholder="gsk_..."
+                    className="w-full bg-black border border-neutral-900 p-4 font-mono text-sm focus:border-accent outline-none"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-neutral-500">
+                    <Sparkles size={12} className="text-accent" /> Gemini API Key (Optional Fallback)
+                  </label>
+                  <input 
+                    type="password" 
+                    value={settings.geminiApiKey || ""}
+                    onChange={e => setSettings({...settings, geminiApiKey: e.target.value})}
+                    placeholder="AIzaSy..."
+                    className="w-full bg-black border border-neutral-900 p-4 font-mono text-sm focus:border-accent outline-none"
+                  />
+                </div>
+
                 <div className="space-y-2">
                   <label className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-neutral-500">
                     <Tag size={12} className="text-accent" /> Amazon Brand Name
