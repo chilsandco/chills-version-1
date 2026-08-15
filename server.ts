@@ -4027,8 +4027,7 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       const pythonScript = path.join(process.cwd(), "scripts", "generate_feed.py");
       const { exec } = await import("child_process");
 
-      console.log(`[AMAZON EXPORT] Spawning python generator for ${products.length} products...`);
-      exec(`python "${pythonScript}" --input "${jsonTempPath}" --template "${templatePath}" --output "${xlsmTempPath}"`, async (err, stdout, stderr) => {
+      const handleExcelResult = async (err: any, stdout: string, stderr: string) => {
         try {
           if (err) {
             console.error("[AMAZON EXPORT] Python error:", stderr || err.message);
@@ -4056,6 +4055,28 @@ Format your response strictly as a single JSON object. Ensure the keys and value
           await fs.promises.unlink(jsonTempPath).catch(() => {});
           await fs.promises.unlink(xlsmTempPath).catch(() => {});
           res.status(500).json({ message: innerErr.message || "Failed to process export spreadsheet." });
+        }
+      };
+
+      console.log(`[AMAZON EXPORT] Spawning python generator (trying python3)...`);
+      const cmd3 = `python3 "${pythonScript}" --input "${jsonTempPath}" --template "${templatePath}" --output "${xlsmTempPath}"`;
+      
+      exec(cmd3, async (err3, stdout3, stderr3) => {
+        if (err3) {
+          const errStr = (stderr3 || err3.message).toLowerCase();
+          const isNotFound = err3.code === 127 || errStr.includes("not found") || errStr.includes("command not found") || errStr.includes("no such file");
+          
+          if (isNotFound) {
+            console.log("[AMAZON EXPORT] python3 not found, falling back to python...");
+            const cmdFallback = `python "${pythonScript}" --input "${jsonTempPath}" --template "${templatePath}" --output "${xlsmTempPath}"`;
+            exec(cmdFallback, async (errF, stdoutF, stderrF) => {
+              await handleExcelResult(errF, stdoutF, stderrF);
+            });
+          } else {
+            await handleExcelResult(err3, stdout3, stderr3);
+          }
+        } else {
+          await handleExcelResult(null, stdout3, stderr3);
         }
       });
 
