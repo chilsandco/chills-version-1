@@ -3887,9 +3887,9 @@ async function startServer() {
         return res.status(400).json({ message: "Product ID is required." });
       }
 
-      const geminiKey = process.env.GEMINI_API_KEY;
-      if (!geminiKey) {
-        return res.status(400).json({ message: "GEMINI_API_KEY is not configured in system environment variables." });
+      const groqKey = process.env.GROQ_API_KEY;
+      if (!groqKey) {
+        return res.status(400).json({ message: "GROQ_API_KEY is not configured in system environment variables." });
       }
 
       const wc = getWooCommerce();
@@ -3903,7 +3903,7 @@ async function startServer() {
       const swatchesData = await fetchSwatches().catch(() => ({}));
       const mappedProduct = mapProduct(rawProduct, {}, swatchesData);
 
-      console.log(`[AMAZON ENRICH] Querying Gemini AI to extract attributes for: ${mappedProduct.name}`);
+      console.log(`[AMAZON ENRICH] Querying Groq AI to extract attributes for: ${mappedProduct.name}`);
       
       const prompt = `You are an expert system that extracts and optimizes e-commerce product listings for Amazon Seller Central inventory feeds.
 Your task is to analyze the following product catalog details (WooCommerce source) and generate standard Amazon listing specifications matching the exact JSON schema defined below.
@@ -3932,32 +3932,32 @@ You must return a single JSON object with the following fields:
 Format your response strictly as a single JSON object. Ensure the keys and values match the requested schema exactly.
 `;
 
-      console.log(`[AMAZON ENRICH] Dispatching direct HTTP POST to stable generateContent API...`);
+      console.log(`[AMAZON ENRICH] Dispatching direct HTTP POST to Groq completions API...`);
       
       const apiRes = await axios.post(
-        `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${geminiKey}`,
+        "https://api.groq.com/openai/v1/chat/completions",
         {
-          contents: [
+          model: "llama-3.3-70b-versatile",
+          messages: [
             {
-              parts: [
-                {
-                  text: prompt
-                }
-              ]
+              role: "user",
+              content: prompt
             }
           ],
-          generationConfig: {
-            responseMimeType: "application/json"
-          }
+          response_format: {
+            type: "json_object"
+          },
+          temperature: 0.1
         },
         {
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${groqKey}`
           }
         }
       );
 
-      const responseText = apiRes.data?.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+      const responseText = apiRes.data?.choices?.[0]?.message?.content || "{}";
       
       let cleanJson = responseText.trim();
       if (cleanJson.startsWith("```")) {
@@ -3966,7 +3966,7 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       }
       const enrichedData = JSON.parse(cleanJson.trim());
 
-      console.log("[AMAZON ENRICH] Enrichment successful:", enrichedData);
+      console.log("[AMAZON ENRICH] Groq enrichment successful:", enrichedData);
       res.json({ success: true, product: mappedProduct, enrichedAttributes: enrichedData });
     } catch (error: any) {
       console.error("[AMAZON ENRICH] Error:", error.response?.data || error.message || error);
@@ -3980,12 +3980,12 @@ Format your response strictly as a single JSON object. Ensure the keys and value
                           errMsg.toLowerCase().includes("quota") ||
                           errMsg.toLowerCase().includes("rate limit");
       
-      const keySnippet = geminiKey ? `${geminiKey.substring(0, 6)}...${geminiKey.substring(geminiKey.length - 4)}` : "None";
+      const keySnippet = groqKey ? `${groqKey.substring(0, 6)}...${groqKey.substring(groqKey.length - 4)}` : "None";
       
       if (isRateLimit) {
-        res.status(429).json({ message: `${errMsg} (Using API Key: ${keySnippet})` });
+        res.status(429).json({ message: `${errMsg} (Using Groq Key: ${keySnippet})` });
       } else {
-        res.status(statusCode).json({ message: `${errMsg} (Using API Key: ${keySnippet})` });
+        res.status(statusCode).json({ message: `${errMsg} (Using Groq Key: ${keySnippet})` });
       }
     }
   });
