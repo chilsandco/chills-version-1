@@ -355,6 +355,14 @@ const ProductDetail: React.FC = () => {
   }, [id]);
 
   useEffect(() => {
+    if (product?.availableColors && product.availableColors.length === 1) {
+      setSelectedColor(product.availableColors[0]);
+    } else {
+      setSelectedColor(null);
+    }
+  }, [product]);
+
+  useEffect(() => {
     if (!loading && searchParams.get('writeReview') === 'true') {
       setShowReviewModal(true);
       const timer = setTimeout(() => {
@@ -566,7 +574,7 @@ const ProductDetail: React.FC = () => {
     if (isSelectedSizeOutOfStock) {
       return;
     }
-    if (product.availableColors && product.availableColors.length > 0 && !selectedColor) {
+    if (product.availableColors && product.availableColors.length > 1 && !selectedColor) {
       setColorError(true);
       return;
     }
@@ -748,7 +756,7 @@ const ProductDetail: React.FC = () => {
     if (isSelectedSizeOutOfStock) {
       return;
     }
-    if (product.availableColors && product.availableColors.length > 0 && !selectedColor) {
+    if (product.availableColors && product.availableColors.length > 1 && !selectedColor) {
       setColorError(true);
       return;
     }
@@ -1035,6 +1043,11 @@ const ProductDetail: React.FC = () => {
               ₹{product.price.toLocaleString()}
               <span className="text-[10px] text-neutral-500 uppercase tracking-widest font-mono font-bold block mt-1">(Excl. Shipping)</span>
             </p>
+            {product.availableColors && product.availableColors.length === 1 && (
+              <p className="text-[11px] tracking-[0.25em] text-neutral-400 uppercase mt-4">
+                Color: <span className="text-white font-mono font-bold">{product.availableColors[0]}</span>
+              </p>
+            )}
           </div>
 
           {/* Story Behind the Design (Moved Up) */}
@@ -1079,7 +1092,7 @@ const ProductDetail: React.FC = () => {
           </motion.div>
 
           {/* Color Selection Section */}
-          {product.availableColors && product.availableColors.length > 0 && (
+          {product.availableColors && product.availableColors.length > 1 && (
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase text-neutral-500">Select Signal Type</h3>
