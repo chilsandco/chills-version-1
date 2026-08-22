@@ -305,7 +305,7 @@ const ProductDetail: React.FC = () => {
     if (product.variations) {
       const matchingVariations = product.variations.filter(v => {
         const matchesSize = v.attributes.size === selectedSize;
-        const matchesColor = selectedColor ? v.attributes.color === selectedColor : true;
+        const matchesColor = !v.attributes.color || !selectedColor || v.attributes.color === selectedColor;
         return matchesSize && matchesColor;
       });
       if (matchingVariations.length > 0) {
@@ -1201,7 +1201,7 @@ const ProductDetail: React.FC = () => {
                   if (product.variations) {
                     const matchingVariations = product.variations.filter(v => {
                       const matchesSize = v.attributes.size === size;
-                      const matchesColor = selectedColor ? v.attributes.color === selectedColor : true;
+                      const matchesColor = !v.attributes.color || !selectedColor || v.attributes.color === selectedColor;
                       return matchesSize && matchesColor;
                     });
                     
