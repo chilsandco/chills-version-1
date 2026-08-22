@@ -357,7 +357,36 @@ const ProductDetail: React.FC = () => {
 
   useEffect(() => {
     if (product?.availableColors && product.availableColors.length > 0) {
-      setSelectedColor(product.availableColors[0]);
+      const parentImage = product.images?.[0];
+      let initialColor = product.availableColors[0];
+
+      if (parentImage && product.variations) {
+        const getCleanFilename = (url: string) => {
+          try {
+            const decoded = decodeURIComponent(url);
+            const lastSlash = decoded.lastIndexOf('/');
+            if (lastSlash === -1) return decoded;
+            return decoded.substring(lastSlash + 1).split('?')[0];
+          } catch (e) {
+            return url;
+          }
+        };
+
+        const parentFilename = getCleanFilename(parentImage);
+        
+        // Find variation whose images contain a matching URL or matching filename
+        const matchingVariation = product.variations.find(v => 
+          v.images?.some((img: string) => 
+            img === parentImage || getCleanFilename(img) === parentFilename
+          )
+        );
+        
+        if (matchingVariation && matchingVariation.attributes.color) {
+          initialColor = matchingVariation.attributes.color;
+        }
+      }
+
+      setSelectedColor(initialColor);
     } else {
       setSelectedColor(null);
     }
