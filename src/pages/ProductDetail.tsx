@@ -187,6 +187,7 @@ const ProductDetail: React.FC = () => {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [sizeError, setSizeError] = useState(false);
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
+  const [hoveredColor, setHoveredColor] = useState<string | null>(null);
   const [colorError, setColorError] = useState(false);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [isDescOpen, setIsDescOpen] = useState(false);
@@ -1043,9 +1044,9 @@ const ProductDetail: React.FC = () => {
               ₹{product.price.toLocaleString()}
               <span className="text-[10px] text-neutral-500 uppercase tracking-widest font-mono font-bold block mt-1">(Excl. Shipping)</span>
             </p>
-            {product.availableColors && product.availableColors.length === 1 && (
+            {product.availableColors && product.availableColors.length > 0 && (
               <p className="text-[11px] tracking-[0.25em] text-neutral-400 uppercase mt-4">
-                Color: <span className="text-white font-mono font-bold">{product.availableColors[0]}</span>
+                Color: <span className="text-white font-mono font-bold">{hoveredColor || selectedColor || 'Select Option'}</span>
               </p>
             )}
           </div>
@@ -1096,11 +1097,6 @@ const ProductDetail: React.FC = () => {
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase text-neutral-500">Select Signal Type</h3>
-                {selectedColor && (
-                  <span className="text-[10px] tracking-[0.2em] font-bold uppercase text-white font-mono">
-                    {selectedColor}
-                  </span>
-                )}
               </div>
               <div className="flex flex-wrap gap-3 mb-2">
                 {product.availableColors.map(color => {
@@ -1110,6 +1106,8 @@ const ProductDetail: React.FC = () => {
                   return (
                   <motion.button 
                     key={color}
+                    onMouseEnter={() => setHoveredColor(color)}
+                    onMouseLeave={() => setHoveredColor(null)}
                     onClick={() => {
                       setSelectedColor(color);
                       setColorError(false);
