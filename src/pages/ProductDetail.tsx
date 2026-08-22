@@ -356,7 +356,7 @@ const ProductDetail: React.FC = () => {
   }, [id]);
 
   useEffect(() => {
-    if (product?.availableColors && product.availableColors.length === 1) {
+    if (product?.availableColors && product.availableColors.length > 0) {
       setSelectedColor(product.availableColors[0]);
     } else {
       setSelectedColor(null);
@@ -1046,7 +1046,7 @@ const ProductDetail: React.FC = () => {
             </p>
             {product.availableColors && product.availableColors.length > 0 && (
               <p className="text-[11px] tracking-[0.25em] text-neutral-400 uppercase mt-4">
-                Color: <span className="text-white font-mono font-bold">{hoveredColor || selectedColor || 'Select Option'}</span>
+                Color: <span className="text-white font-mono font-bold">{hoveredColor || selectedColor}</span>
               </p>
             )}
           </div>
@@ -1097,6 +1097,11 @@ const ProductDetail: React.FC = () => {
             <div className="mb-6">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase text-neutral-500">Select Signal Type</h3>
+                {selectedColor && (
+                  <span className="text-[10px] tracking-[0.2em] font-bold uppercase text-white font-mono">
+                    {selectedColor}
+                  </span>
+                )}
               </div>
               <div className="flex flex-wrap gap-3 mb-2">
                 {product.availableColors.map(color => {
