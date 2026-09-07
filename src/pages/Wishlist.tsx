@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useWishlist } from '../WishlistContext';
 import { useCart } from '../CartContext';
+import SEO from '../components/SEO';
 import { Trash2, ShoppingBag, ArrowRight, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -13,6 +14,7 @@ const Wishlist: React.FC = () => {
   if (wishlist.length === 0) {
     return (
       <div className="h-screen flex flex-col items-center justify-center px-6 text-center">
+        <SEO title="Wishlist" noindex={true} />
         <h1 className="text-4xl font-display font-bold mb-8 uppercase tracking-tighter">Wishlist is empty</h1>
         <Link 
           to="/collection" 
@@ -26,7 +28,9 @@ const Wishlist: React.FC = () => {
 
   return (
     <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen">
+      <SEO title="Wishlist" noindex={true} />
       <div className="mb-16">
+
         <p className="text-[8px] tracking-[0.5em] text-neutral-600 uppercase mb-3">Saved Transmissions</p>
         <h1 className="text-5xl font-display font-bold tracking-tighter uppercase">Wishlist</h1>
       </div>

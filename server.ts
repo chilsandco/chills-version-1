@@ -4500,15 +4500,31 @@ Format your response strictly as a single JSON object. Ensure the keys and value
     }
   });
 
+  // ── Host Normalization (www -> non-www) 301 Redirect Middleware ──────────
+  app.use((req, res, next) => {
+    const host = req.headers.host || "";
+    if (host.startsWith("www.")) {
+      const nonWwwHost = host.replace(/^www\./, "");
+      const proto = req.headers["x-forwarded-proto"] || req.protocol || "https";
+      return res.redirect(301, `${proto}://${nonWwwHost}${req.originalUrl}`);
+    }
+    next();
+  });
+
   app.get("/sitemap.xml", async (req, res) => {
     res.header("Content-Type", "application/xml");
     res.header("Cache-Control", "public, max-age=3600"); // Cache for 1 hour
     
-    const staticUrls = [
+    const todayISO = new Date().toISOString().split("T")[0];
+
+    const staticUrls: { loc: string; priority: string; changefreq: string; lastmod?: string }[] = [
       { loc: "https://chilsandco.com/", priority: "1.0", changefreq: "daily" },
+
       { loc: "https://chilsandco.com/collection", priority: "0.9", changefreq: "daily" },
+      { loc: "https://chilsandco.com/combos", priority: "0.8", changefreq: "weekly" },
       { loc: "https://chilsandco.com/bespoke", priority: "0.9", changefreq: "weekly" },
       { loc: "https://chilsandco.com/co-creator", priority: "0.8", changefreq: "weekly" },
+      { loc: "https://chilsandco.com/customize", priority: "0.8", changefreq: "weekly" },
       { loc: "https://chilsandco.com/social-vault", priority: "0.7", changefreq: "weekly" },
       { loc: "https://chilsandco.com/support", priority: "0.7", changefreq: "monthly" },
       { loc: "https://chilsandco.com/shipping-delivery", priority: "0.5", changefreq: "monthly" },
@@ -4517,7 +4533,7 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       { loc: "https://chilsandco.com/terms-conditions", priority: "0.5", changefreq: "monthly" }
     ];
 
-    let productUrls: { loc: string, priority: string, changefreq: string }[] = [];
+    let productUrls: { loc: string, priority: string, changefreq: string, lastmod?: string }[] = [];
 
     try {
       const wc = getWooCommerce();
@@ -4528,7 +4544,8 @@ Format your response strictly as a single JSON object. Ensure the keys and value
           productUrls = response.data.map((prod: any) => ({
             loc: `https://chilsandco.com/product/${prod.id}`,
             priority: "0.8",
-            changefreq: "weekly"
+            changefreq: "weekly",
+            lastmod: prod.date_modified ? new Date(prod.date_modified).toISOString().split("T")[0] : todayISO
           }));
         }
       }
@@ -4541,6 +4558,7 @@ Format your response strictly as a single JSON object. Ensure the keys and value
     const xmlItems = allUrls.map(url => `
   <url>
     <loc>${url.loc}</loc>
+    <lastmod>${url.lastmod || todayISO}</lastmod>
     <changefreq>${url.changefreq}</changefreq>
     <priority>${url.priority}</priority>
   </url>`).join('');
@@ -4568,12 +4586,11 @@ ${xmlItems}
     console.error(`[CHILS DEBUG] Global Error Handler:`, err);
     res.status(err.status || 500).json({
       error: "Internal Server Error",
-      message: err.message || "An unexpected error occurred.",
-      path: req.url
+      message: err.message || "An unexpected server error occurred."
     });
   });
 
-  // Vite middleware for development
+  // Serve static assets in production mode
   if (!IS_PROD) {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
@@ -4589,137 +4606,175 @@ ${xmlItems}
       console.log(`[CHILS & CO.] Production mode: Serving static files from ${distPath}`);
       app.use(express.static(distPath));
 
-      // ── Social Media Crawler OG Tag Injection ──────────────────────────
-      // WhatsApp, Facebook, Instagram, Twitter, LinkedIn, etc. send crawler
-      // bots that don't execute JavaScript. Since this is a React SPA, the
-      // crawlers only see the static index.html meta tags. This middleware
-      // intercepts crawler requests for product pages and injects product-
-      // specific OG tags so link previews show the correct product image,
-      // title, and description.
-      const SOCIAL_CRAWLER_UA = /facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Slackbot|Discordbot|TelegramBot|Pinterest|Googlebot|bingbot|Applebot/i;
       const DEFAULT_OG_IMAGE = "https://res.cloudinary.com/ddatd5ruz/image/upload/w_1200,h_630,c_fill,f_jpg,q_80/v1782039896/ChatGPT_Image_Jun_21_2026_04_34_04_PM_avhfel.png";
+
+      // Meta map for static indexable pages
+      const PUBLIC_PAGE_META: Record<string, { title: string; description: string }> = {
+        "/": {
+          title: "CHILS & CO. | Extraordinary Bespoke Luxury & High Fashion",
+          description: "Chils & Co. (also known as Chills & Co.) delivers high-end bespoke garments and luxury ready-to-wear. Handcrafted precision for the modern individual."
+        },
+        "/collection": {
+          title: "Haute Couture Collection | CHILS & CO.",
+          description: "Explore the luxury ready-to-wear and bespoke garment collection by Chils & Co."
+        },
+        "/combos": {
+          title: "Curated Style Combos | CHILS & CO.",
+          description: "Exclusive multi-garment luxury pairings designed for modern elegance."
+        },
+        "/bespoke": {
+          title: "Bespoke Garments & Custom Tailoring | CHILS & CO.",
+          description: "Handcrafted bespoke tailoring tailored precisely to your personal measurements."
+        },
+        "/co-creator": {
+          title: "Co-Creator Design Studio | CHILS & CO.",
+          description: "Collaborate directly with our design house to create one-of-a-kind fashion pieces."
+        },
+        "/customize": {
+          title: "Customization Studio | CHILS & CO.",
+          description: "Personalize high-end garments with custom fabrics, cuts, and bespoke finishes."
+        },
+        "/social-vault": {
+          title: "Social Vault | CHILS & CO.",
+          description: "Step into the visual world and digital presence of Chils & Co."
+        },
+        "/support": {
+          title: "Client Concierge & Support | CHILS & CO.",
+          description: "Get assistance with orders, custom fittings, shipping, and inquiries."
+        },
+        "/shipping-delivery": {
+          title: "Shipping & Express Delivery | CHILS & CO.",
+          description: "Comprehensive information on shipping timelines, tracking, and international delivery."
+        },
+        "/returns-refunds": {
+          title: "Returns & Exchanges Policy | CHILS & CO.",
+          description: "Hassle-free size exchanges, style swaps, and return guidelines for Chils & Co."
+        },
+        "/privacy-policy": {
+          title: "Privacy Policy | CHILS & CO.",
+          description: "Detailed overview of how Chils & Co. protects client data and privacy."
+        },
+        "/terms-conditions": {
+          title: "Terms & Conditions | CHILS & CO.",
+          description: "Official terms of service and usage conditions for Chils & Co."
+        }
+      };
+
+      // Private routes that should not be indexed by search engines
+      const PRIVATE_ROUTE_PREFIXES = ["/checkout", "/onboarding", "/console", "/admin", "/auth", "/wishlist"];
 
       app.get("*", async (req, res) => {
         const indexPath = path.resolve(distPath, "index.html");
-        const ua = req.headers["user-agent"] || "";
-        const isCrawler = SOCIAL_CRAWLER_UA.test(ua);
-
-        // For non-crawler requests, just serve the SPA index.html as-is
-        if (!isCrawler) {
-          return res.sendFile(indexPath);
-        }
-
-        // For crawler requests, check if this is a product page
-        const productMatch = req.path.match(/^\/product\/(\d+)/);
         
-        if (!productMatch) {
-          // Non-product page crawler request — serve default OG tags (already in HTML)
-          return res.sendFile(indexPath);
+        // Strip query string and trailing slashes for path matching
+        let cleanPath = req.path || "/";
+        if (cleanPath.length > 1 && cleanPath.endsWith("/")) {
+          cleanPath = cleanPath.slice(0, -1);
         }
 
-        // Product page crawler request — inject product-specific OG tags
-        const productId = productMatch[1];
-        try {
-          const wc = getWooCommerce();
-          if (!wc) {
-            return res.sendFile(indexPath);
-          }
+        let html = fs.readFileSync(indexPath, "utf-8");
+        const escAttr = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        const canonicalUrl = `https://chilsandco.com${cleanPath === "/" ? "" : cleanPath}`;
 
-          const response = await wcSafeCall(wc, "get", `products/${productId}`);
-          const product = response.data;
-
-          if (!product) {
-            return res.sendFile(indexPath);
-          }
-
-          // Get product details
-          const productName = (product.name || "Product").replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-          const productDesc = (product.short_description || product.description || "")
-            .replace(/<[^>]*>/g, "")  // Strip HTML tags
-            .replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"')
-            .replace(/&nbsp;/g, " ")
-            .substring(0, 200)
-            .trim() || "Premium luxury garment by Chils & Co.";
-          
-          // Get the first product image (use direct URL, not the /api/media proxy)
-          const productImage = Array.isArray(product.images) && product.images.length > 0
-            ? product.images[0].src
-            : DEFAULT_OG_IMAGE;
-          
-          const productPrice = product.price || "0";
-          const productUrl = `https://chilsandco.com/product/${productId}`;
-
-          // Read the index.html and replace OG meta tags
-          let html = fs.readFileSync(indexPath, "utf-8");
-
-          // Helper to escape HTML attribute values
-          const escAttr = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-          const ogTitle = escAttr(`${productName} | CHILS & CO.`);
-          const ogDesc = escAttr(productDesc);
-          const ogImage = escAttr(productImage);
-          const ogUrl = escAttr(productUrl);
-
-          // Replace OG meta tag content values using regex
+        // 1. Check if Private Route -> Inject noindex
+        const isPrivate = PRIVATE_ROUTE_PREFIXES.some(prefix => cleanPath.startsWith(prefix));
+        if (isPrivate) {
           html = html.replace(
-            /(<meta\s+property="og:title"\s+content=")([^"]*)("\s*\/>)/i,
-            `$1${ogTitle}$3`
+            /<meta\s+name="robots"\s+content="[^"]*"\s*\/>/i,
+            `<meta name="robots" content="noindex, nofollow" />`
           );
           html = html.replace(
-            /(<meta\s+property="og:description"\s+content=")([^"]*)("\s*\/>)/i,
-            `$1${ogDesc}$3`
+            /<link\s+rel="canonical"\s+href="[^"]*"\s*\/>/i,
+            `<link rel="canonical" href="${escAttr(canonicalUrl)}" />`
           );
-          html = html.replace(
-            /(<meta\s+property="og:image"\s+content=")([^"]*)("\s*\/>)/i,
-            `$1${ogImage}$3`
-          );
-          html = html.replace(
-            /(<meta\s+property="og:url"\s+content=")([^"]*)("\s*\/>)/i,
-            `$1${ogUrl}$3`
-          );
-          html = html.replace(
-            /(<meta\s+property="og:type"\s+content=")([^"]*)("\s*\/>)/i,
-            `$1product$3`
-          );
-
-          // Replace Twitter card meta tags too
-          html = html.replace(
-            /(<meta\s+name="twitter:title"\s+content=")([^"]*)("\s*\/>)/i,
-            `$1${ogTitle}$3`
-          );
-          html = html.replace(
-            /(<meta\s+name="twitter:description"\s+content=")([^"]*)("\s*\/>)/i,
-            `$1${ogDesc}$3`
-          );
-          html = html.replace(
-            /(<meta\s+name="twitter:image"\s+content=")([^"]*)("\s*\/>)/i,
-            `$1${ogImage}$3`
-          );
-          html = html.replace(
-            /(<meta\s+name="twitter:url"\s+content=")([^"]*)("\s*\/>)/i,
-            `$1${ogUrl}$3`
-          );
-
-          // Replace page title
-          html = html.replace(
-            /(<title>)([^<]*)(<\/title>)/i,
-            `$1${productName} | CHILS & CO.$3`
-          );
-
-          // Add product-specific meta tags (price) before closing </head>
-          const productMeta = `
-    <meta property="product:price:amount" content="${escAttr(productPrice)}" />
-    <meta property="product:price:currency" content="INR" />`;
-          html = html.replace("</head>", `${productMeta}\n  </head>`);
-
-          console.log(`[CHILS OG] Served dynamic OG tags for product ${productId}: "${productName}"`);
           res.set("Content-Type", "text/html");
-          res.send(html);
-        } catch (error: any) {
-          console.error(`[CHILS OG] Failed to fetch product ${productId} for OG tags:`, error.message || error);
-          // Fallback: serve the default index.html
-          res.sendFile(indexPath);
+          return res.send(html);
         }
+
+        // 2. Check if Product Page -> Fetch WooCommerce details & inject Product Schema + OG
+        const productMatch = cleanPath.match(/^\/product\/(\d+)/);
+        if (productMatch) {
+          const productId = productMatch[1];
+          try {
+            const wc = getWooCommerce();
+            if (wc) {
+              const response = await wcSafeCall(wc, "get", `products/${productId}`);
+              const product = response.data;
+              if (product) {
+                const productName = (product.name || "Product").replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+                const productDesc = (product.short_description || product.description || "")
+                  .replace(/<[^>]*>/g, "")
+                  .replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"')
+                  .replace(/&nbsp;/g, " ")
+                  .substring(0, 200)
+                  .trim() || "Premium luxury garment by Chils & Co.";
+                
+                const productImage = Array.isArray(product.images) && product.images.length > 0 ? product.images[0].src : DEFAULT_OG_IMAGE;
+                const productPrice = product.price || "0";
+                const ogTitle = escAttr(`${productName} | CHILS & CO.`);
+                const ogDesc = escAttr(productDesc);
+                const ogImage = escAttr(productImage);
+
+                // Title & Canonical
+                html = html.replace(/(<title>)([^<]*)(<\/title>)/i, `$1${ogTitle}$3`);
+                html = html.replace(/(<link\s+rel="canonical"\s+href=")([^"]*)("\s*\/>)/i, `$1${escAttr(canonicalUrl)}$3`);
+                html = html.replace(/(<meta\s+name="description"\s+content=")([^"]*)("\s*\/>)/i, `$1${ogDesc}$3`);
+
+                // OG & Twitter Meta Tags
+                html = html.replace(/(<meta\s+property="og:title"\s+content=")([^"]*)("\s*\/>)/i, `$1${ogTitle}$3`);
+                html = html.replace(/(<meta\s+property="og:description"\s+content=")([^"]*)("\s*\/>)/i, `$1${ogDesc}$3`);
+                html = html.replace(/(<meta\s+property="og:image"\s+content=")([^"]*)("\s*\/>)/i, `$1${ogImage}$3`);
+                html = html.replace(/(<meta\s+property="og:url"\s+content=")([^"]*)("\s*\/>)/i, `$1${escAttr(canonicalUrl)}$3`);
+                html = html.replace(/(<meta\s+property="og:type"\s+content=")([^"]*)("\s*\/>)/i, `$1product$3`);
+                html = html.replace(/(<meta\s+name="twitter:title"\s+content=")([^"]*)("\s*\/>)/i, `$1${ogTitle}$3`);
+                html = html.replace(/(<meta\s+name="twitter:description"\s+content=")([^"]*)("\s*\/>)/i, `$1${ogDesc}$3`);
+                html = html.replace(/(<meta\s+name="twitter:image"\s+content=")([^"]*)("\s*\/>)/i, `$1${ogImage}$3`);
+
+                // Product JSON-LD Schema
+                const productSchema = {
+                  "@context": "https://schema.org/",
+                  "@type": "Product",
+                  "name": productName,
+                  "image": [productImage],
+                  "description": productDesc,
+                  "sku": `CHLS-${productId}`,
+                  "brand": { "@type": "Brand", "name": "CHILS & CO." },
+                  "offers": {
+                    "@type": "Offer",
+                    "url": canonicalUrl,
+                    "priceCurrency": "INR",
+                    "price": productPrice,
+                    "availability": product.stock_status === "outofstock" ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
+                    "itemCondition": "https://schema.org/NewCondition"
+                  }
+                };
+
+                const schemaScript = `\n    <script type="application/ld+json">${JSON.stringify(productSchema)}</script>`;
+                html = html.replace("</head>", `${schemaScript}\n  </head>`);
+
+                res.set("Content-Type", "text/html");
+                return res.send(html);
+              }
+            }
+          } catch (error: any) {
+            console.error(`[CHILS SEO] Error fetching product ${productId}:`, error.message || error);
+          }
+        }
+
+        // 3. Static Public Page Pre-rendering (Home, Collection, Bespoke, Support, etc.)
+        const pageMeta = PUBLIC_PAGE_META[cleanPath] || PUBLIC_PAGE_META["/"];
+        const pageTitle = escAttr(pageMeta.title);
+        const pageDesc = escAttr(pageMeta.description);
+
+        html = html.replace(/(<title>)([^<]*)(<\/title>)/i, `$1${pageTitle}$3`);
+        html = html.replace(/(<link\s+rel="canonical"\s+href=")([^"]*)("\s*\/>)/i, `$1${escAttr(canonicalUrl)}$3`);
+        html = html.replace(/(<meta\s+name="description"\s+content=")([^"]*)("\s*\/>)/i, `$1${pageDesc}$3`);
+        html = html.replace(/(<meta\s+property="og:title"\s+content=")([^"]*)("\s*\/>)/i, `$1${pageTitle}$3`);
+        html = html.replace(/(<meta\s+property="og:description"\s+content=")([^"]*)("\s*\/>)/i, `$1${pageDesc}$3`);
+        html = html.replace(/(<meta\s+property="og:url"\s+content=")([^"]*)("\s*\/>)/i, `$1${escAttr(canonicalUrl)}$3`);
+
+        res.set("Content-Type", "text/html");
+        return res.send(html);
       });
     } else {
       console.warn(`[CHILS & CO.] Production mode active but 'dist' directory not found at ${distPath}`);

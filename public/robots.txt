@@ -1,4 +1,13 @@
 User-agent: *
 Allow: /
 
+# Disallow private and administrative routes from indexing
+Disallow: /console/
+Disallow: /admin/
+Disallow: /checkout
+Disallow: /onboarding
+Disallow: /auth
+Disallow: /wishlist
+
 Sitemap: https://chilsandco.com/sitemap.xml
+

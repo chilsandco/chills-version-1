@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import SEO from '../components/SEO';
 import CheckoutInterstitial from '../components/CheckoutInterstitial';
 import SecondLifeModal from '../components/SecondLifeModal';
 import PackagingUpsellBanner from '../components/PackagingUpsellBanner';
@@ -397,7 +398,9 @@ const Checkout: React.FC = () => {
 
   return (
     <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen">
+      <SEO title="Checkout" noindex={true} />
       <CheckoutInterstitial isVisible={isProcessing} message="Syncing with WooCommerce..." />
+
 
       <AnimatePresence>
         {error && (

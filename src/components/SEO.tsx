@@ -8,6 +8,7 @@ interface SEOProps {
   ogType?: string;
   ogImage?: string;
   keywords?: string;
+  noindex?: boolean;
   schema?: Record<string, any>;
 }
 
@@ -18,10 +19,12 @@ const SEO: React.FC<SEOProps> = ({
   ogType = "website",
   ogImage = "https://res.cloudinary.com/ddatd5ruz/image/upload/v1781014185/chils_main_logo_transparent_ab7vru.png",
   keywords = "luxury fashion, bespoke tailoring, handcrafted garments, Chils and Co, custom suits, high-end menswear",
+  noindex = false,
   schema
 }) => {
   const siteName = "CHILS & CO.";
   const fullTitle = title.includes(siteName) ? title : `${title} | ${siteName}`;
+  const canonicalUrl = canonical.startsWith('http') ? canonical : `https://chilsandco.com${canonical}`;
 
   return (
     <Helmet>
@@ -29,7 +32,8 @@ const SEO: React.FC<SEOProps> = ({
       <title>{fullTitle}</title>
       <meta name="description" content={description} />
       <meta name="keywords" content={keywords} />
-      <link rel="canonical" href={canonical} />
+      <meta name="robots" content={noindex ? "noindex, nofollow" : "index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"} />
+      <link rel="canonical" href={canonicalUrl} />
 
       {/* Open Graph / Facebook */}
       <meta property="og:type" content={ogType} />
