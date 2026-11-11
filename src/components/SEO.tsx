@@ -13,12 +13,12 @@ interface SEOProps {
 }
 
 const SEO: React.FC<SEOProps> = ({ 
-  title = "CHILS & CO. | Extraordinary Bespoke Luxury", 
-  description = "Chils & Co. delivers high-end bespoke garments and luxury ready-to-wear. Handcrafted precision for the modern individual.",
+  title = "CHILS & CO. | Premium Tees and Polos for People Who Build", 
+  description = "Premium tees and polos, designed by techies in Hyderabad. Quiet colour, good fabric, delivered across India.",
   canonical = "https://chilsandco.com",
   ogType = "website",
   ogImage = "https://res.cloudinary.com/ddatd5ruz/image/upload/v1781014185/chils_main_logo_transparent_ab7vru.png",
-  keywords = "luxury fashion, bespoke tailoring, handcrafted garments, Chils and Co, custom suits, high-end menswear",
+  keywords = "premium t-shirts india, polo t-shirts, oversized tees, developer t-shirts, Chils and Co",
   noindex = false,
   schema
 }) => {

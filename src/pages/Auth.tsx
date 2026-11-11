@@ -89,13 +89,13 @@ const Orders: React.FC = () => {
     if (token) fetchOrders();
   }, [token]);
 
-  if (loading) return <div className="text-[10px] text-white/40 tracking-widest uppercase">Retrieving transmissions...</div>;
+  if (loading) return <div className="text-[10px] text-white/40 tracking-widest uppercase">Loading your orders…</div>;
 
   if (orders.length === 0) {
     return (
       <div className="py-8 text-center border border-white/10 bg-white/5 rounded-sm">
         <Package className="mx-auto mb-3 opacity-20" size={32} />
-        <p className="text-[10px] text-white/40 tracking-widest uppercase italic">"No signals detected in the archive."</p>
+        <p className="text-[10px] text-white/40 tracking-widest uppercase italic">"No orders yet."</p>
       </div>
     );
   }
@@ -110,7 +110,7 @@ const Orders: React.FC = () => {
         >
           <div className="flex justify-between items-start mb-2">
             <div>
-              <p className="text-[8px] text-white/40 tracking-widest uppercase mb-1">Signal Identity</p>
+              <p className="text-[8px] text-white/40 tracking-widest uppercase mb-1">Order number</p>
               <p className="text-xs font-bold tracking-tight font-mono group-hover:text-accent transition-colors">#{order.signalId}</p>
             </div>
             <div className={`text-[9px] px-2 py-0.5 rounded-full uppercase font-bold tracking-widest ${
@@ -428,9 +428,9 @@ const Auth: React.FC = () => {
     const hasWaitlistBadge = isFlagActive(user.onWaitlist, 'chils_bespoke_waitlist');
 
     return (
-      <div className="min-h-screen pt-36 md:pt-32 pb-24 px-6">
+      <div className="min-h-screen pt-24 md:pt-32 pb-24 px-6">
       <SEO 
-        title="Member Portal & Authentication"
+        title="Your account"
         description="Access your Chils & Co. account, track your custom garment builds, secure co-creator badges, and view order history."
         canonical="https://chilsandco.com/auth"
         keywords="login, signup, chils and co account, authentication console, member console, track orders"
@@ -480,7 +480,7 @@ const Auth: React.FC = () => {
                     onClick={() => navigate('/console/orders')}
                     className="w-full border border-accent/40 text-accent py-4 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-accent/5 transition-colors flex items-center justify-center gap-2"
                   >
-                    ORDER SIGNALS
+                    ORDERS
                     <ExternalLink size={12} />
                   </button>
                   <button 
@@ -601,7 +601,7 @@ const Auth: React.FC = () => {
                        activeTab === 'orders' ? 'text-white' : 'text-white/40 hover:text-white/80'
                      }`}
                    >
-                     ORDERS ARCHIVE
+                     MY ORDERS
                      {activeTab === 'orders' && (
                        <motion.div 
                          layoutId="activeTabUnderline"
@@ -615,7 +615,7 @@ const Auth: React.FC = () => {
                        activeTab === 'profile' ? 'text-white' : 'text-white/40 hover:text-white/80'
                      }`}
                    >
-                     IDENTITY PROFILE
+                     MY DETAILS
                      {activeTab === 'profile' && (
                        <motion.div 
                          layoutId="activeTabUnderline"
@@ -628,8 +628,8 @@ const Auth: React.FC = () => {
                  {activeTab === 'orders' ? (
                    <>
                      <div className="mb-10">
-                       <h4 className="text-3xl font-display font-bold tracking-tighter mb-2">ORDERS ARCHIVE</h4>
-                       <p className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-medium">Historical logs and status of your active transmissions.</p>
+                       <h4 className="text-3xl font-display font-bold tracking-tighter mb-2">MY ORDERS</h4>
+                       <p className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-medium">Your past orders and their status.</p>
                      </div>
                      
                      <Orders />
@@ -641,8 +641,8 @@ const Auth: React.FC = () => {
                      className="bg-neutral-950 border border-white/10 p-8 md:p-12 rounded-sm"
                    >
                      <div className="mb-10">
-                       <h4 className="text-3xl font-display font-bold tracking-tighter mb-2">IDENTITY SETTINGS</h4>
-                       <p className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-medium">Configure your credentials and contact nodes.</p>
+                       <h4 className="text-3xl font-display font-bold tracking-tighter mb-2">PASSWORD UPDATEDTINGS</h4>
+                       <p className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-medium">Update your name, phone and password.</p>
                      </div>
 
                      <form onSubmit={handleProfileSubmit} className="space-y-6">
@@ -656,7 +656,7 @@ const Auth: React.FC = () => {
                        {profileSuccess && (
                          <div className="bg-green-500/10 border border-green-500/20 p-4 flex items-center gap-3 text-green-500 text-sm">
                            <CheckCircle2 size={18} />
-                           <span>Identity successfully updated.</span>
+                           <span>Your details have been updated.</span>
                          </div>
                        )}
 
@@ -726,35 +726,20 @@ const Auth: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen pt-36 md:pt-32 flex flex-col md:flex-row">
+    <div className="min-h-screen pt-24 md:pt-32 flex flex-col md:flex-row">
       <SEO 
-        title="Authenticate Identity"
+        title="Sign in"
         description="Sign in or register to join the Chils & Co. community. Gain early access to limited bespoke drops and personalized fittings."
         canonical="https://chilsandco.com/auth"
         keywords="login, signup, register identity, authentication gate, bespoke access"
       />
       {/* Left: Branding */}
-      <div className="hidden md:flex flex-1 bg-[#0a0a0a] items-center justify-center p-12 border-r border-white/10">
-        <div className="max-w-md">
-          <motion.h2 
-            initial={{ opacity: 0, x: -30 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 1, ease: [0.22, 1, 0.36, 1] }}
-            className="text-6xl font-display font-bold tracking-tighter leading-none mb-6"
-          >
-            ELEVATED <br /> IDENTITY.
-          </motion.h2>
-          <motion.p 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.6 }}
-            transition={{ delay: 0.5, duration: 1 }}
-            className="text-lg font-light tracking-wide leading-relaxed"
-          >
-            Join the CHILS & CO. community. Gain early access to limited drops, 
-            personalized recommendations, and a seamless shopping experience 
-            designed for the digital elite.
-          </motion.p>
+      <div className="hidden md:flex flex-1 seamless text-ink relative overflow-hidden items-start p-12 lg:p-16">
+        <div className="max-w-md relative z-10">
+          <h2 className="text-5xl lg:text-6xl font-semibold leading-none">Welcome in.</h2>
+          <p className="mt-5 text-stone text-lg">Early access to limited drops, faster checkout and every order in one place.</p>
         </div>
+        <img src="/looks/1683_3.webp" alt="" className="absolute bottom-0 right-[8%] h-[78%] object-contain object-bottom" />
       </div>
 
       {/* Right: Form */}

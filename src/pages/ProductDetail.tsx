@@ -12,170 +12,14 @@ import SizeGuide from '../components/SizeGuide';
 import SEO from '../components/SEO';
 import { useAuth } from '../AuthContext';
 import { ProductReview } from '../types';
-import ProductCard from '../components/ProductCard';
+import { ModelFloor, isStanding } from '../components/ModelFloor';
+import { applyStudio, isPoster } from '../data/studio';
+import { productTone } from '../data/groups';
+import { STORIES, keySpecs } from '../data/stories';
+import TrilogyHint from '../components/TrilogyHint';
+import { itemOf, track } from '../lib/track';
+import cutouts from '../data/cutouts.json';
 
-
-interface MagnifiedImageCardProps {
-  img: string;
-  index: number;
-  total: number;
-  productName: string;
-  onClick: () => void;
-  productImgRef?: React.RefObject<HTMLImageElement | null>;
-}
-
-const MagnifiedImageCard: React.FC<MagnifiedImageCardProps> = ({
-  img,
-  index,
-  total,
-  productName,
-  onClick,
-  productImgRef
-}) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [isHovered, setIsHovered] = useState(false);
-  const [hasHover, setHasHover] = useState(false);
-
-  useEffect(() => {
-    setHasHover(window.matchMedia('(hover: hover)').matches);
-  }, []);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    setMousePos({ x, y });
-  };
-
-  const getColSpan = (i: number, tot: number) => {
-    if (tot <= 1) return "md:col-span-2";
-    if (tot === 2) return "md:col-span-1";
-    
-    const layouts: string[] = [];
-    let remaining = tot;
-    let nextType = 'full';
-    
-    while (remaining > 0) {
-      if (remaining === 1) {
-        layouts.push('full');
-        remaining -= 1;
-      } else if (remaining === 2) {
-        layouts.push('half', 'half');
-        remaining -= 2;
-      } else {
-        if (nextType === 'full') {
-          layouts.push('full');
-          remaining -= 1;
-          nextType = 'half';
-        } else {
-          layouts.push('half', 'half');
-          remaining -= 2;
-          nextType = 'full';
-        }
-      }
-    }
-    
-    return layouts[i] === 'full' ? "md:col-span-2" : "md:col-span-1";
-  };
-
-  const zoomFactor = 2.2;
-  const magnifierSize = 180; // 180px circular loupe
-
-  const containerWidth = containerRef.current ? containerRef.current.clientWidth : 0;
-  const containerHeight = containerRef.current ? containerRef.current.clientHeight : 0;
-  
-  const px = containerWidth > 0 ? mousePos.x / containerWidth : 0;
-  const py = containerHeight > 0 ? mousePos.y / containerHeight : 0;
-
-  const zoomX = -px * containerWidth * zoomFactor + magnifierSize / 2;
-  const zoomY = -py * containerHeight * zoomFactor + magnifierSize / 2;
-
-  return (
-    <motion.div
-      ref={containerRef}
-      onMouseMove={handleMouseMove}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className={`relative aspect-[3/4] bg-neutral-950 overflow-hidden border border-white/5 cursor-zoom-in ${getColSpan(index, total)}`}
-      whileHover={{ scale: 1.015 }}
-      transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-      onClick={onClick}
-      data-cursor="inspect"
-    >
-      <motion.img
-        ref={productImgRef as any}
-        src={img}
-        alt={`${productName} ${index + 1}`}
-        className="w-full h-full object-cover origin-center transition-transform duration-700"
-        referrerPolicy="no-referrer"
-      />
-
-      {/* Futuristic Gold Scan HUD corners appearing on hover */}
-      <div className={`absolute inset-0 border border-accent/20 transition-opacity duration-500 pointer-events-none ${isHovered ? 'opacity-100' : 'opacity-0'}`} />
-      
-      {/* Reticle corner markings */}
-      <div className={`absolute top-3 left-3 w-3 h-3 border-t border-l border-accent/60 transition-all duration-500 pointer-events-none ${isHovered ? 'translate-x-0 translate-y-0 opacity-100' : '-translate-x-2 -translate-y-2 opacity-0'}`} />
-      <div className={`absolute top-3 right-3 w-3 h-3 border-t border-r border-accent/60 transition-all duration-500 pointer-events-none ${isHovered ? 'translate-x-0 translate-y-0 opacity-100' : 'translate-x-2 -translate-y-2 opacity-0'}`} />
-      <div className={`absolute bottom-3 left-3 w-3 h-3 border-b border-l border-accent/60 transition-all duration-500 pointer-events-none ${isHovered ? 'translate-x-0 translate-y-0 opacity-100' : '-translate-x-2 translate-y-2 opacity-0'}`} />
-      <div className={`absolute bottom-3 right-3 w-3 h-3 border-b border-r border-accent/60 transition-all duration-500 pointer-events-none ${isHovered ? 'translate-x-0 translate-y-0 opacity-100' : 'translate-x-2 translate-y-2 opacity-0'}`} />
-
-      {/* Detail Scan Loupe Overlay */}
-      {isHovered && hasHover && containerWidth > 0 && (
-        <div
-          className="absolute rounded-full border border-accent bg-black pointer-events-none overflow-hidden shadow-[0_0_35px_rgba(212,175,55,0.25)]"
-          style={{
-            width: magnifierSize,
-            height: magnifierSize,
-            left: mousePos.x - magnifierSize / 2,
-            top: mousePos.y - magnifierSize / 2,
-            transform: 'translate3d(0, 0, 0)',
-            zIndex: 10,
-          }}
-        >
-          <img
-            src={img}
-            alt="Magnified View"
-            className="absolute max-w-none origin-top-left pointer-events-none top-0 left-0"
-            referrerPolicy="no-referrer"
-            style={{
-              width: containerWidth * zoomFactor,
-              height: containerHeight * zoomFactor,
-              transform: `translate3d(${zoomX}px, ${zoomY}px, 0)`,
-            }}
-          />
-
-          {/* Micro HUD scanning grid inside loupe */}
-          <div 
-            className="absolute inset-0 opacity-15 pointer-events-none bg-[radial-gradient(circle_at_center,transparent_40%,rgba(212,175,55,0.3)_100%)]"
-            style={{
-              backgroundImage: `
-                linear-gradient(rgba(212, 175, 55, 0.15) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(212, 175, 55, 0.15) 1px, transparent 1px)
-              `,
-              backgroundSize: '12px 12px',
-            }}
-          />
-          
-          {/* Lens center crosshair */}
-          <div className="absolute w-2 h-2 flex items-center justify-center opacity-30">
-            <div className="absolute w-[8px] h-[1px] bg-accent" />
-            <div className="absolute h-[8px] w-[1px] bg-accent" />
-          </div>
-        </div>
-      )}
-    </motion.div>
-  );
-};
-
-const sizeAdvisories: Record<string, { fit: string; chest: string; length: string; shoulder: string; note: string }> = {
-  S: { fit: 'Slim fit', chest: '38.5"', length: '28"', shoulder: '16.25"', note: 'Ideal for a structured, close-to-body silhouette. If you prefer a dropped shoulder look, consider M.' },
-  M: { fit: 'Standard fit', chest: '40.5"', length: '28.5"', shoulder: '16.75"', note: 'The standard system design. Balanced torso drape and structured shoulder line.' },
-  L: { fit: 'Relaxed fit', chest: '42.5"', length: '29"', shoulder: '17.25"', note: 'Oversized aesthetic. Features dropped shoulders, a wider chest, and a longer hem drop.' },
-  XL: { fit: 'Loose fit', chest: '45.5"', length: '29.5"', shoulder: '17.75"', note: 'Highly relaxed torso line for an ultra-oversized silhouette.' },
-  '2XL': { fit: 'Extra relaxed', chest: '48.5"', length: '30"', shoulder: '18.25"', note: 'Maximum volume, room, and drape for an extremely relaxed profile.' }
-};
 
 const ProductDetail: React.FC = () => {
   const { id } = useParams();
@@ -323,13 +167,22 @@ const ProductDetail: React.FC = () => {
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/products/${id}`)
-      .then(res => {
-        if (!res.ok) throw new Error();
-        return res.json();
-      })
+    // one brief API hiccup shouldn't throw a shopper back to the collection
+    const loadProduct = (retries: number): Promise<any> =>
+      fetch(`/api/products/${id}`)
+        .then(res => {
+          if (!res.ok) throw new Error();
+          return res.json();
+        })
+        .catch(err => {
+          if (retries <= 0) throw err;
+          return new Promise(resolve => setTimeout(resolve, 700)).then(() => loadProduct(retries - 1));
+        });
+
+    loadProduct(2)
       .then(data => {
-        setProduct(data);
+        setProduct(applyStudio(data));
+        track('view_item', { currency: 'INR', value: data.price, items: [itemOf(data)] });
         setLoading(false);
       })
       .catch(() => navigate('/collection'));
@@ -415,7 +268,7 @@ const ProductDetail: React.FC = () => {
       })
       .then(data => {
         if (Array.isArray(data)) {
-          setAllProducts(data);
+          setAllProducts(data.map(applyStudio));
         }
       })
       .catch(err => console.error("Error fetching products catalog:", err));
@@ -555,45 +408,23 @@ const ProductDetail: React.FC = () => {
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isBuyNowProcessing, setIsBuyNowProcessing] = useState(false);
   const [buttonText, setButtonText] = useState("Add to Cart");
-  const productImgRef = useRef<HTMLImageElement>(null);
   const addToCartBtnRef = useRef<HTMLButtonElement>(null);
+  const [mainButtonVisible, setMainButtonVisible] = useState(true);
 
+  // the sticky mobile bar only appears once the main button has scrolled away
+  useEffect(() => {
+    const el = addToCartBtnRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([e]) => setMainButtonVisible(e.isIntersecting));
+    io.observe(el);
+    return () => io.disconnect();
+  }, [loading, product, isSelectedSizeOutOfStock]);
+
+  // the photo showing on the details screen
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [stageZoom, setStageZoom] = useState<{ x: number; y: number } | null>(null);
 
-  // Swipe gesture tracking for mobile image carousel
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [touchEnd, setTouchEnd] = useState<number | null>(null);
-  const minSwipeDistance = 50;
-
-  const onTouchStart = (e: React.TouchEvent) => {
-    setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
-  };
-
-  const onTouchMove = (e: React.TouchEvent) => {
-    setTouchEnd(e.targetTouches[0].clientX);
-  };
-
-  const onTouchEnd = () => {
-    if (!touchStart || !touchEnd) return;
-    const distance = touchStart - touchEnd;
-    const isLeftSwipe = distance > minSwipeDistance;
-    const isRightSwipe = distance < -minSwipeDistance;
-    
-    if (isLeftSwipe) {
-      setCurrentImageIndex((prev) => (prev + 1) % (product?.images?.length || 1));
-    } else if (isRightSwipe) {
-      setCurrentImageIndex((prev) => (prev - 1 + (product?.images?.length || 1)) % (product?.images?.length || 1));
-    }
-  };
-
-  const handlePrevImage = () => {
-    setCurrentImageIndex((prev) => (prev - 1 + (product?.images?.length || 1)) % (product?.images?.length || 1));
-  };
-
-  const handleNextImage = () => {
-    setCurrentImageIndex((prev) => (prev + 1) % (product?.images?.length || 1));
-  };
+  useEffect(() => { setCurrentImageIndex(0); setStageZoom(null); }, [id]);
 
   const handleAddToCart = () => {
     if (!product) return;
@@ -762,6 +593,7 @@ const ProductDetail: React.FC = () => {
       } else {
         thumb.remove();
         window.dispatchEvent(new CustomEvent('pulse-cart'));
+        window.dispatchEvent(new CustomEvent('bag-open'));
         cartIcon.style.animation = 'cartGoldPulse 0.6s ease-out';
         setTimeout(() => { cartIcon.style.animation = ''; }, 700);
         setIsAddingToCart(false);
@@ -844,11 +676,13 @@ const ProductDetail: React.FC = () => {
     }
   );
 
-  if (loading || !product) return <div className="h-screen flex items-center justify-center font-display tracking-widest text-neutral-500 uppercase text-xs">Awaiting Precision...</div>;
+  if (loading || !product) return <div className="h-screen flex items-center justify-center font-display tracking-widest text-neutral-500 uppercase text-xs">Loading…</div>;
 
   const productStory = product.shortDescription || product.concept || product.description;
   const productDetails = product.description || product.shortDescription || "";
-  const storyParagraphs = productStory.split(/\n{2,}|\r\n{2,}/).map(line => line.trim()).filter(Boolean);
+  const storyParagraphs = productStory.split(/\n{2,}|\r\n{2,}/).map(line => line.trim())
+    // short lines with no full stop are leftover headings from the product text
+    .filter(line => line && (/[.!?”"]$/.test(line) || line.length > 60));
   const detailLines = productDetails.split(/\n+/).map(line => line.trim()).filter(Boolean);
   const detailBullets = detailLines.filter(line => line.startsWith('-')).map(line => line.replace(/^-\s*/, ''));
   const detailParagraphs = detailLines.filter(line => !line.startsWith('-'));
@@ -856,21 +690,39 @@ const ProductDetail: React.FC = () => {
   const totalReviews = reviews.length;
   const averageRating = totalReviews > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / totalReviews) : 0;
 
+  // the model on stage follows the selected colour; a colour without a cut-out shows its photo
+  const cut = (cutouts as Record<string, any>)[product.id];
+  const multiColor = (product.availableColors?.length ?? 0) > 1;
+  const colorCut = selectedColor ? cut?.colors?.[selectedColor] : undefined;
+  const cutSrc: string | undefined = colorCut?.src ?? (multiColor ? undefined : cut?.src);
+  const tagline = detailParagraphs[detailParagraphs.length - 1] || 'Essential by design.';
+  const shortStory = STORIES[product.id] ?? storyParagraphs[0]?.split(/(?<=[.!?])\s/)[0] ?? 'Essential by design.';
+  const specs = keySpecs(productDetails, product.fit);
+
   const displayImages = selectedColor && product.variations
     ? product.variations.find(v => v.attributes.color === selectedColor)?.images?.length 
       ? product.variations.find(v => v.attributes.color === selectedColor)!.images
       : product.images
     : product.images;
 
+  // some colourways have a single photo, so the wall tops up from the product's own set
+  const galleryImages = Array.from(new Set([...displayImages, ...(displayImages.length < 4 ? product.images : [])])).filter(img => !isPoster(img)).slice(0, 6);
+  const heroSrc = cutSrc ?? displayImages[0];
+  const heroIsCutout = !!cutSrc;
+  const heroStands = heroIsCutout && (colorCut?.kind ?? cut?.kind) !== 'bust';
+  const views = galleryImages.length ? galleryImages : [displayImages[0]];
+  const stageIndex = Math.min(currentImageIndex, views.length - 1);
+  const stageSrc = views[stageIndex];
+
   return (
-    <div className="pt-24 sm:pt-32 pb-24 px-6 md:px-12 max-w-[1800px] mx-auto">
+    <div className="pt-16 md:pt-[72px] pb-20">
       <SEO 
         title={product.name}
-        description={product.shortDescription || product.concept || "Chils & Co. delivers high-end bespoke garments and luxury ready-to-wear."}
+        description={product.shortDescription || product.concept || `${product.name} by CHILS & CO. ₹${product.price}, delivered across India with 7-day returns.`}
         canonical={`https://chilsandco.com/product/${product.id}`}
         ogType="product"
         ogImage={product.images[0]}
-        keywords={`${product.name.toLowerCase()}, luxury clothing, bespoke garments, chils and co product`}
+        keywords={`${product.name.toLowerCase()}, ${(product.category || 't-shirt').toLowerCase()}, premium t-shirt india, chils and co`}
         schema={{
           "@context": "https://schema.org/",
           "@type": "Product",
@@ -916,783 +768,332 @@ const ProductDetail: React.FC = () => {
         }}
       />
 
-      {/* Navigation Breadcrumb */}
-      <motion.div 
-        initial={{ opacity: 0, x: -10 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.8, delay: 0.2 }}
-        className="mb-12"
-      >
-        <Link 
-          to="/collection" 
-          className="group inline-flex items-center gap-3 text-[10px] tracking-[0.4em] font-bold uppercase text-neutral-500 hover:text-white transition-all duration-300"
+      {/* PHONE GALLERY: every photo, edge to edge, one swipe apart */}
+      <section className="lg:hidden relative bg-[#e4e3df]">
+        <div
+          key={selectedColor ?? 'all'}
+          className="flex overflow-x-auto snap-x snap-mandatory [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          onScroll={e => { const el = e.currentTarget; setCurrentImageIndex(Math.round(el.scrollLeft / el.clientWidth)); }}
         >
-          <div className="w-8 h-[1px] bg-neutral-800 group-hover:w-12 group-hover:bg-accent transition-all duration-500" />
-          <div className="flex items-center gap-1 group-hover:translate-x-1 transition-transform duration-500">
-            <ChevronLeft size={12} className="group-hover:text-accent transition-colors" />
-            Back to Collections
-          </div>
-        </Link>
-      </motion.div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-        {/* Desktop Image Gallery (Hidden on Mobile) */}
-        <div className="hidden lg:grid lg:col-span-7 grid-cols-1 md:grid-cols-2 gap-4 h-fit">
-          {displayImages.map((img, i) => (
-            <MagnifiedImageCard
-              key={`${selectedColor}-${i}`}
-              img={img}
-              index={i}
-              total={displayImages.length}
-              productName={product.name}
-              productImgRef={i === 0 ? productImgRef : undefined}
-              onClick={() => {
-                setSelectedImage(img);
-                scale.set(1);
-                positionX.set(0);
-                positionY.set(0);
-              }}
-            />
+          {views.map((src, i) => (
+            <button key={src + i} type="button" aria-label={`Zoom photo ${i + 1} of ${product.name}`} onClick={() => { setSelectedImage(src); scale.set(1); positionX.set(0); positionY.set(0); }} className="snap-center shrink-0 w-full aspect-[4/5]">
+              <img src={src} alt={product.name} loading={i === 0 ? 'eager' : 'lazy'} referrerPolicy="no-referrer" draggable={false} className="w-full h-full object-cover object-top" />
+            </button>
           ))}
         </div>
+        {views.length > 1 && (
+          <div className="absolute inset-x-0 bottom-7 flex justify-center gap-1.5 pointer-events-none">
+            {views.map((_, i) => <span key={i} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === stageIndex ? 'bg-[#fff]' : 'bg-[#fff]/45'}`} />)}
+          </div>
+        )}
+      </section>
 
-        {/* Mobile Image Carousel (Hidden on Desktop) */}
-        <div 
-          className="block lg:hidden lg:col-span-7 w-full relative mb-4"
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
-        >
-          <div className="relative aspect-[3/4] w-full bg-neutral-950 overflow-hidden border border-white/5">
-            <AnimatePresence mode="wait">
+      {/* STAGE */}
+      <section style={{ backgroundColor: productTone(product) }} className="relative overflow-hidden text-ink max-lg:!bg-transparent">
+        <div className="relative lg:h-[calc(100svh-72px)] lg:min-h-[660px] lg:max-h-[960px]">
+          <nav className="hidden lg:flex lg:absolute z-20 top-0 left-0 px-5 lg:px-10 pt-4 lg:pt-6 text-xs text-ink/60 items-center gap-2" aria-label="Breadcrumb">
+            <Link to="/" className="hover:text-ink">Home</Link><span>/</span>
+            <Link to="/collection" className="hover:text-ink">Collection</Link><span>/</span>
+            <span className="text-ink truncate">{product.name}</span>
+          </nav>
+
+          <motion.h1
+            key={product.id}
+            initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="hidden lg:block lg:absolute z-0 inset-x-0 top-[5%] text-center font-semibold leading-[.92] tracking-[-0.05em] whitespace-nowrap px-3 select-none"
+            style={{ fontSize: `clamp(44px, ${Math.min(17, 155 / Math.max(product.name.length, 6)).toFixed(1)}vw, 300px)` }}
+          >
+            {product.name}
+          </motion.h1>
+
+          <button
+            type="button"
+            aria-label={`Zoom ${product.name}`}
+            onClick={() => { setSelectedImage(displayImages[0]); scale.set(1); positionX.set(0); positionY.set(0); }}
+            className={`hidden lg:flex lg:absolute z-10 inset-x-0 w-full items-end justify-center cursor-zoom-in ${heroStands ? 'lg:bottom-7 lg:h-[88%] pb-4 lg:pb-0' : 'lg:bottom-0 lg:h-[90%]'}`}
+          >
+            {heroStands && <span aria-hidden className="absolute bottom-2 lg:-bottom-2 left-1/2 -translate-x-1/2 w-[240px] lg:w-[340px] h-6 lg:h-8 rounded-[50%] bg-[radial-gradient(closest-side,rgba(20,18,12,.32),transparent)]" />}
+            <AnimatePresence mode="wait" initial={false}>
               <motion.img
-                key={`${selectedColor}-${currentImageIndex}`}
-                src={displayImages[currentImageIndex] || displayImages[0]}
-                alt={`${product.name} mobile view ${currentImageIndex + 1}`}
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.02 }}
-                transition={{ duration: 0.4, ease: "easeInOut" }}
-                className="w-full h-full object-cover cursor-pointer"
-                onClick={() => {
-                  setSelectedImage(displayImages[currentImageIndex] || displayImages[0]);
-                  scale.set(1);
-                  positionX.set(0);
-                  positionY.set(0);
-                }}
+                key={heroSrc}
+                src={heroSrc}
+                alt={product.name}
+                draggable={false}
                 referrerPolicy="no-referrer"
+                initial={{ opacity: 0, y: 26, scale: 0.985 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }}
+                transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+                className={`relative h-full w-auto max-w-none object-contain object-bottom ${heroIsCutout ? '' : 'mix-blend-multiply'}`}
               />
             </AnimatePresence>
+          </button>
 
-            {/* Navigation Overlay */}
-            {displayImages.length > 1 && (
-              <>
-                <button
-                  onClick={handlePrevImage}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 flex items-center justify-center bg-black/60 border border-white/10 text-white/70 hover:text-white transition-all backdrop-blur-md active:scale-95 cursor-pointer"
-                  aria-label="Previous Image"
-                >
-                  <ChevronLeft size={18} />
-                </button>
-                <button
-                  onClick={handleNextImage}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 z-10 w-9 h-9 flex items-center justify-center bg-black/60 border border-white/10 text-white/70 hover:text-white transition-all backdrop-blur-md active:scale-95 cursor-pointer"
-                  aria-label="Next Image"
-                >
-                  <ChevronRight size={18} />
-                </button>
-                
-                {/* Monospace HUD Counter indicator */}
-                <div className="absolute bottom-4 left-4 z-10 bg-black/75 px-3 py-1.5 border border-white/5 text-[9px] tracking-[0.25em] font-mono text-accent/90 rounded-[2px] font-bold">
-                  {String(currentImageIndex + 1).padStart(2, '0')} / {String(displayImages.length).padStart(2, '0')}
-                </div>
-
-                {/* Progress dot indicators */}
-                <div className="absolute bottom-5 right-4 z-10 flex gap-1.5">
-                  {displayImages.map((_, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setCurrentImageIndex(idx)}
-                      className={`h-1.5 transition-all duration-300 rounded-full cursor-pointer ${idx === currentImageIndex ? 'w-4 bg-accent' : 'w-1.5 bg-neutral-600'}`}
-                      aria-label={`Go to slide ${idx + 1}`}
-                    />
-                  ))}
-                </div>
-              </>
+          <div className="hidden lg:block absolute z-20 left-10 bottom-10 w-[300px]">
+            {product.coCreator && (
+              <Link to={`/collection?creator=${encodeURIComponent(product.coCreator)}`} className="eyebrow text-ink/60 hover:text-ink block mb-3">Co-created by {product.coCreator}</Link>
             )}
+            <p className="text-2xl font-semibold leading-tight">{tagline}</p>
+            <p className="text-sm text-ink/60 mt-2">{product.category}</p>
           </div>
-        </div>
 
-        {/* Product Info */}
-        <div className="lg:col-span-5 lg:sticky lg:top-32 h-fit">
-          <div className="mb-8">
-            <div className="flex items-center justify-between gap-4 mb-4">
-              <p className="text-[12px] tracking-[0.3em] uppercase text-neutral-500">{product.category}</p>
-              {product.coCreator && (
-                <Link
-                  to={`/collection?creator=${encodeURIComponent(product.coCreator)}`}
-                  className="text-[9px] tracking-[0.25em] font-bold text-accent uppercase bg-accent/5 hover:bg-accent/15 px-3.5 py-1.5 border border-accent/20 hover:border-accent/50 rounded-[2px] backdrop-blur-md transition-all duration-300 cursor-pointer active:scale-95"
-                >
-                  CO-CREATED BY {product.coCreator}
-                </Link>
+          {/* BUY */}
+          <div className="relative lg:absolute z-20 lg:right-10 lg:bottom-8 lg:w-[350px] bg-[#fff] lg:bg-[#fff]/70 lg:backdrop-blur-xl px-5 py-6 lg:p-6 max-lg:rounded-t-2xl max-lg:-mt-4">
+            <p className="lg:hidden text-xl font-semibold leading-tight">{product.name}</p>
+            <p className="lg:hidden text-sm text-neutral-500 mt-1 mb-3">{tagline}</p>
+            <div className="flex items-baseline justify-between gap-4 flex-wrap">
+              <p className="text-2xl font-semibold">₹{product.price.toLocaleString()}</p>
+              <p className="mt-1 text-xs text-neutral-500">Delivery from ₹80 · 7-day returns</p>
+              {totalReviews > 0 && (
+                <button onClick={scrollToReviews} className="flex items-center gap-1 text-xs cursor-pointer"><Star size={13} className="fill-current" /> {averageRating.toFixed(1)}</button>
               )}
             </div>
-            <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tighter uppercase">{product.name}</h1>
-            </div>
-            
-            {/* Star Rating Summary */}
-            <div className="flex items-center gap-2 mb-4">
-              <button 
-                onClick={scrollToReviews}
-                className="flex items-center gap-1.5 hover:opacity-80 transition-opacity cursor-pointer group"
-              >
-                <div className="flex items-center gap-0.5 text-accent">
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      size={13}
-                      className={
-                        star <= Math.round(averageRating)
-                          ? "fill-accent stroke-accent"
-                          : "text-neutral-800 stroke-neutral-700"
-                      }
-                    />
-                  ))}
-                </div>
-                <span className="text-[10px] font-mono tracking-widest text-neutral-500 group-hover:text-accent transition-colors uppercase">
-                  {totalReviews > 0 
-                    ? `${averageRating.toFixed(1)} / 5.0 (${totalReviews} Customer Review${totalReviews > 1 ? 's' : ''})`
-                    : "0.0 / 5.0 (0 Customer Reviews)"
-                  }
-                </span>
-              </button>
-            </div>
-
-            <p className="text-xl font-medium">
-              ₹{product.price.toLocaleString()}
-              <span className="text-[10px] text-neutral-500 uppercase tracking-widest font-mono font-bold block mt-1">(Excl. Shipping)</span>
-            </p>
-            {product.availableColors && product.availableColors.length > 0 && (
-              <p className="text-[11px] tracking-[0.25em] text-neutral-400 uppercase mt-4">
-                Color: <span className="text-white font-mono font-bold">{hoveredColor || selectedColor}</span>
-              </p>
-            )}
-          </div>
-
-          {/* Story Behind the Design (Moved Up) */}
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.25 }}
-            className="relative overflow-hidden border border-accent/20 bg-[linear-gradient(135deg,rgba(212,175,55,0.12),rgba(255,255,255,0.025)_38%,rgba(0,0,0,0)_100%)] p-6 md:p-7 mb-8"
-          >
-            <div className="absolute left-0 top-0 h-full w-[2px] bg-accent" />
-            <div className="mb-5 flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center border border-accent/30 bg-black/40 text-accent">
-                  <BookOpen size={16} />
-                </div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-accent">Story Behind The Design</p>
-              </div>
-              <Sparkles size={15} className="text-accent/60" />
-            </div>
-            <div className="space-y-4">
-              {storyParagraphs.slice(0, 2).map((paragraph, index) => (
-                <p
-                  key={index}
-                  className={index === 0
-                    ? "font-display text-xl leading-snug tracking-normal text-white md:text-2xl"
-                    : "text-sm font-light leading-relaxed tracking-wide text-neutral-300"
-                  }
-                >
-                  {paragraph}
-                </p>
-              ))}
-            </div>
-            {productStory.length > 260 && (
-              <button
-                onClick={() => setIsDescOpen(true)}
-                className="group/btn mt-5 flex cursor-pointer items-center gap-3 text-[9px] font-bold uppercase tracking-[0.3em] text-accent transition-colors hover:text-white"
-              >
-                <span className="h-3 w-1 bg-accent transition-colors group-hover/btn:bg-white" />
-                Read Story And Details
-              </button>
-            )}
-          </motion.div>
-
-          {/* Color Selection Section */}
+          {/* Color */}
           {product.availableColors && product.availableColors.length > 1 && (
-            <div className="mb-6">
+            <div className="mt-4">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase text-neutral-500">Select Signal Type</h3>
-                {selectedColor && (
-                  <span className="text-[10px] tracking-[0.2em] font-bold uppercase text-white font-mono">
-                    {selectedColor}
-                  </span>
-                )}
+                <h3 className="text-xs tracking-[0.15em] uppercase font-semibold">
+                  Colour <span className="font-normal text-neutral-500 normal-case tracking-normal ml-1">{hoveredColor || selectedColor}</span>
+                </h3>
               </div>
-              <div className="flex flex-wrap gap-3 mb-2">
+              <div className="flex flex-wrap gap-2.5">
                 {product.availableColors.map(color => {
                   const variation = product.variations?.find(v => v.attributes.color === color);
-                  const variationImageFallback = variation?.images?.[0];
-                  
+                  const thumb = variation?.images?.[0];
+                  const swatch = product.colorSwatches?.[color.toLowerCase()];
+                  const active = selectedColor === color;
                   return (
-                  <motion.button 
-                    key={color}
-                    onMouseEnter={() => setHoveredColor(color)}
-                    onMouseLeave={() => setHoveredColor(null)}
-                    onClick={() => {
-                      setSelectedColor(color);
-                      setColorError(false);
-                      setCurrentImageIndex(0);
-                      
-                      // Reset selected size if it's not available or out of stock in the new color
-                      if (selectedSize && product.variations) {
-                        const hasSizeInNewColor = product.variations.some(v => {
-                          const matchesSize = v.attributes.size === selectedSize;
-                          const matchesColor = v.attributes.color === color;
-                          const inStock = v.manageStock 
-                            ? (v.stockQuantity !== undefined && v.stockQuantity > 0) 
-                            : v.stockStatus !== 'outofstock';
-                          return matchesSize && matchesColor && inStock;
-                        });
-                        if (!hasSizeInNewColor) {
-                          setSelectedSize(null);
+                    <motion.button
+                      key={color}
+                      onMouseEnter={() => setHoveredColor(color)}
+                      onMouseLeave={() => setHoveredColor(null)}
+                      onClick={() => {
+                        setSelectedColor(color);
+                        setColorError(false);
+                        setCurrentImageIndex(0);
+                        if (selectedSize && product.variations) {
+                          const ok = product.variations.some(v => {
+                            const inStock = v.manageStock ? (v.stockQuantity !== undefined && v.stockQuantity > 0) : v.stockStatus !== 'outofstock';
+                            return v.attributes.size === selectedSize && v.attributes.color === color && inStock;
+                          });
+                          if (!ok) setSelectedSize(null);
                         }
-                      }
-                    }}
-                    animate={colorError ? { x: [-2, 2, -2, 2, 0] } : {}}
-                    transition={{ duration: 0.4 }}
-                    className={`h-10 border flex items-center justify-center text-[11px] font-bold transition-all duration-300 cursor-pointer uppercase font-mono overflow-hidden ${
-                      (product.colorSwatches?.[color.toLowerCase()] && product.colorSwatches[color.toLowerCase()].type === 'image') || (!product.colorSwatches?.[color.toLowerCase()] && variationImageFallback) ? 'w-10 rounded-full !p-0' : 'px-4'
-                    } ${
-                      selectedColor === color 
-                        ? 'bg-white text-black border-white scale-105 shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
-                        : colorError 
-                          ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
-                          : 'border-neutral-800 hover:border-white text-neutral-400'
-                    }`}
-                    title={color}
-                  >
-                    {product.colorSwatches?.[color.toLowerCase()] ? (
-                      product.colorSwatches[color.toLowerCase()].type === 'image' ? (
-                        <img src={product.colorSwatches[color.toLowerCase()].value} alt={color} className="w-full h-full object-cover rounded-full" />
-                      ) : product.colorSwatches[color.toLowerCase()].type === 'color' ? (
-                        <div className="flex items-center gap-2">
-                          <span className="block h-4 w-4 rounded-full border border-neutral-600" style={{ backgroundColor: product.colorSwatches[color.toLowerCase()].value }} />
-                          <span>{color}</span>
-                        </div>
+                      }}
+                      animate={colorError ? { x: [-2, 2, -2, 2, 0] } : {}}
+                      title={color}
+                      aria-label={color}
+                      aria-pressed={active}
+                      className={`overflow-hidden transition-all cursor-pointer ${
+                        swatch?.type === 'color' || swatch?.type === 'image' || thumb ? 'w-11 h-14' : 'px-4 h-11 text-sm'
+                      } border ${active ? 'border-[#111] ring-1 ring-[#111]' : colorError ? 'border-red-500' : 'border-black/20 hover:border-black/60'}`}
+                    >
+                      {swatch?.type === 'image' ? (
+                        <img src={swatch.value} alt={color} className="w-full h-full object-cover" />
+                      ) : swatch?.type === 'color' ? (
+                        <span className="block w-full h-full" style={{ backgroundColor: swatch.value }} />
+                      ) : thumb ? (
+                        <img src={thumb} alt={color} referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                       ) : (
                         color
-                      )
-                    ) : variationImageFallback ? (
-                      <img src={variationImageFallback} alt={color} className="w-full h-full object-cover rounded-full" />
-                    ) : (
-                      color
-                    )}
-                  </motion.button>
+                      )}
+                    </motion.button>
                   );
                 })}
               </div>
-              <AnimatePresence>
-                {colorError && (
-                  <motion.div 
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="flex items-center gap-2 mt-2"
-                  >
-                    <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
-                    <p className="text-[10px] text-red-500 tracking-[0.3em] uppercase font-bold">
-                      CAUTION: Select your signal color
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {colorError && <p className="text-xs text-red-600 mt-2">Please choose a colour.</p>}
             </div>
           )}
 
-          {/* Size Selection Section (Moved Up) */}
+          {/* Size */}
           {availableSizes.length > 0 && (
-            <div className="mb-8">
+            <div className="mt-4">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase text-neutral-500">Choose Your Size</h3>
-                <button 
-                  onClick={() => setIsSizeGuideOpen(true)}
-                  className="flex items-center gap-2 text-[10px] tracking-[0.2em] font-bold uppercase text-accent hover:text-accent/80 transition-colors cursor-pointer"
-                >
-                  <Ruler size={12} />
-                  Size Guide
+                <h3 className="text-xs tracking-[0.15em] uppercase font-semibold">Size</h3>
+                <button onClick={() => setIsSizeGuideOpen(true)} className="flex items-center gap-1.5 text-xs underline underline-offset-4 cursor-pointer">
+                  <Ruler size={13} /> Size guide
                 </button>
               </div>
-              <div className="flex gap-3 mb-4">
+              <div className="flex flex-wrap gap-2.5">
                 {availableSizes.map(size => {
-                  // Determine stock of this size
-                  let isOutOfStock = false;
+                  let oos = false;
                   if (product.variations) {
-                    const matchingVariations = product.variations.filter(v => {
-                      const matchesSize = v.attributes.size === size;
-                      const matchesColor = !v.attributes.color || !selectedColor || v.attributes.color === selectedColor;
-                      return matchesSize && matchesColor;
-                    });
-                    
-                    if (matchingVariations.length > 0) {
-                      isOutOfStock = matchingVariations.every(v => {
-                        const hasNoQty = v.stockQuantity !== undefined && v.stockQuantity <= 0;
-                        const isOosStatus = v.stockStatus === 'outofstock';
-                        return v.manageStock ? hasNoQty : isOosStatus;
-                      });
-                    } else {
-                      isOutOfStock = true;
-                    }
+                    const matching = product.variations.filter(v =>
+                      v.attributes.size === size && (!v.attributes.color || !selectedColor || v.attributes.color === selectedColor)
+                    );
+                    oos = matching.length === 0 || matching.every(v => (v.manageStock ? v.stockQuantity !== undefined && v.stockQuantity <= 0 : v.stockStatus === 'outofstock'));
                   }
-                  
+                  const active = selectedSize === size;
                   return (
-                    <motion.button 
+                    <motion.button
                       key={size}
-                      onClick={() => {
-                        setSelectedSize(size);
-                        setSizeError(false);
-                      }}
+                      onClick={() => { setSelectedSize(size); setSizeError(false); }}
                       animate={sizeError ? { x: [-2, 2, -2, 2, 0] } : {}}
-                      transition={{ duration: 0.4 }}
-                      className={`w-12 h-12 border flex items-center justify-center text-[11px] font-bold transition-all duration-300 relative cursor-pointer ${
-                        selectedSize === size 
-                          ? 'bg-white text-black border-white scale-105 shadow-[0_0_15px_rgba(255,255,255,0.3)]' 
-                          : sizeError 
-                            ? 'border-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]'
-                            : isOutOfStock
-                              ? 'border-neutral-900 text-neutral-600 bg-neutral-950/40 opacity-40 hover:border-neutral-700'
-                              : 'border-neutral-800 hover:border-white text-neutral-300'
+                      aria-pressed={active}
+                      className={`relative min-w-[56px] h-12 px-3 text-sm border transition-colors cursor-pointer ${
+                        active
+                          ? 'bg-[#111] text-[#fff] border-[#111]'
+                          : sizeError
+                            ? 'border-red-500'
+                            : oos
+                              ? 'border-black/10 text-neutral-400'
+                              : 'border-black/25 hover:border-[#111]'
                       }`}
                     >
-                      {size}
-                      {isOutOfStock && (
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                          <div className="w-[140%] h-[1px] bg-neutral-800 rotate-[45deg]" />
-                        </div>
-                      )}
+                      <span className={oos && !active ? 'line-through' : ''}>{size}</span>
                     </motion.button>
                   );
                 })}
               </div>
-              <AnimatePresence mode="wait">
-                {selectedSize ? (
-                  <motion.div
-                    key={selectedSize}
-                    initial={{ opacity: 0, height: 0, y: -10 }}
-                    animate={{ opacity: 1, height: 'auto', y: 0 }}
-                    exit={{ opacity: 0, height: 0, y: -10 }}
-                    transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                    className="overflow-hidden mb-6"
-                  >
-                    <div className="border border-accent/20 bg-neutral-950 p-4 rounded-sm relative mt-2">
-                      {/* Corner technical accents */}
-                      <div className="absolute top-0 left-0 w-2 h-[1px] bg-accent" />
-                      <div className="absolute top-0 left-0 w-[1px] h-2 bg-accent" />
-                      <div className="absolute bottom-0 right-0 w-2 h-[1px] bg-accent" />
-                      <div className="absolute bottom-0 right-0 w-[1px] h-2 bg-accent" />
-
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-[9px] font-mono tracking-[0.3em] text-accent uppercase font-bold">
-                          Size Profile: {selectedSize}
-                        </span>
-                        <div className="flex gap-2">
-                          {isSelectedSizeOutOfStock && (
-                            <span className="text-[9px] font-mono tracking-[0.1em] text-red-500 bg-red-500/10 uppercase px-2 py-0.5 border border-red-500/20 rounded-sm font-bold">
-                              Out of Stock
-                            </span>
-                          )}
-                          {sizeAdvisories[selectedSize] && (
-                            <span className="text-[9px] font-mono tracking-[0.1em] text-white/50 uppercase px-2 py-0.5 border border-white/10 rounded-sm">
-                              {sizeAdvisories[selectedSize].fit}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Technical specifications grid */}
-                      {sizeAdvisories[selectedSize] ? (
-                        <div className="grid grid-cols-3 gap-4 border-y border-white/5 py-3 mb-3 text-center">
-                          <div>
-                            <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Chest</p>
-                            <motion.p 
-                              animate={{ opacity: [0.5, 1, 0.8, 1], textShadow: ["none", "0 0 8px rgba(212,175,55,0.4)", "none"] }}
-                              transition={{ duration: 0.3 }}
-                              className="font-mono text-sm text-white"
-                            >
-                              {sizeAdvisories[selectedSize].chest}
-                            </motion.p>
-                          </div>
-                          <div>
-                            <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Length</p>
-                            <motion.p 
-                              animate={{ opacity: [0.5, 1, 0.8, 1], textShadow: ["none", "0 0 8px rgba(212,175,55,0.4)", "none"] }}
-                              transition={{ duration: 0.3, delay: 0.05 }}
-                              className="font-mono text-sm text-white"
-                            >
-                              {sizeAdvisories[selectedSize].length}
-                            </motion.p>
-                          </div>
-                          <div>
-                            <p className="text-[8px] tracking-[0.15em] text-neutral-500 uppercase font-bold mb-1">Shoulder</p>
-                            <motion.p 
-                              animate={{ opacity: [0.5, 1, 0.8, 1], textShadow: ["none", "0 0 8px rgba(212,175,55,0.4)", "none"] }}
-                              transition={{ duration: 0.3, delay: 0.1 }}
-                              className="font-mono text-sm text-white"
-                            >
-                              {sizeAdvisories[selectedSize].shoulder}
-                            </motion.p>
-                          </div>
-                        </div>
-                      ) : null}
-
-                      {/* Fitting advisory note */}
-                      <p className="text-[11px] text-neutral-400 font-light leading-relaxed">
-                        {sizeAdvisories[selectedSize] ? sizeAdvisories[selectedSize].note : `Standard fitting for size ${selectedSize}.`}
-                      </p>
-                    </div>
-                  </motion.div>
-                ) : (
-                  <p className="text-[10px] text-neutral-600 uppercase tracking-widest mb-4">
-                    Model is 5'9" wearing size M for a standard fit.
-                  </p>
-                )}
-              </AnimatePresence>
-              <AnimatePresence>
-                {sizeError && (
-                  <motion.div 
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0 }}
-                    className="flex items-center gap-2 mb-4"
-                  >
-                    <span className="w-1 h-1 bg-red-500 rounded-full animate-pulse" />
-                    <p className="text-[12px] text-red-500 tracking-[0.3em] uppercase font-bold">
-                      CAUTION: Select your size
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {sizeError && <p className="text-xs text-red-600 mt-2">Please select a size.</p>}
             </div>
           )}
 
-          {/* Action Buttons: Add to Cart, Buy Now, Wishlist (Moved Up) */}
-          <div className="flex flex-col gap-4 mb-10">
-            {product.status === "Available" ? (
-              <>
-                {isSelectedSizeOutOfStock ? (
-                  <button
-                    disabled
-                    className="w-full border border-red-500/20 bg-red-500/5 text-red-500 py-5 text-[13px] tracking-[0.3em] font-bold uppercase cursor-not-allowed rounded-[2px]"
-                  >
-                    Size {selectedSize} Out of Stock
-                  </button>
-                ) : (
-                  <>
-                    <motion.button
-                      ref={addToCartBtnRef}
-                      onClick={handleAddToCart}
-                      whileHover={{ 
-                        scale: 1.01,
-                        boxShadow: "0 0 30px rgba(255, 255, 255, 0.1)",
-                        borderColor: "rgba(255, 255, 255, 0.6)"
-                      }}
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full bg-white text-black py-5 text-[13px] tracking-[0.3em] font-bold uppercase transition-all duration-300 border border-transparent active:opacity-90 cursor-pointer"
-                    >
-                      {buttonText}
-                    </motion.button>
-                    <div className="flex flex-col items-center gap-2">
-                      <p className="text-center text-[11px] tracking-widest text-neutral-600 uppercase">
-                        Signal assigned at dispatch
-                      </p>
-                      <p className="text-center text-[9px] tracking-widest text-accent/80 uppercase font-mono mt-0.5">
-                        // Collect in Store (Free) or Home Delivery (Location-based) available
-                      </p>
-                      <AnimatePresence>
-                        {showConfirmation && (
-                          <motion.div 
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -10 }}
-                            className="text-center text-[12px] tracking-widest text-accent uppercase font-bold"
-                          >
-                            Added to Cart ✓ <br/>
-                            <span className="text-[10px] font-normal opacity-60">Signal assigned at dispatch</span>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-     
-                    <motion.button
-                      onClick={handleBuyNow}
-                      disabled={isBuyNowProcessing}
-                      whileHover={{ 
-                        scale: 1.01,
-                        backgroundColor: "rgba(255, 255, 255, 1)",
-                        color: "rgba(0, 0, 0, 1)"
-                      }}
-                      whileTap={{ scale: 0.98 }}
-                      className="w-full border border-neutral-800 py-5 text-[13px] tracking-[0.3em] font-bold uppercase transition-all duration-300 flex items-center justify-center gap-3 disabled:opacity-50 cursor-pointer"
-                    >
-                      {isBuyNowProcessing ? 'Securing Checkout...' : (
-                        <>
-                          <motion.div
-                            whileHover={{ scale: 1.1 }}
-                            transition={{ duration: 0.3, ease: "easeOut" }}
-                            className="text-accent"
-                          >
-                            <CreditCard size={16} />
-                          </motion.div>
-                          Buy Now
-                        </>
-                      )}
-                    </motion.button>
-                  </>
-                )}
-
-                <button
-                  onClick={() => toggleWishlist(product)}
-                  className="w-full flex items-center justify-center gap-3 py-3 text-[12px] tracking-[0.3em] font-bold uppercase text-neutral-500 hover:text-white transition-colors group cursor-pointer"
-                >
-                  <Heart 
-                    size={16} 
-                    className={`transition-all duration-500 ${isInWishlist(product.id) ? 'fill-accent text-accent' : 'group-hover:scale-110'}`} 
-                  />
-                  {isInWishlist(product.id) ? 'Saved' : 'Add to Wishlist'}
-                </button>
-
-                <div className="pt-4 mt-2 border-t border-neutral-900/50">
-                  <ShareSignal 
-                    productName={product.name}
-                    productUrl={window.location.href}
-                    productImage={product.images[0]}
-                  />
-                </div>
-              </>
-            ) : (
-              <button
-                disabled
-                className="w-full border border-neutral-800 py-5 text-[11px] tracking-[0.3em] font-bold uppercase opacity-50 cursor-not-allowed"
-              >
-                Coming Soon
-              </button>
-            )}
-          </div>
-
-          {/* Details & Specs Container */}
-          <div className="space-y-6 pt-6 border-t border-neutral-900/50">
-            {/* Garment Intelligence */}
-            <div className="py-2 space-y-5">
-              <div className="flex items-center gap-3">
-                <div className="h-px flex-1 bg-neutral-900" />
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.32em] text-neutral-500">Garment Intelligence</h3>
-                <div className="h-px flex-1 bg-neutral-900" />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                {[
-                  { label: "Material", value: product.material, icon: Shirt },
-                  { label: "Fit", value: product.fit, icon: Ruler },
-                  { label: "Care", value: product.care, icon: Droplets },
-                  { label: "Reversals", value: "Returnable within 7 days of delivery.", icon: RotateCcw }
-                ].map(({ label, value, icon: Icon }) => (
-                  <div key={label} className="border border-neutral-900 bg-neutral-950/70 p-4">
-                    <Icon size={16} className="mb-4 text-accent" />
-                    <p className="mb-2 text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-600">{label}</p>
-                    <p className="text-[11px] leading-relaxed text-neutral-300">{value}</p>
-                  </div>
-                ))}
-              </div>
-
-              <div className="border border-neutral-900 bg-black p-5">
-                <div className="mb-4 flex items-center justify-between gap-4">
-                  <h3 className="text-[11px] font-bold uppercase tracking-[0.3em] text-accent">Product Details</h3>
-                  <button
-                    onClick={() => setIsDescOpen(true)}
-                    className="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-500 transition-colors hover:text-white cursor-pointer"
-                  >
-                    Full Intel
-                  </button>
-                </div>
-                <div className="space-y-3 text-[12px] font-light leading-relaxed tracking-wide text-neutral-400">
-                  {detailParagraphs.slice(0, 2).map((paragraph, index) => (
-                    <p key={index} className="line-clamp-3">{paragraph}</p>
-                  ))}
-                </div>
-                {detailBullets.length > 0 && (
-                  <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    {detailBullets.slice(0, 6).map((item) => (
-                      <div key={item} className="flex items-start gap-2 text-[11px] leading-relaxed text-neutral-400">
-                        <Check size={12} className="mt-0.5 shrink-0 text-accent" />
-                        <span>{item}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Precision Metrics */}
-            <div className="flex gap-12 py-4 border-t border-b border-neutral-900/50">
-              <div>
-                <p className="text-[9px] tracking-[0.2em] font-bold uppercase text-neutral-500 mb-1">Signals Deployed</p>
-                <p className="text-xl font-display font-bold tracking-tighter text-accent">
-                  {product.totalSales || 0}
-                </p>
-              </div>
-            </div>
-
-            {/* Signal Protocol */}
-            <div className="py-4 border-b border-neutral-900/50">
-              <motion.div
-                initial={{ opacity: 0, y: 5 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 1.2, ease: "easeOut" }}
-                viewport={{ once: true }}
-              >
-                <h3 className="text-[11px] tracking-[0.3em] font-bold uppercase mb-4 text-accent">Signal Protocol</h3>
-                <div className="space-y-4 text-neutral-500 text-[12px] leading-relaxed tracking-wide font-light">
-                  <p className="text-neutral-200">Each piece carries a coded message.</p>
-                  <p>Your signal is not selected. It is assigned.</p>
-                  <p>At dispatch, the system embeds a unique output into your garment. No two drops are identical.</p>
-                  <p className="text-[10px] text-neutral-600 uppercase tracking-[0.2em] pt-2 border-t border-neutral-900/10 inline-block">— Decoded on arrival.</p>
-                </div>
-              </motion.div>
-            </div>
-
-            {/* Reversal Protocol */}
-            <div className="border border-neutral-900 bg-black p-5 space-y-4">
-              <div className="flex items-center justify-between gap-4">
-                <h3 className="text-[11px] font-bold uppercase tracking-[0.3em] text-accent flex items-center gap-2">
-                  <RotateCcw size={13} />
-                  Reversal Protocol
-                </h3>
-                <Link 
-                  to="/returns-refunds" 
-                  className="text-[9px] font-bold uppercase tracking-[0.25em] text-neutral-500 transition-colors hover:text-white flex items-center gap-1"
-                >
-                  Policy Intel <ExternalLink size={10} />
-                </Link>
-              </div>
-              <div className="space-y-3 text-[12px] font-light leading-relaxed tracking-wide text-neutral-400">
-                <p>
-                  Every garment is eligible for a refund or size exchange within <strong className="text-white">7 days of delivery</strong>.
-                </p>
-                <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-mono pt-1">
-                  How to execute a return:
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                  <div className="p-3 bg-neutral-950 border border-neutral-900">
-                    <span className="text-[9px] font-mono text-accent block mb-1">01 / ARCHIVE</span>
-                    <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-normal">Go to your Orders Archive console.</p>
-                  </div>
-                  <div className="p-3 bg-neutral-950 border border-neutral-900">
-                    <span className="text-[9px] font-mono text-accent block mb-1">02 / TRANSMISSION</span>
-                    <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-normal">Select the delivered order signal.</p>
-                  </div>
-                  <div className="p-3 bg-neutral-950 border border-neutral-900">
-                    <span className="text-[9px] font-mono text-accent block mb-1">03 / INITIATE</span>
-                    <p className="text-[10px] text-neutral-400 uppercase tracking-wide leading-normal">Click "Initiate Reversal" to request.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* SYSTEM SCAN // ALTERNATIVE SIGNALS */}
-      {recommendedProducts.length > 0 && (
-        <div className="mt-24 pt-16 border-t border-neutral-900">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-              <h2 className="text-[12px] tracking-[0.4em] font-bold uppercase text-accent font-mono">
-                SYSTEM SCAN // ALTERNATIVE SIGNALS
-              </h2>
-            </div>
-            <div className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest">
-              MATCH TELEMETRY: ACTIVE
-            </div>
-          </div>
-
-          <div className="relative">
-            <AnimatePresence mode="wait">
-              {!isExpanded ? (
-                <motion.div
-                  key="slider"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="flex gap-6 overflow-x-auto pb-6 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-800"
-                >
-                  {recommendedProducts.slice(0, 5).map(({ product: altProd }) => (
-                    <div key={altProd.id} className="w-[280px] sm:w-[320px] shrink-0 relative group/rec">
-                      <ProductCard product={altProd} viewMode="archive" />
-                    </div>
-                  ))}
-                  {recommendedProducts.length > 5 && (
-                    <div className="w-[200px] shrink-0 border border-dashed border-neutral-800 hover:border-accent/40 flex flex-col items-center justify-center text-center p-6 bg-neutral-950/40 hover:bg-neutral-950 transition-colors">
-                      <button
-                        onClick={() => setIsExpanded(true)}
-                        className="text-[10px] font-mono font-bold tracking-[0.2em] text-neutral-400 hover:text-accent uppercase transition-colors cursor-pointer"
-                      >
-                        + SCAN MORE <br />
-                        <span className="text-[8px] text-neutral-600">({recommendedProducts.length - 5} Signals)</span>
-                      </button>
-                    </div>
-                  )}
-                </motion.div>
+          {/* Actions */}
+          <div className="mt-4 flex flex-col gap-2">
+            {product.status === 'Available' ? (
+              isSelectedSizeOutOfStock ? (
+                <button disabled className="w-full border border-black/15 text-neutral-500 py-3.5 text-sm cursor-not-allowed">Size {selectedSize} is out of stock</button>
               ) : (
-                <motion.div
-                  key="grid"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="relative"
-                >
-                  {/* Laser scan line overlay */}
-                  <motion.div 
-                    initial={{ top: "0%" }}
-                    animate={{ top: "100%" }}
-                    transition={{ duration: 1.2, ease: "easeInOut" }}
-                    className="absolute left-0 right-0 h-[2px] bg-accent/80 shadow-[0_0_15px_#d4af37] z-30 pointer-events-none"
-                  />
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {recommendedProducts.map(({ product: altProd }) => (
-                      <div key={altProd.id} className="relative group/rec bg-neutral-950 border border-white/5">
-                        <ProductCard product={altProd} viewMode="archive" />
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="mt-8 flex justify-center">
-                    <button
-                      onClick={() => setIsExpanded(false)}
-                      className="border border-neutral-800 hover:border-white px-8 py-3 text-[9px] font-mono text-neutral-400 hover:text-white tracking-[0.2em] uppercase transition-all duration-300 cursor-pointer"
-                    >
-                      [ COLLAPSE SCAN GRID ]
+                <>
+                  <motion.button
+                    ref={addToCartBtnRef}
+                    onClick={handleAddToCart}
+                    whileTap={{ scale: 0.99 }}
+                    className="w-full bg-ink text-[#fff] py-3.5 text-sm font-medium tracking-wide hover:opacity-90 transition-opacity cursor-pointer"
+                  >
+                    {buttonText === 'Add to Cart' ? 'Add to bag' : buttonText}
+                  </motion.button>
+                  <div className="flex gap-2">
+                    <button onClick={handleBuyNow} disabled={isBuyNowProcessing} className="flex-1 border border-ink py-3 text-sm font-medium hover:bg-ink hover:text-[#fff] transition-colors disabled:opacity-50 cursor-pointer">
+                      {isBuyNowProcessing ? 'Taking you to checkout…' : 'Buy now'}
+                    </button>
+                    <button onClick={() => toggleWishlist(product)} aria-label={isInWishlist(product.id) ? 'Remove from wishlist' : 'Save to wishlist'} aria-pressed={isInWishlist(product.id)} className="w-12 border border-ink flex items-center justify-center hover:bg-ink hover:text-[#fff] transition-colors cursor-pointer">
+                      <Heart size={16} className={isInWishlist(product.id) ? 'fill-current' : ''} />
                     </button>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                </>
+              )
+            ) : (
+              <button disabled className="w-full border border-black/15 text-neutral-500 py-3.5 text-sm cursor-not-allowed">Coming soon</button>
+            )}
+          </div>
+          <TrilogyHint ids={[product.id]} className="mt-3" />
           </div>
         </div>
-      )}
+      </section>
+
+      {/* DETAILS: the photos, the story and the facts */}
+      <section className="bg-paper text-ink">
+        <div className="max-w-[1500px] mx-auto px-5 md:px-10 pt-10 pb-20 lg:pt-0 lg:pb-16 lg:h-[calc(100svh-72px)] lg:min-h-[640px] lg:max-h-[880px] grid lg:grid-cols-[auto_minmax(0,1fr)] gap-8 lg:gap-20 items-center">
+          {views.length > 0 && (
+            <div className="hidden lg:flex flex-row gap-3 lg:h-[84%] min-h-0">
+              {views.length > 1 && (
+                <div className="flex lg:flex-col gap-2 overflow-x-auto lg:overflow-visible shrink-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {views.map((src, i) => (
+                    <button
+                      key={src + i}
+                      type="button"
+                      aria-label={`View photo ${i + 1} of ${views.length}`}
+                      aria-pressed={i === stageIndex}
+                      onMouseEnter={() => setCurrentImageIndex(i)}
+                      onFocus={() => setCurrentImageIndex(i)}
+                      onClick={() => setCurrentImageIndex(i)}
+                      className={`shrink-0 w-12 h-16 lg:w-14 lg:h-[74px] overflow-hidden bg-paper transition-opacity cursor-pointer ${i === stageIndex ? 'opacity-100 ring-1 ring-[#fff] ring-offset-2 ring-offset-ink' : 'opacity-45 hover:opacity-100'}`}
+                    >
+                      <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+              <button
+                type="button"
+                aria-label={`Zoom photo of ${product.name}`}
+                onClick={() => { setSelectedImage(stageSrc); scale.set(1); positionX.set(0); positionY.set(0); }}
+                onMouseMove={e => {
+                  const r = e.currentTarget.getBoundingClientRect();
+                  setStageZoom({ x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 });
+                }}
+                onMouseLeave={() => setStageZoom(null)}
+                className="relative w-full lg:w-auto lg:h-full aspect-[3/4] overflow-hidden bg-paper cursor-zoom-in"
+              >
+                <AnimatePresence initial={false}>
+                  <motion.img
+                    key={stageSrc}
+                    src={stageSrc}
+                    alt={product.name}
+                    draggable={false}
+                    referrerPolicy="no-referrer"
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.35 }}
+                    className="absolute inset-0 w-full h-full object-cover"
+                    style={stageZoom ? { scale: 2.1, transformOrigin: `${stageZoom.x}% ${stageZoom.y}%` } : undefined}
+                  />
+                </AnimatePresence>
+              </button>
+            </div>
+          )}
+
+          <div className="min-w-0">
+            <p className="text-[28px] lg:text-[48px] leading-[1.08] font-semibold tracking-[-0.03em]">{shortStory}</p>
+            {productStory.length > 120 && (
+              <button onClick={() => setIsDescOpen(true)} className="mt-4 text-sm text-stone border-b border-black/20 pb-0.5 hover:text-ink hover:border-ink transition-colors cursor-pointer">Read the full story</button>
+            )}
+            <dl className="mt-8 lg:mt-12 pt-7 lg:pt-9 border-t border-black/10 grid grid-cols-2 gap-x-8 gap-y-7">
+              {specs.map(spec => (
+                <div key={spec.label}>
+                  <dd className="text-[24px] lg:text-[34px] leading-none font-semibold tracking-[-0.025em]">{spec.value}</dd>
+                  <dt className="text-sm text-stone mt-2">{spec.label}</dt>
+                </div>
+              ))}
+            </dl>
+            <div className="mt-8 lg:mt-10 flex flex-wrap gap-x-6 gap-y-2 text-sm text-stone">
+              {product.care && <span>{product.care}</span>}
+              <Link to="/our-promise#second-life" className="underline underline-offset-4 hover:text-ink">Second Life packaging</Link>
+              <Link to="/shipping-delivery" className="underline underline-offset-4 hover:text-ink">Shipping</Link>
+              <Link to="/returns-refunds" className="underline underline-offset-4 hover:text-ink">Returns</Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Sticky buy bar */}
+      <AnimatePresence>
+        {product.status === 'Available' && !isSelectedSizeOutOfStock && !mainButtonVisible && (
+          <motion.div
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+            className="fixed bottom-0 inset-x-0 z-40 bg-[#fff]/95 backdrop-blur text-ink border-t border-black/10"
+          >
+            <div className="max-w-[1680px] mx-auto px-4 md:px-10 py-3 flex items-center gap-4">
+              <div className="min-w-0 mr-auto">
+                <p className="text-sm font-semibold truncate"><span className="hidden md:inline">{product.name} · </span>₹{product.price.toLocaleString()}</p>
+                <p className="text-[11px] text-neutral-500 truncate">{selectedSize ? `Size ${selectedSize}` : 'Choose a size'}{selectedColor && (product.availableColors?.length ?? 0) > 1 ? ` · ${selectedColor}` : ''}</p>
+              </div>
+              <button
+                onClick={() => {
+                  if (availableSizes.length > 0 && !selectedSize) {
+                    setSizeError(true);
+                    addToCartBtnRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  } else handleAddToCart();
+                }}
+                className="shrink-0 w-[46%] md:w-[280px] bg-ink text-[#fff] py-3.5 text-sm font-medium cursor-pointer"
+              >
+                {buttonText === 'Add to Cart' ? 'Add to bag' : buttonText}
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Product Reviews & Ratings Section */}
-      <div id="reviews-section" className="mt-24 pt-16 border-t border-neutral-900">
-        <div className="flex items-center gap-3 mb-10">
-          <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-          <h2 className="text-[12px] tracking-[0.4em] font-bold uppercase text-accent font-mono">
-            CUSTOMER REVIEWS // TRANSMISSION REPORT
-          </h2>
-        </div>
-
+      <div id="reviews-section" className="max-w-[1680px] mx-auto px-5 md:px-10 py-8 md:py-12">
+        {!reviewsLoading && reviews.length === 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 text-ink">
+            <p className="text-sm text-stone">Bought this one? Tell others how it fits.</p>
+            <div className="flex items-center gap-5">
+              <button onClick={() => setShowReviewModal(true)} className="text-sm border-b border-ink pb-0.5 cursor-pointer">Write a review</button>
+              <div className="w-[170px]"><ShareSignal productName={product.name} productUrl={window.location.href} productImage={product.images[0]} /></div>
+            </div>
+          </div>
+        ) : (
+        <>
+        <h2 className="text-2xl md:text-4xl font-semibold mb-8 md:mb-10">Reviews</h2>
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           {/* Rating Breakdown & Stats */}
           <div className="lg:col-span-4 space-y-6">
@@ -1732,7 +1133,7 @@ const ProductDetail: React.FC = () => {
                   const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
                   return (
                     <div key={stars} className="flex items-center gap-3 text-[10px] font-mono">
-                      <span className="w-12 text-neutral-500">{stars} STARS</span>
+                      <span className="w-12 text-neutral-500">{stars} star</span>
                       <div className="flex-1 h-1 bg-neutral-900 overflow-hidden rounded-[1px]">
                         <div 
                           className="h-full bg-accent transition-all duration-500" 
@@ -1749,7 +1150,7 @@ const ProductDetail: React.FC = () => {
                 onClick={() => setShowReviewModal(true)}
                 className="w-full border border-accent/30 hover:border-accent bg-accent/5 hover:bg-accent/10 py-4 text-[11px] tracking-[0.25em] font-bold uppercase text-accent hover:text-white transition-all duration-300 rounded-[1px] cursor-pointer"
               >
-                WRITE A REVIEW / TRANSMIT SIGNAL
+                Write a review
               </button>
             </div>
           </div>
@@ -1763,7 +1164,7 @@ const ProductDetail: React.FC = () => {
               {reviewsLoading ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-[10px] font-mono tracking-[0.3em] text-neutral-500 uppercase">
                   <div className="w-6 h-6 border border-accent border-t-transparent rounded-full animate-spin mb-4" />
-                  DECODING SECURE FEEDBACK...
+                  Loading reviews…
                 </div>
               ) : reviews.length === 0 ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-[10px] font-mono tracking-[0.2em] text-neutral-600 uppercase text-center p-6">
@@ -1780,7 +1181,7 @@ const ProductDetail: React.FC = () => {
                             {rev.reviewer}
                           </span>
                           <span className="text-[8px] font-mono tracking-widest text-accent bg-accent/5 px-2 py-0.5 border border-accent/20 rounded-[1px] uppercase">
-                            VERIFIED DEPLOYMENT
+                            Verified
                           </span>
                         </div>
                         <div className="flex items-center gap-4">
@@ -1798,7 +1199,7 @@ const ProductDetail: React.FC = () => {
                             ))}
                           </div>
                           <span className="text-[9px] font-mono text-neutral-500">
-                            DEPLOYED: {new Date(rev.date_created).toLocaleDateString('en-US', {
+                            {new Date(rev.date_created).toLocaleDateString('en-US', {
                               year: 'numeric',
                               month: '2-digit',
                               day: '2-digit'
@@ -1834,7 +1235,27 @@ const ProductDetail: React.FC = () => {
             </div>
           </div>
         </div>
+        </>
+        )}
       </div>
+
+      {/* You may also like */}
+      {recommendedProducts.length > 0 && (
+        <div className="pt-4 md:pt-8">
+          <div className="flex items-end justify-between gap-4 mb-2 px-5 md:px-10 max-w-[1680px] mx-auto">
+            <h2 className="text-2xl md:text-4xl font-semibold">You may also like</h2>
+            {recommendedProducts.length > 4 && (
+              <button onClick={() => setIsExpanded(e => !e)} className="text-sm underline underline-offset-4 cursor-pointer">
+                {isExpanded ? 'Show less' : 'View more'}
+              </button>
+            )}
+          </div>
+          <ModelFloor
+            products={[...recommendedProducts.map(r => r.product)].sort((a, b) => Number(isStanding(b)) - Number(isStanding(a))).slice(0, isExpanded ? 10 : 4)}
+            spreads={false}
+          />
+        </div>
+      )}
 
       {/* Review Submission Modal */}
       <AnimatePresence>
@@ -1864,7 +1285,7 @@ const ProductDetail: React.FC = () => {
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
                 <h2 className="text-[11px] tracking-[0.4em] font-bold uppercase text-accent font-mono">
-                  WRITE A REVIEW // TRANSMIT SIGNAL
+                  Write a review
                 </h2>
               </div>
 
@@ -1996,7 +1417,7 @@ const ProductDetail: React.FC = () => {
                         rows={4}
                         value={reviewText}
                         onChange={(e) => setReviewText(e.target.value)}
-                        placeholder="Detail the fabric drape, sizing precision, weave texture, or deployment aesthetics..."
+                        placeholder="Tell others about the fit, the fabric and how you wear itment aesthetics..."
                         className="w-full bg-black border border-neutral-800 focus:border-accent px-4 py-3 text-xs text-white focus:outline-none transition-colors rounded-[1px] resize-none font-light leading-relaxed tracking-wide"
                       />
                     </div>
@@ -2006,7 +1427,7 @@ const ProductDetail: React.FC = () => {
                       disabled={submitLoading}
                       className="w-full bg-white text-black hover:bg-neutral-200 py-4 text-[11px] tracking-[0.3em] font-bold uppercase transition-all duration-300 disabled:opacity-50 cursor-pointer rounded-[1px]"
                     >
-                      {submitLoading ? "TRANSMITTING REVIEW..." : "SUBMIT REVIEW / BROADCAST SIGNAL"}
+                      {submitLoading ? "Sending…" : "Submit review"}
                     </button>
                   </>
                 )}
@@ -2073,7 +1494,7 @@ const ProductDetail: React.FC = () => {
               <div className="grid grid-cols-2 gap-8 pt-8 border-t border-neutral-900 text-[10px] tracking-[0.2em] font-bold uppercase text-neutral-500">
                 <div>
                   <p className="text-neutral-700 mb-1">Status</p>
-                  <p className="text-accent">Authenticated Record</p>
+                  <p className="text-accent">Chils & Co.</p>
                 </div>
                 <div>
                   <p className="text-neutral-700 mb-1">Index</p>

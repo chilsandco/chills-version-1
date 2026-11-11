@@ -16,6 +16,8 @@ export default defineConfig(({mode}) => {
       },
     },
     server: {
+      // Dev only: set VITE_API_PROXY=https://chilsandco.com to run the UI against live data without the Express server.
+      proxy: env.VITE_API_PROXY ? { '/api': { target: env.VITE_API_PROXY, changeOrigin: true } } : undefined,
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',

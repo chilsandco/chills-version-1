@@ -98,7 +98,7 @@ const OrderSignals: React.FC = () => {
           to="/auth" 
           className="bg-white text-black px-12 py-5 text-[11px] tracking-[0.3em] font-bold uppercase hover:bg-accent transition-colors"
         >
-          Identify with System
+          Sign in
         </Link>
       </div>
     );
@@ -119,7 +119,7 @@ const OrderSignals: React.FC = () => {
   const paidStatuses = ['processing', 'completed', 'shipping', 'delivered', 'dispatched', 'Dispatched'];
 
   return (
-    <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen">
+    <div className="pt-24 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen">
       {reconcileMessage && (
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
@@ -133,9 +133,9 @@ const OrderSignals: React.FC = () => {
       <header className="mb-16">
         <div className="flex items-center gap-3 mb-4">
           <Activity className="text-accent" size={16} />
-          <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase">Archive Logs</p>
+          <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase">Your account</p>
         </div>
-        <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter uppercase mb-4">Orders Archive</h1>
+        <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter uppercase mb-4">My orders</h1>
         <p className="text-neutral-500 uppercase text-[10px] tracking-widest max-w-xl">
           Every piece you’ve owned.
         </p>
@@ -152,12 +152,12 @@ const OrderSignals: React.FC = () => {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-                <p className="text-[9px] tracking-[0.4em] font-bold uppercase text-accent">Active Protocol: The Bespoke Waitlist</p>
+                <p className="text-[9px] tracking-[0.4em] font-bold uppercase text-accent">The Bespoke waitlist</p>
               </div>
-              <h3 className="text-2xl font-display font-bold uppercase tracking-tight text-white italic">Signal Detected</h3>
+              <h3 className="text-2xl font-display font-bold uppercase tracking-tight text-white italic">You’re on the list</h3>
               <p className="text-neutral-400 text-xs tracking-tight font-light max-w-md">
                 You are currently prioritized in our build list for early access to The Bespoke engineering room. 
-                We will notify you via encrypted signal when initialization is complete.
+                We’ll email you as soon as it opens.
               </p>
             </div>
             <Link 
@@ -182,9 +182,9 @@ const OrderSignals: React.FC = () => {
             <div className="space-y-4">
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 bg-accent rounded-full animate-pulse shadow-[0_0_10px_rgba(212,175,55,0.5)]" />
-                <p className="text-[9px] tracking-[0.4em] font-bold uppercase text-accent">Active Protocol: Co-Creator Network</p>
+                <p className="text-[9px] tracking-[0.4em] font-bold uppercase text-accent">Co-Creator network</p>
               </div>
-              <h3 className="text-2xl font-display font-bold uppercase tracking-tight text-white italic">Identity Verified</h3>
+              <h3 className="text-2xl font-display font-bold uppercase tracking-tight text-white italic">You’re in</h3>
               <p className="text-neutral-400 text-xs tracking-tight font-light max-w-md">
                 Protocol {user?.pseudoName ? `"${user.pseudoName.toUpperCase()}"` : 'Co-Creator'} is active. 
                 Your passive authorship status is secured. Artifact submission portal access will be granted in the next cycle.
@@ -218,7 +218,7 @@ const OrderSignals: React.FC = () => {
               >
                 <div className="flex flex-col md:flex-row md:items-center gap-8 md:gap-16">
                   <div className="w-40">
-                    <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Order Identity</p>
+                    <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Order number</p>
                     <div className="flex items-center gap-2">
                       <p className="font-mono text-sm tracking-widest group-hover:text-accent transition-colors">#{signal.signalId}</p>
                     </div>
@@ -304,7 +304,7 @@ const OrderSignals: React.FC = () => {
       {signals.length === 0 && !loading && (
         <div className="py-24 text-center border border-dashed border-neutral-800">
           <Box className="mx-auto mb-4 text-neutral-800" size={32} />
-          <p className="text-[10px] text-neutral-500 uppercase tracking-[0.2em] italic">"The system is currently quiet. No signals found."</p>
+          <p className="text-[10px] text-neutral-500 uppercase tracking-[0.2em] italic">"No orders yet."</p>
         </div>
       )}
     </div>

@@ -1,538 +1,217 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import { ArrowRight, RefreshCw, CheckCircle2, ShieldCheck, Zap } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ArrowRight, Check } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import SEO from '../components/SEO';
+import Snowflake from '../components/Snowflake';
 
+const HERO = 'https://res.cloudinary.com/ddatd5ruz/image/upload/v1780123415/the_bespoke_2_eypwhw.png';
+const MODEL = 'https://sketchfab.com/models/f66aba2a49064ae7a66afe9bf1613a32/embed?autostart=1&ui_controls=0&ui_infos=0&ui_inspector=0&ui_watermark=0&ui_hint=0&transparent=1';
+
+const STEPS = [
+  { title: 'Start with the fabric', text: 'Every shirt begins with carefully chosen material.' },
+  { title: 'Build it step by step', text: 'Choose the details one at a time, and see the shirt come together.' },
+  { title: 'Made to fit you', text: 'Cut to your measurements for a clean, comfortable fit.' },
+];
+
+const SPECS = [
+  { label: 'Collar', value: 'Spread' },
+  { label: 'Buttons', value: 'Matte resin' },
+  { label: 'Fabric', value: 'Oxford weave' },
+  { label: 'Stitching', value: '18 per inch' },
+];
+
+/** Bespoke: made-to-measure shirts, coming soon, with an early-access list. */
 const Bespoke: React.FC = () => {
-  const { user, refreshUser, updateUser, isLoading: authLoading } = useAuth();
+  const { user, updateUser, isLoading: authLoading } = useAuth();
   const [email, setEmail] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [stats, setStats] = useState<{waitlistPool: number, coCreators: number} | null>(null);
-  const [hasAutoPopulated, setHasAutoPopulated] = useState(false);
-  const [isExisting, setIsExisting] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const [found, setFound] = useState<boolean | null>(() => (sessionStorage.getItem('chils_bespoke_waitlist') === 'true' ? true : null));
+  const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem('chils_bespoke_unlocked') === 'true');
+  const [waiting, setWaiting] = useState<number | null>(null);
 
-  const fetchStats = async () => {
-    try {
-      const response = await fetch('/api/stats');
-      const data = await response.json();
-      if (data) setStats(data);
-    } catch (err) {}
-  };
+  const onList = !!user?.onWaitlist || found === true;
+  const approved = !!user?.bespokeUnlocked || unlocked;
 
   useEffect(() => {
-    fetchStats();
-    const interval = setInterval(fetchStats, 30000); // Poll every 30s
-    return () => clearInterval(interval);
+    const load = () => fetch('/api/stats').then(r => r.json()).then(d => { if (d?.waitlistPool != null) setWaiting(d.waitlistPool); }).catch(() => {});
+    load();
+    const t = setInterval(load, 30000);
+    return () => clearInterval(t);
   }, []);
 
-  const [onWaitlistLocal, setOnWaitlistLocal] = useState<boolean | null>(() => {
-    const stored = sessionStorage.getItem('chils_bespoke_waitlist');
-    return stored === 'true' ? true : null;
-  });
-  const [unlockedLocal, setUnlockedLocal] = useState<boolean | null>(() => {
-    const stored = sessionStorage.getItem('chils_bespoke_unlocked');
-    return stored === 'true' ? true : null;
-  });
-
-  // Use waitlist status from user profile if available, otherwise use local checked status
-  const onWaitlist = !!user?.onWaitlist || 
-                    onWaitlistLocal === true ||
-                    submitted;
-  
-  const bespokeUnlocked = !!user?.bespokeUnlocked || 
-                           unlockedLocal === true ||
-                           false;
-
-  const checkWaitlistStatus = async (emailToCheck: string) => {
-    if (!emailToCheck) return;
-    setIsVerifying(true);
+  const check = async (address: string) => {
+    if (!address) return;
+    setChecking(true);
+    setError('');
     try {
-      const response = await fetch('/api/bespoke/check-status', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: emailToCheck })
-      });
-      const data = await response.json();
+      const res = await fetch('/api/bespoke/check-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: address }) });
+      const data = await res.json();
       if (data.onWaitlist) {
-        setOnWaitlistLocal(true);
-        setUnlockedLocal(!!data.bespokeUnlocked);
+        setFound(true);
+        setUnlocked(!!data.bespokeUnlocked);
         sessionStorage.setItem('chils_bespoke_waitlist', 'true');
         if (data.bespokeUnlocked) sessionStorage.setItem('chils_bespoke_unlocked', 'true');
-        
-        // Sync global state
-        updateUser({ 
-          onWaitlist: true, 
-          bespokeUnlocked: !!data.bespokeUnlocked 
-        });
+        updateUser({ onWaitlist: true, bespokeUnlocked: !!data.bespokeUnlocked });
       } else {
-        setOnWaitlistLocal(false);
+        setFound(false);
       }
-    } catch (err) {
-      console.error("[CHILS & CO.] Status check error:", err);
+    } catch {
+      setError('We couldn’t check right now. Please try again.');
     } finally {
-      setIsVerifying(false);
+      setChecking(false);
     }
   };
 
+  // signed-in shoppers: fill in their email and check straight away
   useEffect(() => {
-    if (user?.email) {
-      checkWaitlistStatus(user.email);
-    }
-  }, [user?.email]);
+    if (!user?.email) return;
+    setEmail(user.email);
+    check(user.email);
+  }, [user?.email]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Pre-populate email once if user is logged in
-  useEffect(() => {
-    if (user?.email && !hasAutoPopulated) {
-      setEmail(user.email);
-      setHasAutoPopulated(true);
-    }
-  }, [user, hasAutoPopulated]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const join = async () => {
     if (!email) return;
-    
-    setIsSubmitting(true);
+    setSending(true);
+    setError('');
     try {
-      const response = await fetch('/api/bespoke/waitlist', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-      
-      const data = await response.json();
-      if (response.ok) {
-        setSubmitted(true);
-        setOnWaitlistLocal(true);
-        sessionStorage.setItem('chils_bespoke_waitlist', 'true');
-        setIsExisting(!!data.isExisting);
-        
-        // Immediate local count update for "real-time" feel
-        setStats(prev => prev ? { ...prev, waitlistPool: prev.waitlistPool + 1 } : prev);
-        
-        // Update user state with full data if returned, otherwise just tag it
-        if (data.user) {
-          updateUser(data.user);
-        } else {
-          updateUser({ onWaitlist: true });
-        }
-        
-        // Remove immediate refresh to prevent WooCommerce cache delay from overwriting local success
-        // The local state is already updated via updateUser
-      } else {
-        alert(data.message || 'Could not join the list. Please try again.');
-      }
-    } catch (error) {
-      console.error('Bespoke error:', error);
-      alert('Something went wrong. Please try again.');
+      const res = await fetch('/api/bespoke/waitlist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email }) });
+      const data = await res.json();
+      if (!res.ok) { setError(data.message || 'We couldn’t add you just now. Please try again.'); return; }
+      setFound(true);
+      sessionStorage.setItem('chils_bespoke_waitlist', 'true');
+      if (!data.isExisting) setWaiting(w => (w == null ? w : w + 1));
+      updateUser(data.user ?? { onWaitlist: true });
+    } catch {
+      setError('We couldn’t reach the server. Please check your connection and try again.');
     } finally {
-      setIsSubmitting(false);
+      setSending(false);
     }
-  };
-
-  const handleManualCheck = (e: React.FormEvent) => {
-    e.preventDefault();
-    checkWaitlistStatus(email);
   };
 
   return (
-    <div className="bg-black min-h-screen pt-28 md:pt-32 pb-24 overflow-hidden">
-      <SEO 
-        title="Bespoke Luxury | CHILS & CO." 
-        description="The future of fashion is personal. Register for early access to Chils & Co. bespoke tailoring experience. Custom built, handcrafted precision tailored for you."
-        keywords="bespoke tailoring India, custom shirts, high-end tailoring, Chils and Co bespoke, personal fashion system"
+    <div className="bg-[#f3f2ee] text-ink pt-24 md:pt-32 pb-20 min-h-screen">
+      <SEO
+        title="Bespoke"
+        description="Shirts made to your measurements, coming soon from CHILS & CO. Join the list for early access."
+        canonical="https://chilsandco.com/bespoke"
       />
-      {/* Hero / Header */}
-      <section className="px-6 md:px-12 mb-24 md:mb-40">
-        <div className="max-w-5xl mx-auto text-center">
-            <motion.div
-               initial={{ opacity: 0, y: 20 }}
-               animate={{ opacity: 1, y: 0 }}
-               transition={{ duration: 1.5 }}
-               className="flex flex-col items-center gap-2 mb-8"
-            >
-              <span className="text-accent text-[11px] uppercase tracking-[0.8em] font-bold mb-4">The Future System</span>
-              <h1 className="text-6xl md:text-[10vw] font-display font-bold tracking-tighter uppercase leading-[0.8] text-white">
-                THE BESPOKE
-              </h1>
-              <p className="text-accent text-lg md:text-2xl font-display italic tracking-[0.2em] font-light mt-4">
-                Arriving Soon
-              </p>
+      <div className="max-w-[1180px] mx-auto px-3 md:px-6">
+        {/* hero */}
+        <section className="grid md:grid-cols-2 gap-2 mb-2">
+          <div className="bg-[#fff] rounded-2xl p-6 md:p-10 flex flex-col justify-center">
+            <p className="eyebrow text-neutral-500 mb-3 inline-flex items-center gap-2"><Snowflake className="w-3 h-3.5" /> Bespoke · Coming soon</p>
+            <h1 className="text-[38px] md:text-[60px] leading-[1.02] font-semibold tracking-[-0.035em]">Shirts made to your measurements.</h1>
+            <p className="mt-4 text-neutral-600 md:text-lg">Built around your body, your fit and your taste, instead of off the rack. Join the list for early access.</p>
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              <a href="#join" className="inline-flex items-center gap-2 bg-ink text-[#fff] rounded-full px-6 py-3.5 text-sm font-medium">
+                {onList ? 'You’re on the list' : 'Join the list'} <ArrowRight size={15} />
+              </a>
+              {/* like the original page, the count only shows once it is meaningful */}
+              {waiting != null && waiting >= 100 && <span className="text-sm text-neutral-500">{waiting} people waiting</span>}
+            </div>
+          </div>
+          <div className="rounded-2xl overflow-hidden bg-[#fff] p-3 md:p-5 flex items-center justify-center">
+            <img src={HERO} alt="The CHILS & CO. bespoke shirt and its details" className="w-full h-auto max-h-[560px] object-contain" />
+          </div>
+        </section>
 
-              {stats && (
-                <motion.div 
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1, duration: 0.8 }}
-                  className="mt-12 group relative"
-                >
-                  <div className="absolute inset-0 bg-accent/5 blur-xl -z-10 group-hover:bg-accent/10 transition-colors" />
-                  <div className="border-y border-white/5 py-8 flex flex-col items-center">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse shadow-[0_0_10px_rgba(212,175,55,0.8)]" />
-                      <span className="text-neutral-500 text-[10px] uppercase tracking-[0.5em] font-mono">GLOBAL QUEUE</span>
-                    </div>
-                    <span className="block text-white text-6xl md:text-7xl font-bold font-mono tracking-tighter leading-none mb-2">
-                      {stats.waitlistPool}
-                    </span>
-                    <div className="flex flex-col items-center">
-                      <span className="text-accent text-[9px] uppercase tracking-[0.4em] font-bold">Identities in Queue</span>
-                      <div className="w-24 h-[1px] bg-gradient-to-r from-transparent via-accent/30 to-transparent mt-4" />
-                    </div>
-                  </div>
-                </motion.div>
+        {/* how it will work */}
+        <section className="bg-[#fff] rounded-2xl p-5 md:p-8 mb-2">
+          <h2 className="text-xl md:text-2xl font-semibold mb-5 md:mb-7">How it will work</h2>
+          <ol className="grid md:grid-cols-3 gap-5 md:gap-8">
+            {STEPS.map((s, i) => (
+              <li key={s.title} className="flex md:flex-col gap-4 md:gap-3">
+                <span className="w-8 h-8 shrink-0 rounded-full bg-ink text-[#fff] text-sm font-medium flex items-center justify-center">{i + 1}</span>
+                <div>
+                  <h3 className="font-semibold">{s.title}</h3>
+                  <p className="text-sm text-neutral-600 mt-1 leading-relaxed">{s.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {/* the shirt, in 3D */}
+        <section className="bg-[#fff] rounded-2xl overflow-hidden mb-2 grid md:grid-cols-[1.4fr_1fr]">
+          <div className="relative h-[380px] md:h-[560px] bg-[#f6f6f4]">
+            <iframe title="The bespoke shirt in 3D" src={MODEL} className="absolute inset-0 w-full h-full" allow="autoplay; fullscreen; xr-spatial-tracking" loading="lazy" />
+          </div>
+          <div className="p-6 md:p-10 flex flex-col justify-center">
+            <h2 className="text-2xl md:text-3xl font-semibold leading-tight">Turn it around. See how it’s made.</h2>
+            <p className="text-neutral-600 mt-3 leading-relaxed">This is the shirt’s actual structure. Every stitch, angle and detail is planned before the first cut.</p>
+            <dl className="mt-6 grid grid-cols-2 gap-x-6 gap-y-5">
+              {SPECS.map(s => (
+                <div key={s.label}>
+                  <dd className="text-lg font-semibold">{s.value}</dd>
+                  <dt className="text-sm text-neutral-500">{s.label}</dt>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+
+        {/* promises */}
+        <section className="grid md:grid-cols-2 gap-2 mb-2">
+          <div className="bg-[#fff] rounded-2xl p-6 md:p-8">
+            <h2 className="text-xl font-semibold">If it doesn’t fit, we fix it</h2>
+            <p className="text-neutral-600 mt-2 leading-relaxed">A made-to-measure shirt sometimes needs a small adjustment. If yours doesn’t fit right, we’ll put it right.</p>
+          </div>
+          <div className="bg-[#fff] rounded-2xl p-6 md:p-8">
+            <h2 className="text-xl font-semibold">Made with care, in small numbers</h2>
+            <p className="text-neutral-600 mt-2 leading-relaxed">Every shirt is cut, stitched and finished carefully, not mass produced. We take a limited number of orders each round.</p>
+          </div>
+        </section>
+
+        {/* the list */}
+        <section id="join" className="bg-ink text-[#fff] rounded-2xl p-6 md:p-10 scroll-mt-24">
+          {checking || authLoading ? (
+            <p className="text-[#fff]/70">Checking your place on the list…</p>
+          ) : approved ? (
+            <div>
+              <span className="inline-flex w-11 h-11 rounded-full bg-[#fff] text-ink items-center justify-center"><Check size={20} /></span>
+              <h2 className="text-2xl md:text-4xl font-semibold mt-4">You’re in.</h2>
+              <p className="text-[#fff]/60 mt-2">You’ve been approved for early access. We’re getting the shirt builder ready and will be in touch.</p>
+            </div>
+          ) : onList ? (
+            <div>
+              <span className="inline-flex w-11 h-11 rounded-full bg-[#fff] text-ink items-center justify-center"><Check size={20} /></span>
+              <h2 className="text-2xl md:text-4xl font-semibold mt-4">You’re on the list.</h2>
+              <p className="text-[#fff]/60 mt-2">We’ll email {email || 'you'} as soon as bespoke opens.</p>
+              {!user && (
+                <button onClick={() => { setFound(null); setEmail(''); sessionStorage.removeItem('chils_bespoke_waitlist'); }} className="mt-4 text-sm border-b border-[#fff]/40 pb-0.5 cursor-pointer">Check a different email</button>
               )}
-            </motion.div>
-            
-            <motion.p 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1.5, delay: 0.3 }}
-              className="text-neutral-400 text-xl md:text-3xl font-display font-light tracking-tight max-w-3xl mx-auto leading-tight"
-            >
-              A shift from readywear to precision-built garments, <br className="hidden md:block" />
-              designed around your body, your preferences, and your standards.
-            </motion.p>
-        </div>
-      </section>
-
-      {/* Main Infographic Section */}
-      <section className="px-6 md:px-12 mb-24">
-        <div className="max-w-[1400px] mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 md:gap-24 items-center">
-             {/* Visual Infographic */}
-             <div className="lg:col-span-8 relative">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, filter: 'blur(30px)' }}
-                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                transition={{ duration: 2.5, ease: [0.16, 1, 0.3, 1] }}
-                className="relative z-10"
-              >
-                <img 
-                  src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1780123415/the_bespoke_2_eypwhw.png" 
-                  alt="The Bespoke Build Process" 
-                  className="w-full h-auto rounded-sm shadow-[0_0_100px_rgba(255,255,255,0.05)] border border-white/5"
-                  referrerPolicy="no-referrer"
-                />
-                
-                {/* Step Labels */}
-                <div className="mt-12 grid grid-cols-2 md:grid-cols-5 gap-8">
-                  {[
-                    { p: '01', t: 'Choose Your Fabric' },
-                    { p: '02', t: 'Take Your Measurements' },
-                    { p: '03', t: 'Customize Your Design' },
-                    { p: '04', t: 'Precision Stitching' },
-                    { p: '05', t: 'Final Check & Delivery' }
-                  ].map((item, i) => (
-                    <motion.div 
-                      key={i}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 0.4 }}
-                      transition={{ delay: 1 + i * 0.2 }}
-                      className="space-y-1"
-                    >
-                      <p className="text-[10px] text-accent uppercase font-bold tracking-widest leading-none">STEP {item.p}</p>
-                      <p className="text-[11px] text-white uppercase tracking-[0.2em]">{item.t}</p>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
             </div>
-
-            {/* Supporting Content */}
-            <div className="lg:col-span-4 space-y-16">
-              <motion.div
-                initial={{ opacity: 0, x: 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 2, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
-                className="space-y-12"
-              >
-                <div className="space-y-4">
-                  <h3 className="text-white text-3xl font-display font-medium tracking-tighter leading-tight italic">
-                    What you’re <br />looking at
-                  </h3>
-                  <div className="h-px w-12 bg-accent opacity-50" />
-                </div>
-
-                <div className="space-y-8">
-                  {[
-                    { icon: <Zap size={18} className="text-accent" />, title: 'Built step-by-step', desc: 'You create the shirt, one step at a time.' },
-                    { icon: <RefreshCw size={18} className="text-accent" />, title: 'Start with the fabric', desc: 'Every build begins with carefully selected material.' },
-                    { icon: <ShieldCheck size={18} className="text-accent" />, title: 'Made to fit you', desc: 'Tailored to your measurements for a clean, comfortable fit.' }
-                  ].map((item, i) => (
-                    <div key={i} className="flex gap-4">
-                      <div className="shrink-0 pt-1">{item.icon}</div>
-                      <div>
-                        <h4 className="text-[11px] text-white uppercase tracking-widest font-bold mb-1">{item.title}</h4>
-                        <p className="text-neutral-500 text-sm leading-relaxed">{item.desc}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
+          ) : user ? (
+            <div>
+              <h2 className="text-2xl md:text-4xl font-semibold">Join the list</h2>
+              <p className="text-[#fff]/60 mt-2">We’ll add <span className="text-[#fff]">{user.email}</span> and email you when bespoke opens.</p>
+              <button onClick={join} disabled={sending} className="mt-6 h-12 px-7 rounded-full bg-[#fff] text-ink text-sm font-medium disabled:opacity-60 cursor-pointer">
+                {sending ? 'Adding you…' : 'Join the list'}
+              </button>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* 3D Blueprint Interactive Section */}
-      <section className="px-6 md:px-12 mb-40 relative">
-        <div className="max-w-[1400px] mx-auto bg-white/5 border border-white/10 rounded-sm overflow-hidden min-h-[600px] flex flex-col md:flex-row">
-          <div className="w-full md:w-3/5 h-[300px] md:h-[600px] relative bg-black">
-            <iframe 
-              title="Chils & Co. Bespoke Blueprint"
-              className="w-full h-full border-0"
-              allowFullScreen
-              allow="autoplay; fullscreen; xr-spatial-tracking"
-              src="https://sketchfab.com/models/f66aba2a49064ae7a66afe9bf1613a32/embed?autostart=1&ui_controls=0&ui_infos=0&ui_inspector=0&ui_watermark=0&ui_hint=0&transparent=1"
-            />
-            {/* 3D Overlay Labels - Positioned centered bottom to avoid all Sketchfab UI corners */}
-            <div className="absolute bottom-10 left-0 w-full flex justify-center pointer-events-none z-10">
-              <div className="px-8 py-4 bg-black/80 backdrop-blur-md border border-accent/30 rounded-sm flex flex-col items-center">
-                <span className="text-[9px] text-accent font-bold uppercase tracking-[0.5em] mb-1">Interactive Blueprint</span>
-                <span className="text-lg text-white font-display uppercase tracking-tighter">V1.0 SHIRT DESIGN</span>
-              </div>
-            </div>
-          </div>
-          <div className="w-full md:w-2/5 p-6 sm:p-12 flex flex-col justify-center space-y-6 sm:space-y-8 bg-neutral-900/50">
-            <div className="space-y-4">
-              <h2 className="text-4xl font-display font-bold uppercase tracking-tighter text-white">Rotate. Inspect. <br />Understand the Build.</h2>
-              <p className="text-neutral-400 font-light leading-relaxed">
-                This is not a mockup. It is the core structure of your shirt. Every stitch, every angle, and every detail is planned before we make the first cut.
-              </p>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-8">
-              <div>
-                <span className="text-[10px] text-accent uppercase font-bold tracking-widest block mb-1">Architecture</span>
-                <span className="text-sm text-white uppercase tracking-wider">Spread Collar</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-accent uppercase font-bold tracking-widest block mb-1">Component</span>
-                <span className="text-sm text-white uppercase tracking-wider">Matte Resin</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-accent uppercase font-bold tracking-widest block mb-1">Base State</span>
-                <span className="text-sm text-white uppercase tracking-wider">Oxford Weave</span>
-              </div>
-              <div>
-                <span className="text-[10px] text-accent uppercase font-bold tracking-widest block mb-1">Stitch Density</span>
-                <span className="text-sm text-white uppercase tracking-wider">18 SPI</span>
-              </div>
-            </div>
-
-            <div className="pt-8 flex items-center gap-4">
-              <span className="w-8 h-[1px] bg-accent/30" />
-              <p className="text-[10px] text-neutral-500 uppercase tracking-[0.5em] italic italic">Built, not bought</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Trust & Guarantee Section */}
-      <section className="px-6 md:px-12 py-24 bg-white/5 border-y border-white/5 relative">
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-24">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            className="space-y-8"
-          >
-            <h3 className="text-white text-4xl font-display font-bold tracking-tighter uppercase italic leading-none">Fit Guarantee</h3>
-            <div className="space-y-4">
-              <p className="text-neutral-400 text-lg leading-relaxed font-light">
-                We understand that precision requires adjustment. If your shirt doesn’t fit right, we’ll fix it.
-              </p>
-              <p className="text-accent text-sm font-bold uppercase tracking-[0.2em]">
-                Engineered to fit. Refined if needed.
-              </p>
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
-            className="space-y-8"
-          >
-            <h3 className="text-white text-4xl font-display font-bold tracking-tighter uppercase italic leading-none">CRAFT STATEMENT</h3>
-            <p className="text-neutral-400 text-lg leading-relaxed font-light">
-              Every piece is cut, stitched, and finished with precision — not mass processed. We reject speed in favor of quality. Only a limited number of builds are accepted each cycle.
-            </p>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Waitlist Form Section */}
-      <section className="px-6 md:px-12 py-40 text-center relative overflow-hidden" id="waitlist">
-        <motion.div
-          initial={{ opacity: 0, y: 50 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="max-w-xl mx-auto"
-        >
-              {isVerifying || authLoading ? (
-                <div className="flex flex-col items-center justify-center space-y-4">
-                  <RefreshCw className="w-10 h-10 text-accent animate-spin" />
-                  <p className="text-[10px] text-accent font-bold uppercase tracking-[0.4em]">Verifying System clearance...</p>
-                </div>
-              ) : bespokeUnlocked ? (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="py-12 px-8 border border-accent bg-accent/5 rounded-sm flex flex-col items-center"
-                >
-                  <div className="w-16 h-16 bg-accent rounded-full flex items-center justify-center mb-8">
-                    <ShieldCheck className="text-black" size={32} />
-                  </div>
-                  <h2 className="text-3xl font-display font-bold text-white uppercase tracking-tighter mb-4">
-                    Access Unlocked
-                  </h2>
-                  <p className="text-neutral-400 font-light leading-relaxed mb-8">
-                    You have been approved for early bespoke access. We are preparing the build experience.
-                  </p>
-                  <div className="flex gap-4">
-                    <div className="px-6 py-3 bg-accent text-black text-[10px] font-bold uppercase tracking-widest rounded-full">System Active</div>
-                  </div>
-                </motion.div>
-              ) : onWaitlist ? (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="py-12 px-8 border border-accent/20 bg-accent/5 rounded-sm flex flex-col items-center"
-                >
-                  <div className="w-16 h-16 bg-accent rounded-full flex items-center justify-center mb-8">
-                    <CheckCircle2 className="text-black" size={32} />
-                  </div>
-                  <h2 className="text-3xl font-display font-bold text-white uppercase tracking-tighter mb-4">
-                    Waitlist Verified
-                  </h2>
-                  <p className="text-neutral-400 font-light leading-relaxed mb-8">
-                    You are on the list. We’ve prioritised your access for the bespoke collection.
-                  </p>
-                  
-                  <div className="flex items-center justify-center gap-3 py-4 px-8 border border-accent bg-accent/5 rounded-full">
-                    <div className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-                    <span className="text-[11px] text-accent font-bold uppercase tracking-[0.4em]">ON THE LIST</span>
-                  </div>
-
-                  <p className="mt-8 text-[10px] text-neutral-500 uppercase tracking-widest leading-relaxed">
-                    Identity verified as <span className="text-white">{(user?.pseudoName || user?.username || email || 'ANONYMOUS').toUpperCase()}</span>. <br/>
-                    You will receive an encrypted signal via <span className="text-accent">{user?.email || email}</span> once the build phase initializes.
-                  </p>
-
-                  {!user && onWaitlistLocal && (
-                    <button 
-                      onClick={() => { setOnWaitlistLocal(null); setEmail(''); }}
-                      className="mt-6 text-neutral-600 hover:text-accent text-[9px] uppercase tracking-widest transition-colors"
-                    >
-                      Check another email
-                    </button>
-                  )}
-                </motion.div>
-              ) : !user ? (
-                <>
-                  <h2 className="text-4xl md:text-6xl font-display font-bold tracking-tighter uppercase mb-6 text-white">Early Access</h2>
-                  <p className="text-neutral-400 mb-12 text-lg font-light leading-relaxed">
-                    Check your status or join the waitlist for the bespoke collection.
-                  </p>
-                  
-                  <div className="flex flex-col gap-6">
-                    <form onSubmit={handleManualCheck} className="flex flex-col gap-4">
-                      <div className="relative">
-                        <input 
-                          type="email" 
-                          placeholder="ENTER SYSTEM EMAIL"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          className="w-full bg-white/5 border border-white/10 px-6 py-5 text-white rounded-sm uppercase tracking-widest text-[11px] focus:border-accent outline-none transition-colors"
-                        />
-                        {isVerifying && (
-                          <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                            <RefreshCw className="w-5 h-5 text-accent animate-spin" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <button 
-                          type="submit"
-                          disabled={isVerifying || !email}
-                          className="py-5 bg-white/5 border border-white/20 text-white uppercase tracking-[0.4em] text-[10px] font-bold transition-all hover:bg-white/10 disabled:opacity-30"
-                        >
-                          Check Status
-                        </button>
-                        <Link 
-                          to="/auth"
-                          className="py-5 bg-accent text-black uppercase tracking-[0.4em] text-[10px] font-bold transition-all flex items-center justify-center gap-2 group italic no-underline"
-                        >
-                          Authenticate <ArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
-                        </Link>
-                      </div>
-                    </form>
-
-                    {onWaitlistLocal === false && email && !isVerifying && (
-                      <motion.div 
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        className="p-6 border border-white/5 bg-white/5 text-left"
-                      >
-                       <p className="text-neutral-400 text-sm leading-relaxed mb-4">
-                         No record found for <span className="text-white">{email}</span>. You must authenticate to join the Bespoke build list.
-                       </p>
-                       <Link to="/auth" className="text-accent text-[11px] uppercase tracking-widest font-bold no-underline flex items-center gap-2">
-                         Proceed to Authentication <ArrowRight size={12} />
-                       </Link>
-                      </motion.div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <>
-                  <h2 className="text-4xl md:text-6xl font-display font-bold tracking-tighter uppercase mb-6 text-white">Join the Build List</h2>
-                  <p className="text-neutral-400 mb-12 text-lg font-light leading-relaxed">
-                    Account verified: <span className="text-white font-bold">{user.email}</span>. Click below to register this identity for early bespoke access.
-                  </p>
-                  
-                  <div className="flex flex-col gap-4">
-                    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                      <div className="relative">
-                        <input 
-                          type="email" 
-                          value={email}
-                          disabled
-                          className="w-full bg-white/5 border border-white/10 px-6 py-5 text-neutral-400 opacity-50 cursor-not-allowed rounded-sm uppercase tracking-widest text-[11px]"
-                        />
-                        {isSubmitting && (
-                          <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                            <RefreshCw className="w-5 h-5 text-accent animate-spin" />
-                          </div>
-                        )}
-                      </div>
-                      
-                      <motion.button 
-                        whileHover={{ backgroundColor: '#D4AF37', color: '#000' }}
-                        whileTap={{ scale: 0.98 }}
-                        disabled={isSubmitting}
-                        className="w-full py-5 border border-accent text-accent uppercase tracking-[0.4em] text-[11px] font-bold transition-all duration-500 flex items-center justify-center gap-3 disabled:opacity-50"
-                      >
-                        {isSubmitting ? 'Processing Signal...' : 'Initiate Early Access'}
-                        {!isSubmitting && <ArrowRight size={14} />}
-                      </motion.button>
-                    </form>
-                  </div>
-                </>
+          ) : (
+            <div>
+              <h2 className="text-2xl md:text-4xl font-semibold">Early access</h2>
+              <p className="text-[#fff]/60 mt-2">Already joined? Check with your email. New here? Sign in to join the list.</p>
+              <form onSubmit={e => { e.preventDefault(); check(email); }} className="mt-6 grid md:grid-cols-[1fr_auto_auto] gap-2">
+                <label className="block">
+                  <span className="sr-only">Email</span>
+                  <input required type="email" value={email} onChange={e => { setEmail(e.target.value); setFound(null); }} placeholder="Email" autoComplete="email" className="w-full h-12 px-4 rounded-full bg-[#fff] text-ink text-[16px] outline-none placeholder:text-neutral-400" />
+                </label>
+                <button type="submit" className="h-12 px-6 rounded-full bg-[#fff] text-ink text-sm font-medium cursor-pointer">Check my place</button>
+                <Link to="/auth?redirect=/bespoke" className="h-12 px-6 rounded-full border border-[#fff]/30 text-sm font-medium inline-flex items-center justify-center">Sign in to join</Link>
+              </form>
+              {found === false && email && (
+                <p className="mt-4 text-sm text-[#fff]/80">We couldn’t find {email} on the list. <Link to="/auth?redirect=/bespoke" className="underline underline-offset-4">Sign in to join</Link>.</p>
               )}
-        </motion.div>
-      </section>
-
-      {/* Background Depth */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vw] h-[80vw] bg-accent/5 rounded-full blur-[200px] pointer-events-none opacity-50" />
+            </div>
+          )}
+          {error && <p className="mt-3 text-sm text-red-300">{error}</p>}
+        </section>
+      </div>
     </div>
   );
 };

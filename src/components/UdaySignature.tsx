@@ -3,6 +3,11 @@ import React, { useState, useRef, useEffect } from 'react';
 const UdaySignature: React.FC = () => {
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  // a short grace period, so the card survives the trip from the badge up to its links
+  const closeTimer = useRef<number | undefined>(undefined);
+  const show = () => { window.clearTimeout(closeTimer.current); setOpen(true); };
+  const hide = () => { closeTimer.current = window.setTimeout(() => setOpen(false), 350); };
+  useEffect(() => () => window.clearTimeout(closeTimer.current), []);
 
   // Close on outside tap (mobile)
   useEffect(() => {
@@ -44,8 +49,8 @@ const UdaySignature: React.FC = () => {
           border-radius: 50%;
           background: radial-gradient(circle at 35% 35%, #f5d97a, #b8860b);
           box-shadow:
-            0 0 8px rgba(212,175,55,.7),
-            0 0 20px rgba(212,175,55,.3);
+            0 0 8px rgba(255,255,255,.7),
+            0 0 20px rgba(255,255,255,.3);
         }
 
         /* Monogram */
@@ -68,7 +73,7 @@ const UdaySignature: React.FC = () => {
           position: absolute;
           inset: 0;
           border-radius: 50%;
-          border: 1px solid rgba(212,175,55,.20);
+          border: 1px solid rgba(255,255,255,.20);
           transform: rotateX(58deg) rotateZ(-20deg);
         }
 
@@ -89,11 +94,11 @@ const UdaySignature: React.FC = () => {
           width: 6px;
           height: 6px;
           border-radius: 50%;
-          background: #D4AF37;
+          background: #f2f2ee;
           box-shadow:
-            0 0 4px #D4AF37,
-            0 0 10px rgba(212,175,55,.8),
-            0 0 20px rgba(212,175,55,.4);
+            0 0 4px #f2f2ee,
+            0 0 10px rgba(255,255,255,.8),
+            0 0 20px rgba(255,255,255,.4);
         }
 
         /* Comet tail */
@@ -104,7 +109,7 @@ const UdaySignature: React.FC = () => {
           transform: translate(-50%, -50%) rotate(90deg);
           width: 2px;
           height: 12px;
-          background: linear-gradient(to bottom, rgba(212,175,55,.6), transparent);
+          background: linear-gradient(to bottom, rgba(255,255,255,.6), transparent);
           border-radius: 2px;
         }
 
@@ -119,12 +124,12 @@ const UdaySignature: React.FC = () => {
           position: absolute;
           inset: -4px;
           border-radius: 50%;
-          border: 1px solid rgba(212,175,55,.0);
+          border: 1px solid rgba(255,255,255,.0);
           transition: border-color .3s, box-shadow .3s;
         }
         .ub-badge-wrap:hover .ub-orbit-system::after {
-          border-color: rgba(212,175,55,.15);
-          box-shadow: 0 0 14px rgba(212,175,55,.15);
+          border-color: rgba(255,255,255,.15);
+          box-shadow: 0 0 14px rgba(255,255,255,.15);
         }
 
         /* ══════════════════════════════════════
@@ -144,8 +149,8 @@ const UdaySignature: React.FC = () => {
           padding: 7px 15px 7px 10px;
           border-radius: 999px;
           background: #0c0c0c;
-          border: 1px solid rgba(212,175,55,.22);
-          color: #C9A84C;
+          border: 1px solid rgba(255,255,255,.22);
+          color: #f2f2ee;
           font-size: 10px;
           font-weight: 700;
           letter-spacing: 0.16em;
@@ -158,9 +163,9 @@ const UdaySignature: React.FC = () => {
         }
 
         .ub-badge-wrap:hover .ub-badge {
-          border-color: rgba(212,175,55,.45);
-          box-shadow: 0 0 22px rgba(212,175,55,.12);
-          color: #D4AF37;
+          border-color: rgba(255,255,255,.45);
+          box-shadow: 0 0 22px rgba(255,255,255,.12);
+          color: #f2f2ee;
         }
 
         /* ══════════════════════════════════════
@@ -182,16 +187,26 @@ const UdaySignature: React.FC = () => {
           right: 0;
           width: 290px;
           background: linear-gradient(145deg, #0d0d0d 0%, #161616 100%);
-          border: 1px solid rgba(212,175,55,.18);
+          border: 1px solid rgba(255,255,255,.18);
           border-radius: 20px;
           padding: 20px;
           box-shadow:
             0 32px 60px rgba(0,0,0,.75),
-            0 0 35px rgba(212,175,55,.07),
-            inset 0 1px 0 rgba(212,175,55,.06);
+            0 0 35px rgba(255,255,255,.07),
+            inset 0 1px 0 rgba(255,255,255,.06);
           animation: ub-card-rise .28s cubic-bezier(.22,1,.36,1) forwards;
           z-index: 99999;
           font-family: Inter, sans-serif;
+        }
+
+        /* an invisible bridge over the gap, so moving up to the links keeps the card open */
+        .ub-card::before {
+          content: '';
+          position: absolute;
+          left: 0;
+          right: 0;
+          bottom: -16px;
+          height: 16px;
         }
 
         /* Down-arrow caret */
@@ -203,8 +218,8 @@ const UdaySignature: React.FC = () => {
           width: 13px;
           height: 13px;
           background: #161616;
-          border-right: 1px solid rgba(212,175,55,.18);
-          border-bottom: 1px solid rgba(212,175,55,.18);
+          border-right: 1px solid rgba(255,255,255,.18);
+          border-bottom: 1px solid rgba(255,255,255,.18);
           transform: rotate(45deg);
         }
 
@@ -215,14 +230,14 @@ const UdaySignature: React.FC = () => {
           gap: 12px;
           margin-bottom: 16px;
           padding-bottom: 16px;
-          border-bottom: 1px solid rgba(212,175,55,.08);
+          border-bottom: 1px solid rgba(255,255,255,.08);
         }
         .ub-profile img {
           width: 50px;
           height: 50px;
           border-radius: 50%;
           object-fit: cover;
-          border: 2px solid rgba(212,175,55,.4);
+          border: 2px solid rgba(255,255,255,.4);
           flex-shrink: 0;
         }
         .ub-profile-name {
@@ -244,7 +259,7 @@ const UdaySignature: React.FC = () => {
           justify-content: space-between;
           align-items: center;
           padding: 9px 0;
-          border-bottom: 1px solid rgba(212,175,55,.06);
+          border-bottom: 1px solid rgba(255,255,255,.06);
           color: #E8DFC8;
           font-size: 13px;
           opacity: 0;
@@ -259,7 +274,7 @@ const UdaySignature: React.FC = () => {
         .ub-credit {
           margin-top: 16px;
           padding-top: 14px;
-          border-top: 1px solid rgba(212,175,55,.08);
+          border-top: 1px solid rgba(255,255,255,.08);
           text-align: center;
           color: #7A6A44;
           font-size: 11px;
@@ -268,7 +283,7 @@ const UdaySignature: React.FC = () => {
         }
         .ub-credit strong {
           display: block;
-          color: #D4AF37;
+          color: #f2f2ee;
           font-size: 14px;
           font-weight: 700;
           margin-top: 1px;
@@ -276,14 +291,15 @@ const UdaySignature: React.FC = () => {
 
         .ub-links {
           display: flex;
+          flex-wrap: wrap;
           justify-content: center;
-          gap: 8px;
+          gap: 6px;
           margin-top: 12px;
         }
         .ub-links a {
           text-decoration: none;
-          color: #D4AF37;
-          border: 1px solid rgba(212,175,55,.22);
+          color: #f2f2ee;
+          border: 1px solid rgba(255,255,255,.22);
           padding: 5px 13px;
           border-radius: 999px;
           font-size: 10px;
@@ -293,16 +309,16 @@ const UdaySignature: React.FC = () => {
           transition: background .22s, transform .2s;
         }
         .ub-links a:hover {
-          background: rgba(212,175,55,.12);
+          background: rgba(255,255,255,.12);
           transform: translateY(-2px);
         }
         /* Mobile: card opens upward, shifts left to avoid overflow */
         @media (max-width: 640px) {
           .ub-card {
-            width: 260px;
+            width: min(290px, calc(100vw - 32px));
             right: auto;
             left: 50%;
-            transform: translateX(-50%);
+            margin-left: calc(min(290px, calc(100vw - 32px)) / -2);
           }
           .ub-card::after {
             right: auto;
@@ -315,9 +331,10 @@ const UdaySignature: React.FC = () => {
       <div
         ref={wrapRef}
         className="ub-badge-wrap"
-        onMouseEnter={() => setOpen(true)}
-        onMouseLeave={() => setOpen(false)}
-        onClick={() => setOpen(prev => !prev)}
+        onMouseEnter={show}
+        onMouseLeave={hide}
+        onFocus={show}
+        onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) hide(); }}
       >
 
         {/* ── HOVER CARD ── */}
@@ -345,7 +362,8 @@ const UdaySignature: React.FC = () => {
               Designed &amp; Developed by
               <strong>Uday Boya</strong>
               <div className="ub-links">
-                <a href="https://in.linkedin.com/in/uday-kumar-boya-ai-innovator" target="_blank" rel="noreferrer">LinkedIn</a>
+                <a href="https://udayboya.com" target="_blank" rel="noreferrer">Portfolio</a>
+                <a href="https://www.linkedin.com/in/udaykumarboya" target="_blank" rel="noreferrer">LinkedIn</a>
                 <a href="https://wa.me/919392837729" target="_blank" rel="noreferrer">WhatsApp</a>
               </div>
             </div>
@@ -354,7 +372,7 @@ const UdaySignature: React.FC = () => {
         )}
 
         {/* ── BADGE ── */}
-        <div className="ub-badge">
+        <button type="button" className="ub-badge" aria-expanded={open} aria-label="Crafted by Uday: contact the designer" onClick={() => setOpen(prev => !prev)}>
 
           {/* Orbit system */}
           <div className="ub-orbit-system">
@@ -367,7 +385,7 @@ const UdaySignature: React.FC = () => {
 
           Crafted by Uday
 
-        </div>
+        </button>
       </div>
     </>
   );

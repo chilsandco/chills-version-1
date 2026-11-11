@@ -78,13 +78,13 @@ const SignalDetails: React.FC = () => {
   ];
 
   return (
-    <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen">
+    <div className="pt-24 md:pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen">
       <Link 
         to="/console/orders" 
         className="inline-flex items-center gap-2 group mb-12 text-[10px] uppercase font-bold tracking-[0.2em] text-neutral-500 hover:text-white transition-colors"
       >
         <ChevronLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-        Back to Archive
+        Back to My orders
       </Link>
 
       <header className="mb-16">
@@ -179,7 +179,7 @@ const SignalDetails: React.FC = () => {
                   Create New Order
                 </Link>
                 <a href="mailto:chilsandco@gmail.com" className="border border-white/10 px-6 py-3 text-[10px] tracking-widest font-bold uppercase hover:border-white transition-colors text-center inline-block">
-                  Support Protocol
+                  Need help?
                 </a>
               </div>
             </section>
@@ -245,11 +245,11 @@ const SignalDetails: React.FC = () => {
                 {signal.rmaSwaps.map((swap, idx) => (
                   <div key={idx} className="pb-6 border-b border-neutral-900 last:border-0 last:pb-0 space-y-3 font-mono text-[11px]">
                     <div className="flex justify-between items-center text-[10px]">
-                      <span className="text-white uppercase font-bold">SWAP ACTION PROTOCOL</span>
-                      <span className="text-green-500 font-bold tracking-widest">// INITIATED</span>
+                      <span className="text-white uppercase font-bold">SIZE EXCHANGE</span>
+                      <span className="text-green-500 font-bold tracking-widest">REQUESTED</span>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-neutral-500">ORIGINAL SIGNAL:</p>
+                      <p className="text-neutral-500">ORIGINAL ORDER:</p>
                       <p className="text-white uppercase tracking-tight">{swap.originalProductName}</p>
                     </div>
                     <div className="space-y-1">
@@ -326,7 +326,7 @@ const SignalDetails: React.FC = () => {
                           className="mt-2 text-[9px] font-mono tracking-widest text-accent hover:text-white uppercase flex items-center gap-1.5 transition-colors"
                         >
                           <MessageSquare size={10} />
-                          Write Review / Transmit Signal
+                          Write a review
                         </Link>
                       )}
                       {(() => {
@@ -376,7 +376,7 @@ const SignalDetails: React.FC = () => {
                         >
                           <div className="flex items-center gap-3 text-[10px] tracking-[0.3em] font-bold uppercase">
                             <RefreshCcw size={14} className="group-hover:rotate-180 transition-transform duration-500" />
-                            Initiate Reversal
+                            Return item
                           </div>
                           <span className="text-[9px] tracking-widest opacity-40 font-medium italic">Request a return for this order</span>
                         </Link>
@@ -432,7 +432,7 @@ const SignalDetails: React.FC = () => {
               
               <div className="space-y-5 relative z-10">
                 <div>
-                  <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Carrier Protocol</span>
+                  <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Delivery</span>
                   <p className="text-xs uppercase font-bold tracking-widest text-white">{signal.shipping.courier || 'Verified partner'}</p>
                 </div>
                 
@@ -485,36 +485,36 @@ const SignalDetails: React.FC = () => {
             <section className="bg-neutral-950 border border-neutral-900 p-8">
               <div className="flex items-center gap-3 mb-6">
                 <User size={14} className="text-accent" />
-                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase">Contact Node</h3>
+                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase">Contact details</h3>
               </div>
               <div className="space-y-4">
                 <div>
-                  <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Full Identity</span>
+                  <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Name</span>
                   <p className="text-xs uppercase font-bold tracking-widest text-white">
                     {signal.billing.first_name} {signal.billing.last_name}
                   </p>
                 </div>
                 {signal.billing.email && (
                   <div>
-                    <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Transmission Mail</span>
+                    <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Email</span>
                     <p className="text-xs font-mono tracking-wider text-neutral-400">{signal.billing.email}</p>
                   </div>
                 )}
                 {signal.billing.phone && (
                   <div>
-                    <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Telemetry Contact</span>
+                    <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Phone</span>
                     <p className="text-xs font-mono tracking-widest text-neutral-400">{signal.billing.phone}</p>
                   </div>
                 )}
                 <div className="pt-4 border-t border-neutral-900">
                   <p className="text-[9px] text-neutral-500 uppercase tracking-widest leading-relaxed mb-3 italic">
-                    These contact parameters were registered at checkout for this transmission.
+                    These details were saved at checkout for this order.
                   </p>
                   <Link 
                     to="/auth"
                     className="inline-flex items-center gap-1.5 text-[9px] font-bold tracking-widest uppercase text-accent hover:text-white transition-colors"
                   >
-                    Update Node Identity ↗
+                    Update my details ↗
                   </Link>
                 </div>
               </div>

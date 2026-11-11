@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { trackPurchase } from '../lib/track';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { CheckCircle2, Activity, ArrowRight, UserPlus, XCircle, Clock, AlertCircle } from 'lucide-react';
@@ -120,6 +121,7 @@ const OrderSuccess: React.FC = () => {
           
           const data = await response.json();
           setOrderInfo(data);
+          if (['processing', 'completed'].includes(data.status)) trackPurchase(String(data.id), Number(data.total) || 0, data.currency || 'INR');
           
           // Terminal states - stop polling
           const terminalStates = ['processing', 'completed', 'failed', 'cancelled', 'refunded'];
@@ -154,7 +156,7 @@ const OrderSuccess: React.FC = () => {
       poll();
     } else {
       setLoading(false);
-      setError("Incomplete transmission data.");
+      setError("We couldn't find this order.");
     }
 
     return () => {
@@ -178,7 +180,7 @@ const OrderSuccess: React.FC = () => {
             transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
             className="w-12 h-12 border-2 border-accent border-t-transparent rounded-full mx-auto"
           />
-          <p className="text-[10px] tracking-[0.5em] text-accent uppercase animate-pulse">Verifying Transmission...</p>
+          <p className="text-[10px] tracking-[0.5em] text-accent uppercase animate-pulse">Confirming your order…</p>
         </div>
       </div>
     );
@@ -189,7 +191,7 @@ const OrderSuccess: React.FC = () => {
   const isFailed = orderInfo ? ['failed', 'cancelled', 'refunded'].includes(orderInfo.status) : false;
 
   return (
-    <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[800px] mx-auto min-h-screen flex flex-col items-center">
+    <div className="pt-24 md:pt-32 pb-24 px-6 md:px-12 max-w-[800px] mx-auto min-h-screen flex flex-col items-center">
       {isSuccessful && <GoldConfetti trigger={isSuccessful} />}
       <motion.div
         initial={{ opacity: 0, y: 30 }}
@@ -223,22 +225,22 @@ const OrderSuccess: React.FC = () => {
 
           <div className="flex flex-col md:flex-row justify-between items-start gap-8 border-b border-neutral-900 pb-12">
             <div>
-              <p className="text-[9px] tracking-[0.3em] text-accent uppercase font-bold mb-2">Signal Generated</p>
+              <p className="text-[9px] tracking-[0.3em] text-accent uppercase font-bold mb-2">Order number</p>
               <p className="font-mono text-3xl tracking-tighter uppercase">{signalId || 'UNKNOWN'}</p>
               <p className="text-[10px] text-neutral-500 uppercase tracking-widest mt-2 italic">
                 {isFailed 
-                  ? "\"This transmission encountered a critical failure.\"" 
+                  ? "This order couldn't be completed." 
                   : isPending 
-                    ? "\"This signal is awaiting payment confirmation.\""
-                    : "\"This signal represents your order within the system.\""}
+                    ? "We're waiting for payment confirmation."
+                    : "Thank you. Your order is confirmed."}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-[9px] tracking-[0.2em] text-neutral-600 uppercase mb-2">System Status</p>
+              <p className="text-[9px] tracking-[0.2em] text-neutral-600 uppercase mb-2">Status</p>
               <div className={`flex items-center gap-3 justify-end ${isFailed ? "text-red-500" : isPending ? "text-amber-500" : "text-accent"}`}>
                 <span className={`w-2 h-2 rounded-full animate-pulse shadow-[0_0_10px_rgba(255,255,255,0.5)] ${isFailed ? "bg-red-500" : isPending ? "bg-amber-500" : "bg-accent"}`} />
                 <p className="text-[11px] font-bold uppercase tracking-widest">
-                  {isFailed ? "Critical Error" : isPending ? "Paused Pulse" : "Active Pulse"}
+                  {isFailed ? "Failed" : isPending ? "Pending" : "Confirmed"}
                 </p>
               </div>
             </div>
@@ -265,7 +267,7 @@ const OrderSuccess: React.FC = () => {
                       {retryError ? (
                         <span className="text-red-400 font-bold">{retryError}</span>
                       ) : (
-                        "Re-initiate standard checkout payment request securely."
+                        "Try the payment again."
                       )}
                     </p>
                   </div>
@@ -300,8 +302,8 @@ const OrderSuccess: React.FC = () => {
                 <div className="flex gap-4">
                   <UserPlus className="text-accent" size={24} />
                   <div>
-                    <h3 className="text-[11px] font-bold uppercase tracking-widest mb-1">Save this signal?</h3>
-                    <p className="text-[10px] text-neutral-500 uppercase tracking-widest">Identify with the system to track your build logs anytime.</p>
+                    <h3 className="text-[11px] font-bold uppercase tracking-widest mb-1">Save this order?</h3>
+                    <p className="text-[10px] text-neutral-500 uppercase tracking-widest">Sign in to track it anytime.</p>
                   </div>
                 </div>
                 <Link 
@@ -316,7 +318,7 @@ const OrderSuccess: React.FC = () => {
 
           {isSuccessful && (
             <div className="pt-8 border-t border-neutral-900">
-              <p className="text-[10px] text-neutral-500 text-center uppercase tracking-[0.3em] mb-8">Share Signal Origin</p>
+              <p className="text-[10px] text-neutral-500 text-center uppercase tracking-[0.3em] mb-8">Share</p>
               <ShareSignal 
                 productName="Chils & Co Signal"
                 productUrl={window.location.origin}

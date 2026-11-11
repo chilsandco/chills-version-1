@@ -1,184 +1,52 @@
 import React from 'react';
-import { motion } from 'motion/react';
-import { Mail, Phone, Clock, MapPin, ArrowRight, ShieldCheck, Headphones } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import SEO from '../components/SEO';
+import { ArrowRight } from 'lucide-react';
+import InfoPage, { Section, useContact, whatsappLink } from '../components/InfoPage';
 
-
+/** How to reach a real person, in plain words. */
 const Support: React.FC = () => {
-  const [settings, setSettings] = React.useState({
-    mobileLink: "+91 7842 07 0404",
-    address: "3rd Floor, Plot No. 38 & 39\nMatrusri Nagar, Miyapur\nHyderabad, Telangana – 500049\nIndia",
-    coordinates: "17.4948, 78.3444",
-    email: "hello.chilsandco@gmail.com"
-  });
-
-  React.useEffect(() => {
-    fetch('/api/settings')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.mobileLink) setSettings(data);
-      })
-      .catch(err => console.error("Failed to sync global nodes:", err));
-  }, []);
-
+  const contact = useContact();
   return (
-    <div className="bg-black text-white min-h-screen pt-32 pb-24 px-6 md:px-12 selection:bg-accent selection:text-black">
-      <SEO 
-        title="Support & Customer Assistance"
-        description="Need help with your order or tailoring coordinates? Get in touch with the Chils & Co. support desk. Direct communication links and location maps."
-        canonical="https://chilsandco.com/support"
-        keywords="customer support, chils and co assistance, contact chils and co, miyapur studio, order inquiries"
-      />
-      <div className="max-w-[1400px] mx-auto">
-        {/* Header Section */}
-        <motion.section 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="mb-24"
-        >
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-8 h-[1px] bg-accent" />
-            <span className="text-[10px] tracking-[0.5em] text-accent font-bold uppercase">System Integrity</span>
-          </div>
-          <h1 className="text-6xl md:text-8xl font-display font-bold tracking-tighter uppercase mb-8">
-            Support <br /> <span className="text-neutral-800 italic">& Assistance</span>
-          </h1>
-          <p className="text-neutral-500 text-sm md:text-base max-w-2xl leading-relaxed uppercase tracking-widest font-light">
-            At Chils & Co, support is not an afterthought — it is an extension of our engineering philosophy. 
-            Root-to-end assistance for every builder in our ecosystem.
-          </p>
-        </motion.section>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 mb-32">
-          {/* Direct Communication */}
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-px bg-neutral-900 border border-neutral-900 overflow-hidden"
-          >
-            {/* Email Support */}
-            <div className="bg-black p-10 flex flex-col justify-between group hover:bg-neutral-950 transition-colors duration-500">
-              <div className="mb-12">
-                <Mail className="text-accent mb-6" size={32} strokeWidth={1} />
-                <h3 className="text-[11px] tracking-[0.3em] font-bold uppercase mb-4 text-neutral-400">Electronic Mail</h3>
-                <p className="text-2xl font-display font-bold tracking-tight mb-2">{settings.email}</p>
-                <p className="text-[10px] text-neutral-600 uppercase tracking-widest leading-relaxed">
-                  For order queries, technical support, and partnership requests.
-                </p>
-              </div>
-              <a 
-                href={`mailto:${settings.email}`}
-                className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.3em] text-white hover:text-accent transition-colors group"
-              >
-                Initiate Transmission <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </a>
-            </div>
-
-            {/* Voice Support */}
-            <div className="bg-black p-10 flex flex-col justify-between group hover:bg-neutral-950 transition-colors duration-500">
-              <div className="mb-12">
-                <Phone className="text-accent mb-6" size={32} strokeWidth={1} />
-                <h3 className="text-[11px] tracking-[0.3em] font-bold uppercase mb-4 text-neutral-400">Voice Link</h3>
-                <p className="text-2xl font-display font-bold tracking-tight mb-2">{settings.mobileLink}</p>
-                <div className="flex items-center gap-2 mt-4">
-                  <Clock className="text-neutral-700" size={14} />
-                  <p className="text-[10px] text-neutral-500 uppercase tracking-widest">
-                    Mon–Sat · 10 AM – 6 PM IST
-                  </p>
-                </div>
-              </div>
-              <a 
-                href={`tel:${settings.mobileLink.replace(/\s+/g, '')}`}
-                className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.3em] text-white hover:text-accent transition-colors group"
-              >
-                Open Connection <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </a>
-            </div>
-
-            {/* Physical Location */}
-            <div className="bg-black p-10 col-span-1 md:col-span-2 group hover:bg-neutral-950 transition-colors duration-500 border-t border-neutral-900">
-              <div className="flex flex-col md:flex-row justify-between gap-12">
-                <div className="max-w-md">
-                  <MapPin className="text-accent mb-6" size={32} strokeWidth={1} />
-                  <h3 className="text-[11px] tracking-[0.3em] font-bold uppercase mb-4 text-neutral-400">Physical Coordinates</h3>
-                  <p className="text-xl font-display font-bold tracking-tight uppercase leading-relaxed mb-4 whitespace-pre-line">
-                    {settings.address}
-                  </p>
-                </div>
-                <div className="flex-shrink-0 flex items-end">
-                   <div className="p-8 border border-neutral-900 rounded-full opacity-20 group-hover:opacity-40 group-hover:scale-110 transition-all duration-700">
-                      <ShieldCheck size={80} strokeWidth={0.5} />
-                   </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-
-          {/* Core Support Links */}
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            className="space-y-6"
-          >
-            <div className="p-8 border border-neutral-900 bg-black flex flex-col justify-between min-h-[300px] hover:border-neutral-700 transition-colors">
-              <div>
-                 <Headphones className="text-neutral-700 mb-6" size={24} />
-                 <h3 className="text-[11px] tracking-[0.3em] font-bold uppercase mb-6 text-neutral-400 font-mono italic">Quick Ops</h3>
-                 <div className="space-y-4">
-                    <Link to="/shipping-delivery" className="flex items-center justify-between group py-2 border-b border-neutral-900">
-                      <span className="text-[10px] uppercase font-bold tracking-widest group-hover:text-accent transition-colors">Shipping Protocol</span>
-                      <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-all" />
-                    </Link>
-                    <Link to="/returns-refunds" className="flex items-center justify-between group py-2 border-b border-neutral-900">
-                      <span className="text-[10px] uppercase font-bold tracking-widest group-hover:text-accent transition-colors">Return Policy</span>
-                      <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-all" />
-                    </Link>
-                    <Link to="/auth" className="flex items-center justify-between group py-2 border-b border-neutral-900">
-                      <span className="text-[10px] uppercase font-bold tracking-widest group-hover:text-accent transition-colors">Account Access</span>
-                      <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-all" />
-                    </Link>
-                 </div>
-              </div>
-              <div className="mt-8 pt-6 border-t border-neutral-900">
-                <p className="text-[9px] text-neutral-700 uppercase tracking-widest italic">
-                  Operational clearance: 24/7 Monitoring
-                </p>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Footer Note */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 0.6 }}
-          className="text-center pt-24 border-t border-neutral-900"
-        >
-          <p className="text-[10px] text-neutral-700 uppercase tracking-[0.5em] mb-8 italic">
-            Essential by Design. Built for the Builder.
-          </p>
-          <div className="flex justify-center gap-12">
-            <div className="flex flex-col items-center">
-               <span className="text-[10px] font-bold text-accent mb-2">INTEGRITY</span>
-               <div className="w-1 h-1 bg-accent rounded-full" />
-            </div>
-            <div className="flex flex-col items-center">
-               <span className="text-[10px] font-bold text-neutral-700 mb-2">PRECISION</span>
-               <div className="w-1 h-1 bg-neutral-800 rounded-full" />
-            </div>
-            <div className="flex flex-col items-center">
-               <span className="text-[10px] font-bold text-neutral-700 mb-2">TRANSPARENCY</span>
-               <div className="w-1 h-1 bg-neutral-800 rounded-full" />
-            </div>
-          </div>
-        </motion.div>
+    <InfoPage
+      seo={{ title: 'Support', description: 'Talk to the CHILS & CO. team on WhatsApp, email or phone, Monday to Saturday, 10 AM to 6 PM. Based in Miyapur, Hyderabad.', canonical: 'https://chilsandco.com/support' }}
+      eyebrow="Support"
+      title="We’re here to help"
+      intro="Questions about an order, a size or anything else? Message the team directly. Real people, every time."
+    >
+      <div className="grid md:grid-cols-3 gap-2">
+        <a href={whatsappLink(contact.mobileLink)} target="_blank" rel="noopener noreferrer" className="bg-[#fff] rounded-2xl p-5 block">
+          <p className="text-sm text-neutral-500">Quickest</p>
+          <p className="text-lg font-semibold mt-1">WhatsApp</p>
+          <p className="text-sm text-neutral-600 mt-1">{contact.mobileLink}</p>
+        </a>
+        <a href={`mailto:${contact.email}`} className="bg-[#fff] rounded-2xl p-5 block">
+          <p className="text-sm text-neutral-500">For orders and partnerships</p>
+          <p className="text-lg font-semibold mt-1">Email</p>
+          <p className="text-sm text-neutral-600 mt-1 break-all">{contact.email}</p>
+        </a>
+        <a href={`tel:${contact.mobileLink.replace(/\s+/g, '')}`} className="bg-[#fff] rounded-2xl p-5 block">
+          <p className="text-sm text-neutral-500">Mon–Sat, 10 AM – 6 PM</p>
+          <p className="text-lg font-semibold mt-1">Call</p>
+          <p className="text-sm text-neutral-600 mt-1">{contact.mobileLink}</p>
+        </a>
       </div>
-    </div>
+      <Section title="Visit or pick up">
+        <p className="whitespace-pre-line">{contact.address}</p>
+        <p>Store pickup is free. Choose it at checkout.</p>
+      </Section>
+      <Section title="Quick answers">
+        <div className="flex flex-col gap-2.5 text-ink">
+          {[
+            { to: '/shipping-delivery', label: 'Delivery times and costs' },
+            { to: '/returns-refunds', label: 'Returns, exchanges and refunds' },
+            { to: '/console/orders', label: 'Track an order' },
+            { to: '/auth', label: 'Your account' },
+          ].map(l => (
+            <Link key={l.to} to={l.to} className="inline-flex items-center gap-2 w-fit border-b border-ink pb-0.5">{l.label} <ArrowRight size={13} /></Link>
+          ))}
+        </div>
+      </Section>
+    </InfoPage>
   );
 };
 

@@ -6,3 +6,9 @@ coverage/
 *.log
 .env*
 !.env.example
+
+# Local secrets: never commit
+secrets/
+
+# Slack bot memory
+.slack-state.json

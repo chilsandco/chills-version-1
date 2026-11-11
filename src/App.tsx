@@ -1,37 +1,67 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { metaPageView } from './lib/track';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { CartProvider } from './CartContext';
 import { AuthProvider } from './AuthContext';
 import { WishlistProvider } from './WishlistContext';
 import Navbar from './components/Navbar';
+import QuickView from './components/QuickView';
+import BagDrawer from './components/BagDrawer';
+import Assistant from './components/Assistant';
+import PageLoader from './components/PageLoader';
 import Footer from './components/Footer';
-import Home from './pages/Home';
-import Collection from './pages/Collection';
-import Combos from './pages/Combos';
-import ProductDetail from './pages/ProductDetail';
-import Checkout from './pages/Checkout';
-import OrderSuccess from './pages/OrderSuccess';
-import OrderSignals from './pages/OrderSignals';
-import SignalDetails from './pages/SignalDetails';
-import Onboarding from './pages/Onboarding';
-import Wishlist from './pages/Wishlist';
-import ReturnRequest from './pages/ReturnRequest';
-import Returns from './pages/Returns';
-import Shipping from './pages/Shipping';
-import Support from './pages/Support';
-import PrivacyPolicy from './pages/PrivacyPolicy';
-import TermsConditions from './pages/TermsConditions';
-import Auth from './pages/Auth';
-import Bespoke from './pages/Bespoke';
-import BespokeSignals from './pages/BespokeSignals';
-import AdminConfig from './pages/AdminConfig';
-import AmazonConsole from './pages/AmazonConsole';
-import CoCreator from './pages/CoCreator';
-import SocialVault from './pages/SignalNetwork';
-import CustomStudio from './pages/CustomStudio';
 import SmoothScroll from './components/SmoothScroll';
-import ScrollProgress from './components/ScrollProgress';
-import CustomCursor from './components/CustomCursor';
+import Home from './pages/Home';
+
+/** Pages load on demand so a phone only downloads the screen it opens. A tab left open
+ *  across a deploy can ask for an old file, so it refreshes once instead of going blank. */
+const page = (load: () => Promise<{ default: React.ComponentType<any> }>) =>
+  React.lazy(() => load().then(m => { sessionStorage.removeItem('page-retry'); return m; }).catch(err => {
+    if (sessionStorage.getItem('page-retry')) throw err;
+    sessionStorage.setItem('page-retry', '1');
+    window.location.reload();
+    return new Promise<never>(() => {});
+  }));
+
+const Collection = page(() => import('./pages/Collection'));
+const Combos = page(() => import('./pages/Combos'));
+const Runway = page(() => import('./pages/Runway'));
+const OurPromise = page(() => import('./pages/OurPromise'));
+const ProductDetail = page(() => import('./pages/ProductDetail'));
+const Checkout = page(() => import('./pages/Checkout'));
+const OrderSuccess = page(() => import('./pages/OrderSuccess'));
+const OrderSignals = page(() => import('./pages/OrderSignals'));
+const SignalDetails = page(() => import('./pages/SignalDetails'));
+const Onboarding = page(() => import('./pages/Onboarding'));
+const Wishlist = page(() => import('./pages/Wishlist'));
+const ReturnRequest = page(() => import('./pages/ReturnRequest'));
+const Returns = page(() => import('./pages/Returns'));
+const Shipping = page(() => import('./pages/Shipping'));
+const Support = page(() => import('./pages/Support'));
+const PrivacyPolicy = page(() => import('./pages/PrivacyPolicy'));
+const TermsConditions = page(() => import('./pages/TermsConditions'));
+const Auth = page(() => import('./pages/Auth'));
+const Bespoke = page(() => import('./pages/Bespoke'));
+const BespokeSignals = page(() => import('./pages/BespokeSignals'));
+const AdminConfig = page(() => import('./pages/AdminConfig'));
+const AmazonConsole = page(() => import('./pages/AmazonConsole'));
+const CoCreator = page(() => import('./pages/CoCreator'));
+const SocialVault = page(() => import('./pages/SignalNetwork'));
+const CustomStudio = page(() => import('./pages/CustomStudio'));
+
+// Internal admin tools keep the original dark console look
+const DARK_PREFIXES = ['/console/bespoke', '/console/amazon', '/admin'];
+
+function Shell({ children }: { children: React.ReactNode }) {
+  const { pathname } = useLocation();
+  const dark = DARK_PREFIXES.some(p => pathname.startsWith(p));
+  React.useEffect(() => { metaPageView(); }, [pathname]);
+  return (
+    <div className={`${dark ? 'bg-black text-white selection:bg-white selection:text-black' : 'theme-light'} min-h-screen flex flex-col overflow-x-clip w-full max-w-full`}>
+      {children}
+    </div>
+  );
+}
 
 export default function App() {
   return (
@@ -40,15 +70,17 @@ export default function App() {
         <WishlistProvider>
           <Router>
             <SmoothScroll>
-            <div className="min-h-screen flex flex-col bg-black text-white selection:bg-white selection:text-black overflow-x-clip w-full max-w-full">
-              <CustomCursor />
-              <ScrollProgress />
+            <Shell>
               <Navbar />
               <main className="flex-grow">
+                <React.Suspense fallback={<PageLoader />}>
                 <Routes>
                   <Route path="/" element={<Home />} />
                   <Route path="/collection" element={<Collection />} />
                   <Route path="/combos" element={<Combos />} />
+                  <Route path="/pick-your-three" element={<Runway />} />
+                  <Route path="/our-promise" element={<OurPromise />} />
+                  <Route path="/shop-the-look" element={<Navigate to="/pick-your-three" replace />} />
                   <Route path="/product/:id" element={<ProductDetail />} />
                   <Route path="/checkout" element={<Checkout />} />
                   <Route path="/order-success/:orderId" element={<OrderSuccess />} />
@@ -71,9 +103,13 @@ export default function App() {
                   <Route path="/console/amazon" element={<AmazonConsole />} />
                   <Route path="/admin/config" element={<AdminConfig />} />
                 </Routes>
+                </React.Suspense>
               </main>
               <Footer />
-            </div>
+              <QuickView />
+              <BagDrawer />
+              <Assistant />
+            </Shell>
           </SmoothScroll>
         </Router>
       </WishlistProvider>

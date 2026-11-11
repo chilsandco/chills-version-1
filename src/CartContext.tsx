@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { cartItems, itemOf, metaAddToCart, track } from './lib/track';
 import { CartItem, Product, ComboSubItem } from './types';
 import { useAuth } from './AuthContext';
 
@@ -121,6 +122,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addToCart = (product: Product, size?: string, color?: string) => {
+    track('add_to_cart', { currency: 'INR', value: product.price, items: [itemOf(product, size)] });
+    metaAddToCart(product.price, [String(product.id)], product.name);
     const resolvedColor = color || (product.availableColors && product.availableColors.length > 0 ? product.availableColors[0] : undefined);
     
     const existingIndex = cart.findIndex(item => 
@@ -163,6 +166,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addComboToCart = (comboProduct: Product, items: ComboSubItem[]) => {
+    track('add_to_cart', { currency: 'INR', value: comboProduct.price, items: [{ item_id: String(comboProduct.id), item_name: comboProduct.name, price: comboProduct.price, quantity: 1, item_variant: items[0]?.selectedSize, item_category: 'Trilogy' }] });
+    metaAddToCart(comboProduct.price, items.map(i => String(i.id)), comboProduct.name);
     const comboKey = `${comboProduct.id}-${items.map(i => `${i.id}_${i.selectedSize}`).join('-')}`;
     const existingIndex = cart.findIndex(item => item.id === comboKey);
     let newCart: CartItem[];
@@ -192,6 +197,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const removeFromCart = (productId: string, size?: string, color?: string) => {
+    const gone = cart.find(item => item.id === productId && item.selectedSize === size);
+    if (gone) track('remove_from_cart', { currency: 'INR', value: gone.price * gone.quantity, items: cartItems([gone]) });
     const newCart = cart.filter(item => !(
       item.id === productId && 
       item.selectedSize === size && 

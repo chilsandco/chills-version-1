@@ -1,965 +1,114 @@
-import React, { useEffect, useState, useRef } from 'react';
-import Hero from '../components/Hero';
-import ProductCard from '../components/ProductCard';
-import EcoEngineeredLogo from '../components/EcoEngineeredLogo';
+import React, { useEffect, useMemo } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
+import { ArrowRight } from 'lucide-react';
 import SEO from '../components/SEO';
+import LineUp from '../components/LineUp';
+import ClothesRail from '../components/ClothesRail';
+import PhoneHome from '../components/PhoneHome';
+import { ModelRow } from '../components/ModelFloor';
+import { useProducts } from '../hooks/useProducts';
+import { useNarrow } from '../hooks/useNarrow';
+import { GROUPS, curateRows } from '../data/groups';
 import { Product } from '../types';
-import { motion, AnimatePresence, useInView, useScroll, useTransform } from 'motion/react';
-import { ArrowRight, RefreshCw, Smartphone, Monitor, Watch } from 'lucide-react';
-import { Link, useLocation } from 'react-router-dom';
+import { Trilogy } from '../components/Trilogy';
 
-const contexts = [
-  { name: "office", color: "rgba(100, 116, 139, 0.1)", light: "rgba(255, 255, 255, 0.05)" },
-  { name: "meeting", color: "rgba(148, 163, 184, 0.1)", light: "rgba(255, 255, 255, 0.08)" },
-  { name: "walk", color: "rgba(234, 179, 8, 0.05)", light: "rgba(234, 179, 8, 0.1)" },
-  { name: "lunch", color: "rgba(212, 175, 55, 0.03)", light: "rgba(212, 175, 55, 0.05)" },
-  { name: "event", color: "rgba(255, 255, 255, 0.02)", light: "rgba(255, 255, 255, 0.15)" },
-  { name: "night", color: "rgba(0, 0, 0, 0.4)", light: "rgba(212, 175, 55, 0.02)" }
-];
+const FIRST_TRILOGY = '1727';
 
-const PhilosophySystem: React.FC = () => {
-  const [contextIndex, setContextIndex] = useState(0);
-  const scrollRef = useRef(null);
-  const isInView = useInView(scrollRef, { once: true, amount: 0.2 });
-  const [isHovered, setIsHovered] = useState(false);
-  const [isFlickering, setIsFlickering] = useState(false);
-
-  // Continuous loop for context artifact
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setIsFlickering(true);
-      setTimeout(() => {
-        setContextIndex((prev) => (prev + 1) % contexts.length);
-        setIsFlickering(false);
-      }, 100);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  return (
-    <div ref={scrollRef} id="philosophy" className="bg-black">
-      {/* SECTION 1: THE SYSTEM (3-COLUMN SPLIT) */}
-      <section className="min-h-screen flex items-center justify-center p-8 md:p-24 relative overflow-hidden">
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: isInView ? 1 : 0 }}
-          transition={{ duration: 2.5, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-7xl grid grid-cols-1 md:grid-cols-12 gap-16 md:gap-8 items-start relative z-10"
-        >
-          {/* LEFT: IDENTITY (STATIC) */}
-          <div className="md:col-span-4 space-y-12 pt-4">
-            <div className="space-y-8">
-              <p className="text-accent text-base md:text-xl font-display font-medium tracking-[0.4em] uppercase">Our Philosophy</p>
-              <div className="space-y-4">
-                <h3 className="text-4xl md:text-5xl font-display font-bold text-white tracking-tighter leading-none">
-                  Designed by techies.
-                </h3>
-                <p className="text-xl md:text-2xl text-white/40 font-display font-light leading-snug tracking-tight">
-                  For those who build, <br />
-                  ship, and iterate.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* CENTER: ARTIFACT (CORE VISUAL) - CONTINUOUS */}
-          <div className="md:col-span-4 flex flex-col items-center justify-center relative py-12">
-            <motion.div
-              animate={{ y: [0, -15, 0] }}
-              transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-              className="relative"
-            >
-              <img 
-                src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1777715200/a50f35f2-0d3c-411b-8695-82ada5d97bd5_20260502_151543_0000_u5fzyj.png" 
-                alt="System Artifact" 
-                className={`w-64 md:w-[32vw] max-w-lg h-auto object-contain brightness-110 drop-shadow-[0_40px_100px_rgba(0,0,0,0.8)] transition-opacity duration-100 ${isFlickering ? 'opacity-80' : 'opacity-100'}`}
-                referrerPolicy="no-referrer"
-              />
-
-              {/* DESKTOP ONLY: ON-SHIRT CONTEXT OVERLAY */}
-              <div className="absolute inset-0 hidden md:flex items-center justify-center">
-                <div className="mt-[-15%] pointer-events-none select-none flex flex-col items-center gap-4">
-                  {/* Constant Anchor */}
-                  <span className="text-[10px] md:text-[11px] font-mono tracking-[0.5em] text-white/20 uppercase">
-                    BUILT FOR EVERY CONTEXT
-                  </span>
-                  
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={contextIndex}
-                      initial={{ opacity: 0, scale: 0.98 }}
-                      animate={{ opacity: isFlickering ? [0.1, 0.6, 0.4] : 0.6, scale: 1 }}
-                      exit={{ opacity: 0, transition: { duration: 0.2 } }}
-                      transition={{ duration: 0.4 }}
-                      className="flex flex-col items-center"
-                    >
-                      <span className="text-[14px] md:text-[16px] font-mono tracking-[1.2rem] text-accent font-bold uppercase mix-blend-overlay">
-                        {contexts[contextIndex].name}
-                      </span>
-                    </motion.div>
-                  </AnimatePresence>
-                </div>
-              </div>
-            </motion.div>
-
-            {/* MOBILE ONLY: ATTACHED CONTEXT LAYER (BELOW SHIRT) */}
-            <div className="flex md:hidden flex-col items-center mt-12 space-y-4 text-center">
-              <span className="text-[10px] font-mono tracking-[0.4em] text-white/30 uppercase">
-                BUILT FOR EVERY CONTEXT
-              </span>
-              <div className="h-8 flex items-center justify-center">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={contextIndex}
-                    initial={{ opacity: 0, y: 5 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -5 }}
-                    transition={{ duration: 0.3 }}
-                    className="flex flex-col items-center"
-                  >
-                    <span className="text-xl font-mono tracking-[0.8em] text-accent font-bold uppercase">
-                      {contexts[contextIndex].name}
-                    </span>
-                  </motion.div>
-                </AnimatePresence>
-              </div>
-            </div>
-          </div>
-
-          {/* RIGHT: BELIEF (DYNAMIC TEXT) */}
-          <div className="md:col-span-4 flex flex-col md:items-end md:text-right space-y-10 md:pt-4">
-            <p className="text-3xl md:text-[2.5rem] font-display font-light text-white tracking-tighter leading-[1.05] max-w-sm">
-              We believe clothing should <br />
-              move with you — <br />
-              <span className="text-white/20 italic font-extra-light">through every context, without interruption.</span>
-            </p>
-            
-            <div className="pt-6 border-t border-white/10 w-full md:w-auto">
-              <p className="text-accent text-[13px] md:text-[15px] font-bold uppercase tracking-[0.6em] leading-tight">
-                FROM WORK TO <br /> EVERYTHING AFTER.
-              </p>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Ambient Glow */}
-        <div 
-          className="absolute inset-0 transition-colors duration-2000 blur-[180px] opacity-[0.04] pointer-events-none"
-          style={{ backgroundColor: contexts[contextIndex].light }} 
-        />
-      </section>
-
-      {/* SECTION 2: THE SIGNATURE (STANDALONE) */}
-      <section className="py-16 md:py-20 flex flex-col items-center justify-center px-6 relative overflow-hidden bg-black">
-        <div className="text-center space-y-8 md:space-y-12">
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            whileInView={{ opacity: 0.5, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 2 }}
-            className="text-4xl md:text-6xl font-display font-extra-light text-white tracking-[0.3em] uppercase"
-          >
-            Not just seen.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.98 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 3, delay: 0.5 }}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            className="relative cursor-default"
-          >
-            <h4 
-              className="text-7xl md:text-[12vw] font-display font-black tracking-tighter uppercase italic leading-none transition-all duration-1000 transform"
-              style={{ 
-                color: '#C5A028',
-                textShadow: isHovered ? '0 0 40px rgba(197, 160, 40, 0.15)' : 'none',
-                scale: isHovered ? 1.01 : 1
-              }}
-            >
-              <span className="relative inline-block overflow-hidden px-4">
-                Lived in.
-                
-                {/* Light Sweep Effect */}
-                <motion.div
-                  initial={{ x: '-150%' }}
-                  animate={isHovered ? { x: '250%' } : { x: '-150%' }}
-                  transition={{ duration: 1.5, ease: "easeInOut" }}
-                  className="absolute inset-0 top-[-100%] bottom-[-100%] w-64 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-[-30deg] pointer-events-none"
-                  style={{ mixBlendMode: 'soft-light' }}
-                />
-              </span>
-            </h4>
-          </motion.div>
-        </div>
-      </section>
-      
-      <div className="absolute inset-0 opacity-[0.02] pointer-events-none mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-[length:128px_128px]" />
-    </div>
-  );
-};
-
-const PromiseCarousel: React.FC = () => {
-  const containerRef = useRef<HTMLElement>(null);
-  const { scrollYProgress } = useScroll({
-    target: containerRef,
-    offset: ["start start", "end end"]
-  });
-
-  const [index, setIndex] = useState(0);
-
-  const promiseData = [
-    { 
-      title: "WELL-VETTED FABRIC", 
-      tag: "MATERIAL",
-      desc: "Sourced from trusted manufacturers with an uncompromising standard for build quality. We exclusively utilize 100% fine premium cotton, engineered for substance, tactile endurance, and structural integrity.",
-      image: "https://res.cloudinary.com/ddatd5ruz/image/upload/v1777910929/ChatGPT_Image_May_4_2026_08_46_37_PM_e6lboy.png"
-    },
-    { 
-      title: "PRECISION TAILORING", 
-      tag: "CRAFT",
-      desc: "Every pattern is digitally mapped and finished with double stitching on the neck and shoulders. This ensures long-term durability and resistance to sagging — maintaining a fit that feels like a second skin.",
-      image: "https://res.cloudinary.com/ddatd5ruz/image/upload/v1777910953/ChatGPT_Image_May_4_2026_08_56_56_PM_gclj1y.png"
-    },
-    { 
-      title: "CREATIVE OVERFLOW", 
-      tag: "VISION",
-      desc: "Our designs are artifacts of expression—story, satire, and idea. This path leads to the upcoming Co-Creator concept, inviting our community to collaborate on future signal drops within our ecosystem.",
-      image: "https://res.cloudinary.com/ddatd5ruz/image/upload/v1777910958/ChatGPT_Image_May_4_2026_09_00_31_PM_a6szsf.png"
-    },
-    { 
-      title: "WORN FOR A REASON", 
-      tag: "LEGACY",
-      desc: "Nothing we give you is meant to be thrown away. From packaging to tags — every element is designed with a second life. Built to stay. Designed to be used — again.",
-      image: "https://res.cloudinary.com/ddatd5ruz/image/upload/v1777911683/ChatGPT_Image_May_4_2026_09_23_04_PM_mztats.png"
-    }
-  ];
-
-  // Sync index with scroll progress
-  useEffect(() => {
-    const unsubscribe = scrollYProgress.on("change", (latest) => {
-      if (latest < 0.25) setIndex(0);
-      else if (latest < 0.5) setIndex(1);
-      else if (latest < 0.75) setIndex(2);
-      else setIndex(3);
-    });
-    return () => unsubscribe();
-  }, [scrollYProgress]);
-
-  return (
-    <section 
-      ref={containerRef} 
-      id="promise" 
-      className="bg-black relative h-[400vh]"
-    >
-      <div className="sticky top-0 h-[100dvh] flex flex-col justify-start overflow-hidden pt-4 sm:pt-10 lg:pt-20">
-        <div className="max-w-[1800px] mx-auto px-6 w-full flex flex-col h-full">
-          {/* Header - Simple & Premium */}
-          <div className="mb-2 sm:mb-4 lg:mb-6 relative z-30">
-            <span className="text-accent text-[9px] md:text-[10px] uppercase tracking-[1.2rem] mb-1 block font-bold opacity-70">
-              The <span className="italic underline underline-offset-[4px] decoration-accent/40 font-light">Commitment</span>
-            </span>
-            <h2 className="text-2xl md:text-5xl lg:text-5xl font-display font-medium uppercase tracking-tighter text-white leading-[0.85]">
-              Our <span className="italic underline underline-offset-[0.5rem] md:underline-offset-[1rem] decoration-accent/30 font-light">Promise</span>
-            </h2>
-          </div>
-
-          {/* Unified Content Display */}
-          <div className="flex-1 relative flex items-center justify-center mb-4 lg:mb-6">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 30, filter: "blur(10px)" }}
-                animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                exit={{ opacity: 0, y: -30, filter: "blur(10px)" }}
-                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                className="w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center"
-              >
-                {/* Text Content */}
-                <div className="lg:col-span-5 xl:col-span-4 space-y-4 lg:space-y-8 order-2 lg:order-1">
-                  <div className="space-y-4">
-                    <span className="font-mono text-[11px] text-accent tracking-[0.5em] block uppercase font-bold">
-                      0{index + 1} // S_{promiseData[index].tag}
-                    </span>
-                    <h3 className="text-2xl sm:text-4xl lg:text-6xl font-display uppercase tracking-tighter text-white leading-[0.9]">
-                      {promiseData[index].title}
-                    </h3>
-                  </div>
-                  
-                  <p className="text-neutral-400 text-xs sm:text-sm lg:text-lg xl:text-xl font-light leading-relaxed max-w-xl">
-                    {promiseData[index].desc}
-                  </p>
-
-                  <div className="flex items-center gap-4 pt-4 lg:pt-10 border-t border-white/5">
-                    <div className="w-12 h-[1px] bg-accent/40" />
-                    <span className="font-mono text-[10px] text-accent/60 uppercase tracking-[0.4em]">Operational_Standard_V1</span>
-                  </div>
-                </div>
-
-                {/* Image Component */}
-                <div className="lg:col-span-7 xl:col-span-8 order-1 lg:order-2">
-                  <div className="relative w-full bg-[#050505] border border-white/5 overflow-hidden">
-                    <div className="flex items-center justify-center aspect-video lg:aspect-[16/9] p-2 sm:p-6 lg:p-12 relative overflow-hidden">
-                      {/* Technical Framing Accents */}
-                      <div className="absolute top-8 left-8 w-4 h-4 border-t border-l border-white/20 opacity-40" />
-                      <div className="absolute top-8 right-8 w-4 h-4 border-t border-r border-white/20 opacity-40" />
-                      <div className="absolute bottom-8 left-8 w-4 h-4 border-b border-l border-white/20 opacity-40" />
-                      <div className="absolute bottom-8 right-8 w-4 h-4 border-b border-r border-white/20 opacity-40" />
-
-                      <motion.img
-                        src={promiseData[index].image}
-                        alt={promiseData[index].title}
-                        initial={{ scale: 1.1, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
-                        className="w-full h-full object-contain relative z-10 max-h-[25vh] sm:max-h-[35vh] lg:max-h-[55vh]"
-                        referrerPolicy="no-referrer"
-                      />
-                      
-                      {/* Depth Gradient */}
-                      <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-60 z-20 pointer-events-none" />
-                      <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          {/* Progress Indicator (Bottom) */}
-          <div className="pb-4 sm:pb-8 lg:pb-16 flex items-center justify-between border-t border-white/5 pt-3 sm:pt-4 lg:pt-8">
-            <div className="flex gap-4">
-              {promiseData.map((_, i) => (
-                <div 
-                  key={i} 
-                  className={`h-1 transition-all duration-700 rounded-full ${index === i ? 'w-12 bg-accent' : 'w-4 bg-white/10'}`} 
-                />
-              ))}
-            </div>
-            <div className="font-mono text-[9px] text-neutral-600 uppercase tracking-[0.5em]">
-              System_Integrity_Check: OK
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-};
-
-// --- Odometer Digit Component (inline) ---
-const OdometerDigit: React.FC<{
-  target: number;
-  isInView: boolean;
-  delay?: number;
-  duration?: number;
-  className?: string;
-  glow?: boolean;
-}> = ({ target, isInView, delay = 0, duration = 1.8, className = '', glow = false }) => {
-  const [settled, setSettled] = useState(false);
-  const [translateY, setTranslateY] = useState(0);
-
-  // Build the strip: 0-9 repeated twice + digits 0..target for final settle
-  const digits = [
-    ...Array.from({ length: 10 }, (_, i) => i),
-    ...Array.from({ length: 10 }, (_, i) => i),
-    ...Array.from({ length: target + 1 }, (_, i) => i),
-  ];
-  const totalStops = digits.length;
-  const targetIndex = totalStops - 1; // last digit in the strip is the target
-
-  useEffect(() => {
-    if (!isInView) return;
-    const timeout = setTimeout(() => {
-      setTranslateY(targetIndex);
-      const settleTimeout = setTimeout(() => setSettled(true), duration * 1000 + 100);
-      return () => clearTimeout(settleTimeout);
-    }, delay * 1000);
-    return () => clearTimeout(timeout);
-  }, [isInView, delay, duration, targetIndex]);
-
-  return (
-    <span
-      className={`inline-block overflow-hidden align-baseline ${className}`}
-      style={{ height: '1em', lineHeight: '1em' }}
-    >
-      <span
-        className="inline-flex flex-col items-center"
-        style={{
-          transition: isInView ? `transform ${duration}s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s` : 'none',
-          transform: `translateY(-${translateY}em)`,
-          willChange: 'transform',
-        }}
-      >
-        {digits.map((d, i) => (
-          <span
-            key={i}
-            className="block"
-            style={{ height: '1em', lineHeight: '1em' }}
-            aria-hidden={i !== targetIndex}
-          >
-            {d}
-          </span>
-        ))}
-      </span>
-      {/* Glow overlay on settle */}
-      {glow && (
-        <style>{`
-          @keyframes odometer-glow {
-            0% { text-shadow: 0 0 0px transparent; }
-            30% { text-shadow: 0 0 20px rgba(212, 175, 55, 0.6), 0 0 40px rgba(212, 175, 55, 0.3); }
-            100% { text-shadow: 0 0 0px transparent; }
-          }
-        `}</style>
-      )}
-    </span>
-  );
-};
-
-// --- Drop Identifier Section ---
-const DropIdentifierSection: React.FC = () => {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const isInView = useInView(sectionRef, { once: true, margin: '-100px' });
-
-  return (
-    <section className="py-20 md:py-24 px-6 text-center overflow-hidden" ref={sectionRef}>
-      <motion.div
-        initial={{ opacity: 0, y: 40, filter: 'blur(10px)' }}
-        whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-        viewport={{ once: true, margin: '-100px' }}
-        transition={{ duration: 2, ease: [0.22, 1, 0.36, 1] }}
-      >
-        {/* "Drop 001" with odometer digits */}
-        <span className="text-accent text-[13px] uppercase tracking-[0.8em] mb-6 block font-bold">
-          Drop{' '}
-          <OdometerDigit target={0} isInView={isInView} delay={0.2} duration={1.0} />
-          <OdometerDigit target={0} isInView={isInView} delay={0.4} duration={1.2} />
-          <OdometerDigit target={1} isInView={isInView} delay={0.6} duration={1.4} />
-        </span>
-
-        {/* "1NCEPTION" */}
-        <h2 className="text-5xl sm:text-6xl md:text-[12vw] font-display font-bold tracking-tighter uppercase leading-none mb-8">
-          <span className="text-accent inline-block">1</span>NCEPTION
-        </h2>
-
-        <div className="flex items-center justify-center gap-4">
-          <span className="h-px w-8 bg-white/10" />
-          <p className="text-neutral-500 text-[10px] md:text-xs uppercase tracking-[0.5em] font-medium italic">
-            The beginning of the system.
-          </p>
-          <span className="h-px w-8 bg-white/10" />
-        </div>
-      </motion.div>
-    </section>
-  );
+const reveal = {
+  initial: { opacity: 0, y: 28 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: '-80px' },
+  transition: { duration: 0.8, ease: [0.22, 1, 0.36, 1] as const },
 };
 
 const Home: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [hasSeenSustainability, setHasSeenSustainability] = useState(false);
-  const location = useLocation();
+  const { products } = useProducts();
+  const narrow = useNarrow(768);
+  const { hash } = useLocation();
 
+  // older links like /#second-life now live on the Our promise page
+  const navigate = useNavigate();
   useEffect(() => {
-    if (location.hash) {
-      const id = location.hash.replace('#', '');
-      setTimeout(() => {
-        const el = document.getElementById(id);
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
-      }, 500); // Small delay to ensure component is rendered
-    }
-  }, [location.hash]);
+    if (['#second-life', '#eco-engineered', '#promise'].includes(hash)) navigate(`/our-promise${hash}`, { replace: true });
+  }, [hash, navigate]);
 
-  useEffect(() => {
-    const seen = sessionStorage.getItem('chils_sustainability_seen');
-    if (seen) setHasSeenSustainability(true);
-    
-    fetch('/api/products')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) {
-          setProducts(data);
-        } else {
-          console.error("Home: Products data is not an array", data);
-          setProducts([]);
-        }
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Home: Error fetching products", err);
-        setProducts([]);
-        setLoading(false);
-      });
-  }, []);
+  // the top pick from each group, so the row shows range rather than four similar tees
+  const best = useMemo(() => {
+    const rows = curateRows(products.filter(p => p.type !== 'grouped' && p.status === 'Available' && p.images?.length && p.category !== 'Combos'));
+    return GROUPS.map(g => rows[g.slug]?.[0]).filter(Boolean).slice(0, 4);
+  }, [products]);
+
+  // the first numbered set, shown as the real object
+  const firstSet = useMemo(() => {
+    const ids = products.find(p => p.id === FIRST_TRILOGY)?.groupedProducts ?? [];
+    return ids.map(id => products.find(p => p.id === id)).filter(Boolean) as Product[];
+  }, [products]);
+
+  if (narrow) return (
+    <>
+      <SEO title="CHILS & CO. | Premium Streetwear for Builders" description="Premium tees and polos designed by techies, for those who build. Choose a Trilogy of three tees and save 10%." />
+      <PhoneHome />
+    </>
+  );
 
   return (
-    <div className="bg-black">
-      <SEO 
-        title="CHILS & CO. | Extraordinary Bespoke Luxury" 
-        description="Experience the pinnacle of luxury with Chils & Co. Bespoke and ready-to-wear garments engineered for the modern tech pioneer. Designed by techies, for those who build."
-        keywords="luxury clothing India, bespoke shirts, custom tailored suits, Chils and Co, premium menswear, techie fashion"
+    <div className="pt-[72px] bg-[#fff] text-ink">
+      <SEO
+        title="CHILS & CO. | Premium Streetwear for Builders"
+        description="Premium tees and polos designed by techies, for those who build. Choose a Trilogy of three tees and save 10%."
       />
-      <Hero />
 
-      {/* Drop Identifier Section */}
-      <DropIdentifierSection />
+      <LineUp />
+      <ClothesRail />
 
-      {/* Collection Preview - Cinematic Reveal */}
-      <section className="py-16 md:py-20 px-6 md:px-12 max-w-[1800px] mx-auto overflow-hidden">
-        
-        {/* Active Inventory Counter Header */}
-        {!loading && products.length > 0 && (
-          <div className="flex justify-between items-center mb-8 border-b border-white/5 pb-4">
-            <span className="text-neutral-500 text-[10px] uppercase tracking-[0.4em] font-mono">
-              Showing 4 of {products.length} Available Designs
-            </span>
-            <Link to="/collection" className="text-accent hover:text-white text-[10px] uppercase tracking-[0.3em] font-bold transition-colors">
-              View All
-            </Link>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-16">
-          {loading ? (
-            Array(4).fill(0).map((_, i) => (
-              <div key={i} className="aspect-[3/4] bg-white/5 animate-pulse" />
-            ))
-          ) : (
-            (() => {
-              const featured = products.filter(p => p.featured);
-              const regular = products.filter(p => !p.featured);
-              const displayProducts = [...featured, ...regular].slice(0, 4);
-              
-              return displayProducts.map((product, i) => (
-                <motion.div
-                  key={product.id}
-                  initial={{ opacity: 0, y: 80, scale: 0.98, filter: 'blur(5px)' }}
-                  whileInView={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
-                  viewport={{ once: true, margin: "-50px" }}
-                  transition={{ 
-                    duration: 2, 
-                    delay: i * 0.2, 
-                    ease: [0.22, 1, 0.36, 1] 
-                  }}
-                >
-                  <ProductCard product={product} />
-                </motion.div>
-              ));
-            })()
-          )}
-        </div>
-
-        {/* Centered CTA Button */}
-        {!loading && products.length > 0 && (
-          <div className="flex justify-center mb-24">
-            <Link 
-              to="/collection" 
-              className="group relative px-16 py-6 border border-accent/30 text-accent text-[11px] tracking-[0.5em] font-bold uppercase transition-all duration-500 hover:border-accent hover:bg-accent hover:text-black rounded-sm overflow-hidden flex items-center gap-4"
-            >
-              Explore All {products.length} Designs
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform duration-500" />
-            </Link>
-          </div>
-        )}
-
-        {/* Engineered Stacks Section */}
-        {!loading && (
-          <div className="my-32 border-t border-neutral-900 pt-24">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 mb-16">
-              <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.2 }}
-              >
-                <span className="text-accent text-[11px] tracking-[0.4em] font-mono uppercase font-bold mb-4 block">
-                  SYSTEM LEVEL OPTIMIZATION
-                </span>
-                <h2 className="text-4xl md:text-6xl font-display font-bold tracking-tighter uppercase">
-                  ENGINEERED STACKS
-                </h2>
-              </motion.div>
-              <motion.p
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.2, delay: 0.2 }}
-                className="text-neutral-500 text-base max-w-md font-light leading-relaxed"
-              >
-                Three curated T-shirts. Built to work together. Save 10% when you buy a stack. Pre-curated combinations matching your technical identity.
-              </motion.p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-              {/* Stack 1: Core Stack */}
-              <motion.div 
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1 }}
-                className="bg-neutral-950 p-8 border border-neutral-900 hover:border-accent/30 transition-all duration-500 group relative flex flex-col justify-between min-h-[420px]"
-              >
-                <div className="absolute top-0 right-0 w-6 h-6 border-t border-r border-accent/10 group-hover:border-accent/30 transition-colors" />
-                <div>
-                  <span className="text-accent text-[9px] font-mono tracking-widest uppercase block mb-2">Stack 01 // Essential Rotation</span>
-                  <h3 className="text-2xl font-display font-bold uppercase tracking-tight text-white mb-4">Core Stack</h3>
-                  <p className="text-xs text-neutral-400 mb-6 leading-relaxed">
-                    Kernel Panic (Black) + Cold Reset (Grey) + Evergreen Loop (Forest). Curated for daily rotations.
-                  </p>
-                  <ul className="space-y-2 mb-8 text-[11px] font-mono text-neutral-500">
-                    <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-neutral-800 rounded-full" /> 01 // KERNEL PANIC [BLACK]</li>
-                    <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-neutral-800 rounded-full" /> 02 // COLD RESET [LIGHT GREY]</li>
-                    <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-neutral-800 rounded-full" /> 03 // EVERGREEN LOOP [GREEN]</li>
-                  </ul>
-                </div>
-                <div className="flex items-baseline justify-between pt-6 border-t border-neutral-900 mt-auto">
-                  <div>
-                    <span className="text-xl font-display font-bold text-white font-mono">₹949</span>
-                    <span className="text-xs text-neutral-500 line-through ml-2 font-mono">₹1,047</span>
-                  </div>
-                  <Link to="/combos?id=combo_core" className="text-[10px] tracking-[0.2em] font-bold uppercase text-accent hover:text-white transition-colors">
-                    Configure &rarr;
-                  </Link>
-                </div>
-              </motion.div>
-
-              {/* Stack 2: Builder Stack */}
-              <motion.div 
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1, delay: 0.2 }}
-                className="bg-neutral-950 p-8 border border-neutral-900 hover:border-accent/30 transition-all duration-500 group relative flex flex-col justify-between min-h-[420px]"
-              >
-                <div className="absolute top-0 right-0 w-6 h-6 border-t border-r border-accent/10 group-hover:border-accent/30 transition-colors" />
-                <div>
-                  <span className="text-accent text-[9px] font-mono tracking-widest uppercase block mb-2">Stack 02 // Build & Compile</span>
-                  <h3 className="text-2xl font-display font-bold uppercase tracking-tight text-white mb-4">Builder Stack</h3>
-                  <p className="text-xs text-neutral-400 mb-6 leading-relaxed">
-                    Kernel Panic (Black) + Ambient Noise (Gray-Blue) + Red Shift (Red). High speed compilation style.
-                  </p>
-                  <ul className="space-y-2 mb-8 text-[11px] font-mono text-neutral-500">
-                    <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-neutral-800 rounded-full" /> 01 // KERNEL PANIC [BLACK]</li>
-                    <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-neutral-800 rounded-full" /> 02 // AMBIENT NOISE [GRAY-BLUE]</li>
-                    <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-neutral-800 rounded-full" /> 03 // RED SHIFT [RED]</li>
-                  </ul>
-                </div>
-                <div className="flex items-baseline justify-between pt-6 border-t border-neutral-900 mt-auto">
-                  <div>
-                    <span className="text-xl font-display font-bold text-white font-mono">₹1,079</span>
-                    <span className="text-xs text-neutral-500 line-through ml-2 font-mono">₹1,197</span>
-                  </div>
-                  <Link to="/combos?id=combo_builder" className="text-[10px] tracking-[0.2em] font-bold uppercase text-accent hover:text-white transition-colors">
-                    Configure &rarr;
-                  </Link>
-                </div>
-              </motion.div>
-
-              {/* Stack 3: Creator Stack */}
-              <motion.div 
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1, delay: 0.4 }}
-                className="bg-neutral-950 p-8 border border-neutral-900 hover:border-accent/30 transition-all duration-500 group relative flex flex-col justify-between min-h-[420px]"
-              >
-                <div className="absolute top-0 right-0 w-6 h-6 border-t border-r border-accent/10 group-hover:border-accent/30 transition-colors" />
-                <div>
-                  <span className="text-accent text-[9px] font-mono tracking-widest uppercase block mb-2">Stack 03 // Logic & Creative</span>
-                  <h3 className="text-2xl font-display font-bold uppercase tracking-tight text-white mb-4">Creator Stack</h3>
-                  <p className="text-xs text-neutral-400 mb-6 leading-relaxed">
-                    Power Cycle (White) + FriendChip (Charcoal) + Forest Original (Green). Balanced layouts.
-                  </p>
-                  <ul className="space-y-2 mb-8 text-[11px] font-mono text-neutral-500">
-                    <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-neutral-800 rounded-full" /> 01 // POWER CYCLE [WHITE]</li>
-                    <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-neutral-800 rounded-full" /> 02 // FRIENDCHIP [CHARCOAL]</li>
-                    <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 bg-neutral-800 rounded-full" /> 03 // FOREST ORIGINAL [GREEN]</li>
-                  </ul>
-                </div>
-                <div className="flex items-baseline justify-between pt-6 border-t border-neutral-900 mt-auto">
-                  <div>
-                    <span className="text-xl font-display font-bold text-white font-mono">₹1,079</span>
-                    <span className="text-xs text-neutral-500 line-through ml-2 font-mono">₹1,197</span>
-                  </div>
-                  <Link to="/combos?id=combo_creator" className="text-[10px] tracking-[0.2em] font-bold uppercase text-accent hover:text-white transition-colors">
-                    Configure &rarr;
-                  </Link>
-                </div>
-              </motion.div>
-            </div>
-
-            <div className="flex justify-center mb-12">
-              <Link 
-                to="/combos" 
-                className="group relative px-12 py-5 border border-accent/30 text-accent text-[11px] tracking-[0.4em] font-bold uppercase transition-all duration-500 hover:border-accent hover:bg-accent hover:text-black rounded-sm overflow-hidden flex items-center gap-4"
-              >
-                Explore Curated Stacks
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform duration-500" />
+      {/* MANIFESTO */}
+      <section className="bg-paper text-ink">
+        <div className="max-w-[1500px] mx-auto px-6 md:px-12 py-16 md:py-40">
+          <motion.p {...reveal} className="eyebrow text-stone mb-8">Our philosophy</motion.p>
+          <motion.h2 {...reveal} className="text-[40px] leading-[1.04] md:text-[88px] font-semibold max-w-[1100px]">
+            For those who build, ship and iterate.
+          </motion.h2>
+          <motion.div {...reveal} className="mt-12 md:mt-16 grid md:grid-cols-2 gap-8 items-end">
+            <p className="text-stone text-lg max-w-md">Essential by design. Elevated by intent. Clothing that moves with you, from work to everything after.</p>
+            <div className="flex flex-wrap gap-x-8 gap-y-3 md:justify-end">
+              <Link to="/collection" className="inline-flex items-center gap-2.5 border-b border-ink pb-1 hover:opacity-60 transition-opacity">
+                Shop the collection <ArrowRight size={16} />
+              </Link>
+              <Link to="/our-promise" className="inline-flex items-center gap-2.5 border-b border-black/20 pb-1 text-stone hover:text-ink hover:border-ink transition-colors">
+                Our promise
               </Link>
             </div>
-          </div>
-        )}
-
-        <div className="flex flex-col md:flex-row justify-between items-end gap-12">
-          <motion.div
-            initial={{ opacity: 0, x: -60, filter: 'blur(10px)' }}
-            whileInView={{ opacity: 1, x: 0, filter: 'blur(0px)' }}
-            viewport={{ once: true, margin: "-100px" }}
-            transition={{ duration: 2, ease: [0.22, 1, 0.36, 1] }}
-            className="max-w-3xl"
-          >
-            <span className="text-accent text-[13px] uppercase tracking-[0.6em] mb-8 block font-bold">The 001 Collection</span>
-            <h2 className="text-5xl md:text-[8vw] font-display font-bold tracking-tighter leading-[0.85] mb-12">
-              ENGINEERED <br /> FOR SILENCE
-            </h2>
-            <p className="text-gray-400 text-lg md:text-2xl font-light leading-relaxed max-w-xl">
-              A precise exploration of form and function. <br />
-              Engineered by those who build systems. Worn by those who understand them.
-            </p>
           </motion.div>
         </div>
       </section>
 
-      {/* Coming Next - The Bespoke Teaser */}
-      <section className="py-24 md:py-40 bg-black text-center relative overflow-hidden" id="bespoke-teaser">
-        <div className="max-w-5xl mx-auto px-6 relative z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 1.5 }}
-            className="mb-12"
-          >
-            <span className="text-accent text-[11px] uppercase tracking-[0.8em] font-bold mb-4 block">Coming Next</span>
-            <h2 className="text-5xl md:text-8xl font-display font-bold tracking-tighter uppercase leading-none text-white mb-6">
-              THE BESPOKE
-            </h2>
-            <p className="text-neutral-500 text-lg md:text-2xl font-display italic tracking-[0.2em] font-light">
-              Not off-the-rack. Not adjusted. Built from scratch — for you.
-            </p>
+      {/* THE ESSENTIALS */}
+      {best.length > 0 && (
+        <section className="pb-4">
+          <div className="max-w-[1500px] mx-auto px-5 md:px-12 pt-16 md:pt-32">
+          <motion.div {...reveal} className="flex items-end justify-between mb-10 md:mb-14">
+            <h2 className="text-[34px] md:text-6xl font-semibold">The essentials</h2>
+            <Link to="/collection" className="text-sm border-b border-ink pb-0.5">View all</Link>
           </motion.div>
+          </div>
+          <ModelRow products={best.slice(0, 4)} />
+        </section>
+      )}
 
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 2, delay: 0.3 }}
-            className="relative group mb-16 max-w-4xl mx-auto"
-          >
-            <Link to="/bespoke">
-              <div className="relative overflow-hidden rounded-sm border border-white/5 shadow-2lx">
-                <img 
-                  src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1780123415/the_bespoke_2_eypwhw.png" 
-                  alt="The Next System" 
-                  className="w-full h-auto opacity-40 group-hover:opacity-60 group-hover:scale-105 transition-all duration-1000"
-                />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="bg-black/80 backdrop-blur-sm border border-accent/20 px-8 py-4 rounded-full flex items-center gap-4 group-hover:bg-accent group-hover:text-black transition-all duration-500">
-                    <span className="text-[11px] uppercase tracking-[0.4em] font-bold">Explore the System</span>
-                    <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </div>
-              </div>
-            </Link>
+      {/* PICK YOUR THREE */}
+      <section className="floor-band text-ink overflow-hidden">
+        <div className="max-w-[1500px] mx-auto px-5 md:px-12 pt-14 md:pt-20 grid md:grid-cols-2 items-end gap-6">
+          <motion.div {...reveal} className="pb-2 md:pb-24">
+            <p className="eyebrow text-stone mb-3">Three tees, chosen to go together</p>
+            <h2 className="text-[42px] md:text-[80px] font-semibold leading-[1]">Pick your three.</h2>
+            <p className="text-stone mt-3 md:text-lg">Choose a Trilogy and save 10%.</p>
+            <Link to="/pick-your-three" className="mt-7 inline-flex items-center gap-2 bg-ink text-[#fff] px-7 py-4 text-sm font-medium hover:opacity-85 transition-opacity">See the Trilogies <ArrowRight size={15} /></Link>
           </motion.div>
-        </div>
-        
-        {/* Background Depth */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vw] h-[60vw] bg-accent/5 rounded-full blur-[180px] pointer-events-none opacity-30" />
-      </section>
-
-      <PhilosophySystem />
-
-      <PromiseCarousel />
-
-      {/* Second Life Section - Cinematic Reveal with Visual Evidence */}
-      <motion.section 
-        id="second-life"
-        className="py-24 md:py-40 bg-white text-black relative z-10 overflow-hidden"
-        onViewportEnter={() => {
-          if (!hasSeenSustainability) {
-            sessionStorage.setItem('chils_sustainability_seen', 'true');
-            setHasSeenSustainability(true);
-          }
-        }}
-      >
-        <div className="max-w-[1400px] mx-auto px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
-            {/* Text Content */}
-            <div className="lg:col-span-5 text-left">
-              <motion.div
-                initial={{ opacity: 0, x: -30 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
-              >
-                <div className="flex items-center gap-4 mb-8">
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                    className="p-3 bg-black/5 rounded-full"
-                  >
-                    <RefreshCw className="w-5 h-5 text-black" strokeWidth={1} />
-                  </motion.div>
-                  <span className="text-[13px] uppercase tracking-[0.4em] font-bold">Protocol: Circularity</span>
-                </div>
-
-                <h2 className="text-5xl md:text-7xl font-display font-bold tracking-tighter mb-8 leading-[0.9] uppercase">
-                  SECOND LIFE
-                </h2>
-                
-                <div className="space-y-8 text-neutral-600 text-lg md:text-xl font-light leading-relaxed max-w-lg mb-12">
-                  <p className="text-black font-bold text-2xl md:text-3xl tracking-tight leading-tight">
-                    Not made to be discarded.
-                  </p>
-                  <p>
-                    What you receive is not an end product — it is the beginning of a second function.
-                  </p>
-                  <p>
-                    Our packaging is designed as a reusable system: <br />
-                    storage, organization, and utility beyond delivery.
-                  </p>
-                  <p>
-                    From compartmental structure to material finish, every detail is designed to persist.
-                  </p>
-                </div>
-
-                <div className="pt-8 border-t border-black/5">
-                  <p className="font-bold text-black uppercase tracking-widest text-xs">
-                    Status: Permanent / Reusable
-                  </p>
-                </div>
-              </motion.div>
-            </div>
-
-            {/* Visual Content */}
-            <div className="lg:col-span-7 relative">
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }}
-                whileInView={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                viewport={{ once: true }}
-                transition={{ duration: 2.5, ease: [0.22, 1, 0.36, 1] }}
-                className="relative z-10 rounded-sm overflow-hidden shadow-2xl"
-              >
-                <img 
-                  src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1777382382/second_life_copy_cvaj7g.png" 
-                  alt="Second Life Packaging System" 
-                  className="w-full h-auto"
-                  referrerPolicy="no-referrer"
-                />
-              </motion.div>
-              
-              {/* Decorative accents */}
-              <div className="absolute -top-12 -right-12 w-64 h-64 bg-accent/5 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-12 -left-12 w-48 h-48 bg-black/5 rounded-full blur-2xl pointer-events-none" />
-            </div>
+          <div className="w-[76%] max-w-[380px] mx-auto pb-12 md:pb-20">
+            {firstSet.length === 3 && <Trilogy edition="N° 01" tees={firstSet} onPick={() => navigate('/pick-your-three')} />}
           </div>
         </div>
-      </motion.section>
-
-      {/* Eco Engineered Section - Premium Precision */}
-      <motion.section 
-        id="eco-engineered"
-        className="py-12 md:py-20 bg-black text-white text-center px-6 relative overflow-hidden"
-      >
-        {/* OLED-Hardened Film Grain Overlay */}
-        <div 
-          className="absolute inset-0 opacity-[0.015] pointer-events-none mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-[length:256px_256px]" 
-          style={{ filter: 'contrast(120%) brightness(110%)' }}
-        />
-
-        <div className="max-w-5xl mx-auto relative z-10">
-          <motion.div
-            initial={hasSeenSustainability ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true, margin: "-20%" }}
-            transition={{ duration: 2.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
-            className="flex justify-center mb-16"
-          >
-            <EcoEngineeredLogo />
-          </motion.div>
-
-          <motion.h2 
-            initial={hasSeenSustainability ? { opacity: 1, y: 0, filter: 'blur(0px)' } : { opacity: 0, y: 15, filter: 'blur(8px)' }}
-            whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-            viewport={{ once: true, margin: "-20%" }}
-            transition={{ duration: 2.5, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            className="text-3xl sm:text-6xl md:text-[8vw] font-display font-bold tracking-tighter mb-12 leading-none uppercase text-[#5CA904] whitespace-normal sm:whitespace-nowrap"
-          >
-             ECO ENGINEERED
-          </motion.h2>
-          
-          {/* Horizontal Precision Sweep Animation - Responsive Speed */}
-          <div className="relative overflow-hidden mb-20 py-6 inline-block mx-auto max-w-full">
-            <motion.p 
-              initial={hasSeenSustainability ? { opacity: 1, y: 0 } : { opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-20%" }}
-              transition={{ duration: 2, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
-              className="text-xl md:text-3xl font-display font-medium tracking-tight uppercase text-[#5CA904] italic relative z-10"
-            >
-              Built with purpose. Designed without waste.
-            </motion.p>
-            {!hasSeenSustainability && (
-              <motion.div 
-                initial={{ left: '-10%' }}
-                whileInView={{ left: '110%' }}
-                viewport={{ once: true, margin: "-20%" }}
-                transition={{ 
-                  duration: typeof window !== 'undefined' && window.innerWidth < 768 ? 3.5 : 5, 
-                  delay: 0.8, 
-                  ease: [0.4, 0, 0.2, 1] 
-                }}
-                className="absolute top-0 bottom-0 w-px bg-[#5CA904] z-0 opacity-25 shadow-[0_0_8px_rgba(92,169,4,0.2)]"
-              />
-            )}
-          </div>
-
-          <motion.div 
-            initial={hasSeenSustainability ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-20%" }}
-            transition={{ duration: 2, delay: 1, ease: [0.22, 1, 0.36, 1] }}
-            className="text-lg md:text-2xl font-sans font-light text-[#EAEAEA] max-w-4xl mx-auto leading-relaxed space-y-12"
-          >
-            <p>
-              Sustainability at Chils & Co. is not an addition — it is engineered into the system.
-            </p>
-            <p>
-              We eliminate plastic entirely, reduce material excess, and design every component to function beyond its first use.
-            </p>
-            <p className="text-[#5CA904] font-medium opacity-80">
-              From packaging to product detailing, every element is structured for durability, reuse, and extended life.
-            </p>
-          </motion.div>
-        </div>
-      </motion.section>
-
-      {/* Final CTA */}
-      <section className="py-24 md:py-40 px-6 text-center bg-black overflow-hidden">
-        <motion.h2 
-          initial={{ opacity: 0, y: 100, filter: 'blur(20px)' }}
-          whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-          viewport={{ once: true }}
-          transition={{ duration: 2.5, ease: [0.22, 1, 0.36, 1] }}
-          className="text-5xl md:text-[10vw] font-display font-bold tracking-tighter mb-32 uppercase leading-[0.8] text-white"
-        >
-          Essential by Design.<br/>Elevated by Intent.
-        </motion.h2>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 2, delay: 1, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <Link
-            to="/collection"
-            className="inline-block border border-white/20 text-white px-24 py-8 text-[13px] tracking-[0.6em] font-bold uppercase hover:bg-white hover:text-black transition-all duration-1000 rounded-full"
-          >
-            Shop Now
-          </Link>
-        </motion.div>
       </section>
     </div>
   );

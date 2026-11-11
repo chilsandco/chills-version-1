@@ -72,7 +72,7 @@ const ShareSignal: React.FC<ShareSignalProps> = ({ productName, productUrl, prod
           className="w-full flex items-center justify-center gap-3 py-4 text-[11px] tracking-[0.3em] font-bold uppercase text-neutral-400 border border-neutral-900 hover:border-neutral-700 hover:text-white transition-all group"
         >
           <Share2 size={14} className="group-hover:scale-110 transition-transform" />
-          {isOrderSuccess ? 'Share Your Signal' : 'Share Your Signal'}
+          Share
         </button>
       ) : (
         <motion.div 
@@ -81,7 +81,7 @@ const ShareSignal: React.FC<ShareSignalProps> = ({ productName, productUrl, prod
           className="border border-neutral-900 bg-neutral-950/50 p-6 space-y-6"
         >
           <div className="flex justify-between items-center">
-            <h4 className="text-[10px] tracking-[0.4em] font-bold uppercase text-accent">Transmit Signal</h4>
+            <h4 className="text-[10px] tracking-[0.4em] font-bold uppercase text-accent">Share</h4>
             <button 
               onClick={() => setIsOpen(false)}
               className="text-[9px] tracking-[0.2em] uppercase text-neutral-600 hover:text-white transition-colors"

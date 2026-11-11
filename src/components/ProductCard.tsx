@@ -1,218 +1,91 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Heart, Plus } from 'lucide-react';
 import { Product } from '../types';
 import { useWishlist } from '../WishlistContext';
-import { Heart } from 'lucide-react';
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'motion/react';
+import { openQuickView } from './QuickView';
+import { studio, small } from '../data/studio';
 
 interface ProductCardProps {
   product: Product;
   viewMode?: 'editorial' | 'archive';
+  /** Show a hover/tap size strip that adds straight to the bag */
+  quickAdd?: boolean;
+  /** Overrides the category line, so a card matches the group it is shown in */
+  label?: string;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ product, viewMode = 'editorial' }) => {
+const hasCat = (p: Product, name: string) =>
+  p.category?.toLowerCase() === name || p.categories?.some(c => c.toLowerCase() === name);
+
+const ProductCard: React.FC<ProductCardProps> = ({ product, quickAdd = false, label }) => {
   const { toggleWishlist, isInWishlist } = useWishlist();
-  const [isHovered, setIsHovered] = useState(false);
-  const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const cardRef = useRef<HTMLDivElement>(null);
+  const canQuickAdd = quickAdd && product.type !== 'grouped' && product.status === 'Available' && !!product.availableSizes?.length && !hasCat(product, 'combos');
+  const [hover, setHover] = useState(false);
 
-  // Motion values for 3D tilt
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
+  const to = hasCat(product, 'combos-redirect')
+    ? '/combos'
+    : product.type === 'grouped' || hasCat(product, 'combos')
+      ? `/combos?id=${product.id}`
+      : `/product/${product.id}`;
 
-  const mouseXSpring = useSpring(x, { stiffness: 150, damping: 20 });
-  const mouseYSpring = useSpring(y, { stiffness: 150, damping: 20 });
-
-  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["10deg", "-10deg"]);
-  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-10deg", "10deg"]);
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-    const rect = cardRef.current.getBoundingClientRect();
-    const width = rect.width;
-    const height = rect.height;
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    const xPct = mouseX / width - 0.5;
-    const yPct = mouseY / height - 0.5;
-
-    x.set(xPct);
-    y.set(yPct);
-  };
-
-  const handleMouseLeave = () => {
-    setIsHovered(false);
-    x.set(0);
-    y.set(0);
-  };
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isHovered && product.images.length > 1) {
-      interval = setInterval(() => {
-        setCurrentImageIndex((prev) => (prev + 1) % product.images.length);
-      }, 1500);
-    } else {
-      setCurrentImageIndex(0);
-    }
-    return () => clearInterval(interval);
-  }, [isHovered, product.images.length]);
+  const img = studio((hover && product.images[1]) || product.images[0]);
+  const liked = isInWishlist(product.id);
 
   return (
-    <motion.div
-      ref={cardRef}
-      onMouseMove={handleMouseMove}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        rotateX,
-        rotateY,
-        transformStyle: "preserve-3d",
-      }}
-      className="group relative block overflow-hidden bg-neutral-950 perspective-1000 transition-shadow duration-500"
-    >
-      <Link 
-        to={
-          // Gateway redirect products — go to their curated experience page
-          product.category?.toLowerCase() === 'combos-redirect' || product.categories?.some(c => c.toLowerCase() === 'combos-redirect')
-            ? '/combos'
-          // Grouped/combo products — open the specific combo drawer
-          : product.type === 'grouped' || product.category?.toLowerCase() === 'combos' || product.categories?.some(c => c.toLowerCase() === 'combos')
-            ? `/combos?id=${product.id}`
-          // Standard product page
-          : `/product/${product.id}`
-        }
-        className="block"
-        data-cursor="inspect"
-      >
-        <div className="aspect-[3/4] overflow-hidden relative" style={{ transform: "translateZ(50px)" }}>
-          <button 
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              toggleWishlist(product);
-            }}
-            className={`absolute z-30 rounded-full bg-black/50 backdrop-blur-md border border-white/10 text-white transition-all hover:scale-110 active:scale-95 group/heart ${
-              viewMode === 'archive'
-                ? 'top-2 right-2 sm:top-3 sm:right-3 md:top-4 md:right-4 p-1.5 md:p-2'
-                : 'top-4 right-4 p-2'
-            }`}
-          >
-            <Heart 
-              size={viewMode === 'archive' ? 12 : 14} 
-              strokeWidth={2}
-              className={`transition-colors duration-300 ${isInWishlist(product.id) ? 'fill-accent text-accent' : 'text-white'}`}
-            />
-          </button>
-          
-          <AnimatePresence mode="wait">
-            <motion.img
-              key={currentImageIndex}
-              initial={{ opacity: 0, scale: 1.1, y: 10 }}
-              animate={{ opacity: 1, scale: 1.05, y: 0 }}
-              exit={{ opacity: 0, scale: 1, y: -10 }}
-              transition={{ 
-                duration: 0.8,
-                ease: [0.22, 1, 0.36, 1]
-              }}
-              src={product.images[currentImageIndex]}
+    <div className="group relative min-w-0" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
+      <Link to={to} className="block">
+        <div className="relative aspect-[3/4] bg-paper overflow-hidden">
+          {img && (
+            <img
+              src={small(img)}
               alt={product.name}
-              className="w-full h-full object-cover"
+              loading="lazy"
               referrerPolicy="no-referrer"
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
             />
-          </AnimatePresence>
-          
-          <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors duration-1000" />
-          
-          {/* Progress Indicators */}
-          {product.images.length > 1 && isHovered && (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-20">
-              {product.images.map((_, i) => (
-                <motion.div 
-                  key={i} 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className={`h-[1px] transition-all duration-500 ${i === currentImageIndex ? 'w-6 bg-accent' : 'w-2 bg-white/20'}`}
-                />
-              ))}
-            </div>
+          )}
+
+          {canQuickAdd && (
+            <>
+              <button
+                onClick={e => { e.preventDefault(); e.stopPropagation(); openQuickView(product); }}
+                className="hidden md:block absolute inset-x-2 bottom-2 z-10 bg-[#fff]/95 backdrop-blur text-ink py-3 text-[13px] font-medium opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 focus:opacity-100 transition-all duration-300 hover:bg-ink hover:text-[#fff]"
+              >
+                Quick view
+              </button>
+              <button
+                onClick={e => { e.preventDefault(); e.stopPropagation(); openQuickView(product); }}
+                aria-label={`Quick view ${product.name}`}
+                className="md:hidden absolute right-2 bottom-2 z-10 w-9 h-9 rounded-full bg-[#fff]/95 backdrop-blur text-ink flex items-center justify-center"
+              >
+                <Plus size={17} strokeWidth={1.6} />
+              </button>
+            </>
+          )}
+
+          {product.status === 'Coming Soon' && (
+            <span className="absolute bottom-2 left-2 bg-ink text-[#fff] font-mono text-[10px] px-1.5 py-0.5">
+              Coming soon
+            </span>
           )}
         </div>
 
-        <div 
-          className={`flex justify-between items-start bg-black border-t border-white/5 relative z-10 transition-all duration-300 ${
-            viewMode === 'archive'
-              ? 'p-4 sm:p-5 md:p-6'
-              : 'p-6 sm:p-7 md:p-8'
-          }`} 
-          style={{ transform: "translateZ(30px)" }}
-        >
-          <div className="min-w-0 pr-4">
-            <h3 className={`tracking-[0.2em] font-bold uppercase mb-2 group-hover:text-accent transition-colors duration-500 ${
-              viewMode === 'archive'
-                ? 'text-[11px] sm:text-[12px] md:text-[13px]'
-                : 'text-[13px] sm:text-[14px] md:text-[15px]'
-            }`}>{product.name}</h3>
-            <p className={`text-neutral-600 uppercase tracking-widest ${
-              viewMode === 'archive'
-                ? 'text-[9px] sm:text-[10px] md:text-[12px]'
-                : 'text-[12px]'
-            }`}>{product.category}</p>
-            {product.coCreator && (
-              <p className={`text-accent/85 font-mono tracking-[0.2em] uppercase mt-2 ${
-                viewMode === 'archive'
-                  ? 'text-[8px] sm:text-[9px]'
-                  : 'text-[9px]'
-              }`}>
-                CO-CREATED BY {product.coCreator}
-              </p>
-            )}
-          </div>
-          <div className="text-right flex-shrink-0">
-            <p className={`font-mono opacity-40 group-hover:opacity-100 transition-opacity duration-500 ${
-              viewMode === 'archive'
-                ? 'text-[11px] sm:text-[12px] md:text-[13px]'
-                : 'text-[13px] sm:text-[14px] md:text-[15px]'
-            }`}>₹{product.price.toLocaleString()}</p>
-            <span className={`text-neutral-600 uppercase tracking-widest font-mono font-bold mt-1 block ${
-              viewMode === 'archive'
-                ? 'text-[7px] sm:text-[8px]'
-                : 'text-[8px]'
-            }`}>excl. shipping</span>
-          </div>
+        <div className="pt-3 pr-8">
+          <h3 className="text-sm md:text-[15px] font-medium leading-snug truncate">{product.name}</h3>
+          <p className="text-xs text-neutral-500 mt-0.5 truncate">{label ?? product.category}</p>
+          <p className="text-sm font-semibold mt-1.5">₹{product.price.toLocaleString()}</p>
         </div>
-
-        {product.status === "Coming Soon" && (
-          <div 
-            className={`absolute bg-white text-black font-bold uppercase z-30 transition-all duration-300 ${
-              viewMode === 'archive'
-                ? 'top-2 left-2 sm:top-4 sm:left-4 md:top-6 md:left-6 text-[8px] sm:text-[10px] md:text-[11px] px-2 py-1 md:px-3 md:py-1.5 tracking-[0.15em] md:tracking-[0.2em]'
-                : 'top-6 left-6 text-[11px] px-3 py-1.5 tracking-[0.2em]'
-            }`} 
-            style={{ transform: "translateZ(60px)" }}
-          >
-            Coming Soon
-          </div>
-        )}
-
-        {product.totalSales !== undefined && product.totalSales > 0 && (
-          <div 
-            className={`absolute bg-accent text-black font-bold uppercase z-30 flex items-center gap-1.5 transition-all duration-300 ${
-              viewMode === 'archive'
-                ? 'top-2 left-2 sm:top-4 sm:left-4 md:top-6 md:left-6 text-[8px] sm:text-[9px] px-2 py-0.5 md:px-3 md:py-1 tracking-[0.2em] md:tracking-[0.3em]'
-                : 'top-6 left-6 text-[9px] px-3 py-1 tracking-[0.3em] gap-2'
-            }`} 
-            style={{ transform: "translateZ(60px)" }}
-          >
-            <span className="w-1 h-1 rounded-full bg-black animate-pulse" />
-            Deployed: {product.totalSales}
-          </div>
-        )}
-
-        <div className="absolute inset-0 border border-white/0 group-hover:border-white/10 transition-colors pointer-events-none z-40" />
       </Link>
-    </motion.div>
+
+      <button
+        onClick={() => toggleWishlist(product)}
+        aria-label={liked ? 'Remove from wishlist' : 'Add to wishlist'}
+        className="absolute bottom-0 right-0 p-1.5 hover:scale-110 transition-transform"
+      >
+        <Heart size={18} strokeWidth={1.6} className={liked ? 'fill-current' : ''} />
+      </button>
+    </div>
   );
 };
 

@@ -101,7 +101,7 @@ const ReturnRequest: React.FC = () => {
           setError(data.message || "Failed to retrieve signal details.");
         }
       } catch (err) {
-        setError("Network error. Could not connect to system hub.");
+        setError("Network error. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -224,7 +224,7 @@ const ReturnRequest: React.FC = () => {
         setError(data.message || "Failed to initiate return signal.");
       }
     } catch (err) {
-      setError("Transmission failure. System unreachable.");
+      setError("Something went wrong. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -241,7 +241,7 @@ const ReturnRequest: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen pt-36 md:pt-32 flex items-center justify-center">
+      <div className="min-h-screen pt-24 md:pt-32 flex items-center justify-center">
         <motion.div animate={{ rotate: 360 }} transition={{ duration: 2, repeat: Infinity, ease: "linear" }}>
           <RefreshCcw className="text-accent" size={32} />
         </motion.div>
@@ -254,7 +254,7 @@ const ReturnRequest: React.FC = () => {
       <div className="min-h-screen pt-28 md:pt-32 px-6 flex flex-col items-center justify-center text-center">
         <ShieldAlert size={48} className="text-red-500 mb-6" />
         <h2 className="text-2xl font-display font-bold mb-4 uppercase tracking-tighter">{error}</h2>
-        <Link to="/console/orders" className="text-accent uppercase tracking-widest text-xs font-bold hover:text-white transition-colors">Return to archive</Link>
+        <Link to="/console/orders" className="text-accent uppercase tracking-widest text-xs font-bold hover:text-white transition-colors">Back to My orders</Link>
       </div>
     );
   }
@@ -269,8 +269,8 @@ const ReturnRequest: React.FC = () => {
         >
           <CheckCircle2 size={40} className="text-black" />
         </motion.div>
-        <h2 className="text-4xl font-display font-bold mb-4 tracking-tighter uppercase">Reversal Protocol Initiated</h2>
-        <p className="text-[11px] text-white/50 tracking-widest uppercase italic mb-12 max-w-md">Our team is reviewing your transmission. You will be notified once the reversal is authorized.</p>
+        <h2 className="text-4xl font-display font-bold mb-4 tracking-tighter uppercase">Return requested</h2>
+        <p className="text-[11px] text-white/50 tracking-widest uppercase italic mb-12 max-w-md">Our team is reviewing your request. We’ll let you know once it’s approved.</p>
         <Link to="/console/orders" className="bg-white text-black px-12 py-5 text-[11px] tracking-[0.3em] font-bold uppercase hover:bg-accent transition-colors">GO TO DASHBOARD</Link>
       </div>
     );
@@ -279,10 +279,10 @@ const ReturnRequest: React.FC = () => {
   const isWindowExpired = signal?.status === 'completed' && !isReturnable();
 
   return (
-    <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen">
+    <div className="pt-24 md:pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen">
       <Link to={`/console/orders/${id}`} className="inline-flex items-center gap-2 text-white/40 hover:text-accent transition-colors mb-12 group">
         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-        <span className="text-[10px] uppercase tracking-widest font-bold">Back to Signal Details</span>
+        <span className="text-[10px] uppercase tracking-widest font-bold">Back to order</span>
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-16">
@@ -294,9 +294,9 @@ const ReturnRequest: React.FC = () => {
         {isWindowExpired ? (
           <div className="lg:col-span-12 bg-red-500/5 border border-red-500/20 p-12 text-center rounded-sm">
             <AlertCircle size={40} className="mx-auto mb-6 text-red-500" />
-            <h3 className="text-2xl font-display font-bold tracking-tight mb-4 uppercase">System Lock: 7-Day Window Expired</h3>
+            <h3 className="text-2xl font-display font-bold tracking-tight mb-4 uppercase">The 7-day return window has closed</h3>
             <p className="text-[11px] text-white/50 tracking-[0.2em] uppercase italic max-w-md mx-auto leading-relaxed">
-              Returns are only authorized within a 7-day delivery window. This window has now closed for your transmission. For critical defective hardware issues, please contact direct support.
+              Returns are only authorized within a 7-day delivery window. This window has now closed for your order. For critical defective hardware issues, please contact direct support.
             </p>
           </div>
         ) : (
@@ -624,7 +624,7 @@ const ReturnRequest: React.FC = () => {
                       <motion.div animate={{ rotate: 360 }} transition={{ duration: 10, repeat: Infinity, ease: "linear" }}>
                         <RefreshCcw size={16} />
                       </motion.div>
-                      SEND REVERSAL SIGNAL
+                      SUBMIT RETURN
                     </>
                   )}
                 </button>
@@ -663,7 +663,7 @@ const ReturnRequest: React.FC = () => {
                     </div>
                     {returnItems.length > 0 && (
                       <div className="mt-8 pt-8 border-t border-white/10 space-y-4 font-mono text-[10px]">
-                        <h6 className="text-[9px] text-neutral-500 uppercase tracking-widest font-bold font-sans mb-2">REVERSAL PROTOCOL BALANCE</h6>
+                        <h6 className="text-[9px] text-neutral-500 uppercase tracking-widest font-bold font-sans mb-2">RETURN SUMMARY</h6>
                         {balanceSheet.refundTotal > 0 && (
                           <div className="flex justify-between items-center text-green-500">
                             <span>TOTAL REFUND VALUE:</span>

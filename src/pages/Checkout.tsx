@@ -1,20 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { small } from '../data/studio';
+import { cartItems, cartValue, track } from '../lib/track';
 import { useCart } from '../CartContext';
 import { useCheckout } from '../hooks/useCheckout';
 import { useAuth } from '../AuthContext';
-import { 
-  Trash2, Plus, Minus, CreditCard, User, Mail, Phone, 
-  MapPin, Building, Trash, Navigation, 
-  Check, Settings, X, ChevronRight,
-  GripVertical, Share2, Package, ShieldCheck as Shield,
-  Lock, Info, Zap, Leaf, Sparkles
-} from 'lucide-react';
+import { Lock, Minus, Package, Plus, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import SEO from '../components/SEO';
 import CheckoutInterstitial from '../components/CheckoutInterstitial';
 import SecondLifeModal from '../components/SecondLifeModal';
-import PackagingUpsellBanner from '../components/PackagingUpsellBanner';
+import { useNarrow } from '../hooks/useNarrow';
+import { studio } from '../data/studio';
 
 interface Address {
   id: string;
@@ -28,6 +25,9 @@ interface Address {
   phone?: string;
 }
 
+const money = (n: number) =>
+  n.toLocaleString('en-IN', { minimumFractionDigits: Number.isInteger(n) ? 0 : 2, maximumFractionDigits: 2 });
+
 const sanitizePhoneNumber = (phone: string) => {
   if (!phone) return '';
   const digits = phone.replace(/\D/g, '');
@@ -37,8 +37,27 @@ const sanitizePhoneNumber = (phone: string) => {
   return digits.slice(-10);
 };
 
+const Field: React.FC<React.InputHTMLAttributes<HTMLInputElement> & { label: string; prefix?: string; hint?: string }> = ({ label, prefix, hint, ...input }) => (
+  <label className="block">
+    <span className="block text-sm mb-1.5">{label}{input.required && <span className="text-stone"> *</span>}</span>
+    <span className="flex items-center h-12 border border-black/20 focus-within:border-ink focus-within:ring-1 focus-within:ring-ink transition-colors bg-[#fff]">
+      {prefix && <span className="pl-3 text-stone text-[15px] select-none">{prefix}</span>}
+      <input {...input} className="w-full h-full px-3 bg-transparent text-[16px] text-ink outline-none placeholder:text-black/35" />
+    </span>
+    {hint && <span className="block text-xs text-red-700 mt-1">{hint}</span>}
+  </label>
+);
+
 const Checkout: React.FC = () => {
   const { cart, updateQuantity, removeFromCart, totalPrice } = useCart();
+
+  // one report per visit to checkout, once the bag has loaded
+  const reported = React.useRef(false);
+  React.useEffect(() => {
+    if (reported.current || !cart.length) return;
+    reported.current = true;
+    track('begin_checkout', { currency: 'INR', value: cartValue(cart), items: cartItems(cart) });
+  }, [cart]);
 
   // Total items in cart for packaging intelligence
   // Combos count as their actual tee count (3), not as 1 cart item
@@ -51,6 +70,44 @@ const Checkout: React.FC = () => {
   const { triggerCheckout, isProcessing, error, setError } = useCheckout();
   const { user, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
+  const narrow = useNarrow(1024);
+  const [showItems, setShowItems] = useState(false);
+
+  // A private code, entered quietly at the end of the order
+  const [codeOpen, setCodeOpen] = useState(false);
+  const [codeInput, setCodeInput] = useState('');
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const [codeChecking, setCodeChecking] = useState(false);
+  const [coupon, setCoupon] = useState<{ code: string; discountType: string; amount: number } | null>(null);
+  const hasSet = cart.some(item => item.isCombo);
+
+  const applyCode = async () => {
+    const code = codeInput.trim();
+    if (!code) return;
+    setCodeChecking(true);
+    setCodeError(null);
+    try {
+      const r = await fetch('/api/coupons/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, subtotal: totalPrice, hasSet }),
+      });
+      const d = await r.json();
+      if (d.valid) { setCoupon({ code: d.code, discountType: d.discountType, amount: d.amount }); setCodeInput(''); setCodeOpen(false); }
+      else setCodeError(d.message || "That code isn't valid.");
+    } catch {
+      setCodeError("We couldn't check that code. Please try again.");
+    } finally {
+      setCodeChecking(false);
+    }
+  };
+
+  // codes don't combine with sets, so adding a set clears the code
+  useEffect(() => { if (hasSet) setCoupon(null); }, [hasSet]);
+
+  const discount = coupon
+    ? coupon.discountType === 'percent' ? (totalPrice * coupon.amount) / 100 : Math.min(coupon.amount, totalPrice)
+    : 0;
 
   // Second Life modal state — shown when 1 item in cart
   const [showSecondLifeModal, setShowSecondLifeModal] = useState(false);
@@ -60,8 +117,7 @@ const Checkout: React.FC = () => {
   const [coordinatesFlash, setCoordinatesFlash] = useState(false);
   const [shippingMethod, setShippingMethod] = useState<'delivery' | 'pickup'>('delivery');
 
-  const getShippingFee = () => {
-    if (shippingMethod !== 'delivery') return 0;
+  const deliveryFee = () => {
     const realShippingCount = cart.reduce((count, item) => {
       if (item.id.toString() === '1672') return count; // exclude packaging product
       if (item.isCombo && item.comboItems && item.comboItems.length > 0) {
@@ -74,6 +130,8 @@ const Checkout: React.FC = () => {
     const extra = realShippingCount - 2;
     return 80 + Math.floor(extra / 2) * 79 + (extra % 2) * 49;
   };
+
+  const getShippingFee = () => (shippingMethod === 'delivery' ? deliveryFee() : 0);
 
   const dismissSecondLife = () => {
     setSecondLifeDismissed(true);
@@ -102,7 +160,7 @@ const Checkout: React.FC = () => {
 
   const [addressFormData, setAddressFormData] = useState({
     label: '',
-    type: 'other' as 'home' | 'work' | 'other',
+    type: 'home' as 'home' | 'work' | 'other',
     address: '',
     city: '',
     state: '',
@@ -270,7 +328,7 @@ const Checkout: React.FC = () => {
 
     setShowAddressForm(false);
     setEditingAddressId(null);
-    setAddressFormData({ label: '', type: 'other', address: '', city: '', state: '', pincode: '', phone: '' });
+    setAddressFormData({ label: '', type: 'home', address: '', city: '', state: '', pincode: '', phone: '' });
   };
 
   const deleteAddress = (id: string) => {
@@ -301,7 +359,7 @@ const Checkout: React.FC = () => {
   // Core payment logic (extracted so modal can also trigger it)
   const proceedToPayment = async () => {
     const shippingFee = getShippingFee();
-    await triggerCheckout(formData, cart, totalPrice + shippingFee, shippingMethod);
+    await triggerCheckout(formData, cart, totalPrice - discount + shippingFee, shippingMethod, coupon?.code);
     // triggerCheckout handles navigation logic via PhonePe redirect
   };
 
@@ -356,7 +414,7 @@ const Checkout: React.FC = () => {
 
     // Phone number length validation (must be exactly 10 digits)
     if (formData.phone.length !== 10) {
-      setError("Identity Clearance error: Phone number must be exactly 10 digits.");
+      setError("Phone number must be exactly 10 digits.");
       const identitySection = document.getElementById('identity-section');
       if (identitySection) {
         identitySection.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -379,751 +437,251 @@ const Checkout: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="h-screen bg-black flex items-center justify-center">
-        <div className="w-12 h-12 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      <div className="h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (cart.length === 0) {
     return (
-      <div className="h-screen flex flex-col items-center justify-center px-6 text-center">
-        <h1 className="text-4xl font-display font-bold mb-8 uppercase tracking-tighter">Your cart is empty</h1>
-        <Link to="/collection" className="bg-white text-black px-12 py-5 text-[11px] tracking-[0.3em] font-bold uppercase hover:bg-accent transition-colors">
-          Explore Collection
-        </Link>
+      <div className="h-screen flex flex-col items-center justify-center px-6 text-center text-ink">
+        <h1 className="text-4xl md:text-5xl font-semibold">Your bag is empty</h1>
+        <p className="text-stone mt-3">Choose a Trilogy and save 10%.</p>
+        <Link to="/pick-your-three" className="mt-8 bg-ink text-[#fff] px-10 py-4 text-sm font-medium">Pick your three</Link>
+        <Link to="/collection" className="mt-4 text-sm underline underline-offset-4">Browse all products</Link>
       </div>
     );
   }
 
-  return (
-    <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen">
-      <SEO title="Checkout" noindex={true} />
-      <CheckoutInterstitial isVisible={isProcessing} message="Syncing with WooCommerce..." />
+  const isPhoneValid = /^\d{10}$/.test(formData.phone);
+  const identityComplete = !!(formData.firstName && formData.email && isPhoneValid);
+  const showIdentityForm = isEditingIdentity || !identityComplete;
+  const orderTotal = totalPrice - discount + getShippingFee();
 
+  const stepper = (qty: number, onChange: (n: number) => void, name: string) => (
+    <div className="inline-flex items-center border border-black/15">
+      <button type="button" aria-label={`Reduce ${name}`} onClick={() => onChange(qty - 1)} className="w-8 h-8 flex items-center justify-center"><Minus size={12} /></button>
+      <span className="w-6 text-center text-sm" aria-live="polite">{qty}</span>
+      <button type="button" aria-label={`Add another ${name}`} onClick={() => onChange(qty + 1)} className="w-8 h-8 flex items-center justify-center"><Plus size={12} /></button>
+    </div>
+  );
+
+  const orderLines = (
+    <ul className="divide-y divide-black/[.07]">
+      {cart.map(item => {
+        const remove = () => (item.isCombo ? removeFromCart(item.id) : removeFromCart(item.id, item.selectedSize, item.selectedColor));
+        const setQty = (n: number) => {
+          if (n < 1) return remove();
+          return item.isCombo ? updateQuantity(item.id, n) : updateQuantity(item.id, n, item.selectedSize, item.selectedColor);
+        };
+        const variationImage = item.selectedColor && item.variations
+          ? item.variations.find(v => v.attributes.color === item.selectedColor)?.images?.[0]
+          : null;
+        const image = studio((item.isCombo ? item.comboItems?.[0]?.image : variationImage) || item.images[0]);
+        return (
+          <li key={`${item.id}-${item.selectedSize || ''}-${item.selectedColor || ''}`} className="flex gap-4 py-4">
+            <Link to={item.isCombo ? `/combos?id=${item.comboId || item.id}` : `/product/${item.id}`} className="w-[72px] h-[92px] shrink-0 bg-paper overflow-hidden">
+              <img src={small(image)} alt={item.name} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+            </Link>
+            <div className="flex-1 min-w-0 flex flex-col">
+              <div className="flex justify-between gap-3">
+                <p className="font-medium text-sm leading-snug truncate">{item.name}</p>
+                <p className="text-sm font-medium whitespace-nowrap">₹{(item.price * item.quantity).toLocaleString()}</p>
+              </div>
+              {item.isCombo ? (
+                <ul className="text-xs text-stone mt-1 space-y-0.5">
+                  {item.comboItems?.map((sub, i) => <li key={sub.id + i} className="truncate">{sub.name} · {sub.selectedSize}</li>)}
+                  <li className="text-ink">10% set saving applied</li>
+                </ul>
+              ) : (
+                <p className="text-xs text-stone mt-1 truncate">{[item.selectedSize && `Size ${item.selectedSize}`, item.selectedColor].filter(Boolean).join(' · ')}</p>
+              )}
+              <div className="flex items-center justify-between mt-auto pt-2">
+                {stepper(item.quantity, setQty, item.name)}
+                <button type="button" onClick={remove} className="text-xs text-stone underline underline-offset-4 hover:text-ink cursor-pointer">Remove</button>
+              </div>
+            </div>
+          </li>
+        );
+      })}
+    </ul>
+  );
+
+  const heading = (n: number, title: string, action?: React.ReactNode) => (
+    <div className="flex items-baseline justify-between gap-4 mb-5">
+      <h2 className="text-xl md:text-2xl font-semibold"><span className="text-stone font-normal mr-2">{n}</span>{title}</h2>
+      {action}
+    </div>
+  );
+
+  return (
+    <div className="pt-20 md:pt-28 pb-16 md:pb-24 px-5 md:px-10 max-w-[1240px] mx-auto min-h-screen text-ink">
+      <SEO title="Checkout" noindex={true} />
+      <CheckoutInterstitial isVisible={isProcessing} message="Taking you to secure payment" />
 
       <AnimatePresence>
         {error && (
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            className="fixed top-32 right-6 md:right-12 z-[110] w-full max-w-sm"
+          <motion.div
+            role="alert"
+            initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+            className="fixed top-20 md:top-24 inset-x-5 md:inset-x-auto md:right-10 z-[110] md:w-full md:max-w-sm bg-[#fff] border border-black/15 shadow-[0_18px_50px_rgba(20,18,12,.14)] p-5"
           >
-            <div className="bg-neutral-950 border border-white/10 p-1 flex flex-col shadow-[0_0_50px_rgba(239,68,68,0.15)]">
-              <div className="bg-red-500/10 p-6 flex flex-col relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-1">
-                  <X className="text-red-500/20" size={128} />
-                </div>
-                
-                <div className="relative z-10">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Zap className="text-red-500" size={16} />
-                    <h3 className="text-white text-[12px] uppercase font-bold tracking-[0.2em]">Transmission Fault</h3>
-                  </div>
-                  
-                  <p className="text-neutral-400 text-[11px] font-mono leading-relaxed mb-6 border-l border-red-500/50 pl-4 py-1">
-                    {error}
-                  </p>
-                  
-                  <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                    <button 
-                      onClick={() => setError(null)}
-                      className="text-[10px] uppercase font-bold tracking-[0.2em] text-white hover:text-accent transition-colors"
-                    >
-                      Clear Log
-                    </button>
-                    <span className="text-[9px] font-mono text-neutral-600 uppercase">Err_Sig_404</span>
-                  </div>
-                </div>
+            <div className="flex justify-between gap-4">
+              <div>
+                <p className="font-medium text-red-700">Something went wrong</p>
+                <p className="text-sm text-stone mt-1">{error}</p>
               </div>
+              <button type="button" onClick={() => setError(null)} aria-label="Dismiss"><X size={16} /></button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="flex items-center justify-between mb-16">
-        <div>
-          <span className="text-accent text-[10px] uppercase tracking-[0.4em] font-bold block mb-2 opacity-60">Phase: Finalization</span>
-          <h1 className="text-5xl md:text-6xl font-display font-bold tracking-tighter uppercase">Checkout</h1>
-        </div>
-        
-        {isAuthenticated && (
-            <div className="hidden md:flex items-center gap-3 px-5 py-2.5 bg-neutral-900/50 border border-white/5 rounded-sm backdrop-blur-md">
-                <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-white/50">Authenticated: {user?.username}</span>
-            </div>
-        )}
-      </div>
+      <h1 className="text-[40px] md:text-[64px] leading-none font-semibold mb-6 md:mb-12">Checkout</h1>
 
-      <div className="mb-12 flex items-center gap-4 py-4 border-y border-neutral-900">
-        <div className="flex items-center gap-2 text-accent">
-          <Lock size={12} />
-          <span className="text-[10px] uppercase font-bold tracking-widest">End-to-End Encrypted</span>
+      {narrow && (
+        <div className="bg-paper mb-8 max-md:mb-2 max-md:rounded-2xl max-md:overflow-hidden max-md:bg-[#fff]">
+          <button type="button" onClick={() => setShowItems(v => !v)} aria-expanded={showItems} className="w-full flex items-center justify-between px-4 py-4 text-sm">
+            <span className="font-medium">{showItems ? 'Hide' : 'Show'} your order · {totalItemCount} {totalItemCount === 1 ? 'item' : 'items'}</span>
+            <span className="font-semibold">₹{money(orderTotal)}</span>
+          </button>
+          {showItems && <div className="px-4 pb-2 bg-[#fff] border-x border-b border-paper">{orderLines}</div>}
         </div>
-        <div className="w-[1px] h-3 bg-neutral-800" />
-        <div className="text-[10px] uppercase font-bold tracking-widest text-neutral-500">
-          WooCommerce Secure Protocol v2.4
-        </div>
-      </div>
+      )}
 
-      <form onSubmit={handlePayment} className="grid grid-cols-1 lg:grid-cols-12 gap-16 xl:gap-24">        {/* Left Column: Form + Cart */}
-        <div className="lg:col-span-7 space-y-12">
-          
-          {/* Step 01: Extraction Manifest */}
-          <section className="space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-neutral-900">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-                <h2 className="text-[11px] tracking-[0.25em] font-mono font-bold uppercase text-white">01 / Extraction Manifest</h2>
+      <form onSubmit={handlePayment} className="grid grid-cols-1 lg:grid-cols-12 gap-2 lg:gap-16">
+        <div className="lg:col-span-7 space-y-2 md:space-y-12">
+
+          {/* CONTACT */}
+          <section id="identity-section" className="max-md:bg-[#fff] max-md:rounded-2xl max-md:p-4">
+            {heading(1, 'Contact', identityComplete && !showIdentityForm ? (
+              <button type="button" onClick={() => setIsEditingIdentity(true)} className="text-sm underline underline-offset-4 cursor-pointer">Edit</button>
+            ) : undefined)}
+            {!showIdentityForm ? (
+              <div className="text-sm leading-relaxed border-t border-black/10 pt-4">
+                <p className="font-medium">{formData.firstName} {formData.lastName || ''}</p>
+                <p className="text-stone">{formData.email}</p>
+                <p className="text-stone">+91 {formData.phone}</p>
               </div>
-              <span className="text-[9px] font-mono text-neutral-600 uppercase">
-                {cart.length} unique {cart.length === 1 ? 'artifact' : 'artifacts'}
-              </span>
-            </div>
-            
-            <div className="space-y-4">
-              {cart.map(item => {
-                if (item.isCombo && item.comboItems) {
-                  return (
-                    <div key={item.id} className="border border-accent/20 bg-neutral-950/40 rounded-sm overflow-hidden mb-6">
-                      <div className="bg-accent/5 px-4 py-3 border-b border-accent/10 flex justify-between items-center">
-                        <div>
-                          <span className="text-[9px] font-mono tracking-widest text-accent uppercase block mb-0.5">CURATED WARDROBE STACK</span>
-                          <Link to={`/combos?id=${item.comboId || item.id}`} className="hover:text-accent transition-colors block">
-                            <h3 className="text-sm font-display font-bold uppercase text-white">{item.name}</h3>
-                          </Link>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-[9px] font-mono tracking-widest text-emerald-500 uppercase block mb-0.5">10% SAVINGS APPLIED</span>
-                          <span className="text-xs font-mono font-bold text-white">₹{(item.price * item.quantity).toLocaleString()}</span>
-                        </div>
-                      </div>
-                      
-                      <div className="p-4 space-y-4">
-                        {/* Three Images Display */}
-                        <div className="flex gap-3 pb-4 border-b border-white/5 overflow-x-auto">
-                          {item.comboItems.map((sub, idx) => (
-                            <Link to={`/product/${sub.id}`} key={sub.id + '_' + idx} className="relative w-16 h-20 bg-neutral-950 rounded-sm border border-white/5 overflow-hidden flex-shrink-0 group">
-                              <img 
-                                src={sub.image} 
-                                alt={sub.name} 
-                                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300"
-                                referrerPolicy="no-referrer"
-                              />
-                              <div className="absolute bottom-0 inset-x-0 bg-black/60 py-0.5 text-center">
-                                <span className="text-[7px] font-mono text-neutral-400 truncate block px-1">{sub.name}</span>
-                              </div>
-                            </Link>
-                          ))}
-                        </div>
-
-                        {/* Sub-item Size & Color info */}
-                        <div className="space-y-2">
-                          {item.comboItems.map((sub, idx) => (
-                            <div key={sub.id + '_' + idx} className="flex justify-between items-center text-xs">
-                              <div>
-                                <Link to={`/product/${sub.id}`} className="hover:text-accent transition-colors">
-                                  <span className="font-display font-medium text-neutral-300 uppercase">{sub.name}</span>
-                                </Link>
-                                <div className="flex items-center gap-2 mt-0.5 text-[8px] text-neutral-500 font-mono">
-                                  <span>SIZE: {sub.selectedSize}</span>
-                                  <span className="w-1 h-1 bg-neutral-800 rounded-full" />
-                                  <span>COLOR: {sub.selectedColor}</span>
-                                </div>
-                              </div>
-                              <span className="text-[9px] font-mono text-neutral-500">₹{sub.price}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        {/* Stack quantity & removal */}
-                        <div className="flex justify-between items-center pt-3 border-t border-white/5 mt-2">
-                          <div className="flex items-center bg-black border border-neutral-900/80 p-0.5 rounded-sm">
-                            <button type="button" onClick={() => updateQuantity(item.id, item.quantity - 1)} className="w-4 h-4 flex items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer">
-                                <Minus size={8} />
-                            </button>
-                            <span className="w-5 text-center text-[9px] font-mono font-bold">{item.quantity}</span>
-                            <button type="button" onClick={() => updateQuantity(item.id, item.quantity + 1)} className="w-4 h-4 flex items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer">
-                                <Plus size={8} />
-                            </button>
-                          </div>
-                          <button type="button" onClick={() => removeFromCart(item.id)} className="text-neutral-500 hover:text-red-500 transition-colors p-1 cursor-pointer flex items-center gap-1.5 text-[9px] font-mono uppercase">
-                              <Trash2 size={12} />
-                              <span>Remove Stack</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                }
-
-                // Standard item rendering logic
-                const variationImage = item.selectedColor && item.variations
-                  ? item.variations.find(v => v.attributes.color === item.selectedColor)?.images?.[0]
-                  : null;
-                const itemImage = variationImage || item.images[0];
-
-                return (
-                  <div key={`${item.id}-${item.selectedSize || ''}-${item.selectedColor || ''}`} className="flex gap-6 p-4 border border-white/5 bg-neutral-950/10 rounded-sm group relative">
-                    <Link to={`/product/${item.id}`} className="w-16 h-20 bg-neutral-950 overflow-hidden relative flex-shrink-0 block rounded-sm">
-                      <img 
-                          src={itemImage} 
-                          alt={item.name} 
-                          className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-102 transition-all duration-500" 
-                          referrerPolicy="no-referrer"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                    </Link>
-                    <div className="flex-grow flex flex-col py-0.5 justify-between">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <Link to={`/product/${item.id}`} className="hover:text-accent transition-colors">
-                            <h3 className="text-sm tracking-tight font-display font-medium uppercase mb-0.5">{item.name}</h3>
-                          </Link>
-                          <div className="flex items-center gap-3 flex-wrap">
-                            <span className="text-[8px] text-neutral-600 uppercase tracking-widest font-bold font-mono">CAT_{item.category?.toUpperCase() || 'SYS'}</span>
-                            <span className="w-1 h-1 bg-neutral-800 rounded-full" />
-                            <span className="text-[8px] text-accent uppercase tracking-[0.2em] font-bold font-mono">SIZE: {item.selectedSize || 'OS'}</span>
-                            {item.selectedColor && (
-                              <>
-                                <span className="w-1 h-1 bg-neutral-800 rounded-full" />
-                                <span className="text-[8px] text-accent uppercase tracking-[0.2em] font-bold font-mono">COLOR: {item.selectedColor}</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <button type="button" onClick={() => removeFromCart(item.id, item.selectedSize, item.selectedColor)} className="text-neutral-700 hover:text-red-500 transition-colors p-1 -mt-1 cursor-pointer">
-                            <Trash2 size={13} />
-                        </button>
-                      </div>
-
-                      <div className="flex justify-between items-center mt-2">
-                        <div className="flex items-center bg-black border border-neutral-900/80 p-0.5 rounded-sm">
-                          <button type="button" onClick={() => updateQuantity(item.id, item.quantity - 1, item.selectedSize, item.selectedColor)} className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer">
-                              <Minus size={8} />
-                          </button>
-                          <span className="w-6 text-center text-[9px] font-mono font-bold">{item.quantity.toString().padStart(2, '0')}</span>
-                          <button type="button" onClick={() => updateQuantity(item.id, item.quantity + 1, item.selectedSize, item.selectedColor)} className="w-5 h-5 flex items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer">
-                              <Plus size={8} />
-                          </button>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-[8px] text-neutral-600 font-mono tracking-tighter block">₹{item.price.toLocaleString()} EACH</span>
-                          <p className="text-xs font-mono tracking-tight font-bold text-white">₹{(item.price * item.quantity).toLocaleString()}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <Field label="First name" name="firstName" required value={formData.firstName} onChange={handleInputChange} autoComplete="given-name" />
+                  <Field label="Last name" name="lastName" value={formData.lastName} onChange={handleInputChange} autoComplete="family-name" />
+                  <Field label="Email" name="email" type="email" required value={formData.email} onChange={handleInputChange} autoComplete="email" />
+                  <Field label="Phone" name="phone" type="tel" required prefix="+91" maxLength={10} value={formData.phone} onChange={handlePhoneInputChange} autoComplete="tel-national"
+                    hint={formData.phone && formData.phone.length < 10 ? 'Enter all 10 digits' : undefined} />
+                </div>
+                {identityComplete && (
+                  <button type="button" onClick={() => setIsEditingIdentity(false)} className="mt-4 text-sm underline underline-offset-4 cursor-pointer">Done</button>
+                )}
+              </>
+            )}
           </section>
 
-          {/* Packaging Intelligence Banner (Visual divider between Step 1 and Step 2) */}
-          <PackagingUpsellBanner itemCount={totalItemCount} />
-
-          {/* Step 02: Identity Clearance */}
-          {(() => {
-            const isPhoneValid = /^\d{10}$/.test(formData.phone);
-            const identityComplete = !!(formData.firstName && formData.email && isPhoneValid);
-            const showIdentityForm = isEditingIdentity || !identityComplete;
-            return (
-              <section id="identity-section" className="space-y-6">
-                <div className="flex items-center justify-between pb-4 border-b border-neutral-900">
-                  <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 rounded-full transition-all ${
-                      identityComplete 
-                        ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' 
-                        : 'bg-amber-500 shadow-[0_0_8px_#f59e0b] animate-pulse'
-                    }`} />
-                    <h2 className="text-[11px] tracking-[0.25em] font-mono font-bold uppercase text-white">02 / Identity Clearance</h2>
-                  </div>
-                  {identityComplete && !showIdentityForm && (
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingIdentity(true)}
-                      className="text-[9px] tracking-[0.2em] font-bold uppercase text-neutral-500 hover:text-accent transition-colors cursor-pointer"
-                    >
-                      [ Edit Credentials ]
-                    </button>
-                  )}
-                </div>
-
-                <AnimatePresence mode="wait">
-                  {!showIdentityForm ? (
-                    // Read-only Glassmorphic Security Badge
-                    <motion.div
-                      key="badge"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -8 }}
-                      className="relative border border-white/5 bg-neutral-950/40 p-6 flex flex-col sm:flex-row items-center gap-6 rounded-sm backdrop-blur-md overflow-hidden"
-                    >
-                      {/* Corner subtle markings */}
-                      <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t border-l border-accent/20" />
-                      <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b border-r border-accent/20" />
-                      
-                      {/* Left side: Avatar */}
-                      <div className="w-14 h-14 rounded-full border border-accent/30 bg-accent/5 shadow-[0_0_15px_rgba(212,175,55,0.15)] flex items-center justify-center font-display text-accent text-xl font-bold uppercase shrink-0">
-                        {formData.firstName.charAt(0) || 'U'}
-                      </div>
-
-                      {/* Right side: Key-value metadata */}
-                      <div className="flex-grow grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-[11px] uppercase tracking-wider font-light leading-relaxed">
-                        <div>
-                          <span className="text-neutral-600 block text-[8px] font-bold tracking-widest font-mono">HOLDER_NAME</span>
-                          <span className="text-white font-medium">{formData.firstName} {formData.lastName || ''}</span>
-                        </div>
-                        <div>
-                          <span className="text-neutral-600 block text-[8px] font-bold tracking-widest font-mono">SECURE_EMAIL</span>
-                          <span className="text-white font-medium lowercase font-sans">{formData.email}</span>
-                        </div>
-                        <div>
-                          <span className="text-neutral-600 block text-[8px] font-bold tracking-widest font-mono">VERIFIED_PHONE</span>
-                          <span className="text-white font-medium font-mono">+91 {formData.phone}</span>
-                        </div>
-                        <div>
-                          <span className="text-neutral-600 block text-[8px] font-bold tracking-widest font-mono">CLEARANCE_LEVEL</span>
-                          <span className="text-accent font-bold">LEVEL 1 AUTHORIZED ✓</span>
-                        </div>
-                      </div>
-                    </motion.div>
-                  ) : (
-                    // Edit Form
-                    <motion.div
-                      key="form"
-                      initial={{ opacity: 0, scale: 0.99 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.99 }}
-                      className="border border-amber-500/10 bg-neutral-950/20 p-6 rounded-sm space-y-6 shadow-[0_0_20px_rgba(212,175,55,0.02)]"
-                    >
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
-                        <div className="space-y-2 group">
-                          <label className="text-[9px] text-neutral-500 uppercase tracking-[0.2em] block font-bold group-focus-within:text-accent transition-colors">First Name *</label>
-                          <input
-                            type="text"
-                            name="firstName"
-                            required
-                            value={formData.firstName}
-                            onChange={handleInputChange}
-                            className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none transition-all font-mono placeholder:text-neutral-800 text-white"
-                            placeholder="REQUIRED"
-                          />
-                        </div>
-                        <div className="space-y-2 group">
-                          <label className="text-[9px] text-neutral-500 uppercase tracking-[0.2em] block font-bold group-focus-within:text-accent transition-colors">Last Name</label>
-                          <input
-                            type="text"
-                            name="lastName"
-                            value={formData.lastName}
-                            onChange={handleInputChange}
-                            className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none transition-all font-mono placeholder:text-neutral-800 text-white"
-                            placeholder="OPTIONAL"
-                          />
-                        </div>
-                        <div className="space-y-2 group">
-                          <label className="text-[9px] text-neutral-500 uppercase tracking-[0.2em] block font-bold group-focus-within:text-accent transition-colors">Email Address *</label>
-                          <input
-                            type="email"
-                            name="email"
-                            required
-                            value={formData.email}
-                            onChange={handleInputChange}
-                            className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none transition-all font-mono placeholder:text-neutral-800 text-white"
-                            placeholder="you@mail.com"
-                          />
-                        </div>
-                        <div className="space-y-2 group">
-                          <label className="text-[9px] text-neutral-500 uppercase tracking-[0.2em] block font-bold group-focus-within:text-accent transition-colors">Phone Number *</label>
-                          <div className="flex items-center gap-1.5 border-b border-neutral-900 focus-within:border-accent transition-all">
-                            <span className="text-sm font-mono text-neutral-500 select-none">+91</span>
-                            <input
-                              type="tel"
-                              name="phone"
-                              required
-                              value={formData.phone}
-                              onChange={handlePhoneInputChange}
-                              className="w-full bg-transparent py-2 text-sm outline-none font-mono placeholder:text-neutral-800 text-white"
-                              placeholder="XXXXXXXXXX"
-                              maxLength={10}
-                            />
-                          </div>
-                          {formData.phone && formData.phone.length < 10 && (
-                            <span className="text-[9px] text-amber-500 font-mono mt-1 block uppercase tracking-wider">
-                              Must be exactly 10 digits (currently {formData.phone.length})
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {identityComplete && (
-                        <div className="pt-2 flex justify-end">
-                          <button
-                            type="button"
-                            onClick={() => setIsEditingIdentity(false)}
-                            className="px-6 py-2.5 bg-white text-black text-[10px] uppercase font-bold tracking-[0.2em] hover:bg-accent hover:text-black transition-all rounded-sm cursor-pointer active:scale-95"
-                          >
-                            Lock Pass
-                          </button>
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </section>
-            );
-          })()}
-
-          {/* Step 03: Transit Protocol */}
-          <section className="space-y-6">
-            <div className="flex items-center justify-between pb-4 border-b border-neutral-900">
-              <div className="flex items-center gap-3">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-                <h2 className="text-[11px] tracking-[0.25em] font-mono font-bold uppercase text-white">03 / Transit Protocol</h2>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <button
-                type="button"
-                onClick={() => setShippingMethod('delivery')}
-                className={`p-5 border text-left rounded-sm transition-all cursor-pointer ${
-                  shippingMethod === 'delivery'
-                    ? 'border-accent bg-accent/[0.02] shadow-[0_0_15px_rgba(212,175,55,0.05)]'
-                    : 'border-white/5 bg-neutral-950/20 hover:border-neutral-800'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] uppercase tracking-widest font-bold text-white">Home Delivery</span>
-                  <span className="text-[11px] font-mono font-bold text-accent">
-                    ₹{(() => {
-                      const realShippingCount = cart.reduce((count, item) => {
-                        if (item.id.toString() === '1672') return count;
-                        return count + item.quantity;
-                      }, 0);
-                      if (realShippingCount === 0) return 0;
-                      return realShippingCount <= 2 ? 80 : 80 + Math.floor((realShippingCount - 2) / 2) * 79 + ((realShippingCount - 2) % 2) * 49;
-                    })()}
-                  </span>
-                </div>
-                <p className="text-[10px] text-neutral-500 uppercase tracking-wider font-light leading-relaxed">
-                  Delivered to your specified coordinate node. Standard dispatch times apply.
-                </p>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setShippingMethod('pickup')}
-                className={`p-5 border text-left rounded-sm transition-all cursor-pointer ${
-                  shippingMethod === 'pickup'
-                    ? 'border-accent bg-accent/[0.02] shadow-[0_0_15px_rgba(212,175,55,0.05)]'
-                    : 'border-white/5 bg-neutral-950/20 hover:border-neutral-800'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[11px] uppercase tracking-widest font-bold text-white">Collect in Store</span>
-                  <span className="text-[11px] font-mono font-bold text-emerald-500">FREE</span>
-                </div>
-                <p className="text-[10px] text-neutral-500 uppercase tracking-wider font-light leading-relaxed">
-                  Pick up at Miyapur, Hyderabad store. Ready within 24 hours.
-                </p>
-              </button>
-            </div>
-          </section>
-
-          {/* Delivery Destination (Conditional based on Transit Protocol) */}
-          {shippingMethod === 'delivery' ? (
-            (() => {
-              const coordComplete = !!selectedAddressId;
-              return (
-                <section
-                  id="coordinates-section"
-                  className={`space-y-6 transition-all duration-700 ${
-                    coordinatesFlash ? 'coordinates-flash' : ''
-                  }`}
+          {/* DELIVERY */}
+          <section className="max-md:bg-[#fff] max-md:rounded-2xl max-md:p-4">
+            {heading(2, 'Delivery')}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {([
+                ['delivery', 'Home delivery', `₹${deliveryFee()}`, 'Delivered to your address.'],
+                ['pickup', 'Collect in store', 'Free', 'Miyapur, Hyderabad. Ready within 24 hours.'],
+              ] as const).map(([id, title, price, note]) => (
+                <button
+                  key={id} type="button" onClick={() => setShippingMethod(id)} aria-pressed={shippingMethod === id}
+                  className={`p-4 border text-left transition-colors cursor-pointer ${shippingMethod === id ? 'border-ink ring-1 ring-ink' : 'border-black/15 hover:border-black/40'}`}
                 >
-                  <div className="flex items-center justify-between pb-4 border-b border-neutral-900">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-2 h-2 rounded-full transition-all ${
-                        coordComplete 
-                          ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' 
-                          : coordinatesFlash
-                            ? 'bg-red-500 shadow-[0_0_8px_#ef4444] animate-pulse'
-                            : 'bg-amber-500 shadow-[0_0_8px_#f59e0b] animate-pulse'
-                      }`} />
-                      <h2 className="text-[11px] tracking-[0.25em] font-mono font-bold uppercase text-white">04 / Delivery Destination</h2>
-                    </div>
-                    {addresses.length > 0 && !showAddressForm && (
-                      <button
-                        type="button"
-                        onClick={() => { setShowAddressForm(true); setEditingAddressId(null); setAddressFormData({ label:'', type:'other', address:'', city:'', state:'', pincode:'', phone:'' }); }}
-                        className="text-[9px] tracking-[0.2em] font-bold uppercase text-neutral-500 hover:text-accent transition-colors cursor-pointer"
-                      >
-                        [ + Add Destination ]
-                      </button>
+                  <span className="flex justify-between gap-3 font-medium text-sm"><span>{title}</span><span>{price}</span></span>
+                  <span className="block text-sm text-stone mt-1">{note}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+
+          {/* ADDRESS / STORE */}
+          {shippingMethod === 'delivery' ? (
+            <section id="coordinates-section" className={coordinatesFlash ? 'coordinates-flash' : ''}>
+              {heading(3, 'Delivery address', addresses.length > 0 && !showAddressForm ? (
+                <button
+                  type="button"
+                  onClick={() => { setShowAddressForm(true); setEditingAddressId(null); setAddressFormData({ label: '', type: 'home', address: '', city: '', state: '', pincode: '', phone: '' }); }}
+                  className="text-sm underline underline-offset-4 cursor-pointer"
+                >
+                  Add new
+                </button>
+              ) : undefined)}
+              {coordinatesFlash && <p className="text-sm text-red-700 -mt-3 mb-3">Please add a delivery address.</p>}
+
+              {!showAddressForm ? (
+                addresses.length === 0 ? (
+                  <button type="button" onClick={() => setShowAddressForm(true)} className="w-full border border-black/15 hover:border-ink transition-colors py-5 text-sm font-medium flex items-center justify-center gap-2 cursor-pointer">
+                    <Plus size={15} /> Add a delivery address
+                  </button>
+                ) : (
+                  <div className="space-y-3" role="radiogroup" aria-label="Delivery address">
+                    {addresses.map(addr => {
+                      const on = selectedAddressId === addr.id;
+                      return (
+                        <div
+                          key={addr.id} role="radio" aria-checked={on} tabIndex={0}
+                          onClick={() => setSelectedAddressId(addr.id)}
+                          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedAddressId(addr.id); } }}
+                          className={`p-4 border flex items-start gap-3 cursor-pointer transition-colors ${on ? 'border-ink ring-1 ring-ink' : 'border-black/15 hover:border-black/40'}`}
+                        >
+                          <span className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${on ? 'border-ink' : 'border-black/30'}`}>
+                            {on && <span className="w-2 h-2 rounded-full bg-ink" />}
+                          </span>
+                          <div className="flex-1 min-w-0 text-sm">
+                            <p className="font-medium capitalize">{addr.label}{addr.phone && <span className="text-stone font-normal ml-2">+91 {addr.phone}</span>}</p>
+                            <p className="text-stone mt-0.5">{addr.address}, {addr.city}{addr.state ? `, ${addr.state}` : ''} {addr.pincode}</p>
+                          </div>
+                          <div className="flex gap-3 text-xs text-stone shrink-0">
+                            <button type="button" onClick={e => { e.stopPropagation(); handleEditAddress(addr); }} className="underline underline-offset-4 hover:text-ink cursor-pointer">Edit</button>
+                            <button type="button" onClick={e => { e.stopPropagation(); deleteAddress(addr.id); }} className="underline underline-offset-4 hover:text-red-700 cursor-pointer">Remove</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
+              ) : (
+                <div className="border-t border-black/10 pt-5">
+                  <div className="flex gap-2 mb-4">
+                    {(['home', 'work', 'other'] as const).map(t => (
+                      <button key={t} type="button" aria-pressed={addressFormData.type === t} onClick={() => setAddressFormData(prev => ({ ...prev, type: t }))}
+                        className={`px-4 h-10 text-sm capitalize border cursor-pointer ${addressFormData.type === t ? 'bg-ink text-[#fff] border-ink' : 'border-black/15 hover:border-black/40'}`}>{t}</button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {addressFormData.type === 'other' && (
+                      <div className="sm:col-span-2"><Field label="Label" name="label" value={addressFormData.label} onChange={handleAddressInputChange} placeholder="e.g. Studio, Hostel" /></div>
                     )}
+                    <div className="sm:col-span-2"><Field label="Address" name="address" required value={addressFormData.address} onChange={handleAddressInputChange} placeholder="Flat, building, street" autoComplete="street-address" /></div>
+                    <Field label="City" name="city" required value={addressFormData.city} onChange={handleAddressInputChange} autoComplete="address-level2" />
+                    <Field label="State" name="state" value={addressFormData.state} onChange={handleAddressInputChange} autoComplete="address-level1" />
+                    <Field label="Pincode" name="pincode" required inputMode="numeric" value={addressFormData.pincode} onChange={handleAddressInputChange} autoComplete="postal-code" />
+                    <Field label="Phone for delivery (optional)" name="phone" type="tel" prefix="+91" maxLength={10} value={addressFormData.phone} onChange={handleAddressInputChange} />
                   </div>
-
-                  <div className={`relative transition-all duration-500`}>
-                    <AnimatePresence mode="wait">
-                      {!showAddressForm ? (
-                        <motion.div
-                          key="address-list"
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: -8 }}
-                        >
-                          {addresses.length === 0 ? (
-                            /* Empty state — minimal CTA */
-                            <div
-                              onClick={() => setShowAddressForm(true)}
-                              className="py-10 border border-dashed border-neutral-900 hover:border-accent/30 bg-neutral-950/20 hover:bg-accent/[0.01] transition-all rounded-sm flex flex-col items-center justify-center cursor-pointer group"
-                            >
-                              <MapPin className="text-neutral-700 group-hover:text-accent group-hover:scale-105 transition-all mb-3" size={24} />
-                              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-neutral-500 group-hover:text-white transition-colors">
-                                + Initialize Delivery Destination
-                              </p>
-                            </div>
-                          ) : (
-                            <div className="space-y-3">
-                              {addresses.map(addr => (
-                                <div
-                                  key={addr.id}
-                                  onClick={() => setSelectedAddressId(addr.id)}
-                                  className={`relative p-5 border transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4 rounded-sm ${
-                                    selectedAddressId === addr.id
-                                      ? 'border-accent bg-accent/[0.02] shadow-[0_0_15px_rgba(212,175,55,0.05)]'
-                                      : 'border-white/5 bg-neutral-950/20 hover:border-neutral-800'
-                                  }`}
-                                >
-                                  <div className="flex items-start gap-4">
-                                    {/* Custom Radio Button */}
-                                    <div className={`mt-0.5 w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
-                                      selectedAddressId === addr.id ? 'border-accent' : 'border-neutral-800'
-                                    }`}>
-                                      {selectedAddressId === addr.id && (
-                                        <div className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                                      )}
-                                    </div>
-                                    <div>
-                                      <div className="flex items-center gap-2.5 mb-1">
-                                        <span className={`text-[10px] uppercase font-bold tracking-[0.2em] px-2 py-0.5 rounded-sm ${
-                                          selectedAddressId === addr.id ? 'bg-accent/10 text-accent border border-accent/20' : 'bg-neutral-900 text-neutral-500 border border-transparent'
-                                        }`}>{addr.label}</span>
-                                        {addr.phone && (
-                                          <span className="text-[9px] font-mono text-neutral-600 font-bold">{addr.phone}</span>
-                                        )}
-                                      </div>
-                                      <p className="text-xs font-light text-neutral-400 font-sans tracking-wide leading-relaxed">
-                                        {addr.address}, {addr.city}, {addr.state} - {addr.pincode}
-                                      </p>
-                                    </div>
-                                  </div>
-
-                                  <div className="flex items-center gap-4 self-end md:self-auto text-[9px] font-bold uppercase tracking-widest text-neutral-600">
-                                    <button
-                                      type="button"
-                                      onClick={(e) => { e.stopPropagation(); handleEditAddress(addr); }}
-                                      className="hover:text-accent transition-colors cursor-pointer"
-                                    >
-                                      [ Edit ]
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => { e.stopPropagation(); deleteAddress(addr.id); }}
-                                      className="hover:text-red-500 transition-colors cursor-pointer"
-                                    >
-                                      [ Delete ]
-                                    </button>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </motion.div>
-                      ) : (
-                        // Add / Edit address form
-                        <motion.div
-                          key="address-form"
-                          initial={{ opacity: 0, scale: 0.99 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.99 }}
-                          className="border border-neutral-900 bg-neutral-950/40 p-6 rounded-sm space-y-6"
-                        >
-                          <div className="flex items-center justify-between">
-                            <h3 className="text-[11px] font-bold uppercase tracking-[0.3em] text-accent font-mono">
-                              {editingAddressId ? 'Edit Coordinate Node' : 'Initialize Coordinate Node'}
-                            </h3>
-                            <button type="button" onClick={() => { setShowAddressForm(false); setEditingAddressId(null); }} className="text-neutral-600 hover:text-white transition-colors cursor-pointer">
-                              <X size={18} />
-                            </button>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
-                            <div className="space-y-2">
-                              <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Node Type</label>
-                              <div className="flex gap-2">
-                                {['home', 'work', 'other'].map(t => (
-                                  <button
-                                    key={t}
-                                    type="button"
-                                    onClick={() => setAddressFormData(prev => ({ ...prev, type: t as any }))}
-                                    className={`flex-1 py-2 text-[9px] uppercase font-bold tracking-[0.2em] border transition-all cursor-pointer ${
-                                      addressFormData.type === t
-                                        ? 'bg-accent border-accent text-black'
-                                        : 'bg-transparent border-neutral-900 text-neutral-600 hover:border-neutral-700'
-                                    }`}
-                                  >
-                                    {t}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                            {addressFormData.type === 'other' && (
-                              <div className="space-y-2">
-                                <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Custom Label</label>
-                                <input
-                                  type="text"
-                                  name="label"
-                                  value={addressFormData.label}
-                                  onChange={handleAddressInputChange}
-                                  placeholder="e.g. Studio, Hostel"
-                                  className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
-                                />
-                              </div>
-                            )}
-                            <div className="md:col-span-2 space-y-2">
-                              <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Street Address *</label>
-                              <input
-                                  type="text"
-                                  name="address"
-                                  required
-                                  value={addressFormData.address}
-                                  onChange={handleAddressInputChange}
-                                  className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
-                                  placeholder="Flat / Building / Street"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">City *</label>
-                              <input
-                                type="text"
-                                name="city"
-                                required
-                                value={addressFormData.city}
-                                onChange={handleAddressInputChange}
-                                className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
-                                placeholder="Your City"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">State</label>
-                              <input
-                                type="text"
-                                name="state"
-                                value={addressFormData.state}
-                                onChange={handleAddressInputChange}
-                                className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
-                                placeholder="State"
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] font-bold">Pincode *</label>
-                              <input
-                                type="text"
-                                name="pincode"
-                                required
-                                value={addressFormData.pincode}
-                                onChange={handleAddressInputChange}
-                                className="w-full bg-transparent border-b border-neutral-900 py-2 text-sm focus:border-accent outline-none font-mono placeholder:text-neutral-800 text-white"
-                                placeholder="000000"
-                              />
-                            </div>
-                            <div className="space-y-2 group">
-                              <label className="text-[9px] text-neutral-600 uppercase tracking-[0.2em] block font-bold group-focus-within:text-accent transition-colors">Contact Phone Number (Optional)</label>
-                              <div className="flex items-center gap-1.5 border-b border-neutral-900 focus-within:border-accent transition-all">
-                                <span className="text-sm font-mono text-neutral-500 select-none">+91</span>
-                                <input
-                                  type="tel"
-                                  name="phone"
-                                  value={addressFormData.phone}
-                                  onChange={handleAddressInputChange}
-                                  className="w-full bg-transparent py-2 text-sm outline-none font-mono placeholder:text-neutral-800 text-white"
-                                  placeholder="XXXXXXXXXX"
-                                  maxLength={10}
-                                />
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="pt-4 flex gap-4">
-                            <button
-                              type="button"
-                              onClick={saveAddress}
-                              className="flex-grow bg-white text-black py-4 text-[11px] font-bold uppercase tracking-[0.25em] hover:bg-accent transition-colors cursor-pointer"
-                            >
-                              Save Coordinates
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => { setShowAddressForm(false); setEditingAddressId(null); }}
-                              className="px-8 border border-neutral-900 py-4 text-[11px] font-bold uppercase tracking-[0.25em] hover:bg-neutral-900 transition-colors text-neutral-500 cursor-pointer"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                  <div className="flex gap-3 mt-5">
+                    <button type="button" onClick={saveAddress} className="bg-ink text-[#fff] px-7 py-3.5 text-sm font-medium cursor-pointer">Save address</button>
+                    <button type="button" onClick={() => { setShowAddressForm(false); setEditingAddressId(null); }} className="border border-black/20 px-7 py-3.5 text-sm cursor-pointer">Cancel</button>
                   </div>
-                </section>
-              );
-            })()
+                </div>
+              )}
+            </section>
           ) : (
-            <section className="space-y-6">
-              <div className="flex items-center justify-between pb-4 border-b border-neutral-900">
-                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-                  <h2 className="text-[11px] tracking-[0.25em] font-mono font-bold uppercase text-white">04 / Store Collection Node</h2>
-                </div>
-              </div>
-
-              <div className="border border-accent/20 bg-neutral-950/40 p-6 rounded-sm relative overflow-hidden backdrop-blur-md">
-                <div className="absolute top-0 left-0 w-2.5 h-2.5 border-t border-l border-accent/20" />
-                <div className="absolute bottom-0 right-0 w-2.5 h-2.5 border-b border-r border-accent/20" />
-                
-                <div className="flex items-start gap-4">
-                  <MapPin className="text-accent shrink-0 mt-0.5" size={18} />
-                  <div>
-                    <span className="text-[10px] uppercase font-bold tracking-[0.2em] px-2 py-0.5 bg-accent/10 text-accent border border-accent/20 rounded-sm mb-2 inline-block">
-                      CHILS & CO. HQ / FLAGSHIP STORE
-                    </span>
-                    <p className="text-xs text-neutral-400 font-sans tracking-wide leading-relaxed mt-1">
-                      3rd Floor, Plot No. 38 & 39, Matrusri Nagar, Miyapur<br />
-                      Hyderabad, Telangana – 500049, India
-                    </p>
-                    <p className="text-[9px] font-mono text-neutral-600 font-bold mt-2 uppercase">
-                      Hours: Mon–Sat · 10 AM – 6 PM IST
-                    </p>
-                    <div className="mt-4">
-                      <a
-                        href="https://share.google/IwXCYyuX7MlF1tCt2"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-2 px-4 py-2 border border-accent/30 hover:border-accent bg-accent/5 hover:bg-accent/15 text-[10px] uppercase font-bold tracking-widest text-accent hover:text-white transition-all rounded-sm cursor-pointer"
-                      >
-                        <Navigation size={10} className="rotate-45" />
-                        View Map Location
-                      </a>
-                    </div>
-                  </div>
-                </div>
+            <section className="max-md:bg-[#fff] max-md:rounded-2xl max-md:p-4">
+              {heading(3, 'Collection store')}
+              <div className="text-sm border-t border-black/10 pt-4 leading-relaxed">
+                <p className="font-medium">CHILS &amp; CO. Store</p>
+                <p className="text-stone">3rd Floor, Plot No. 38 &amp; 39, Matrusri Nagar, Miyapur<br />Hyderabad, Telangana 500049</p>
+                <p className="text-stone">Mon–Sat, 10 AM – 6 PM IST</p>
+                <a href="https://share.google/IwXCYyuX7MlF1tCt2" target="_blank" rel="noopener noreferrer" className="inline-block mt-3 underline underline-offset-4">View on map</a>
               </div>
             </section>
           )}
 
-          {/* Second Life Modal — triggered on pay with 1 item */}
           <SecondLifeModal
             isOpen={showSecondLifeModal}
             onClose={() => setShowSecondLifeModal(false)}
@@ -1133,192 +691,73 @@ const Checkout: React.FC = () => {
             }}
             cartProductIds={cart.map(item => item.id)}
           />
-
         </div>
 
-        {/* Summary */}
-        <div className="lg:col-span-5">
-          <div className="sticky top-32 space-y-8">
-            <div className="bg-neutral-950 p-10 border border-neutral-900 relative">
-              {/* Corner Accents */}
-              <div className="absolute top-0 right-0 w-8 h-8 border-t border-r border-accent/20" />
-              <div className="absolute bottom-0 left-0 w-8 h-8 border-b border-l border-accent/20" />
+        {/* ORDER */}
+        <aside className="lg:col-span-5">
+          <div className="lg:sticky lg:top-24 lg:bg-paper lg:p-8 max-lg:bg-[#fff] max-lg:rounded-2xl max-lg:p-4">
+            {!narrow && (
+              <>
+                <h2 className="text-xl font-semibold mb-1">Your order</h2>
+                <div className="max-h-[38vh] overflow-y-auto pr-1 -mr-1" data-lenis-prevent>{orderLines}</div>
+              </>
+            )}
 
-              <h2 className="text-[11px] tracking-[0.4em] font-bold uppercase mb-10 text-white/40">Financial Ledger</h2>
-
-              <div className="space-y-6 mb-10">
-                <div className="flex justify-between items-center text-[11px] uppercase tracking-widest">
-                  <span className="text-neutral-600">Assets Subtotal</span>
-                  <span className="font-mono">₹{totalPrice.toLocaleString()}</span>
+            <dl className="text-sm space-y-2.5 border-t border-black/10 pt-4 lg:mt-1">
+              <div className="flex justify-between"><dt className="text-stone">Subtotal</dt><dd>₹{totalPrice.toLocaleString()}</dd></div>
+              {coupon && (
+                <div className="flex justify-between">
+                  <dt className="text-stone">
+                    Code <span className="uppercase text-ink">{coupon.code}</span>
+                    <button type="button" onClick={() => setCoupon(null)} className="ml-2 text-xs underline underline-offset-2 cursor-pointer">Remove</button>
+                  </dt>
+                  <dd>−₹{money(discount)}</dd>
                 </div>
-                <div className="flex justify-between items-center text-[11px] uppercase tracking-widest">
-                  <span className="text-neutral-600">Transit Protocol</span>
-                  {shippingMethod === 'delivery' ? (
-                    <span className="font-mono text-white font-bold">₹{getShippingFee()}</span>
-                  ) : (
-                    <span className="text-accent font-bold">Free (Store Pickup)</span>
-                  )}
-                </div>
-                <div className="flex justify-between items-center text-[11px] uppercase tracking-widest pt-6 border-t border-neutral-900">
-                  <span className="text-white font-bold">Extraction Total</span>
-                  <span className="text-2xl font-display font-medium text-white">₹{(totalPrice + getShippingFee()).toLocaleString()}</span>
-                </div>
+              )}
+              <div className="flex justify-between"><dt className="text-stone">{shippingMethod === 'delivery' ? 'Delivery' : 'Collect in store'}</dt><dd>{shippingMethod === 'delivery' ? `₹${getShippingFee()}` : 'Free'}</dd></div>
+              <div className="flex justify-between items-baseline pt-3 border-t border-black/10">
+                <dt className="font-medium">Total</dt>
+                <dd className="text-2xl font-semibold">₹{money(orderTotal)}</dd>
               </div>
+            </dl>
 
-              {/* Packaging & Unboxing Selection */}
-              <div className="mb-6 space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Package size={14} className="text-neutral-500" />
-                    <span className="text-[10px] uppercase tracking-[0.25em] font-bold text-white/50">Packaging Selection</span>
-                  </div>
-                  {totalItemCount < 2 && (
-                    <span className="text-[9px] font-mono text-accent uppercase font-bold animate-pulse">
-                      Upgrade Available
-                    </span>
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  {/* Option 1: Eco-friendly Biodegradable Bag */}
-                  <div 
-                    className={`relative p-4 border transition-all duration-300 rounded-sm flex items-start gap-4 ${
-                      totalItemCount === 1 
-                        ? 'border-emerald-500/30 bg-emerald-500/[0.03] shadow-[0_0_15px_rgba(16,185,129,0.05)]' 
-                        : 'border-white/5 bg-neutral-950/20 opacity-40'
-                    }`}
-                  >
-                    <div className={`p-2 rounded-full border ${
-                      totalItemCount === 1 
-                        ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-400' 
-                        : 'border-neutral-800 text-neutral-600'
-                    }`}>
-                      <Leaf size={16} />
+            {!coupon && !hasSet && (
+              <div className="mt-4">
+                {!codeOpen ? (
+                  <button type="button" onClick={() => setCodeOpen(true)} className="text-xs text-stone underline underline-offset-2 hover:text-ink cursor-pointer">Have a code?</button>
+                ) : (
+                  <>
+                    <div className="flex gap-2">
+                      <input
+                        value={codeInput}
+                        onChange={e => { setCodeInput(e.target.value); setCodeError(null); }}
+                        onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); applyCode(); } }}
+                        placeholder="Enter your code"
+                        aria-label="Code"
+                        autoFocus
+                        className="flex-1 min-w-0 h-11 px-3 bg-[#fff] border border-black/20 focus:border-ink outline-none text-[16px] text-ink uppercase placeholder:normal-case placeholder:text-black/35"
+                      />
+                      <button type="button" onClick={applyCode} disabled={codeChecking || !codeInput.trim()} className="px-5 h-11 bg-ink text-[#fff] text-sm disabled:opacity-40 cursor-pointer">{codeChecking ? '…' : 'Apply'}</button>
                     </div>
-                    <div className="flex-grow min-w-0">
-                      <div className="flex justify-between items-center">
-                        <h4 className={`text-[11px] font-bold uppercase tracking-wider ${totalItemCount === 1 ? 'text-white' : 'text-neutral-500'}`}>
-                          Eco-friendly Biodegradable Bag
-                        </h4>
-                        {totalItemCount === 1 && (
-                          <span className="text-[8px] uppercase tracking-widest font-extrabold px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-sm">
-                            Active Selection
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[9.5px] text-neutral-500 font-light mt-1 leading-relaxed">
-                        100% compostable, plant-based materials. Zero waste, zero footprint.
-                      </p>
-                    </div>
-                  </div>
+                    {codeError && <p role="alert" className="text-xs text-red-700 mt-2">{codeError}</p>}
+                  </>
+                )}
+              </div>
+            )}
 
-                  {/* Option 2: Second Life Box */}
-                  <div 
-                    className={`relative p-4 border transition-all duration-300 rounded-sm flex items-start gap-4 ${
-                      totalItemCount >= 2 
-                        ? 'border-accent/40 bg-accent/[0.03] shadow-[0_0_15px_rgba(212,175,55,0.08)]' 
-                        : 'border-white/5 bg-neutral-950/10'
-                    }`}
-                  >
-                    <div className={`p-2 rounded-full border ${
-                      totalItemCount >= 2 
-                        ? 'border-accent/30 bg-accent/10 text-accent' 
-                        : 'border-neutral-900 text-neutral-700'
-                    }`}>
-                      {totalItemCount >= 2 ? <Sparkles size={16} className="text-accent" /> : <Lock size={14} />}
-                    </div>
-                    <div className="flex-grow min-w-0">
-                      <div className="flex justify-between items-center">
-                        <h4 className={`text-[11px] font-bold uppercase tracking-wider ${totalItemCount >= 2 ? 'text-white' : 'text-neutral-600'}`}>
-                          Premium Second Life Box
-                        </h4>
-                        {totalItemCount >= 2 ? (
-                          <span className="text-[8px] uppercase tracking-widest font-extrabold px-2 py-0.5 bg-accent/10 text-accent border border-accent/20 rounded-sm">
-                            Unlocked
-                          </span>
-                        ) : (
-                          <span className="text-[8px] uppercase tracking-widest font-bold text-neutral-600">
-                            Locked (Requires 2+ tees)
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-[9.5px] text-neutral-600 mt-1 leading-relaxed">
-                        Premium cardboard box with storage system designed for reuse.
-                      </p>
-                      
-                      {totalItemCount < 2 && (
-                        <div className="mt-3 pt-2 border-t border-neutral-900/60 flex items-center justify-between">
-                          <span className="text-[8px] uppercase tracking-widest text-[#D4AF37] font-bold animate-pulse">
-                            Add 1 more tee to unlock upgrade
-                          </span>
-                          <div className="h-1.5 w-24 bg-neutral-900 border border-white/5 rounded-full overflow-hidden">
-                            <div className="h-full w-1/2 bg-accent" />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
+            <p className="text-xs text-stone mt-4 flex gap-2">
+              <Package size={14} className="shrink-0 mt-px" />
+              {totalItemCount >= 2
+                ? 'Your order ships in our reusable Second Life box.'
+                : 'Ships in a biodegradable bag. Add one more tee for our reusable Second Life box.'}
+            </p>
 
-              <div className="space-y-4">
-                <button
-                  type="submit"
-                  disabled={isProcessing}
-                  className="w-full bg-white text-black py-6 text-[12px] tracking-[0.4em] font-bold uppercase hover:bg-accent transition-all duration-500 flex flex-col items-center justify-center gap-2 relative overflow-hidden group disabled:opacity-30 disabled:cursor-not-allowed"
-                >
-                  <div className="absolute inset-0 bg-accent translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out" />
-                  <div className="relative z-10 flex items-center gap-4">
-                    {isProcessing ? (
-                      <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}>
-                        <Share2 size={16} />
-                      </motion.div>
-                    ) : (
-                      <CreditCard size={18} className="text-black" />
-                    )}
-                    <div className="flex flex-col items-start text-left">
-                      <span className="text-[8px] uppercase tracking-[0.25em] text-neutral-500 group-hover:text-black/50 transition-colors block mb-0.5 font-bold font-sans leading-none">Initiate Extraction</span>
-                      <span className="text-[16px] uppercase tracking-[0.3em] font-extrabold text-black leading-none">CHECK OUT</span>
-                    </div>
-                  </div>
-                  {!isProcessing && (
-                    <span className="relative z-10 text-[8px] opacity-40 font-bold group-hover:opacity-100 transition-opacity">
-                      {totalItemCount < 2 && !secondLifeDismissed ? "Unlocks Premium Box with 2 Tees" : "Redirect to secure portal"}
-                    </span>
-                  )}
-                </button>
-
-                <div className="flex items-center gap-2 p-3 bg-neutral-900/40 border border-neutral-800 rounded-sm">
-                  <Shield size={14} className="text-accent shrink-0" />
-                  <p className="text-[9px] uppercase tracking-widest text-neutral-500 font-bold leading-tight">
-                    Payments handled via secure external nodes (PhonePe/UPI)
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-8 pt-6 border-t border-neutral-900 text-[9px] text-neutral-700 text-center uppercase tracking-[0.2em] leading-relaxed space-y-1">
-                <p>Digital Signal: {Math.random().toString(36).substr(2, 12).toUpperCase()}</p>
-                <p>Protocol: SSL_256_EXTERN</p>
-                <p>© CHILS & CO. SYSTEMS</p>
-              </div>
-            </div>
-
-            <div className="flex gap-4 px-4 overflow-x-auto no-scrollbar pb-2">
-              <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border border-neutral-900 opacity-30">
-                <Package size={12} />
-                <span className="text-[9px] uppercase font-bold tracking-widest">Handcrafted</span>
-              </div>
-              <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border border-neutral-900 opacity-30">
-                <Zap size={12} />
-                <span className="text-[9px] uppercase font-bold tracking-widest">Global Express</span>
-              </div>
-              <div className="flex-shrink-0 flex items-center gap-2 px-3 py-2 border border-neutral-900 opacity-30">
-                <Shield size={12} />
-                <span className="text-[9px] uppercase font-bold tracking-widest">Verified Origins</span>
-              </div>
-            </div>
+            <button type="submit" disabled={isProcessing} className="mt-5 w-full bg-ink text-[#fff] py-4 text-[15px] font-medium flex items-center justify-center gap-2.5 hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer">
+              <Lock size={15} /> {isProcessing ? 'Processing…' : `Pay ₹${money(orderTotal)}`}
+            </button>
+            <p className="text-xs text-stone text-center mt-3">You'll complete payment securely on PhonePe.</p>
           </div>
-        </div>
+        </aside>
       </form>
     </div>
   );

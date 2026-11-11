@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
+import { track } from '../lib/track';
 import { useNavigate, Link } from 'react-router-dom';
 import { Search, X, Loader2, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product } from '../types';
+import { applyStudio } from '../data/studio';
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -80,7 +82,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ isOpen, onClose }) => {
         .then((res) => res.json())
         .then((data) => {
           if (Array.isArray(data)) {
-            setProducts(data);
+            setProducts(data.map(applyStudio));
           }
         })
         .catch((err) => console.error('SearchOverlay: error fetching products', err))
@@ -155,6 +157,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ isOpen, onClose }) => {
     if (e) e.preventDefault();
     if (query.trim()) {
       onClose();
+      track('search', { search_term: query.trim() });
       navigate(`/collection?search=${encodeURIComponent(query.trim())}`);
     }
   };

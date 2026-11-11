@@ -121,14 +121,14 @@ const Onboarding: React.FC = () => {
               >
                 <p className="text-[12px] tracking-[0.4em] uppercase">Status: Initialized</p>
                 <p className="text-[10px] tracking-[0.2em] uppercase italic px-12">
-                  "The build begins now. Your presence has been registered in the archive."
+                  "You’re in. Welcome to CHILS & CO."
                 </p>
               </motion.div>
             </div>
 
             <div className="flex flex-col items-center gap-4">
               <div className="w-12 h-[1px] bg-neutral-800" />
-              <p className="text-[8px] tracking-[0.8em] text-neutral-600 uppercase">Redirecting to System Root</p>
+              <p className="text-[8px] tracking-[0.8em] text-neutral-600 uppercase">Taking you to the store</p>
               <Activity className="text-accent animate-pulse" size={16} />
             </div>
           </motion.div>

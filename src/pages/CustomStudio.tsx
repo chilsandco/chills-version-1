@@ -466,132 +466,49 @@ const CustomStudio: React.FC = () => {
   const stepLabels = ['Configure', 'Your Design', 'Contact'];
 
   return (
-    <div className="bg-black min-h-screen pt-28 md:pt-36 pb-24 text-white font-sans selection:bg-accent selection:text-black">
+    <div className="studio-plain bg-[#f3f2ee] text-ink min-h-screen pt-24 md:pt-32 pb-24 font-sans">
       <SEO
         title="Custom Studio | CHILS & CO."
-        description="Design bespoke apparel and items for teams, occasions or singles. Heavyweight premium fabrics, design assistance, and instant WhatsApp customization consultation."
+        description="Custom tees, hoodies, drinkware, caps and stickers for teams, events and gifts. Upload your design or describe your idea, and get a quote on WhatsApp."
         keywords="custom tshirts, custom hoodies, custom mugs, bespoke gifting Miyapur, custom caps, custom bottles Hyderabad"
       />
 
-      {/* Ambient glow */}
-      <div className="absolute top-0 left-0 w-full h-[500px] bg-[radial-gradient(circle_600px_at_50%_-80px,rgba(212,175,55,0.07),transparent)] pointer-events-none -z-10" />
 
       <div className="max-w-[1600px] mx-auto px-5 md:px-10">
 
         {/* ─── HERO ─── */}
-        <section className="pt-4 pb-20 md:pb-28 border-b border-neutral-900">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-            
-            {/* Left Column: Brand Text & CTA */}
-            <div className="lg:col-span-6 space-y-8">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                <span className="text-[8px] font-mono font-bold tracking-[0.3em] text-accent uppercase">Chils Lab</span>
-              </div>
-              
-              <div className="space-y-4">
-                <h1 className="text-6xl md:text-8xl font-display font-extrabold tracking-tighter uppercase leading-[0.85]">
-                  Custom<br />
-                  <span className="text-accent italic">Studio</span>
-                </h1>
-                <h3 className="text-lg md:text-xl font-display text-accent/80 font-medium tracking-tight">
-                  Your Idea. Professionally Crafted.
-                </h3>
-                <p className="text-neutral-400 text-sm md:text-base leading-relaxed max-w-lg font-light">
-                  From a single personalized gift to hundreds of pieces for your event, startup, wedding, or community. Premium customization across apparel, drinkware, and stickers.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-8 pt-4">
-                <button
-                  onClick={scrollToConfigurator}
-                  className="px-8 py-4 bg-accent text-black text-[10px] font-bold uppercase tracking-[0.3em] flex items-center gap-2.5 hover:bg-white hover:shadow-[0_0_25px_rgba(255,255,255,0.15)] transition-all cursor-pointer"
-                >
-                  Start Designing <ArrowRight size={12} />
+        <section className="pt-2 pb-10 md:pb-16">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 items-center">
+            <div className="lg:col-span-6">
+              <p className="eyebrow text-neutral-500 mb-3">Custom Studio</p>
+              <h1 className="text-[38px] md:text-[64px] leading-[1.02] font-semibold tracking-[-0.035em]">Custom pieces for your team, event or gift.</h1>
+              <p className="mt-4 text-neutral-600 md:text-lg max-w-lg">
+                From one personalised gift to hundreds of pieces for your startup, event, wedding or community. Tees, hoodies, drinkware, caps and stickers.
+              </p>
+              <div className="mt-6 flex flex-wrap items-center gap-3">
+                <button onClick={scrollToConfigurator} className="inline-flex items-center gap-2 bg-ink text-[#fff] rounded-full px-6 py-3.5 text-sm font-medium cursor-pointer">
+                  Start designing <ArrowRight size={15} />
                 </button>
-                <a href="https://wa.me/917842070404" target="_blank" rel="noopener noreferrer"
-                  className="text-[10px] font-mono text-neutral-500 hover:text-accent transition-colors uppercase tracking-widest flex items-center gap-2 group">
-                  Or WhatsApp us <span className="group-hover:translate-x-1 transition-transform">→</span>
+                <a href="https://wa.me/917842070404" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 border border-ink rounded-full px-6 py-3.5 text-sm font-medium">
+                  WhatsApp us
                 </a>
               </div>
             </div>
-
-            {/* Right Column: Sleek Git-Pipeline Timeline with Train Animation */}
-            <div className="lg:col-span-6 relative pl-0 lg:pl-8 py-4">
-              {/* Vertical track line (background) */}
-              <div className="absolute left-[16px] top-[22px] bottom-[22px] w-px bg-neutral-900 hidden lg:block" />
-
-              {/* Glowing active train track line */}
-              <motion.div 
-                className="absolute left-[16px] top-[22px] w-px bg-accent shadow-[0_0_8px_#d4af37] hidden lg:block"
-                style={{ originY: 0 }}
-                animate={{ height: `${trainProgress}%` }}
-                transition={{ duration: 0.8, ease: "easeInOut" }}
-              />
-
-              {/* Premium Custom Sci-Fi Train Vehicle */}
-              <motion.div 
-                className="absolute left-[8px] w-4 h-8 hidden lg:block z-20 select-none pointer-events-none"
-                animate={{ top: `calc(${trainProgress}% + 22px - 16px)` }}
-                transition={{ duration: 0.8, ease: "easeInOut" }}
-              >
-                <svg viewBox="0 0 12 24" className="w-full h-full text-accent fill-accent/20 stroke-accent filter drop-shadow-[0_0_8px_rgba(212,175,55,0.8)]">
-                  {/* Sleek aerodynamic nose pointing downwards */}
-                  <path d="M2,2 L10,2 L10,14 C10,18 7,22 6,22 C5,22 2,18 2,14 Z" strokeWidth="0.8" />
-                  {/* Dark tech windshield/windows */}
-                  <rect x="4" y="5" width="4" height="2" rx="0.5" className="fill-black/90 stroke-none" />
-                  <rect x="4" y="9" width="4" height="2" rx="0.5" className="fill-black/90 stroke-none" />
-                  <rect x="4" y="13" width="4" height="2" rx="0.5" className="fill-black/90 stroke-none" />
-                  {/* Micro side detail lines */}
-                  <path d="M1,6 L2,8 L2,12 L1,14" strokeWidth="0.5" />
-                  <path d="M11,6 L10,8 L10,12 L11,14" strokeWidth="0.5" />
-                </svg>
-              </motion.div>
-
-              <div className="space-y-12">
-                {[
-                  { n: '01', title: 'You send the design', sub: 'Upload SVG, PNG, AI, or briefly describe your concept in text.' },
-                  { n: '02', title: 'We show you a mockup', sub: 'Review our digital placement and color blueprint preview.' },
-                  { n: '03', title: 'We print & ship', sub: 'Premium boxed packaging, dispatched locally in 3–5 days.' }
-                ].map((s, idx) => {
-                  const isNodeActive = activeStop >= (idx + 1);
-
-                  return (
-                    <div key={s.n} className="relative pl-8 lg:pl-12 group">
-                      {/* Node Dot (Stops) */}
-                      <div 
-                        className={`absolute left-[6px] lg:left-[11px] top-1.5 w-[11px] h-[11px] rounded-full bg-black border-[2px] transition-all duration-300 z-10 ${
-                          isNodeActive 
-                            ? 'border-accent bg-accent shadow-[0_0_10px_#d4af37]' 
-                            : 'border-neutral-800'
-                        }`} 
-                      />
-                      
-                      <div className="space-y-1.5">
-                        <div className="flex items-center gap-3">
-                          <span className={`text-[10px] font-mono font-bold transition-colors duration-300 ${
-                            isNodeActive ? 'text-accent' : 'text-neutral-500'
-                          }`}>
-                            {s.n}
-                          </span>
-                          <h3 className={`text-xs font-mono font-bold uppercase tracking-wider transition-colors duration-300 ${
-                            isNodeActive ? 'text-accent' : 'text-white'
-                          }`}>
-                            {s.title}
-                          </h3>
-                        </div>
-                        <p className={`text-xs font-light leading-relaxed max-w-md transition-colors duration-300 ${
-                          isNodeActive ? 'text-neutral-200' : 'text-neutral-400'
-                        }`}>
-                          {s.sub}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
+            <ol className="lg:col-span-6 grid gap-2">
+              {[
+                { title: 'You send the design', sub: 'Upload SVG, PNG or AI files, or just describe your idea.' },
+                { title: 'We show you a mockup', sub: 'See where it sits and how the colours look before anything is printed.' },
+                { title: 'We print and ship', sub: 'Packed in our reusable box and dispatched in 3–5 days.' },
+              ].map((s, i) => (
+                <li key={s.title} className="studio-card flex gap-4 items-start p-5">
+                  <span className="w-8 h-8 shrink-0 rounded-full bg-ink text-[#fff] text-sm font-medium flex items-center justify-center">{i + 1}</span>
+                  <div>
+                    <h3 className="font-semibold">{s.title}</h3>
+                    <p className="text-sm text-neutral-600 mt-1">{s.sub}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
           </div>
         </section>
 
@@ -676,22 +593,22 @@ const CustomStudio: React.FC = () => {
               <button
                 key={prod.id}
                 onClick={() => handleProductSelect(prod)}
-                className={`group text-left bg-neutral-950/60 border rounded-sm overflow-hidden transition-all duration-300 hover:border-accent/40 ${
-                  selectedProduct.id === prod.id ? 'border-accent animate-pulse-subtle' : 'border-white/5'
+                className={`group text-left bg-[#fff] rounded-2xl overflow-hidden transition-shadow duration-300 ${
+                  selectedProduct.id === prod.id ? 'ring-2 ring-ink' : 'hover:shadow-[0_10px_30px_-15px_rgba(0,0,0,.35)]'
                 }`}
               >
                 <div className="aspect-square w-full bg-black relative overflow-hidden">
                   <img
                     src={prod.images[0]}
                     alt={prod.name}
-                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 opacity-80 group-hover:opacity-100"
+                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700"
                   />
-                  <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-sm px-2 py-0.5 border border-white/10 rounded-full">
-                    <span className="text-[8px] font-mono text-neutral-400">{prod.category}</span>
+                  <div className="absolute top-3 left-3 bg-[#fff]/90 px-2.5 py-1 rounded-full">
+                    <span className="text-[11px] text-neutral-600">{prod.category}</span>
                   </div>
                   {selectedProduct.id === prod.id && (
-                    <div className="absolute top-3 right-3 w-5 h-5 bg-accent rounded-full flex items-center justify-center">
-                      <Check size={10} className="text-black" strokeWidth={3} />
+                    <div className="absolute top-3 right-3 w-6 h-6 bg-ink text-[#fff] rounded-full flex items-center justify-center">
+                      <Check size={12} strokeWidth={3} />
                     </div>
                   )}
                 </div>
@@ -802,7 +719,7 @@ const CustomStudio: React.FC = () => {
                       src={selectedProduct.images[activeImageIndex] || selectedProduct.images[0]}
                       alt={selectedProduct.name}
                       initial={{ opacity: 0 }}
-                      animate={{ opacity: 0.8 }}
+                      animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.4 }}
                       className="absolute inset-0 w-full h-full object-contain"
@@ -847,7 +764,7 @@ const CustomStudio: React.FC = () => {
                         key={idx}
                         type="button"
                         onClick={() => setActiveImageIndex(idx)}
-                        className={`w-9 h-9 border rounded-sm overflow-hidden transition-all ${activeImageIndex === idx ? 'border-accent' : 'border-white/10 opacity-50 hover:opacity-80'}`}
+                        className={`w-10 h-10 rounded-lg overflow-hidden transition-all ${activeImageIndex === idx ? 'ring-2 ring-ink' : 'ring-1 ring-black/10'}`}
                       >
                         <img src={img} alt="" className="w-full h-full object-cover" />
                       </button>

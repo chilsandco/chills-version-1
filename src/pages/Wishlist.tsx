@@ -27,11 +27,11 @@ const Wishlist: React.FC = () => {
   }
 
   return (
-    <div className="pt-36 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen">
+    <div className="pt-24 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen">
       <SEO title="Wishlist" noindex={true} />
       <div className="mb-16">
 
-        <p className="text-[8px] tracking-[0.5em] text-neutral-600 uppercase mb-3">Saved Transmissions</p>
+        <p className="text-[8px] tracking-[0.5em] text-neutral-600 uppercase mb-3">Saved for later</p>
         <h1 className="text-5xl font-display font-bold tracking-tighter uppercase">Wishlist</h1>
       </div>
 

@@ -1,21 +1,784 @@
 // server.ts
 import express from "express";
-import path from "path";
+import path2 from "path";
 import https from "https";
-import fs from "fs";
+import fs2 from "fs";
 import { fileURLToPath } from "url";
 import cors from "cors";
-import axios from "axios";
+import axios2 from "axios";
 import WooCommerceRestApi from "@woocommerce/woocommerce-rest-api";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
+import crypto2 from "crypto";
+
+// orderVariations.ts
+var same = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
+var COLOR_ATTRS = ["color", "pa_color", "colors", "pa_colors", "colour", "pa_colour", "colours", "pa_colours"];
+var SIZE_ATTRS = ["size", "pa_size", "sizes", "pa_sizes"];
+function mapWooVariation(v) {
+  const attributes = {};
+  (Array.isArray(v.attributes) ? v.attributes : []).forEach((attr) => {
+    const name = (attr.name || "").toLowerCase();
+    if (COLOR_ATTRS.includes(name)) attributes.color = attr.option;
+    if (SIZE_ATTRS.includes(name)) attributes.size = attr.option;
+  });
+  return { id: v.id, attributes, price: v.price, stockStatus: v.stock_status, stockQuantity: v.stock_quantity, manageStock: v.manage_stock === true };
+}
+var hasStock = (v) => v.manageStock ? (v.stockQuantity ?? 0) > 0 : v.stockStatus !== "outofstock";
+function findVariation(variations, size, color) {
+  const matches = variations.filter((v) => {
+    const a = v.attributes ?? {};
+    const sizeOk = size ? !!a.size && same(a.size, size) : true;
+    const colorOk = color && a.color ? same(a.color, color) : true;
+    return sizeOk && colorOk;
+  });
+  return matches.find(hasStock) ?? matches[0];
+}
+function trustedPrice(variation, productPrice) {
+  const n = Number(variation?.price || productPrice);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+function couponProblem(c, subtotal, hasSet, now = /* @__PURE__ */ new Date()) {
+  if (!c) return "That code isn't valid.";
+  if (hasSet) return "Codes can't be combined with sets.";
+  if (c.date_expires_gmt && /* @__PURE__ */ new Date(`${c.date_expires_gmt}Z`) < now) return "That code has expired.";
+  if (c.usage_limit && (c.usage_count ?? 0) >= c.usage_limit) return "That code has been fully used.";
+  const min = Number(c.minimum_amount || 0);
+  if (min > 0 && subtotal < min) return `This code needs an order of \u20B9${min.toLocaleString("en-IN")} or more.`;
+  return null;
+}
+
+// slackBot.ts
+import fs from "fs";
+import path from "path";
+import { WebClient } from "@slack/web-api";
+import { SocketModeClient } from "@slack/socket-mode";
+var STATUSES = [
+  { value: "processing", label: "Processing" },
+  { value: "on-hold", label: "On hold" },
+  { value: "completed", label: "Completed" },
+  { value: "cancelled", label: "Cancelled", risky: true },
+  { value: "refunded", label: "Refunded", risky: true },
+  { value: "failed", label: "Failed", risky: true }
+];
+var UNPAID = ["pending", "failed", "cancelled", "checkout-draft", "refunded", "trash"];
+var WHATSAPP_US = "+91 78420 70404";
+var ABANDON_AFTER = 20 * 6e4;
+var ABANDON_WINDOW = 6 * 36e5;
+var WATCH_EVERY = 5 * 6e4;
+var SUMMARY_HOUR = 9;
+var web = null;
+var wc = null;
+var channel = "";
+var rooms = { unpaid: "", returns: "", summary: "" };
+var allowed = [];
+var adminBase = "https://api.chilsandco.com";
+var money = (n) => `\u20B9${Number(n || 0).toLocaleString("en-IN")}`;
+var can = (user) => !allowed.length || allowed.includes(user);
+var adminLink = (id) => `${adminBase}/wp-admin/post.php?post=${id}&action=edit`;
+var plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+var metaOf = (order, key) => (order.meta_data || []).find((m) => m.key === key)?.value;
+var isPaid = (order) => !UNPAID.includes(order.status);
+var isPickup = (order) => (order.shipping_lines || []).some((s) => /pickup|store/i.test(s.method_title || s.method_id || ""));
+var IST = 5.5 * 36e5;
+var istDay = (t = Date.now()) => new Date(t + IST).toISOString().slice(0, 10);
+var istHour = (t = Date.now()) => new Date(t + IST).getUTCHours();
+var istMidnight = (t = Date.now()) => {
+  const d = new Date(t + IST);
+  d.setUTCHours(0, 0, 0, 0);
+  return d.getTime() - IST;
+};
+var istLabel = (t) => new Date(t).toLocaleDateString("en-IN", { timeZone: "Asia/Kolkata", weekday: "short", day: "numeric", month: "short" });
+var istTime = (t) => new Date(t).toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" });
+var createdAt = (order) => (/* @__PURE__ */ new Date(`${order.date_created_gmt || order.date_created}Z`)).getTime();
+var ago = (t) => {
+  const m = Math.round((Date.now() - t) / 6e4);
+  if (m < 60) return `${m} min ago`;
+  const h = Math.round(m / 60);
+  if (h < 48) return `${h} hour${h === 1 ? "" : "s"} ago`;
+  return `${Math.round(h / 24)} days ago`;
+};
+var state = { abandoned: {}, returns: {} };
+var stateFile = "";
+function loadState() {
+  stateFile = (process.env.SLACK_STATE_FILE || "").trim() || path.join(process.cwd(), ".slack-state.json");
+  try {
+    state = { abandoned: {}, returns: {}, ...JSON.parse(fs.readFileSync(stateFile, "utf8")) };
+  } catch {
+  }
+}
+function saveState() {
+  const cutoff = Date.now() - 14 * 864e5;
+  for (const [id, t] of Object.entries(state.abandoned)) if (t < cutoff) delete state.abandoned[id];
+  try {
+    fs.writeFileSync(stateFile, JSON.stringify(state));
+  } catch (err) {
+    console.warn("[SLACK] Could not save the bot's memory file:", err.message);
+  }
+}
+async function ordersBetween(from, to, extra = {}) {
+  const out = [];
+  for (let page = 1; page <= 10; page++) {
+    const { data } = await wc("get", "orders", {
+      after: new Date(from).toISOString(),
+      ...to ? { before: new Date(to).toISOString() } : {},
+      dates_are_gmt: true,
+      per_page: 100,
+      page,
+      ...extra
+    });
+    out.push(...data);
+    if (data.length < 100) break;
+  }
+  return out;
+}
+function itemLines(order) {
+  return (order.line_items || []).map((i) => {
+    const size = (i.meta_data || []).find((m) => /size/i.test(m.display_key || m.key))?.display_value;
+    return `\u2022 ${i.name}${size ? ` (${size})` : ""} \xD7 ${i.quantity}`;
+  }).join("\n") || "\u2022 (no items listed)";
+}
+function orderBlocks(order, done) {
+  const pickup = isPickup(order);
+  const city = order.shipping?.city || order.billing?.city || "";
+  const name = `${order.billing?.first_name || ""}`.trim();
+  const blocks = [
+    { type: "header", text: { type: "plain_text", text: `Order #${order.id} \xB7 ${money(order.total)}` } },
+    {
+      type: "section",
+      fields: [
+        { type: "mrkdwn", text: `*Customer*
+${name || "\u2014"}` },
+        { type: "mrkdwn", text: `*${pickup ? "Store pickup" : "Delivery to"}*
+${pickup ? "Collect in store" : city || "\u2014"}` },
+        { type: "mrkdwn", text: `*Status*
+${order.status}` },
+        { type: "mrkdwn", text: `*Payment*
+${order.payment_method_title || order.payment_method || "\u2014"}` }
+      ]
+    },
+    { type: "section", text: { type: "mrkdwn", text: itemLines(order) } }
+  ];
+  if (done) blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: done }] });
+  blocks.push({
+    type: "actions",
+    block_id: `order_${order.id}`,
+    elements: [
+      { type: "button", text: { type: "plain_text", text: "Ready to ship" }, action_id: "ready_to_ship", value: String(order.id), style: "primary" },
+      {
+        type: "button",
+        text: { type: "plain_text", text: "Delivered in person" },
+        action_id: "in_person",
+        value: String(order.id),
+        confirm: {
+          title: { type: "plain_text", text: "Mark as delivered?" },
+          text: { type: "mrkdwn", text: `Order #${order.id} will be marked completed and the customer gets WooCommerce's completed-order email.` },
+          confirm: { type: "plain_text", text: "Mark completed" },
+          deny: { type: "plain_text", text: "Cancel" }
+        }
+      },
+      {
+        type: "static_select",
+        action_id: "set_status",
+        placeholder: { type: "plain_text", text: "Change status" },
+        options: STATUSES.map((s) => ({ text: { type: "plain_text", text: s.label }, value: `${order.id}:${s.value}` })),
+        confirm: {
+          title: { type: "plain_text", text: "Change the order status?" },
+          text: { type: "mrkdwn", text: "This updates WooCommerce and the customer's order page. Cancelled orders return their stock. Refunded does not send money back, so refund it in PhonePe as well." },
+          confirm: { type: "plain_text", text: "Change it" },
+          deny: { type: "plain_text", text: "Keep it" }
+        }
+      },
+      { type: "button", text: { type: "plain_text", text: "Open in WooCommerce" }, action_id: "open_admin", url: adminLink(order.id) }
+    ]
+  });
+  return blocks;
+}
+function waNumber(phone) {
+  let d = String(phone || "").replace(/\D/g, "");
+  if (d.length === 11 && d.startsWith("0")) d = d.slice(1);
+  if (d.length === 10) d = `91${d}`;
+  return /^91\d{10}$/.test(d) ? d : "";
+}
+function abandonedBlocks(order, done) {
+  const name = `${order.billing?.first_name || ""} ${order.billing?.last_name || ""}`.trim();
+  const first = `${order.billing?.first_name || ""}`.trim() || "there";
+  const items = order.line_items || [];
+  const firstItem = items[0]?.name || "your tees";
+  const more = items.length > 1 ? ` and ${plural(items.length - 1, "more item")}` : "";
+  const wa = waNumber(order.billing?.phone);
+  const text = `Hi ${first}, this is CHILS & CO. Your order for ${firstItem}${more} didn't go through at payment. Want a hand finishing it? Just reply here.`;
+  const failed = order.status === "failed";
+  const blocks = [
+    { type: "header", text: { type: "plain_text", text: `Not paid \xB7 ${money(order.total)} \xB7 #${order.id}` } },
+    {
+      type: "section",
+      fields: [
+        { type: "mrkdwn", text: `*Customer*
+${name || "\u2014"}` },
+        { type: "mrkdwn", text: `*Phone*
+${order.billing?.phone || "\u2014"}` },
+        { type: "mrkdwn", text: `*What happened*
+${failed ? "Payment failed" : "Left at the payment page"}` },
+        { type: "mrkdwn", text: `*Started*
+${istTime(createdAt(order))} (${ago(createdAt(order))})` }
+      ]
+    },
+    { type: "section", text: { type: "mrkdwn", text: itemLines(order) } }
+  ];
+  if (done) blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: done }] });
+  const actions = [];
+  if (wa) actions.push({ type: "button", text: { type: "plain_text", text: `WhatsApp ${first}` }, action_id: "open_whatsapp", url: `https://wa.me/${wa}?text=${encodeURIComponent(text)}`, style: "primary" });
+  if (!done) actions.push({ type: "button", text: { type: "plain_text", text: "Mark followed up" }, action_id: "followed_up", value: String(order.id) });
+  actions.push({ type: "button", text: { type: "plain_text", text: "Open in WooCommerce" }, action_id: "open_admin", url: adminLink(order.id) });
+  blocks.push({ type: "actions", elements: actions });
+  return blocks;
+}
+async function checkAbandoned() {
+  const now = Date.now();
+  const recent = await ordersBetween(now - ABANDON_WINDOW);
+  const paidLater = /* @__PURE__ */ new Map();
+  for (const o of recent) {
+    const email = `${o.billing?.email || ""}`.toLowerCase();
+    if (email && isPaid(o)) paidLater.set(email, Math.max(paidLater.get(email) || 0, createdAt(o)));
+  }
+  for (const o of recent) {
+    if (!["pending", "failed"].includes(o.status) || state.abandoned[o.id]) continue;
+    if (now - createdAt(o) < ABANDON_AFTER || Number(o.total) <= 0 || !(o.line_items || []).length) continue;
+    state.abandoned[o.id] = now;
+    const email = `${o.billing?.email || ""}`.toLowerCase();
+    if (email && (paidLater.get(email) || 0) > createdAt(o)) continue;
+    await web.chat.postMessage({ channel: rooms.unpaid, text: `Not paid: ${money(o.total)} from ${o.billing?.first_name || "a customer"} (#${o.id})`, blocks: abandonedBlocks(o) });
+    console.log(`[SLACK] Posted unpaid checkout #${o.id}`);
+  }
+  saveState();
+}
+async function summaryText(morning = false) {
+  const today = istMidnight();
+  const yesterday = today - 864e5;
+  const [y, processing, returns] = await Promise.all([
+    ordersBetween(yesterday, today),
+    wc("get", "orders", { status: "processing", per_page: 100 }).then((r) => r.data),
+    wc("get", "orders", { status: "return-requested", per_page: 100 }).then((r) => r.data)
+  ]);
+  const paid = y.filter(isPaid);
+  const sales = paid.reduce((n, o) => n + Number(o.total || 0), 0);
+  const counts = /* @__PURE__ */ new Map();
+  for (const o of paid) for (const i of o.line_items || []) counts.set(i.name, (counts.get(i.name) || 0) + Number(i.quantity || 0));
+  const best = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+  const unpaid = y.filter((o) => ["pending", "failed"].includes(o.status) && Number(o.total) > 0);
+  const unpaidValue = unpaid.reduce((n, o) => n + Number(o.total || 0), 0);
+  const packed = processing.filter((o) => metaOf(o, "_chils_packed_by"));
+  const toPack = processing.filter((o) => !metaOf(o, "_chils_packed_by"));
+  const oldest = toPack.length ? Math.min(...toPack.map(createdAt)) : 0;
+  const lines = [`*${morning ? "Good morning. " : ""}Here's yesterday, ${istLabel(yesterday)}:*`];
+  lines.push(paid.length ? `\u2022 Orders: ${paid.length}, ${money(sales)}${best ? ` \xB7 best seller ${best[0]} (\xD7${best[1]})` : ""}` : "\u2022 No paid orders.");
+  if (unpaid.length) lines.push(`\u2022 Didn't pay: ${plural(unpaid.length, "checkout")} worth ${money(unpaidValue)} reached PhonePe but ${unpaid.length === 1 ? "wasn't" : "weren't"} paid`);
+  lines.push("", "*Today's list:*");
+  const todo = [];
+  if (toPack.length) todo.push(`\u2022 To pack: ${plural(toPack.length, "paid order")} (oldest ${ago(oldest)}): ${toPack.slice(0, 6).map((o) => `#${o.id}`).join(", ")}`);
+  if (packed.length) todo.push(`\u2022 Packed, waiting for pickup or Shiprocket: ${packed.map((o) => `#${o.id}`).join(", ")}`);
+  if (returns.length) todo.push(`\u2022 Returns waiting for a decision: ${returns.length} (type \`returns\`)`);
+  lines.push(...todo.length ? todo : ["\u2022 Nothing waiting. \u{1F389}"]);
+  return lines.join("\n");
+}
+async function maybeSendSummary() {
+  const day = istDay();
+  if (state.summaryDay === day || istHour() < SUMMARY_HOUR || istHour() >= 12) return;
+  state.summaryDay = day;
+  saveState();
+  await web.chat.postMessage({ channel: rooms.summary, text: await summaryText(true) });
+  console.log("[SLACK] Posted the morning summary");
+}
+function returnRequest(order) {
+  const raw = metaOf(order, "wps_rma_return_product");
+  let entries = [];
+  try {
+    entries = Object.values(typeof raw === "string" ? JSON.parse(raw) : raw || {});
+  } catch {
+  }
+  const req = entries[entries.length - 1] || {};
+  const subject = String(req.subject || "");
+  const pick = (label) => subject.match(new RegExp(`${label}:\\s*(.*)`))?.[1]?.trim() || "";
+  const products = req.products || [];
+  const names = new Map((order.line_items || []).map((i) => [String(i.product_id), i.name]));
+  for (const p of products) {
+    const line = (order.line_items || []).find((i) => String(i.id) === String(p.item_id));
+    if (line && !names.has(String(p.product_id))) names.set(String(p.product_id), line.name);
+  }
+  const wants = subject.split("\n").filter((l) => l.startsWith("- Product ID:")).map((l) => {
+    const [, id, qty, act] = l.match(/Product ID:\s*(\d+)\s*\|\s*Qty:\s*(\d+)\s*\|\s*Action:\s*(.*)/) || [];
+    return `\u2022 ${names.get(id) || `Product ${id}`} \xD7 ${qty}: ${act}`;
+  });
+  const value = products.reduce((n, p) => n + Number(p.price || 0) * Number(p.qty || 1), 0);
+  const images = pick("Images").split(",").map((s) => s.trim()).filter((s) => /^https?:/.test(s));
+  return {
+    reason: pick("Reason"),
+    description: pick("Description"),
+    wants,
+    value,
+    images,
+    isRefund: wants.some((w) => /:\s*Refund$/.test(w)) || !wants.length && /refund/i.test(subject)
+  };
+}
+function returnBlocks(order, done) {
+  const r = returnRequest(order);
+  const name = `${order.billing?.first_name || ""} ${order.billing?.last_name || ""}`.trim();
+  const detail = [
+    `*Reason:* ${r.reason || "not given"}`,
+    r.description ? `*Customer's note:* ${r.description}` : "",
+    r.wants.length ? `*What they want:*
+${r.wants.join("\n")}` : `*Items:*
+${itemLines(order)}`,
+    r.images.length ? `*Photos:* ${r.images.map((u, i) => `<${u}|photo ${i + 1}>`).join(" \xB7 ")}` : ""
+  ].filter(Boolean);
+  const blocks = [
+    { type: "header", text: { type: "plain_text", text: `Return request \xB7 Order #${order.id}` } },
+    {
+      type: "section",
+      fields: [
+        { type: "mrkdwn", text: `*Customer*
+${name || "\u2014"}` },
+        { type: "mrkdwn", text: `*Value*
+${money(r.value || order.total)}` },
+        { type: "mrkdwn", text: `*Ordered*
+${istLabel(createdAt(order))}` },
+        { type: "mrkdwn", text: `*Status*
+${order.status}` }
+      ]
+    },
+    { type: "section", text: { type: "mrkdwn", text: detail.join("\n") } }
+  ];
+  if (done) blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: done }] });
+  const actions = [];
+  if (!done) {
+    actions.push(
+      {
+        type: "button",
+        text: { type: "plain_text", text: "Approve" },
+        style: "primary",
+        action_id: "return_approve",
+        value: String(order.id),
+        confirm: {
+          title: { type: "plain_text", text: "Approve this return?" },
+          text: { type: "mrkdwn", text: `Order #${order.id} moves to Return approved and the customer is emailed that it's approved.${r.isRefund ? " Approving doesn't send money back: refund it in PhonePe too." : ""}` },
+          confirm: { type: "plain_text", text: "Approve" },
+          deny: { type: "plain_text", text: "Cancel" }
+        }
+      },
+      { type: "button", text: { type: "plain_text", text: "Reject" }, style: "danger", action_id: "return_reject", value: String(order.id) }
+    );
+  }
+  actions.push({ type: "button", text: { type: "plain_text", text: "Open in WooCommerce" }, action_id: "open_admin", url: adminLink(order.id) });
+  blocks.push({ type: "actions", elements: actions });
+  return blocks;
+}
+async function waitingReturns() {
+  const { data } = await wc("get", "orders", { status: "return-requested", per_page: 50 });
+  return data;
+}
+async function checkReturns() {
+  const waiting = await waitingReturns();
+  const ids = new Set(waiting.map((o) => String(o.id)));
+  for (const id of Object.keys(state.returns)) if (!ids.has(id)) delete state.returns[id];
+  if (!state.returnsSeeded) {
+    for (const o of waiting) state.returns[o.id] = Date.now();
+    state.returnsSeeded = true;
+    saveState();
+    if (waiting.length) await web.chat.postMessage({ channel: rooms.returns, text: `${plural(waiting.length, "return request")} ${waiting.length === 1 ? "was" : "were"} already waiting before I started watching. Type \`returns\` to see them.` });
+    return;
+  }
+  for (const o of waiting) {
+    if (state.returns[o.id]) continue;
+    state.returns[o.id] = Date.now();
+    await web.chat.postMessage({ channel: rooms.returns, text: `Return request for order #${o.id}`, blocks: returnBlocks(o) });
+    console.log(`[SLACK] Posted return request #${o.id}`);
+  }
+  saveState();
+}
+async function approveReturn(id, who, user, ch, ts) {
+  const { data: current } = await wc("get", `orders/${id}`);
+  if (current.status !== "return-requested") return `Order #${id} isn't waiting on a return decision any more (it's ${current.status}). Nothing changed.`;
+  const { data } = await wc("put", `orders/${id}`, { status: "return-approved" });
+  await wc("post", `orders/${id}/notes`, {
+    note: `Good news: your return request for order #${id} is approved. We'll be in touch shortly with the next steps.`,
+    customer_note: true
+  });
+  await note(id, `Return approved by ${who} from Slack.`);
+  const refund = returnRequest(current).isRefund ? " \xB7 refund the money in PhonePe" : "";
+  await updateCard(ch, ts, `Return #${id}`, returnBlocks(data, `\u2705 Approved by <@${user}> \xB7 customer emailed${refund}`));
+  return "";
+}
+async function rejectReturn(id, reason, who, user, ch, ts) {
+  const { data: current } = await wc("get", `orders/${id}`);
+  if (current.status !== "return-requested") return `Order #${id} isn't waiting on a return decision any more (it's ${current.status}). Nothing changed.`;
+  const { data } = await wc("put", `orders/${id}`, { status: "return-cancelled" });
+  await wc("post", `orders/${id}/notes`, {
+    note: `We're sorry, we can't accept the return for order #${id}.
+
+${reason}
+
+If you'd like to talk it through, message us on WhatsApp at ${WHATSAPP_US}.`,
+    customer_note: true
+  });
+  await note(id, `Return rejected by ${who} from Slack. Reason given: ${reason}`);
+  await updateCard(ch, ts, `Return #${id}`, returnBlocks(data, `\u2716\uFE0F Rejected by <@${user}> \xB7 customer emailed the reason`));
+  return "";
+}
+function openRejectDialog(body, id) {
+  return web.views.open({
+    trigger_id: body.trigger_id,
+    view: {
+      type: "modal",
+      callback_id: "return_reject_submit",
+      private_metadata: JSON.stringify({ id, ch: body.channel?.id, ts: body.message?.ts }),
+      title: { type: "plain_text", text: "Reject return" },
+      submit: { type: "plain_text", text: "Reject and email" },
+      close: { type: "plain_text", text: "Cancel" },
+      blocks: [
+        { type: "section", text: { type: "mrkdwn", text: `Order #${id}. The customer gets this reason by email, so keep it kind and clear.` } },
+        {
+          type: "input",
+          block_id: "reason",
+          label: { type: "plain_text", text: "Reason" },
+          element: {
+            type: "plain_text_input",
+            action_id: "value",
+            multiline: true,
+            min_length: 10,
+            placeholder: { type: "plain_text", text: "e.g. The tee has been worn and washed, so we can't take it back." }
+          }
+        }
+      ]
+    }
+  });
+}
+async function note(orderId, text) {
+  await wc("post", `orders/${orderId}/notes`, { note: text, customer_note: false });
+}
+async function setStatus(orderId, status, who, extraMeta = []) {
+  const { data: current } = await wc("get", `orders/${orderId}`);
+  if (current.status === status) return { ...current, _unchanged: true };
+  const { data } = await wc("put", `orders/${orderId}`, { status, ...extraMeta.length ? { meta_data: extraMeta } : {} });
+  await note(orderId, `Status set to ${status} by ${who} from Slack.`);
+  return data;
+}
+async function updateCard(ch, ts, text, blocks) {
+  if (!ch || !ts) return;
+  try {
+    await web.chat.update({ channel: ch, ts, text, blocks });
+  } catch (err) {
+    console.warn("[SLACK] Could not update the message:", err?.data?.error || err.message);
+  }
+}
+var refreshMessage = (body, order, done) => updateCard(body.channel?.id, body.message?.ts, `Order #${order.id}`, orderBlocks(order, done));
+async function reply(body, text) {
+  await web.chat.postMessage({ channel: body.channel?.id || channel, thread_ts: body.message?.ts, text });
+}
+async function onAction(body) {
+  const action = body.actions?.[0];
+  if (!action || ["open_admin", "open_whatsapp"].includes(action.action_id)) return;
+  const user = body.user?.id;
+  const who = body.user?.username || body.user?.name || user;
+  if (!can(user)) return reply(body, `<@${user}> you're not on the list of people who can change orders.`);
+  console.log(`[SLACK] ${who} pressed ${action.action_id} ${action.value || action.selected_option?.value || ""}`);
+  try {
+    if (action.action_id === "return_reject") {
+      await openRejectDialog(body, action.value);
+    } else if (action.action_id === "return_approve") {
+      const msg = await approveReturn(action.value, who, user, body.channel?.id, body.message?.ts);
+      if (msg) await reply(body, msg);
+    } else if (action.action_id === "followed_up") {
+      const id = action.value;
+      const { data } = await wc("get", `orders/${id}`);
+      await note(id, `Customer followed up about the unpaid checkout (by ${who}, from Slack).`);
+      await updateCard(body.channel?.id, body.message?.ts, `Not paid #${id}`, abandonedBlocks(data, `\u{1F4AC} Followed up by <@${user}>`));
+    } else if (action.action_id === "ready_to_ship") {
+      const id = action.value;
+      await note(id, `Packed and ready to ship (by ${who}, from Slack).`);
+      const { data } = await wc("put", `orders/${id}`, { meta_data: [{ key: "_chils_packed_by", value: String(who) }] });
+      await refreshMessage(body, data, `\u{1F4E6} Packed by <@${user}> \xB7 ${isPickup(data) ? "ready for pickup" : "ready for Shiprocket"}`);
+    } else if (action.action_id === "in_person") {
+      const id = action.value;
+      const data = await setStatus(id, "completed", who, [{ key: "_chils_delivered_in_person", value: "yes" }]);
+      if (data._unchanged) return reply(body, `Order #${id} is already completed. Nothing changed and no new email was sent.`);
+      await refreshMessage(body, data, `\u{1F91D} Delivered in person by <@${user}> \xB7 completed, customer emailed`);
+    } else if (action.action_id === "set_status") {
+      const [id, status] = String(action.selected_option?.value || "").split(":");
+      if (!id || !STATUSES.some((s) => s.value === status)) return;
+      const data = await setStatus(id, status, who);
+      if (data._unchanged) return reply(body, `Order #${id} is already ${status}. Nothing changed.`);
+      const extra = status === "refunded" ? " \xB7 remember to refund the money in PhonePe" : "";
+      await refreshMessage(body, data, `Status set to *${status}* by <@${user}>${extra}`);
+    }
+  } catch (err) {
+    console.error("[SLACK] Action failed:", err?.response?.data || err?.data || err.message);
+    await reply(body, `Couldn't do that: ${err?.response?.data?.message || err?.data?.error || err.message}`);
+  }
+}
+async function onViewSubmit(body) {
+  if (body.view?.callback_id !== "return_reject_submit") return;
+  const user = body.user?.id;
+  const who = body.user?.username || body.user?.name || user;
+  const { id, ch, ts } = JSON.parse(body.view.private_metadata || "{}");
+  const reason = String(body.view.state?.values?.reason?.value?.value || "").trim();
+  if (!can(user) || !id || !reason) return;
+  console.log(`[SLACK] ${who} rejected return ${id}`);
+  try {
+    const msg = await rejectReturn(id, reason, who, user, ch, ts);
+    if (msg) await web.chat.postMessage({ channel: ch || channel, thread_ts: ts, text: msg });
+  } catch (err) {
+    console.error("[SLACK] Reject failed:", err?.response?.data || err.message);
+    await web.chat.postMessage({ channel: ch || channel, thread_ts: ts, text: `Couldn't reject return #${id}: ${err?.response?.data?.message || err.message}` });
+  }
+}
+var HELP = [
+  "*Things I understand:*",
+  "\u2022 `status 1234`: show an order with its buttons",
+  "\u2022 `pending`: paid orders not packed yet",
+  "\u2022 `today`: today's orders and sales",
+  "\u2022 `summary`: the morning summary, right now",
+  "\u2022 `returns`: return requests waiting for a decision",
+  "",
+  "_On my own I post new orders here, unpaid checkouts in #unpaid-checkouts, return requests in #returns and a summary in #daily-summary every morning at 9. These commands work in any of those channels._"
+].join("\n");
+async function onMessage(event) {
+  if (event.bot_id || event.subtype || !event.text) return;
+  const text = String(event.text).trim().toLowerCase().replace(/<@[^>]+>\s*/g, "");
+  const say = (t, blocks) => web.chat.postMessage({ channel: event.channel, thread_ts: event.ts, text: t, ...blocks ? { blocks } : {} });
+  try {
+    const status = text.match(/^(?:status|order)\s*#?(\d+)$/);
+    if (status) {
+      const { data } = await wc("get", `orders/${status[1]}`);
+      return say(`Order #${data.id}`, data.status === "return-requested" ? returnBlocks(data) : orderBlocks(data));
+    }
+    if (text === "pending") {
+      const { data } = await wc("get", "orders", { status: "processing", per_page: 20 });
+      if (!data.length) return say("Nothing waiting. Every paid order is packed or done. \u{1F389}");
+      return say(`*${plural(data.length, "paid order")} waiting:*
+` + data.map((o) => `\u2022 #${o.id} \xB7 ${money(o.total)} \xB7 ${o.shipping?.city || o.billing?.city || ""}${metaOf(o, "_chils_packed_by") ? " \xB7 packed" : ""}`).join("\n"));
+    }
+    if (text === "today") {
+      const data = await ordersBetween(istMidnight());
+      const paid = data.filter(isPaid);
+      const total = paid.reduce((n, o) => n + Number(o.total || 0), 0);
+      return say(`*Today:* ${plural(paid.length, "order")}, ${money(total)}.`);
+    }
+    if (text === "summary") return say(await summaryText());
+    if (text === "returns") {
+      const waiting = await waitingReturns();
+      if (!waiting.length) return say("No return requests waiting. \u{1F389}");
+      await say(`*${plural(waiting.length, "return request")} waiting for a decision:*`);
+      for (const o of waiting.slice(0, 10)) await say(`Return request for order #${o.id}`, returnBlocks(o));
+      return;
+    }
+    if (text === "help") return say(HELP);
+  } catch (err) {
+    console.error("[SLACK] Command failed:", err?.response?.data || err.message);
+    await say(`Couldn't do that: ${err?.response?.data?.message || err.message}`);
+  }
+}
+async function safely(name, job) {
+  try {
+    await job();
+  } catch (err) {
+    console.error(`[SLACK] ${name} check failed:`, err?.response?.data?.message || err?.data?.error || err.message);
+  }
+}
+async function startSlackBot(opts) {
+  const botToken = (process.env.SLACK_BOT_TOKEN || "").trim();
+  const appToken = (process.env.SLACK_APP_TOKEN || "").trim();
+  channel = (process.env.SLACK_ORDERS_CHANNEL || "").trim();
+  rooms.unpaid = (process.env.SLACK_UNPAID_CHANNEL || "").trim() || channel;
+  rooms.returns = (process.env.SLACK_RETURNS_CHANNEL || "").trim() || channel;
+  rooms.summary = (process.env.SLACK_SUMMARY_CHANNEL || "").trim() || channel;
+  if (!botToken || !appToken || !channel) {
+    console.log("[SLACK] Order bot off (SLACK_BOT_TOKEN, SLACK_APP_TOKEN or SLACK_ORDERS_CHANNEL not set).");
+    return;
+  }
+  allowed = (process.env.SLACK_ALLOWED_USERS || "").split(",").map((s) => s.trim()).filter(Boolean);
+  adminBase = opts.adminUrl.replace(/\/$/, "");
+  wc = opts.wc;
+  web = new WebClient(botToken);
+  loadState();
+  const socket = new SocketModeClient({ appToken });
+  socket.on("interactive", async ({ body, ack }) => {
+    await ack();
+    if (body.type === "block_actions") onAction(body);
+    else if (body.type === "view_submission") onViewSubmit(body);
+  });
+  socket.on("message", async ({ event, ack }) => {
+    await ack();
+    onMessage(event);
+  });
+  socket.on("app_mention", async ({ event, ack }) => {
+    await ack();
+    onMessage(event);
+  });
+  try {
+    await socket.start();
+    console.log("[SLACK] Order bot connected.");
+  } catch (err) {
+    console.error("[SLACK] Order bot could not connect:", err?.data?.error || err.message);
+    return;
+  }
+  const watch = async () => {
+    await safely("Unpaid checkout", checkAbandoned);
+    await safely("Returns", checkReturns);
+    await safely("Morning summary", maybeSendSummary);
+  };
+  setTimeout(watch, 3e4);
+  setInterval(watch, WATCH_EVERY);
+}
+async function notifyNewOrder(order) {
+  if (!web || !channel || !order?.id) return;
+  try {
+    await web.chat.postMessage({ channel, text: `New order #${order.id} \xB7 ${money(order.total)}`, blocks: orderBlocks(order) });
+  } catch (err) {
+    console.error("[SLACK] New-order message failed:", err?.data?.error || err.message);
+  }
+}
+async function notifyShipping(orderId, trackingStatus, newStatus) {
+  if (!web || !channel) return;
+  const s = String(trackingStatus).toLowerCase();
+  const icon = /deliver/.test(s) && !/undeliver|fail/.test(s) ? "\u2705" : /rto|return|fail|undeliver|lost|damage/.test(s) ? "\u26A0\uFE0F" : "";
+  if (!icon) return;
+  const extra = newStatus === "completed" ? " \xB7 marked completed, customer emailed" : " \xB7 needs a look";
+  try {
+    await web.chat.postMessage({ channel, text: `${icon} Order #${orderId}: ${trackingStatus}${extra}  <${adminLink(orderId)}|Open>` });
+  } catch (err) {
+    console.error("[SLACK] Shipping message failed:", err?.data?.error || err.message);
+  }
+}
+
+// metaCapi.ts
+import axios from "axios";
 import crypto from "crypto";
+var API_VERSION = "v21.0";
+var pixelId = () => process.env.META_PIXEL_ID || process.env.VITE_META_PIXEL_ID || "";
+var token = () => process.env.META_CAPI_TOKEN || "";
+var metaEnabled = () => !!(pixelId() && token());
+var sha256 = (v) => crypto.createHash("sha256").update(v).digest("hex");
+var norm = (v) => String(v ?? "").trim().toLowerCase();
+var hashed = (v) => norm(v) ? sha256(norm(v)) : void 0;
+var phoneDigits = (v) => {
+  const d = String(v ?? "").replace(/\D/g, "");
+  if (d.length === 10) return `91${d}`;
+  if (d.length === 11 && d.startsWith("0")) return `91${d.slice(1)}`;
+  return d;
+};
+function readCookie(header, name) {
+  const m = (header || "").match(new RegExp(`(?:^|;\\s*)${name}=([^;]*)`));
+  return m ? decodeURIComponent(m[1]) : void 0;
+}
+function browserContext(req) {
+  const cookie = req.headers.cookie;
+  return {
+    fbp: readCookie(cookie, "_fbp"),
+    fbc: readCookie(cookie, "_fbc"),
+    ua: req.headers["user-agent"],
+    ip: req.ip,
+    url: req.headers.referer
+  };
+}
+async function send(event) {
+  if (!metaEnabled()) return;
+  const body = { data: [event] };
+  if (process.env.META_TEST_EVENT_CODE) body.test_event_code = process.env.META_TEST_EVENT_CODE;
+  try {
+    await axios.post(`https://graph.facebook.com/${API_VERSION}/${pixelId()}/events`, body, {
+      params: { access_token: token() },
+      timeout: 8e3
+    });
+  } catch (err) {
+    console.error("[CHILS & CO. META] Conversions API failed:", err?.response?.data?.error?.message || err?.message);
+  }
+}
+var userData = (ctx, extra = {}) => {
+  const u = {
+    client_ip_address: ctx.ip,
+    client_user_agent: ctx.ua,
+    fbp: ctx.fbp,
+    fbc: ctx.fbc,
+    ...extra
+  };
+  Object.keys(u).forEach((k) => (u[k] === void 0 || u[k] === "") && delete u[k]);
+  return u;
+};
+function sendAddToCart(ctx, eventId, data) {
+  return send({
+    event_name: "AddToCart",
+    event_time: Math.floor(Date.now() / 1e3),
+    event_id: eventId,
+    action_source: "website",
+    event_source_url: data.url || ctx.url,
+    user_data: userData(ctx),
+    custom_data: {
+      currency: "INR",
+      value: data.value,
+      content_type: "product",
+      content_ids: data.contentIds,
+      ...data.contentName ? { content_name: data.contentName } : {}
+    }
+  });
+}
+var sentPurchases = /* @__PURE__ */ new Set();
+var ORDER_META_KEYS = { fbp: "_meta_fbp", fbc: "_meta_fbc", ua: "_meta_ua", ip: "_meta_ip", url: "_meta_url" };
+function orderMetaFrom(ctx) {
+  return Object.keys(ORDER_META_KEYS).filter((k) => ctx[k]).map((k) => ({ key: ORDER_META_KEYS[k], value: String(ctx[k]) }));
+}
+function sendPurchase(order) {
+  if (!order?.id || !metaEnabled()) return;
+  const id = String(order.id);
+  if (sentPurchases.has(id)) return;
+  sentPurchases.add(id);
+  const meta = (key) => (order.meta_data || []).find((m) => m.key === key)?.value;
+  const ctx = {
+    fbp: meta(ORDER_META_KEYS.fbp),
+    fbc: meta(ORDER_META_KEYS.fbc),
+    ua: meta(ORDER_META_KEYS.ua),
+    ip: meta(ORDER_META_KEYS.ip),
+    url: meta(ORDER_META_KEYS.url)
+  };
+  const b = order.billing || {};
+  const items = order.line_items || [];
+  return send({
+    event_name: "Purchase",
+    event_time: Math.floor(Date.now() / 1e3),
+    event_id: `purchase-${id}`,
+    action_source: "website",
+    event_source_url: ctx.url || "https://chilsandco.com/checkout",
+    user_data: userData(ctx, {
+      em: hashed(b.email),
+      ph: phoneDigits(b.phone) ? sha256(phoneDigits(b.phone)) : void 0,
+      fn: hashed(b.first_name),
+      ln: hashed(b.last_name),
+      ct: hashed(String(b.city || "").replace(/\s+/g, "")),
+      st: hashed(String(b.state || "").replace(/\s+/g, "")),
+      zp: hashed(b.postcode),
+      country: hashed(b.country || "in"),
+      external_id: order.customer_id ? sha256(String(order.customer_id)) : void 0
+    }),
+    custom_data: {
+      currency: order.currency || "INR",
+      value: Number(order.total) || 0,
+      order_id: id,
+      content_type: "product",
+      content_ids: items.map((i) => String(i.product_id)),
+      contents: items.map((i) => ({ id: String(i.product_id), quantity: i.quantity, item_price: Number(i.price) || void 0 })),
+      num_items: items.reduce((n, i) => n + (Number(i.quantity) || 0), 0)
+    }
+  });
+}
+
+// server.ts
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest, CallbackType } from "pg-sdk-node";
 dotenv.config();
 var IS_PROD = process.env.NODE_ENV === "production";
-var JWT_SECRET = process.env.JWT_SECRET || "X1jtvpOK_J<.x%yEe3pm^pGN6!BwN_TLv@ibyA4Ix)3$+IA8I@=^G-5BRRqB9H_M";
+var JWT_SECRET = process.env.JWT_SECRET || "";
+if (!JWT_SECRET) console.error("[CHILS & CO.] JWT_SECRET is not set: customer logins will fail until it is added to the environment.");
 var __filename = fileURLToPath(import.meta.url);
-var __dirname = path.dirname(__filename);
+var __dirname = path2.dirname(__filename);
 function getWooCommerce() {
   const k = (process.env.WOOCOMMERCE_KEY || "").trim();
   const s = (process.env.WOOCOMMERCE_SECRET || "").trim();
@@ -61,11 +824,11 @@ function toSignalId(orderId) {
   const signalNum = numId % 9e5 + 1e5;
   return `CHLS-${signalNum}`;
 }
-async function wcSafeCall(wc, method, ...args) {
+async function wcSafeCall(wc2, method, ...args) {
   const maxRetries = 6;
   for (let i = 0; i <= maxRetries; i++) {
     try {
-      return await wc[method](...args);
+      return await wc2[method](...args);
     } catch (error) {
       const isTransient = error.code === "ECONNRESET" || error.code === "ETIMEDOUT" || error.code === "ECONNABORTED" || error.code === "EAI_AGAIN" || error.code === "ENOTFOUND" || error.code === "EHOSTUNREACH" || error.message?.includes("socket hang up") || error.message?.includes("timeout") || error.message?.includes("read ECONNRESET") || error.message?.includes("ERR_BAD_RESPONSE") || error.response && error.response.status >= 500;
       if (isTransient && i < maxRetries) {
@@ -115,8 +878,8 @@ async function verifyPhonePeTransaction(merchantTransactionId) {
     return null;
   }
   const endpoint = `/pg/v1/status/${merchantId}/${merchantTransactionId}`;
-  const checksum = crypto.createHash("sha256").update(endpoint + saltKey).digest("hex") + "###" + saltIndex;
-  const verifyRes = await axios.get(`https://api.phonepe.com/apis/hermes${endpoint}`, {
+  const checksum = crypto2.createHash("sha256").update(endpoint + saltKey).digest("hex") + "###" + saltIndex;
+  const verifyRes = await axios2.get(`https://api.phonepe.com/apis/hermes${endpoint}`, {
     timeout: 3e3,
     headers: {
       "Content-Type": "application/json",
@@ -128,12 +891,12 @@ async function verifyPhonePeTransaction(merchantTransactionId) {
 }
 function normalizePhonePeStatus(statusData) {
   if (!statusData) return null;
-  const state = statusData.state || statusData.data?.state;
+  const state2 = statusData.state || statusData.data?.state;
   const code = statusData.code || statusData.data?.code;
   const paymentDetail = statusData.paymentDetails?.[0] || statusData.data?.paymentDetails?.[0];
   const merchantTransactionId = statusData.merchantOrderId || statusData.originalMerchantOrderId || statusData.data?.merchantOrderId || statusData.data?.merchantTransactionId;
   const transactionId = statusData.transactionId || paymentDetail?.transactionId || statusData.orderId || statusData.data?.orderId || statusData.data?.transactionId;
-  if (state === "COMPLETED" || statusData.success && code === "PAYMENT_SUCCESS") {
+  if (state2 === "COMPLETED" || statusData.success && code === "PAYMENT_SUCCESS") {
     return {
       success: true,
       code: "PAYMENT_SUCCESS",
@@ -141,23 +904,23 @@ function normalizePhonePeStatus(statusData) {
       data: { merchantTransactionId, transactionId }
     };
   }
-  if (["FAILED", "CANCELLED", "EXPIRED"].includes(state) || ["PAYMENT_ERROR", "PAYMENT_DECLINED", "TIMED_OUT", "PAYMENT_FAILED"].includes(code)) {
+  if (["FAILED", "CANCELLED", "EXPIRED"].includes(state2) || ["PAYMENT_ERROR", "PAYMENT_DECLINED", "TIMED_OUT", "PAYMENT_FAILED"].includes(code)) {
     return {
       success: false,
-      code: code || `PAYMENT_${state}`,
-      message: statusData.message || state,
+      code: code || `PAYMENT_${state2}`,
+      message: statusData.message || state2,
       data: { merchantTransactionId, transactionId }
     };
   }
   return {
     success: false,
-    code: code || state || "PAYMENT_PENDING",
-    message: statusData.message || state || "Payment is still pending",
+    code: code || state2 || "PAYMENT_PENDING",
+    message: statusData.message || state2 || "Payment is still pending",
     data: { merchantTransactionId, transactionId }
   };
 }
-async function reconcilePendingPhonePeOrder(wc, order, fallbackTransactionId) {
-  if (!wc || !order?.id || !isPayableOrderStatus(order.status)) {
+async function reconcilePendingPhonePeOrder(wc2, order, fallbackTransactionId) {
+  if (!wc2 || !order?.id || !isPayableOrderStatus(order.status)) {
     return order;
   }
   const merchantTransactionId = getPhonePeTransactionId(order, fallbackTransactionId);
@@ -170,7 +933,7 @@ async function reconcilePendingPhonePeOrder(wc, order, fallbackTransactionId) {
     if (statusData.success && statusData.code === "PAYMENT_SUCCESS") {
       const transactionId = statusData.data?.transactionId;
       console.log(`[CHILS & CO.] Public status reconciled Order ${order.id} as PAID.`);
-      const update = await wcSafeCall(wc, "put", `orders/${order.id}`, {
+      const update = await wcSafeCall(wc2, "put", `orders/${order.id}`, {
         status: "processing",
         set_paid: true,
         transaction_id: transactionId,
@@ -183,7 +946,7 @@ async function reconcilePendingPhonePeOrder(wc, order, fallbackTransactionId) {
     }
     if (["PAYMENT_ERROR", "PAYMENT_DECLINED", "TIMED_OUT", "PAYMENT_FAILED"].includes(statusData.code)) {
       console.log(`[CHILS & CO.] Public status reconciled Order ${order.id} as FAILED (${statusData.code}).`);
-      const update = await wcSafeCall(wc, "put", `orders/${order.id}`, {
+      const update = await wcSafeCall(wc2, "put", `orders/${order.id}`, {
         status: "failed",
         customer_note: `Payment resolution: ${statusData.message || statusData.code}`
       });
@@ -207,7 +970,7 @@ async function startServer() {
   app.get("/api/ping", (req, res) => {
     res.json({ status: "alive", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
   });
-  const SETTINGS_FILE = path.join(process.cwd(), "settings.json");
+  const SETTINGS_FILE = path2.join(process.cwd(), "settings.json");
   const DEFAULT_SETTINGS = {
     mobileLink: "+91 7842 07 0404",
     address: "3rd Floor, Plot No. 38 & 39\nMatrusri Nagar, Miyapur\nHyderabad, Telangana \u2013 500049\nIndia",
@@ -229,11 +992,11 @@ async function startServer() {
   };
   app.get("/api/settings", (req, res) => {
     try {
-      if (!fs.existsSync(SETTINGS_FILE)) {
-        fs.writeFileSync(SETTINGS_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2));
+      if (!fs2.existsSync(SETTINGS_FILE)) {
+        fs2.writeFileSync(SETTINGS_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2));
         return res.json(DEFAULT_SETTINGS);
       }
-      const nodeContent = fs.readFileSync(SETTINGS_FILE, "utf-8");
+      const nodeContent = fs2.readFileSync(SETTINGS_FILE, "utf-8");
       const settings = JSON.parse(nodeContent);
       res.json({ ...DEFAULT_SETTINGS, ...settings });
     } catch (error) {
@@ -251,9 +1014,9 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "10mb", extended: true }));
   const authenticateToken = (req, res, next) => {
     const authHeader = req.headers["authorization"];
-    const token = authHeader && authHeader.split(" ")[1];
-    if (!token) return res.status(401).json({ message: "Access denied. No token provided." });
-    jwt.verify(token, JWT_SECRET, (err, user) => {
+    const token2 = authHeader && authHeader.split(" ")[1];
+    if (!token2) return res.status(401).json({ message: "Access denied. No token provided." });
+    jwt.verify(token2, JWT_SECRET, (err, user) => {
       if (err) return res.status(403).json({ message: "Invalid or expired token." });
       req.user = user;
       next();
@@ -265,11 +1028,11 @@ async function startServer() {
   });
   app.get("/api/health", async (req, res) => {
     try {
-      const wc = getWooCommerce();
+      const wc2 = getWooCommerce();
       let connectivity = "Not tested";
-      if (wc) {
+      if (wc2) {
         try {
-          const test = await wcSafeCall(wc, "get", "products", { per_page: 1 });
+          const test = await wcSafeCall(wc2, "get", "products", { per_page: 1 });
           connectivity = test.status === 200 ? "Success" : `Failed (Status: ${test.status})`;
         } catch (err) {
           connectivity = `Error: ${err.message}`;
@@ -279,7 +1042,7 @@ async function startServer() {
         status: "ok",
         env: process.env.NODE_ENV,
         woocommerce: {
-          configured: !!wc,
+          configured: !!wc2,
           url: process.env.WOOCOMMERCE_URL,
           hasKey: !!process.env.WOOCOMMERCE_KEY,
           hasSecret: !!process.env.WOOCOMMERCE_SECRET,
@@ -307,7 +1070,7 @@ async function startServer() {
     }
     try {
       const wpUrl = (process.env.WOOCOMMERCE_URL || "").replace(/\/$/, "");
-      const res = await axios.get(`${wpUrl}/wp-json/chils/v1/swatches`, { timeout: 4e3 });
+      const res = await axios2.get(`${wpUrl}/wp-json/chils/v1/swatches`, { timeout: 4e3 });
       if (res.data && typeof res.data === "object" && !res.data.code) {
         const swatches = {};
         Object.values(res.data).forEach((term) => {
@@ -920,8 +1683,8 @@ async function startServer() {
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
     try {
-      const wc = getWooCommerce();
-      if (!wc) {
+      const wc2 = getWooCommerce();
+      if (!wc2) {
         console.log("[CHILS & CO.] No WooCommerce credentials found. Serving mock data.");
         return res.json(mockProducts);
       }
@@ -931,7 +1694,7 @@ async function startServer() {
       let page = 1;
       let hasMore = true;
       while (hasMore) {
-        const response = await wcSafeCall(wc, "get", "products", {
+        const response = await wcSafeCall(wc2, "get", "products", {
           per_page: 100,
           page,
           status: "publish"
@@ -961,12 +1724,12 @@ async function startServer() {
   });
   app.get("/api/products/:id", async (req, res) => {
     try {
-      const wc = getWooCommerce();
-      if (!wc) {
+      const wc2 = getWooCommerce();
+      if (!wc2) {
         const mockProduct = mockProducts.find((product) => product.id === req.params.id);
         return mockProduct ? res.json(mockProduct) : res.status(404).json({ message: "Product not found (Mock Mode)" });
       }
-      const response = await wcSafeCall(wc, "get", `products/${req.params.id}`);
+      const response = await wcSafeCall(wc2, "get", `products/${req.params.id}`);
       let productData = response.data;
       console.log(`[CHILS & CO. DEBUG] Product ${req.params.id} Type: '${productData.type}'`);
       let resolvedMediaUrls = {};
@@ -976,7 +1739,7 @@ async function startServer() {
         let hasMore = true;
         while (hasMore) {
           console.log(`[CHILS & CO. DEBUG] Fetching variations page ${page} for product ${req.params.id}...`);
-          const variationsResponse = await wcSafeCall(wc, "get", `products/${req.params.id}/variations`, {
+          const variationsResponse = await wcSafeCall(wc2, "get", `products/${req.params.id}/variations`, {
             per_page: 100,
             page
           });
@@ -1036,7 +1799,7 @@ async function startServer() {
           console.log(`[CHILS & CO. DEBUG] Fetching ${unresolvedIds.length} unresolved media URLs from WordPress API...`);
           try {
             const wpUrl = (process.env.WOOCOMMERCE_URL || "").replace(/\/$/, "");
-            const mediaResponse = await axios.get(`${wpUrl}/wp-json/wp/v2/media`, {
+            const mediaResponse = await axios2.get(`${wpUrl}/wp-json/wp/v2/media`, {
               params: { include: unresolvedIds.join(",") }
             });
             if (mediaResponse.data && Array.isArray(mediaResponse.data)) {
@@ -1060,8 +1823,8 @@ async function startServer() {
   });
   app.get("/api/products/:id/reviews", async (req, res) => {
     try {
-      const wc = getWooCommerce();
-      if (!wc) {
+      const wc2 = getWooCommerce();
+      if (!wc2) {
         return res.json([
           {
             id: 1,
@@ -1083,7 +1846,7 @@ async function startServer() {
           }
         ]);
       }
-      const response = await wcSafeCall(wc, "get", "products/reviews", {
+      const response = await wcSafeCall(wc2, "get", "products/reviews", {
         product: req.params.id,
         status: "approved"
       });
@@ -1124,10 +1887,10 @@ async function startServer() {
       let finalReviewer = reviewer;
       let finalEmail = reviewer_email;
       const authHeader = req.headers["authorization"];
-      const token = authHeader && authHeader.split(" ")[1];
-      if (token) {
+      const token2 = authHeader && authHeader.split(" ")[1];
+      if (token2) {
         try {
-          const decoded = jwt.verify(token, JWT_SECRET);
+          const decoded = jwt.verify(token2, JWT_SECRET);
           const userObj = decoded.data?.user || decoded;
           finalReviewer = userObj.pseudoName || `${userObj.first_name || ""} ${userObj.last_name || ""}`.trim() || userObj.username || finalReviewer;
           finalEmail = userObj.email || finalEmail;
@@ -1147,17 +1910,17 @@ async function startServer() {
               const base64Content = imgBase64.replace(/^data:image\/\w+;base64,/, "");
               const buffer = Buffer.from(base64Content, "base64");
               const filename = `rev-${productId}-${Date.now()}-${index}.${ext}`;
-              const publicUploadDir = path.resolve(__dirname, "public", "uploads", "reviews");
-              const distUploadDir = path.resolve(__dirname, "dist", "uploads", "reviews");
-              if (!fs.existsSync(publicUploadDir)) {
-                fs.mkdirSync(publicUploadDir, { recursive: true });
+              const publicUploadDir = path2.resolve(__dirname, "public", "uploads", "reviews");
+              const distUploadDir = path2.resolve(__dirname, "dist", "uploads", "reviews");
+              if (!fs2.existsSync(publicUploadDir)) {
+                fs2.mkdirSync(publicUploadDir, { recursive: true });
               }
-              fs.writeFileSync(path.join(publicUploadDir, filename), buffer);
-              if (fs.existsSync(path.resolve(__dirname, "dist"))) {
-                if (!fs.existsSync(distUploadDir)) {
-                  fs.mkdirSync(distUploadDir, { recursive: true });
+              fs2.writeFileSync(path2.join(publicUploadDir, filename), buffer);
+              if (fs2.existsSync(path2.resolve(__dirname, "dist"))) {
+                if (!fs2.existsSync(distUploadDir)) {
+                  fs2.mkdirSync(distUploadDir, { recursive: true });
                 }
-                fs.writeFileSync(path.join(distUploadDir, filename), buffer);
+                fs2.writeFileSync(path2.join(distUploadDir, filename), buffer);
               }
               savedUrls.push(`/uploads/reviews/${filename}`);
             }
@@ -1169,8 +1932,8 @@ async function startServer() {
       const reviewPayload = savedUrls.length > 0 ? `${review}
 
 __IMAGES__${JSON.stringify(savedUrls)}` : review;
-      const wc = getWooCommerce();
-      if (!wc) {
+      const wc2 = getWooCommerce();
+      if (!wc2) {
         return res.json({
           id: Math.floor(Math.random() * 1e4),
           reviewer: finalReviewer,
@@ -1189,7 +1952,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         rating: Number(rating),
         status: "approved"
       };
-      const response = await wcSafeCall(wc, "post", "products/reviews", reviewData);
+      const response = await wcSafeCall(wc2, "post", "products/reviews", reviewData);
       let resReview = response.data.review.replace(/<[^>]*>?/gm, "").trim();
       let resImages = [];
       const imgMatch = resReview.match(/__IMAGES__(\[.*?\])/);
@@ -1214,17 +1977,46 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       res.status(500).json({ message: "Failed to submit product review" });
     }
   });
+  app.post("/api/coupons/validate", async (req, res) => {
+    try {
+      const wc2 = getWooCommerce();
+      const code = String(req.body?.code || "").trim().toLowerCase().replace(/\s+/g, "");
+      if (!wc2 || !code) return res.status(400).json({ valid: false, message: "That code isn't valid." });
+      const { data } = await wcSafeCall(wc2, "get", "coupons", { code });
+      const coupon = Array.isArray(data) ? data[0] : void 0;
+      const problem = couponProblem(coupon, Number(req.body?.subtotal) || 0, !!req.body?.hasSet);
+      if (problem) return res.json({ valid: false, message: problem });
+      return res.json({ valid: true, code: coupon.code, discountType: coupon.discount_type, amount: Number(coupon.amount) });
+    } catch (err) {
+      console.error("[CHILS & CO.] Coupon check failed:", err);
+      return res.status(500).json({ valid: false, message: "We couldn't check that code. Please try again." });
+    }
+  });
+  app.post("/api/meta/event", (req, res) => {
+    const { event, eventId, value, contentIds, contentName, url } = req.body || {};
+    if (event !== "AddToCart" || typeof eventId !== "string" || eventId.length > 100) {
+      return res.status(400).json({ ok: false });
+    }
+    const ids = Array.isArray(contentIds) ? contentIds.slice(0, 20).map(String) : [];
+    sendAddToCart(browserContext(req), eventId, {
+      value: Math.max(0, Math.min(Number(value) || 0, 1e5)),
+      contentIds: ids,
+      contentName: typeof contentName === "string" ? contentName.slice(0, 200) : void 0,
+      url: typeof url === "string" ? url.slice(0, 500) : void 0
+    });
+    res.status(202).json({ ok: true });
+  });
   app.post("/api/checkout/create-order", async (req, res) => {
     try {
-      const { amount, currency, customerDetails, lineItems, shippingMethod } = req.body;
-      const wc = getWooCommerce();
+      const { amount, currency, customerDetails, lineItems, shippingMethod, couponCode } = req.body;
+      const wc2 = getWooCommerce();
       if (!req.headers.authorization) {
         return res.status(401).json({ message: "Authentication required: Please sign in or register to place an order." });
       }
       let customerId = 0;
-      const token = req.headers.authorization.split(" ")[1];
+      const token2 = req.headers.authorization.split(" ")[1];
       try {
-        const decoded = jwt.verify(token, JWT_SECRET);
+        const decoded = jwt.verify(token2, JWT_SECRET);
         customerId = decoded.data?.user?.id || decoded.id || 0;
       } catch (e) {
         console.error("JWT verification failed for checkout:", e);
@@ -1255,14 +2047,61 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
           flattenedLineItems.push(item);
         }
       });
-      if (wc) {
-        const isPickup = shippingMethod === "pickup";
+      if (wc2) {
+        const needsLookup = flattenedLineItems.filter((item) => item.selectedSize || item.selectedColor);
+        const lookups = /* @__PURE__ */ new Map();
+        for (const item of needsLookup) {
+          const id = String(item.id);
+          if (!lookups.has(id)) {
+            lookups.set(id, (async () => {
+              const all = [];
+              for (let page = 1; ; page++) {
+                const { data } = await wcSafeCall(wc2, "get", `products/${id}/variations`, { per_page: 100, page });
+                if (!Array.isArray(data) || data.length === 0) break;
+                all.push(...data.map(mapWooVariation));
+                if (data.length < 100) break;
+              }
+              return all;
+            })().catch((err) => {
+              console.warn(`[CHILS & CO.] Could not load variations for product ${id}: ${err.message}`);
+              return [];
+            }));
+          }
+        }
+        await Promise.all(needsLookup.map(async (item) => {
+          item.variations = await lookups.get(String(item.id));
+        }));
+        const productPrices = /* @__PURE__ */ new Map();
+        await Promise.all([...new Set(flattenedLineItems.map((item) => String(item.id)))].map(async (id) => {
+          const { data } = await wcSafeCall(wc2, "get", `products/${id}`);
+          productPrices.set(id, data?.price);
+        }));
+        for (const item of flattenedLineItems) {
+          const match = Array.isArray(item.variations) && item.variations.length ? findVariation(item.variations, item.selectedSize, item.selectedColor) : void 0;
+          const price = trustedPrice(match, productPrices.get(String(item.id)));
+          if (price === null) {
+            return res.status(409).json({ message: `${item.name || "An item"} is unavailable right now. Please remove it and try again.` });
+          }
+          item.price = price;
+        }
+        let couponLines = [];
+        if (couponCode) {
+          const code = String(couponCode).trim().toLowerCase().replace(/\s+/g, "");
+          const { data } = await wcSafeCall(wc2, "get", "coupons", { code });
+          const coupon = Array.isArray(data) ? data[0] : void 0;
+          const subtotal = flattenedLineItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+          const hasSet = lineItems.some((item) => item.isCombo);
+          const problem = couponProblem(coupon, subtotal, hasSet);
+          if (problem) return res.status(400).json({ message: problem });
+          couponLines = [{ code: coupon.code }];
+        }
+        const isPickup2 = shippingMethod === "pickup";
         const realShippingCount = flattenedLineItems.reduce((sum, item) => {
           if (item.id && item.id.toString() === "1672") return sum;
           return sum + item.quantity;
         }, 0);
         let shippingFee = 0;
-        if (!isPickup && realShippingCount > 0) {
+        if (!isPickup2 && realShippingCount > 0) {
           if (realShippingCount <= 2) {
             shippingFee = 80;
           } else {
@@ -1287,7 +2126,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
             email: customerDetails.email,
             phone: customerDetails.phone
           },
-          shipping: isPickup ? {
+          shipping: isPickup2 ? {
             first_name: customerDetails.firstName,
             last_name: customerDetails.lastName,
             address_1: "3rd Floor, Plot No. 38 & 39, Matrusri Nagar, Miyapur",
@@ -1307,14 +2146,13 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
           line_items: flattenedLineItems.map((item) => {
             let variationId = void 0;
             if (item.variations && Array.isArray(item.variations)) {
-              const match = item.variations.find((v) => {
-                const matchesSize = item.selectedSize ? v.attributes?.size === item.selectedSize : true;
-                const matchesColor = item.selectedColor ? v.attributes?.color === item.selectedColor : true;
-                return matchesSize && matchesColor;
-              });
+              const match = findVariation(item.variations, item.selectedSize, item.selectedColor);
               if (match) {
-                variationId = parseInt(match.id, 10);
+                variationId = parseInt(String(match.id), 10);
               }
+            }
+            if (!variationId && item.selectedSize) {
+              console.warn(`[CHILS & CO.] No variation found for product ${item.id} (size ${item.selectedSize}, colour ${item.selectedColor || "none"})`);
             }
             const meta_data = [];
             if (item.selectedSize) {
@@ -1348,11 +2186,12 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
           }),
           shipping_lines: [
             {
-              method_id: isPickup ? "local_pickup" : "flat_rate",
-              method_title: isPickup ? "Collect in Store" : "Home Delivery",
+              method_id: isPickup2 ? "local_pickup" : "flat_rate",
+              method_title: isPickup2 ? "Collect in Store" : "Home Delivery",
               total: shippingFee.toString()
             }
           ],
+          ...couponLines.length ? { coupon_lines: couponLines } : {},
           meta_data: [
             {
               key: "Packaging Selection",
@@ -1360,16 +2199,18 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
             },
             {
               key: "Delivery Method",
-              value: isPickup ? "Collect in Store" : "Home Delivery"
-            }
+              value: isPickup2 ? "Collect in Store" : "Home Delivery"
+            },
+            // Browser identifiers for the Meta Purchase event sent once this order is paid
+            ...orderMetaFrom(browserContext(req))
           ]
         };
         console.log("[CHILS & CO.] Creating WooCommerce Order:", orderData);
-        const response = await wcSafeCall(wc, "post", "orders", orderData);
+        const response = await wcSafeCall(wc2, "post", "orders", orderData);
         invalidateProductsCache();
         const merchantTransactionId = `${response.data.id}_${Date.now()}`;
         try {
-          await wcSafeCall(wc, "put", `orders/${response.data.id}`, {
+          await wcSafeCall(wc2, "put", `orders/${response.data.id}`, {
             meta_data: [
               { key: "_phonepe_transaction_id", value: merchantTransactionId }
             ]
@@ -1382,6 +2223,8 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
           // Return WC Order ID
           merchantTransactionId,
           // Also return the unique ID
+          total: response.data.total,
+          // What WooCommerce will actually charge
           amount: amount * 100,
           currency: currency || "INR",
           receipt: `receipt_${response.data.id}`
@@ -1401,7 +2244,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
   });
   app.post("/api/checkout/phonepe/pay", async (req, res) => {
     try {
-      const { amount, merchantTransactionId, merchantUserId, mobileNumber } = req.body;
+      const { merchantTransactionId } = req.body;
       const phonePeClient = getPhonePeClient();
       if (!phonePeClient) {
         return res.status(400).json({
@@ -1418,7 +2261,19 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       const orderId = merchantTransactionId.split("_")[0];
       const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?signal=${toSignalId(orderId)}`;
       const callbackUrl = process.env.PHONEPE_CALLBACK_URL || `${currentOrigin}/api/checkout/phonepe/callback`;
-      const amountPaise = Math.max(100, Math.round(Number(amount) * 100));
+      const wc2 = getWooCommerce();
+      if (!wc2) {
+        return res.status(503).json({ success: false, message: "Payments are unavailable right now. Please try again." });
+      }
+      const { data: wcOrder } = await wcSafeCall(wc2, "get", `orders/${orderId}`);
+      if (!["pending", "failed"].includes(wcOrder?.status)) {
+        return res.status(409).json({ success: false, message: "This order can't be paid again." });
+      }
+      const orderTotal = parseFloat(wcOrder.total);
+      if (!Number.isFinite(orderTotal) || orderTotal <= 0) {
+        return res.status(409).json({ success: false, message: "We couldn't confirm this order's total. Please try again." });
+      }
+      const amountPaise = Math.round(orderTotal * 100);
       console.log(`[CHILS & CO.] PhonePe SDK - Initiating Checkout:
         - Transaction ID: ${merchantTransactionId}
         - Base Domain: ${currentOrigin}
@@ -1455,12 +2310,12 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       if (signal !== expectedSignal) {
         return res.status(403).json({ success: false, message: "Signal validation failed." });
       }
-      const wc = getWooCommerce();
-      if (!wc) {
+      const wc2 = getWooCommerce();
+      if (!wc2) {
         return res.status(400).json({ success: false, message: "WooCommerce not configured." });
       }
       console.log(`[CHILS & CO.] Initiating payment retry for Order ID: ${orderId}`);
-      const orderResponse = await wcSafeCall(wc, "get", `orders/${orderId}`);
+      const orderResponse = await wcSafeCall(wc2, "get", `orders/${orderId}`);
       const order = orderResponse.data;
       if (!order) {
         return res.status(404).json({ success: false, message: "Order not found." });
@@ -1474,7 +2329,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       }
       const merchantTransactionId = `${orderId}_${Date.now()}`;
       console.log(`[CHILS & CO.] Updating WC Order ${orderId} status to 'pending' with new transaction ID: ${merchantTransactionId}`);
-      await wcSafeCall(wc, "put", `orders/${orderId}`, {
+      await wcSafeCall(wc2, "put", `orders/${orderId}`, {
         status: "pending",
         meta_data: [
           { key: "_phonepe_transaction_id", value: merchantTransactionId }
@@ -1543,7 +2398,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
             const fullTransactionId = payload.originalMerchantOrderId || payload.merchantOrderId;
             const transactionId = payload.paymentDetails?.[0]?.transactionId || payload.transactionId || payload.orderId;
             const orderId = fullTransactionId?.startsWith("RMA_") ? fullTransactionId.split("_")[1] : fullTransactionId?.split("_")[0];
-            const wc = getWooCommerce();
+            const wc2 = getWooCommerce();
             if (fullTransactionId?.startsWith("RMA_")) {
               console.log(`[CHILS & CO.] SDK callback for RMA Swap Delta. Tx: ${fullTransactionId}`);
               if (payload.state === "COMPLETED") {
@@ -1574,8 +2429,8 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
             }
             if (payload.state === "COMPLETED") {
               console.log(`[CHILS & CO.] SDK verified COMPLETED for order: ${orderId}`);
-              if (wc && orderId) {
-                const updateRes = await wcSafeCall(wc, "put", `orders/${orderId}`, {
+              if (wc2 && orderId) {
+                const updateRes = await wcSafeCall(wc2, "put", `orders/${orderId}`, {
                   status: "processing",
                   set_paid: true,
                   transaction_id: transactionId,
@@ -1586,12 +2441,12 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
                 });
               }
             } else {
-              const state = payload.state;
-              console.log(`[CHILS & CO.] SDK verified ${state} for order: ${orderId}`);
-              if (wc && orderId) {
-                await wcSafeCall(wc, "put", `orders/${orderId}`, {
+              const state2 = payload.state;
+              console.log(`[CHILS & CO.] SDK verified ${state2} for order: ${orderId}`);
+              if (wc2 && orderId) {
+                await wcSafeCall(wc2, "put", `orders/${orderId}`, {
                   status: "failed",
-                  note: `PhonePe SDK Verified ${state}. Ref: ${transactionId}`
+                  note: `PhonePe SDK Verified ${state2}. Ref: ${transactionId}`
                 });
               }
             }
@@ -1611,7 +2466,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       }
       if (xVerifyHeader) {
         const stringToHash = base64Response + saltKey;
-        const sha256Hash = crypto.createHash("sha256").update(stringToHash).digest("hex");
+        const sha256Hash = crypto2.createHash("sha256").update(stringToHash).digest("hex");
         const expectedVerify = sha256Hash + "###" + saltIndex;
         if (xVerifyHeader !== expectedVerify) {
           console.error("[CHILS & CO.] PhonePe Callback Signature Mismatch!");
@@ -1653,11 +2508,11 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
           return res.status(200).send("OK");
         }
         console.log(`[CHILS & CO.] Payment CONFIRMED for Order: ${orderId}. Full ID: ${fullTransactionId}. Trans ID: ${transactionId}`);
-        const wc = getWooCommerce();
-        if (wc && orderId) {
+        const wc2 = getWooCommerce();
+        if (wc2 && orderId) {
           try {
             console.log(`[CHILS & CO.] Updating WooCommerce Order ${orderId} to 'processing'`);
-            const updateRes = await wcSafeCall(wc, "put", `orders/${orderId}`, {
+            const updateRes = await wcSafeCall(wc2, "put", `orders/${orderId}`, {
               status: "processing",
               set_paid: true,
               transaction_id: transactionId,
@@ -1682,10 +2537,10 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         }
         console.log(`[CHILS & CO.] Payment FAILED/CANCELLED for Order: ${orderId}. Reason: ${reason}`);
         if (orderId) {
-          const wc = getWooCommerce();
-          if (wc) {
+          const wc2 = getWooCommerce();
+          if (wc2) {
             try {
-              await wcSafeCall(wc, "put", `orders/${orderId}`, {
+              await wcSafeCall(wc2, "put", `orders/${orderId}`, {
                 status: "failed",
                 note: `PhonePe Payment Failed/Cancelled. Reason: ${reason}`
               });
@@ -1710,8 +2565,8 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       if (!email || !password) {
         return res.status(400).json({ message: "Email and password are required for identity creation." });
       }
-      const wc = getWooCommerce();
-      if (!wc) {
+      const wc2 = getWooCommerce();
+      if (!wc2) {
         console.log("[CHILS & CO.] No WooCommerce credentials. Registering mock customer:", email);
         return res.json({
           id: Math.floor(Math.random() * 1e3),
@@ -1730,7 +2585,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         username: email.split("@")[0].trim().toLowerCase()
       };
       console.log(`[CHILS & CO.] Transmitting customer data to WooCommerce...`);
-      const response = await wcSafeCall(wc, "post", "customers", customerData);
+      const response = await wcSafeCall(wc2, "post", "customers", customerData);
       console.log(`[CHILS & CO.] WooCommerce Registration Successful: ${response.data.id}`);
       triggerWelcomeEmail(response.data.email, response.data.first_name).catch((err) => {
         console.error("[CHILS & CO. EMAIL] Welcome email failed:", err);
@@ -1776,7 +2631,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
           message: data.message || "Invalid credentials"
         });
       }
-      const wc = getWooCommerce();
+      const wc2 = getWooCommerce();
       let customerId = 0;
       let firstName = "";
       let lastName = "";
@@ -1786,10 +2641,10 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       let pseudoName = "";
       let wishlist = [];
       let cart = [];
-      if (wc) {
+      if (wc2) {
         try {
           console.log(`[CHILS & CO.] Looking up WC customer ID for: ${data.user_email}`);
-          const search = await wcSafeCall(wc, "get", "customers", { email: data.user_email });
+          const search = await wcSafeCall(wc2, "get", "customers", { email: data.user_email });
           if (search && Array.isArray(search.data) && search.data.length > 0) {
             const customer = search.data[0];
             customerId = customer.id;
@@ -1882,7 +2737,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       }
       const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "162390818288-j2fcothougcpmok54mojqmn7fq2i5goc.apps.googleusercontent.com";
       console.log("[CHILS & CO.] Verifying Google token...");
-      const verifyRes = await axios.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`).catch((err) => {
+      const verifyRes = await axios2.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`).catch((err) => {
         console.error("Google verify token request failed:", err.message);
         throw new Error("Invalid or expired Google authentication token.");
       });
@@ -1897,13 +2752,13 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       if (!email) {
         return res.status(400).json({ message: "Google profile does not provide a valid email address." });
       }
-      const wc = getWooCommerce();
+      const wc2 = getWooCommerce();
       let customerId = 0;
       let customer = null;
-      if (wc) {
+      if (wc2) {
         try {
           console.log(`[CHILS & CO.] Searching WooCommerce for email: ${email}`);
-          const search = await wcSafeCall(wc, "get", "customers", { email });
+          const search = await wcSafeCall(wc2, "get", "customers", { email });
           if (search && Array.isArray(search.data) && search.data.length > 0) {
             customer = search.data[0];
             customerId = customer.id;
@@ -1921,7 +2776,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
               last_name: lastName,
               username: email.split("@")[0]
             };
-            const response = await wcSafeCall(wc, "post", "customers", newCustomerData);
+            const response = await wcSafeCall(wc2, "post", "customers", newCustomerData);
             customer = response.data;
             customerId = customer.id;
             console.log(`[CHILS & CO.] Successfully created WooCommerce customer: ${customerId}`);
@@ -1931,7 +2786,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
           } catch (createErr) {
             console.error("[CHILS & CO.] WooCommerce account auto-creation failed:", createErr.response?.data || createErr.message);
             if (createErr.response?.data?.code === "registration-error-email-exists") {
-              const finalSearch = await wcSafeCall(wc, "get", "customers", { search: email });
+              const finalSearch = await wcSafeCall(wc2, "get", "customers", { search: email });
               const exactMatch = Array.isArray(finalSearch.data) ? finalSearch.data.find((c) => c.email?.toLowerCase() === email) : null;
               if (exactMatch) {
                 customer = exactMatch;
@@ -2031,20 +2886,20 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       const { email: rawEmail, pseudoName } = req.body;
       const email = (rawEmail || "").toLowerCase();
       if (!email) return res.status(400).json({ message: "Email is required" });
-      const wc = getWooCommerce();
-      if (!wc) {
+      const wc2 = getWooCommerce();
+      if (!wc2) {
         console.log("[CHILS & CO.] No WooCommerce credentials. Waitlist signal mocked.");
         return res.json({ success: true, message: "Waitlist signal received (Mock Mode)" });
       }
       console.log(`[CHILS & CO.] Processing Bespoke join for: ${email}`, { pseudoName });
       let customerId = null;
       try {
-        const response = await wcSafeCall(wc, "get", "customers", { email });
+        const response = await wcSafeCall(wc2, "get", "customers", { email });
         if (response && Array.isArray(response.data) && response.data.length > 0) {
           customerId = response.data[0].id;
           console.log(`[CHILS & CO.] Found exact customer match: ${customerId}`);
         } else {
-          const search = await wcSafeCall(wc, "get", "customers", { search: email });
+          const search = await wcSafeCall(wc2, "get", "customers", { search: email });
           if (search && Array.isArray(search.data) && search.data.length > 0) {
             const match = search.data.find((c) => c.email?.toLowerCase() === email.toLowerCase());
             if (match) {
@@ -2064,7 +2919,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       }
       if (customerId) {
         console.log(`[CHILS & CO.] Tagging customer ${customerId} for Bespoke waitlist.`);
-        const response = await wcSafeCall(wc, "put", `customers/${customerId}`, {
+        const response = await wcSafeCall(wc2, "put", `customers/${customerId}`, {
           meta_data: metaToUpdate
         });
         const updatedCustomer = response.data;
@@ -2093,7 +2948,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         });
       }
       try {
-        const response = await wcSafeCall(wc, "post", "customers", {
+        const response = await wcSafeCall(wc2, "post", "customers", {
           email,
           username: email.split("@")[0],
           meta_data: metaToUpdate
@@ -2115,10 +2970,10 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         const errorData = createError.response?.data;
         if (errorData?.code === "registration-error-email-exists" || errorData?.code === "customer_invalid_email") {
           console.log(`[CHILS & CO.] Email exists during create. Final recovery search for: ${email}`);
-          const finalSearch = await wcSafeCall(wc, "get", "customers", { search: email });
+          const finalSearch = await wcSafeCall(wc2, "get", "customers", { search: email });
           const exactMatch = Array.isArray(finalSearch.data) ? finalSearch.data.find((c) => c.email?.toLowerCase() === email.toLowerCase()) : null;
           if (exactMatch) {
-            const response = await wcSafeCall(wc, "put", `customers/${exactMatch.id}`, {
+            const response = await wcSafeCall(wc2, "put", `customers/${exactMatch.id}`, {
               meta_data: metaToUpdate
             });
             const updatedCustomer = response.data;
@@ -2162,12 +3017,12 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       const { email: rawEmail } = req.body;
       const email = (rawEmail || "").toLowerCase().trim();
       if (!email) return res.status(400).json({ message: "Email is required" });
-      const wc = getWooCommerce();
-      if (!wc) return res.json({ onWaitlist: false });
+      const wc2 = getWooCommerce();
+      if (!wc2) return res.json({ onWaitlist: false });
       console.log(`[CHILS & CO.] Status check search for: ${email}`);
       let customer = null;
       try {
-        const response = await wcSafeCall(wc, "get", "customers", { search: email, per_page: 20 });
+        const response = await wcSafeCall(wc2, "get", "customers", { search: email, per_page: 20 });
         if (response && Array.isArray(response.data)) {
           customer = response.data.find(
             (c) => c.email?.toLowerCase() === email || c.billing?.email?.toLowerCase() === email
@@ -2208,9 +3063,9 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
   });
   app.get("/api/stats", async (req, res) => {
     try {
-      const wc = getWooCommerce();
-      if (!wc) return res.json({ waitlistPool: 0, coCreators: 0 });
-      const response = await wcSafeCall(wc, "get", "customers", { per_page: 50 });
+      const wc2 = getWooCommerce();
+      if (!wc2) return res.json({ waitlistPool: 0, coCreators: 0 });
+      const response = await wcSafeCall(wc2, "get", "customers", { per_page: 50 });
       const totalUsers = parseInt(response.headers?.["x-wp-total"] || "0", 10);
       const customers = response?.data || [];
       const waitlistCount = customers.filter(
@@ -2238,19 +3093,19 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       const { email: rawEmail, pseudoName } = req.body;
       const email = (rawEmail || "").toLowerCase();
       if (!email) return res.status(400).json({ message: "Email is required" });
-      const wc = getWooCommerce();
-      if (!wc) {
+      const wc2 = getWooCommerce();
+      if (!wc2) {
         console.log("[CHILS & CO.] No WooCommerce credentials. Co-Creator interest mocked.");
         return res.json({ success: true, message: "Interest signal received (Mock Mode)" });
       }
       console.log(`[CHILS & CO.] Processing Co-Creator interest for: ${email}`, { pseudoName });
       let customerId = null;
       try {
-        const response = await wcSafeCall(wc, "get", "customers", { email });
+        const response = await wcSafeCall(wc2, "get", "customers", { email });
         if (response && Array.isArray(response.data) && response.data.length > 0) {
           customerId = response.data[0].id;
         } else {
-          const search = await wcSafeCall(wc, "get", "customers", { search: email });
+          const search = await wcSafeCall(wc2, "get", "customers", { search: email });
           if (search && Array.isArray(search.data) && search.data.length > 0) {
             const match = search.data.find((c) => c.email?.toLowerCase() === email.toLowerCase());
             if (match) customerId = match.id;
@@ -2266,7 +3121,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         metaToUpdate.push({ key: "pseudo_name", value: pseudoName });
       }
       if (customerId) {
-        const response = await wcSafeCall(wc, "put", `customers/${customerId}`, {
+        const response = await wcSafeCall(wc2, "put", `customers/${customerId}`, {
           meta_data: metaToUpdate
         });
         const updatedCustomer = response.data;
@@ -2293,7 +3148,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         });
       }
       try {
-        const response = await wcSafeCall(wc, "post", "customers", {
+        const response = await wcSafeCall(wc2, "post", "customers", {
           email,
           username: email.split("@")[0],
           meta_data: metaToUpdate
@@ -2312,10 +3167,10 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       } catch (createError) {
         const errorData = createError.response?.data;
         if (errorData?.code === "registration-error-email-exists" || errorData?.code === "customer_invalid_email") {
-          const finalSearch = await wcSafeCall(wc, "get", "customers", { search: email });
+          const finalSearch = await wcSafeCall(wc2, "get", "customers", { search: email });
           const exactMatch = finalSearch && Array.isArray(finalSearch.data) ? finalSearch.data.find((c) => c.email?.toLowerCase() === email.toLowerCase()) : null;
           if (exactMatch) {
-            await wcSafeCall(wc, "put", `customers/${exactMatch.id}`, {
+            await wcSafeCall(wc2, "put", `customers/${exactMatch.id}`, {
               meta_data: metaToUpdate
             });
             return res.json({
@@ -2352,14 +3207,14 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       const { email: rawEmail } = req.body;
       const email = (rawEmail || "").toLowerCase().trim();
       if (!email) return res.status(400).json({ message: "Email is required" });
-      const wc = getWooCommerce();
-      if (!wc) return res.json({ coCreatorInterest: false });
+      const wc2 = getWooCommerce();
+      if (!wc2) return res.json({ coCreatorInterest: false });
       console.log(`[CHILS & CO.] Co-Creator status check search for: ${email}`);
       res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
       res.setHeader("Pragma", "no-cache");
       res.setHeader("Expires", "0");
       let customer = null;
-      const response = await wcSafeCall(wc, "get", "customers", { search: email });
+      const response = await wcSafeCall(wc2, "get", "customers", { search: email });
       if (response && Array.isArray(response.data)) {
         customer = response.data.find((c) => c.email?.toLowerCase() === email);
       }
@@ -2406,28 +3261,28 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
           const base64Content = parts[1];
           const buffer = Buffer.from(base64Content, "base64");
           const filename = `design-${Date.now()}-${Math.floor(Math.random() * 1e3)}.${ext}`;
-          const publicUploadDir = path.resolve(__dirname, "public", "uploads", "custom_designs");
-          const distUploadDir = path.resolve(__dirname, "dist", "uploads", "custom_designs");
-          if (!fs.existsSync(publicUploadDir)) {
-            fs.mkdirSync(publicUploadDir, { recursive: true });
+          const publicUploadDir = path2.resolve(__dirname, "public", "uploads", "custom_designs");
+          const distUploadDir = path2.resolve(__dirname, "dist", "uploads", "custom_designs");
+          if (!fs2.existsSync(publicUploadDir)) {
+            fs2.mkdirSync(publicUploadDir, { recursive: true });
           }
-          fs.writeFileSync(path.join(publicUploadDir, filename), buffer);
-          if (fs.existsSync(path.resolve(__dirname, "dist"))) {
-            if (!fs.existsSync(distUploadDir)) {
-              fs.mkdirSync(distUploadDir, { recursive: true });
+          fs2.writeFileSync(path2.join(publicUploadDir, filename), buffer);
+          if (fs2.existsSync(path2.resolve(__dirname, "dist"))) {
+            if (!fs2.existsSync(distUploadDir)) {
+              fs2.mkdirSync(distUploadDir, { recursive: true });
             }
-            fs.writeFileSync(path.join(distUploadDir, filename), buffer);
+            fs2.writeFileSync(path2.join(distUploadDir, filename), buffer);
           }
           fileUrl = `/uploads/custom_designs/${filename}`;
         } catch (err) {
           console.error("[CHILS & CO.] Failed to save design file:", err);
         }
       }
-      const QUOTES_FILE = path.join(process.cwd(), "quotes.json");
+      const QUOTES_FILE = path2.join(process.cwd(), "quotes.json");
       let quotes = [];
-      if (fs.existsSync(QUOTES_FILE)) {
+      if (fs2.existsSync(QUOTES_FILE)) {
         try {
-          quotes = JSON.parse(fs.readFileSync(QUOTES_FILE, "utf-8"));
+          quotes = JSON.parse(fs2.readFileSync(QUOTES_FILE, "utf-8"));
         } catch (e) {
           quotes = [];
         }
@@ -2444,7 +3299,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         timestamp: (/* @__PURE__ */ new Date()).toISOString()
       };
       quotes.push(newQuote);
-      fs.writeFileSync(QUOTES_FILE, JSON.stringify(quotes, null, 2));
+      fs2.writeFileSync(QUOTES_FILE, JSON.stringify(quotes, null, 2));
       console.log(`[CHILS & CO.] Custom quote request logged for ${email}`);
       res.json({ success: true, message: "Quote request successfully processed", quote: newQuote });
     } catch (error) {
@@ -2459,9 +3314,9 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       if (!adminEmails.some((email) => email.toLowerCase() === userEmail.toLowerCase())) {
         return res.status(403).json({ message: "Access Denied: Admin clearance required." });
       }
-      const wc = getWooCommerce();
-      if (!wc) return res.json([]);
-      const response = await wcSafeCall(wc, "get", "customers", {
+      const wc2 = getWooCommerce();
+      if (!wc2) return res.json([]);
+      const response = await wcSafeCall(wc2, "get", "customers", {
         per_page: 100,
         role: "all"
       });
@@ -2500,31 +3355,31 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
   });
   app.get("/api/auth/me", authenticateToken, async (req, res) => {
     try {
-      const wc = getWooCommerce();
-      if (!wc) return res.json(req.user);
+      const wc2 = getWooCommerce();
+      if (!wc2) return res.json(req.user);
       let customer = null;
       let customerIdFromToken = req.user?.id || req.user?.data?.user?.id || req.user?.user_id;
       const email = (req.user?.email || req.user?.data?.user?.user_email || "").toLowerCase();
       try {
         if (customerIdFromToken) {
-          const idResponse = await wcSafeCall(wc, "get", `customers/${customerIdFromToken}`);
+          const idResponse = await wcSafeCall(wc2, "get", `customers/${customerIdFromToken}`);
           if (idResponse && idResponse.status === 200 && idResponse.data?.id) {
             customer = idResponse.data;
           }
         }
         if (!customer && email) {
-          const directResponse = await wcSafeCall(wc, "get", "customers", { email });
+          const directResponse = await wcSafeCall(wc2, "get", "customers", { email });
           if (directResponse && Array.isArray(directResponse.data) && directResponse.data.length > 0) {
             customer = directResponse.data[0];
           } else {
-            const searchResponse = await wcSafeCall(wc, "get", "customers", { search: email });
+            const searchResponse = await wcSafeCall(wc2, "get", "customers", { search: email });
             if (searchResponse && Array.isArray(searchResponse.data)) {
               customer = searchResponse.data.find((c) => c.email?.toLowerCase() === email.toLowerCase());
             }
           }
           if (!customer) {
             const username = email.split("@")[0];
-            const usernameResponse = await wcSafeCall(wc, "get", "customers", { search: username });
+            const usernameResponse = await wcSafeCall(wc2, "get", "customers", { search: username });
             if (usernameResponse && Array.isArray(usernameResponse.data)) {
               customer = usernameResponse.data.find(
                 (c) => c.email?.toLowerCase() === email.toLowerCase() || c.username?.toLowerCase() === username.toLowerCase()
@@ -2605,8 +3460,8 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         return res.status(400).json({ message: "A valid email address is required." });
       }
       const sanitizedPhone = (phone || "").replace(/\D/g, "").slice(-10);
-      const wc = getWooCommerce();
-      if (!wc) {
+      const wc2 = getWooCommerce();
+      if (!wc2) {
         return res.json({ ...req.user, first_name: first_name.trim(), last_name: last_name.trim(), email: email.toLowerCase().trim() });
       }
       const customerId = req.user?.id || req.user?.data?.user?.id;
@@ -2626,7 +3481,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       if (sanitizedPhone) {
         updatePayload.billing.phone = sanitizedPhone;
       }
-      const response = await wcSafeCall(wc, "put", `customers/${customerId}`, updatePayload);
+      const response = await wcSafeCall(wc2, "put", `customers/${customerId}`, updatePayload);
       const updatedCustomer = response.data;
       const getMetaValue = (metaData, key) => {
         const match = metaData?.find((m) => {
@@ -2665,8 +3520,8 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       if (!Array.isArray(wishlist)) {
         return res.status(400).json({ message: "Wishlist must be an array of products." });
       }
-      const wc = getWooCommerce();
-      if (!wc) {
+      const wc2 = getWooCommerce();
+      if (!wc2) {
         return res.json({ success: true, message: "Wishlist updated (Mock Mode)", wishlist });
       }
       const customerId = req.user?.id || req.user?.data?.user?.id || req.user?.user_id;
@@ -2674,7 +3529,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         return res.status(400).json({ message: "Customer ID not found in token." });
       }
       console.log(`[CHILS & CO.] Updating wishlist for customer ${customerId}.`);
-      await wcSafeCall(wc, "put", `customers/${customerId}`, {
+      await wcSafeCall(wc2, "put", `customers/${customerId}`, {
         meta_data: [
           { key: "wishlist", value: JSON.stringify(wishlist) }
         ]
@@ -2691,8 +3546,8 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       if (!Array.isArray(cart)) {
         return res.status(400).json({ message: "Cart must be an array of cart items." });
       }
-      const wc = getWooCommerce();
-      if (!wc) {
+      const wc2 = getWooCommerce();
+      if (!wc2) {
         return res.json({ success: true, message: "Cart updated (Mock Mode)", cart });
       }
       const customerId = req.user?.id || req.user?.data?.user?.id || req.user?.user_id;
@@ -2700,7 +3555,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         return res.status(400).json({ message: "Customer ID not found in token." });
       }
       console.log(`[CHILS & CO.] Updating cart for customer ${customerId}.`);
-      await wcSafeCall(wc, "put", `customers/${customerId}`, {
+      await wcSafeCall(wc2, "put", `customers/${customerId}`, {
         meta_data: [
           { key: "cart", value: JSON.stringify(cart) }
         ]
@@ -2713,8 +3568,8 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
   });
   app.get("/api/orders", authenticateToken, async (req, res) => {
     try {
-      const wc = getWooCommerce();
-      if (!wc) {
+      const wc2 = getWooCommerce();
+      if (!wc2) {
         return res.json([
           mapOrderToSignal({
             id: 101,
@@ -2734,7 +3589,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       if (!customerId && userEmail) {
         console.log(`[CHILS & CO.] ID missing from token, searching WC by email: ${userEmail}`);
         try {
-          const customerSearch = await wcSafeCall(wc, "get", "customers", { email: userEmail });
+          const customerSearch = await wcSafeCall(wc2, "get", "customers", { email: userEmail });
           if (customerSearch && Array.isArray(customerSearch.data) && customerSearch.data.length > 0) {
             customerId = customerSearch.data[0].id;
             console.log(`[CHILS & CO.] Found customer ID linked to email: ${customerId}`);
@@ -2746,14 +3601,14 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       let orders;
       if (customerId) {
         console.log(`[CHILS & CO.] Fetching orders for customer ID: ${customerId}`);
-        const response = await wcSafeCall(wc, "get", "orders", {
+        const response = await wcSafeCall(wc2, "get", "orders", {
           customer: customerId,
           per_page: 50
         });
         orders = response.data;
       } else if (userEmail) {
         console.log(`[CHILS & CO.] No customer ID found, fetching recent orders to filter by email: ${userEmail}`);
-        const response = await wcSafeCall(wc, "get", "orders", { per_page: 100 });
+        const response = await wcSafeCall(wc2, "get", "orders", { per_page: 100 });
         orders = response.data.filter((o) => o.billing?.email?.toLowerCase() === userEmail.toLowerCase());
       } else {
         return res.status(400).json({ message: "Unable to identify customer from token" });
@@ -2771,8 +3626,8 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
   });
   app.get("/api/orders/:id", authenticateToken, async (req, res) => {
     try {
-      const wc = getWooCommerce();
-      if (!wc) {
+      const wc2 = getWooCommerce();
+      if (!wc2) {
         return res.json(mapOrderToSignal({
           id: req.params.id,
           status: "completed",
@@ -2785,7 +3640,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
           shipping_lines: [{ method_title: "Drone Relay" }]
         }));
       }
-      const response = await wcSafeCall(wc, "get", `orders/${req.params.id}`);
+      const response = await wcSafeCall(wc2, "get", `orders/${req.params.id}`);
       res.json(mapOrderToSignal(response.data));
     } catch (error) {
       console.error("WooCommerce Order Detail Error:", error);
@@ -2804,8 +3659,8 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       if (signal !== expectedSignal) {
         return res.status(403).json({ message: "Signal mismatch. Verification failed." });
       }
-      const wc = getWooCommerce();
-      if (!wc) {
+      const wc2 = getWooCommerce();
+      if (!wc2) {
         return res.json({
           id,
           status: "processing",
@@ -2813,8 +3668,8 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
           currency: "INR"
         });
       }
-      const response = await wcSafeCall(wc, "get", `orders/${id}`);
-      const order = await reconcilePendingPhonePeOrder(wc, response.data, merchantTransactionId);
+      const response = await wcSafeCall(wc2, "get", `orders/${id}`);
+      const order = await reconcilePendingPhonePeOrder(wc2, response.data, merchantTransactionId);
       res.json({
         id: order.id,
         status: order.status,
@@ -2827,35 +3682,35 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       res.status(404).json({ message: "Signal not found in system archives." });
     }
   });
-  const PENDING_SWAPS_FILE = path.join(process.cwd(), "pending_swaps.json");
+  const PENDING_SWAPS_FILE = path2.join(process.cwd(), "pending_swaps.json");
   const activeRmaSubmissions = /* @__PURE__ */ new Set();
   const savePendingSwap = (txId, payload) => {
     let pending = {};
-    if (fs.existsSync(PENDING_SWAPS_FILE)) {
+    if (fs2.existsSync(PENDING_SWAPS_FILE)) {
       try {
-        pending = JSON.parse(fs.readFileSync(PENDING_SWAPS_FILE, "utf8"));
+        pending = JSON.parse(fs2.readFileSync(PENDING_SWAPS_FILE, "utf8"));
       } catch (e) {
         pending = {};
       }
     }
     pending[txId] = payload;
-    fs.writeFileSync(PENDING_SWAPS_FILE, JSON.stringify(pending, null, 2), "utf8");
+    fs2.writeFileSync(PENDING_SWAPS_FILE, JSON.stringify(pending, null, 2), "utf8");
   };
   const getPendingSwap = (txId) => {
-    if (!fs.existsSync(PENDING_SWAPS_FILE)) return null;
+    if (!fs2.existsSync(PENDING_SWAPS_FILE)) return null;
     try {
-      const pending = JSON.parse(fs.readFileSync(PENDING_SWAPS_FILE, "utf8"));
+      const pending = JSON.parse(fs2.readFileSync(PENDING_SWAPS_FILE, "utf8"));
       return pending[txId] || null;
     } catch (e) {
       return null;
     }
   };
   const removePendingSwap = (txId) => {
-    if (!fs.existsSync(PENDING_SWAPS_FILE)) return;
+    if (!fs2.existsSync(PENDING_SWAPS_FILE)) return;
     try {
-      const pending = JSON.parse(fs.readFileSync(PENDING_SWAPS_FILE, "utf8"));
+      const pending = JSON.parse(fs2.readFileSync(PENDING_SWAPS_FILE, "utf8"));
       delete pending[txId];
-      fs.writeFileSync(PENDING_SWAPS_FILE, JSON.stringify(pending, null, 2), "utf8");
+      fs2.writeFileSync(PENDING_SWAPS_FILE, JSON.stringify(pending, null, 2), "utf8");
     } catch (e) {
     }
   };
@@ -2911,15 +3766,15 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
     }
   });
   const executeWooCommerceRmaSubmit = async (orderId, reason, description, products, images, swapInfoList, paidTxId) => {
-    const rmaSecret = process.env.RMA_API_SECRET || "wps_e48738cedfb75d113a6e3f11a6dc18ff5ca4b9b4";
+    const rmaSecret = process.env.RMA_API_SECRET || "";
     const rawWpUrl = process.env.WOOCOMMERCE_URL || "https://chilsandco.com";
     const wpUrl = rawWpUrl.endsWith("/") ? rawWpUrl.slice(0, -1) : rawWpUrl;
     const rmaSecretClean = rmaSecret.trim();
     const authHeader = "Basic " + Buffer.from(`secret_key:${rmaSecretClean}`).toString("base64");
-    const wc = getWooCommerce();
-    if (paidTxId && wc) {
+    const wc2 = getWooCommerce();
+    if (paidTxId && wc2) {
       try {
-        const notesRes = await wcSafeCall(wc, "get", `orders/${orderId}/notes`);
+        const notesRes = await wcSafeCall(wc2, "get", `orders/${orderId}/notes`);
         const hasNote = Array.isArray(notesRes.data) && notesRes.data.some((n) => n.note?.includes(paidTxId));
         if (hasNote) {
           console.log(`[CHILS & CO.] RMA Delta Payment transaction ${paidTxId} was already logged in parent order ${orderId}. Skipping duplicate RMA processing.`);
@@ -2974,9 +3829,9 @@ ${actionsSummary}`;
       console.error(`[CHILS & CO.] RMA Rejection: ${rmaResponse.status} - ${text}`);
       throw new Error(`RMA API failed: ${text}`);
     }
-    if (wc) {
+    if (wc2) {
       try {
-        const orderRes = await wcSafeCall(wc, "get", `orders/${orderId}`);
+        const orderRes = await wcSafeCall(wc2, "get", `orders/${orderId}`);
         const currentMeta = orderRes.data.meta_data || [];
         let updatedMeta = currentMeta.filter((m) => !["_rma_swap_info", "_rma_refund_delta_amount", "rma_swap_info", "rma_refund_delta_amount"].includes(m.key));
         if (swapInfoList && swapInfoList.length > 0) {
@@ -3025,16 +3880,16 @@ Reason: ${reason}`;
           console.log(`[CHILS & CO.] Setting WooCommerce order status to 'refund-requested' with refund delta: \u20B9${refundDeltaTotal}`);
         }
         try {
-          await wcSafeCall(wc, "put", `orders/${orderId}`, updatePayload);
+          await wcSafeCall(wc2, "put", `orders/${orderId}`, updatePayload);
           console.log(`[CHILS & CO.] WooCommerce Order metadata logged for RMA ${orderId} (Status updated: ${!!updatePayload.status})`);
         } catch (statusErr) {
           console.warn(`[CHILS & CO.] WooCommerce status 'refund-requested' failed or rejected by API:`, statusErr.message || statusErr);
           delete updatePayload.status;
-          await wcSafeCall(wc, "put", `orders/${orderId}`, updatePayload);
+          await wcSafeCall(wc2, "put", `orders/${orderId}`, updatePayload);
           console.log(`[CHILS & CO.] WooCommerce metadata updated successfully without status change.`);
         }
         try {
-          await wcSafeCall(wc, "post", `orders/${orderId}/notes`, {
+          await wcSafeCall(wc2, "post", `orders/${orderId}/notes`, {
             note: noteText,
             customer_note: false
           });
@@ -3048,7 +3903,7 @@ Reason: ${reason}`;
             const lineItems = [];
             let totalExchangeCredit = 0;
             for (const s of swapInfoList) {
-              const altRes = await wcSafeCall(wc, "get", `products/${s.swapProductId}`);
+              const altRes = await wcSafeCall(wc2, "get", `products/${s.swapProductId}`);
               lineItems.push({
                 product_id: parseInt(s.swapProductId, 10),
                 quantity: s.quantity,
@@ -3060,7 +3915,7 @@ Reason: ${reason}`;
             }
             let totalSwappedCost = 0;
             for (const s of swapInfoList) {
-              const altRes = await wcSafeCall(wc, "get", `products/${s.swapProductId}`);
+              const altRes = await wcSafeCall(wc2, "get", `products/${s.swapProductId}`);
               const altPrice = parseFloat(altRes.data.price.toString());
               totalSwappedCost += altPrice * s.quantity;
             }
@@ -3086,14 +3941,14 @@ Reason: ${reason}`;
               ]
             };
             console.log(`[CHILS & CO.] Creating WooCommerce Exchange Order for parent Order ${orderId}...`);
-            const newOrderRes = await wcSafeCall(wc, "post", "orders", exchangeOrderPayload);
+            const newOrderRes = await wcSafeCall(wc2, "post", "orders", exchangeOrderPayload);
             const newOrder = newOrderRes.data;
             console.log(`[CHILS & CO.] Exchange Order created successfully: ID #${newOrder.id}`);
-            await wcSafeCall(wc, "post", `orders/${orderId}/notes`, {
+            await wcSafeCall(wc2, "post", `orders/${orderId}/notes`, {
               note: `Reversal Style Swap completed. Exchange Order #${newOrder.id} has been generated for fulfillment.`,
               customer_note: false
             });
-            await wcSafeCall(wc, "post", `orders/${newOrder.id}/notes`, {
+            await wcSafeCall(wc2, "post", `orders/${newOrder.id}/notes`, {
               note: `This order was generated as a style swap exchange from parent Signal #${toSignalId(orderId)}.`,
               customer_note: false
             });
@@ -3114,9 +3969,9 @@ Reason: ${reason}`;
       const { id } = req.params;
       const { reason, description, products, images } = req.body;
       console.log(`[CHILS & CO.] Initiating return logic for order ${id}`);
-      const wc = getWooCommerce();
-      if (!wc) throw new Error("WooCommerce not configured.");
-      const orderResponse = await wcSafeCall(wc, "get", `orders/${id}`);
+      const wc2 = getWooCommerce();
+      if (!wc2) throw new Error("WooCommerce not configured.");
+      const orderResponse = await wcSafeCall(wc2, "get", `orders/${id}`);
       const order = orderResponse.data;
       const parentExchangeOrderId = order.meta_data?.find((m) => m.key === "parent_exchange_order_id" || m.key === "_parent_exchange_order_id")?.value;
       if (parentExchangeOrderId) {
@@ -3129,7 +3984,7 @@ Reason: ${reason}`;
           image: cached.images?.[0] || null
         };
         try {
-          const res2 = await wcSafeCall(wc, "get", `products/${productId}`);
+          const res2 = await wcSafeCall(wc2, "get", `products/${productId}`);
           return {
             price: parseFloat(res2.data.price.toString()),
             image: res2.data.images?.[0]?.src || null
@@ -3221,9 +4076,9 @@ Reason: ${reason}`;
       if (!isAdmin) {
         return res.status(403).json({ message: "Higher clearance required for core reconfiguration." });
       }
-      const currentSettings = fs.existsSync(SETTINGS_FILE) ? JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf-8")) : DEFAULT_SETTINGS;
+      const currentSettings = fs2.existsSync(SETTINGS_FILE) ? JSON.parse(fs2.readFileSync(SETTINGS_FILE, "utf-8")) : DEFAULT_SETTINGS;
       const newSettings = { ...currentSettings, ...req.body };
-      fs.writeFileSync(SETTINGS_FILE, JSON.stringify(newSettings, null, 2));
+      fs2.writeFileSync(SETTINGS_FILE, JSON.stringify(newSettings, null, 2));
       console.log("[CHILS & CO.] Global settings recalibrated successfully.");
       res.json({ success: true, settings: newSettings });
     } catch (error) {
@@ -3243,17 +4098,17 @@ Reason: ${reason}`;
       if (!productId) {
         return res.status(400).json({ message: "Product ID is required." });
       }
-      const settings = fs.existsSync(SETTINGS_FILE) ? JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf-8")) : DEFAULT_SETTINGS;
+      const settings = fs2.existsSync(SETTINGS_FILE) ? JSON.parse(fs2.readFileSync(SETTINGS_FILE, "utf-8")) : DEFAULT_SETTINGS;
       groqKey = settings.groqApiKey || process.env.GROQ_API_KEY;
       if (!groqKey) {
         return res.status(400).json({ message: "GROQ_API_KEY is not configured. Please save your Groq API Key in your Admin panel settings." });
       }
-      const wc = getWooCommerce();
-      if (!wc) {
+      const wc2 = getWooCommerce();
+      if (!wc2) {
         return res.status(400).json({ message: "WooCommerce API is not configured." });
       }
       console.log(`[AMAZON ENRICH] Fetching product #${productId} from WooCommerce...`);
-      const response = await wcSafeCall(wc, "get", `products/${productId}`);
+      const response = await wcSafeCall(wc2, "get", `products/${productId}`);
       const rawProduct = response.data;
       const swatchesData = await fetchSwatches().catch(() => ({}));
       const mappedProduct = mapProduct(rawProduct, {}, swatchesData);
@@ -3285,7 +4140,7 @@ You must return a single JSON object with the following fields:
 Format your response strictly as a single JSON object. Ensure the keys and values match the requested schema exactly.
 `;
       console.log(`[AMAZON ENRICH] Dispatching direct HTTP POST to Groq completions API...`);
-      const apiRes = await axios.post(
+      const apiRes = await axios2.post(
         "https://api.groq.com/openai/v1/chat/completions",
         {
           model: "llama-3.3-70b-versatile",
@@ -3341,11 +4196,11 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       if (!products || !enrichedData) {
         return res.status(400).json({ message: "Products and enrichedData are required." });
       }
-      const settings = JSON.parse(await fs.promises.readFile("settings.json", "utf-8").catch(() => "{}"));
+      const settings = JSON.parse(await fs2.promises.readFile("settings.json", "utf-8").catch(() => "{}"));
       const tempId = Date.now() + "_" + Math.floor(Math.random() * 1e3);
-      const xlsmTempPath = path.join(process.cwd(), `temp_${tempId}.xlsm`);
-      const templatePath = path.join(process.cwd(), "amazon_blank_template.xlsm");
-      if (!fs.existsSync(templatePath)) {
+      const xlsmTempPath = path2.join(process.cwd(), `temp_${tempId}.xlsm`);
+      const templatePath = path2.join(process.cwd(), "amazon_blank_template.xlsm");
+      if (!fs2.existsSync(templatePath)) {
         return res.status(500).json({ message: "Amazon blank template file is missing on the server." });
       }
       const XLSXModule = await import("xlsx");
@@ -3598,8 +4453,8 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       }
       console.log(`[AMAZON EXPORT] Saving macro-enabled workbook natively...`);
       XLSX.writeFile(wb, xlsmTempPath, { bookVBA: true });
-      const buffer = await fs.promises.readFile(xlsmTempPath);
-      await fs.promises.unlink(xlsmTempPath).catch(() => {
+      const buffer = await fs2.promises.readFile(xlsmTempPath);
+      await fs2.promises.unlink(xlsmTempPath).catch(() => {
       });
       res.setHeader("Content-Type", "application/vnd.ms-excel.sheet.macroEnabled.12");
       res.setHeader("Content-Disposition", `attachment; filename=Amazon_Bulk_Listing_Feed_${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}.xlsm`);
@@ -3622,9 +4477,9 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       }
       let targets = phoneNumbers;
       if (phoneNumbers.length === 1 && phoneNumbers[0] === "all_customers") {
-        const wc = getWooCommerce();
-        if (wc) {
-          const customersRes = await wcSafeCall(wc, "get", "customers", { per_page: 100 });
+        const wc2 = getWooCommerce();
+        if (wc2) {
+          const customersRes = await wcSafeCall(wc2, "get", "customers", { per_page: 100 });
           targets = customersRes.data.map((c) => c.billing?.phone).filter(Boolean);
         } else {
           targets = [];
@@ -3725,9 +4580,9 @@ Format your response strictly as a single JSON object. Ensure the keys and value
   });
   app.post("/api/webhooks/logistics-relay", async (req, res) => {
     try {
-      const token = req.query.token || req.headers["x-api-key"];
-      const expectedToken = process.env.SHIPROCKET_WEBHOOK_TOKEN || "chils_secure_relay_token_109283";
-      if (!token || token !== expectedToken) {
+      const token2 = req.query.token || req.headers["x-api-key"];
+      const expectedToken = process.env.SHIPROCKET_WEBHOOK_TOKEN || "";
+      if (!token2 || token2 !== expectedToken) {
         console.warn(`[LOGISTICS WEBHOOK] Unauthorized access attempt: token mismatch.`);
         return res.status(401).json({ error: "Unauthorized: Invalid Webhook Token" });
       }
@@ -3747,15 +4602,15 @@ Format your response strictly as a single JSON object. Ensure the keys and value
         console.warn(`[LOGISTICS WEBHOOK] Invalid order ID format: ${rawOrderId}. Acknowledging with 200.`);
         return res.status(200).json({ success: true, message: "Webhook acknowledged (invalid order format)." });
       }
-      const wc = getWooCommerce();
-      if (!wc) {
+      const wc2 = getWooCommerce();
+      if (!wc2) {
         console.error("[LOGISTICS WEBHOOK] WooCommerce client not configured. Webhook mapping aborted.");
         return res.status(500).json({ error: "Internal store configuration error" });
       }
       console.log(`[LOGISTICS WEBHOOK] Syncing Order #${orderId} - AWB: ${awb}, Courier: ${courier}, Status: ${trackingStatus}`);
       let orderResponse;
       try {
-        orderResponse = await wcSafeCall(wc, "get", `orders/${orderId}`);
+        orderResponse = await wcSafeCall(wc2, "get", `orders/${orderId}`);
       } catch (err) {
         console.error(`[LOGISTICS WEBHOOK] Order #${orderId} lookup failed in WooCommerce:`, err.message);
         return res.status(200).json({ success: true, message: `Webhook received but order #${orderId} was not found in WooCommerce.` });
@@ -3786,7 +4641,7 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       if (updatedStatus !== existingOrder.status) {
         try {
           console.log(`[LOGISTICS WEBHOOK] Attempting order status transition to: ${updatedStatus}`);
-          await wcSafeCall(wc, "put", `orders/${orderId}`, {
+          await wcSafeCall(wc2, "put", `orders/${orderId}`, {
             ...orderUpdatePayload,
             status: updatedStatus,
             customer_note: `Logistics status update: ${trackingStatus}. Carrier: ${courier || "N/A"}, AWB: #${awb || "N/A"}`
@@ -3794,19 +4649,20 @@ Format your response strictly as a single JSON object. Ensure the keys and value
           console.log(`[LOGISTICS WEBHOOK] Order #${orderId} status & meta updated successfully to: ${updatedStatus}`);
         } catch (statusErr) {
           console.warn(`[LOGISTICS WEBHOOK] WooCommerce rejected status transition to '${updatedStatus}' (may be unregistered). Falling back to meta update only.`);
-          await wcSafeCall(wc, "put", `orders/${orderId}`, {
+          await wcSafeCall(wc2, "put", `orders/${orderId}`, {
             ...orderUpdatePayload,
             customer_note: `Logistics status update: ${trackingStatus} (In Transit). Carrier: ${courier || "N/A"}, AWB: #${awb || "N/A"}`
           });
           console.log(`[LOGISTICS WEBHOOK] Order #${orderId} metadata updated successfully (retained status: ${existingOrder.status})`);
         }
       } else {
-        await wcSafeCall(wc, "put", `orders/${orderId}`, {
+        await wcSafeCall(wc2, "put", `orders/${orderId}`, {
           ...orderUpdatePayload,
           customer_note: `Logistics details updated. Status: ${trackingStatus}. Carrier: ${courier || "N/A"}, AWB: #${awb || "N/A"}`
         });
         console.log(`[LOGISTICS WEBHOOK] Order #${orderId} metadata updated (no status change).`);
       }
+      notifyShipping(orderId, String(trackingStatus), updatedStatus);
       return res.status(200).send("OK");
     } catch (error) {
       console.error("[LOGISTICS WEBHOOK] Error processing webhook:", error.message || error);
@@ -3846,7 +4702,7 @@ Format your response strictly as a single JSON object. Ensure the keys and value
         return res.status(403).send("Forbidden: Domain not whitelisted");
       }
       console.log(`[CHILS MEDIA PROXY] Fetching image from WooCommerce: ${imageUrl}`);
-      const response = await axios.get(imageUrl, {
+      const response = await axios2.get(imageUrl, {
         responseType: "arraybuffer",
         headers: {
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -3879,7 +4735,8 @@ Format your response strictly as a single JSON object. Ensure the keys and value
     const staticUrls = [
       { loc: "https://chilsandco.com/", priority: "1.0", changefreq: "daily" },
       { loc: "https://chilsandco.com/collection", priority: "0.9", changefreq: "daily" },
-      { loc: "https://chilsandco.com/combos", priority: "0.8", changefreq: "weekly" },
+      { loc: "https://chilsandco.com/pick-your-three", priority: "0.9", changefreq: "weekly" },
+      { loc: "https://chilsandco.com/our-promise", priority: "0.6", changefreq: "monthly" },
       { loc: "https://chilsandco.com/bespoke", priority: "0.9", changefreq: "weekly" },
       { loc: "https://chilsandco.com/co-creator", priority: "0.8", changefreq: "weekly" },
       { loc: "https://chilsandco.com/customize", priority: "0.8", changefreq: "weekly" },
@@ -3892,9 +4749,9 @@ Format your response strictly as a single JSON object. Ensure the keys and value
     ];
     let productUrls = [];
     try {
-      const wc = getWooCommerce();
-      if (wc) {
-        const response = await wcSafeCall(wc, "get", "products", { per_page: 100, status: "publish" });
+      const wc2 = getWooCommerce();
+      if (wc2) {
+        const response = await wcSafeCall(wc2, "get", "products", { per_page: 100, status: "publish" });
         if (Array.isArray(response.data)) {
           productUrls = response.data.map((prod) => ({
             loc: `https://chilsandco.com/product/${prod.id}`,
@@ -3945,69 +4802,83 @@ ${xmlItems}
     app.use(vite.middlewares);
     console.log(`[CHILS & CO.] Development mode: Vite middleware active`);
   } else {
-    const distPath = path.resolve(__dirname, "dist");
-    if (fs.existsSync(distPath)) {
+    const distPath = path2.resolve(__dirname, "dist");
+    if (fs2.existsSync(distPath)) {
       console.log(`[CHILS & CO.] Production mode: Serving static files from ${distPath}`);
-      app.use(express.static(distPath));
+      app.use(express.static(distPath, {
+        index: false,
+        setHeaders: (res, filePath) => {
+          if (/[\\/]assets[\\/]/.test(filePath)) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          else if (/\.(webp|png|jpe?g|svg|woff2?)$/i.test(filePath)) res.setHeader("Cache-Control", "public, max-age=604800");
+        }
+      }));
       const DEFAULT_OG_IMAGE = "https://res.cloudinary.com/ddatd5ruz/image/upload/w_1200,h_630,c_fill,f_jpg,q_80/v1782039896/ChatGPT_Image_Jun_21_2026_04_34_04_PM_avhfel.png";
       const PUBLIC_PAGE_META = {
         "/": {
-          title: "CHILS & CO. | Extraordinary Bespoke Luxury & High Fashion",
-          description: "Chils & Co. (also known as Chills & Co.) delivers high-end bespoke garments and luxury ready-to-wear. Handcrafted precision for the modern individual."
+          title: "CHILS & CO. | Premium Tees and Polos for People Who Build",
+          description: "Premium tees and polos designed by techies in Hyderabad. Quiet colour, good fabric, delivered across India from \u20B980."
         },
         "/collection": {
-          title: "Haute Couture Collection | CHILS & CO.",
-          description: "Explore the luxury ready-to-wear and bespoke garment collection by Chils & Co."
+          title: "Shop all tees and polos | CHILS & CO.",
+          description: "Polos, minimal tees, blacks, oversized and regular-fit tees by CHILS & CO. Delivered across India with 7-day returns."
+        },
+        "/pick-your-three": {
+          title: "Trilogies: three tees, save 10% | CHILS & CO.",
+          description: "Three tees chosen to go together, banded as a numbered Trilogy. Pick your size and save 10%."
         },
         "/combos": {
-          title: "Curated Style Combos | CHILS & CO.",
-          description: "Exclusive multi-garment luxury pairings designed for modern elegance."
+          title: "Trilogies: three tees, save 10% | CHILS & CO.",
+          description: "Three tees chosen to go together, banded as a numbered Trilogy. Pick your size and save 10%."
+        },
+        "/our-promise": {
+          title: "Our promise | CHILS & CO.",
+          description: "Plastic-free, reusable packaging and tees made to last. How CHILS & CO. thinks about what it makes."
         },
         "/bespoke": {
-          title: "Bespoke Garments & Custom Tailoring | CHILS & CO.",
-          description: "Handcrafted bespoke tailoring tailored precisely to your personal measurements."
+          title: "Bespoke | CHILS & CO.",
+          description: "Custom pieces made with the CHILS & CO. team."
         },
         "/co-creator": {
-          title: "Co-Creator Design Studio | CHILS & CO.",
-          description: "Collaborate directly with our design house to create one-of-a-kind fashion pieces."
+          title: "Co-Creator | CHILS & CO.",
+          description: "Design a tee with CHILS & CO. and earn from every one sold."
         },
         "/customize": {
-          title: "Customization Studio | CHILS & CO.",
-          description: "Personalize high-end garments with custom fabrics, cuts, and bespoke finishes."
+          title: "Custom Studio | CHILS & CO.",
+          description: "Design your own tee in the CHILS & CO. Custom Studio."
         },
         "/social-vault": {
           title: "Social Vault | CHILS & CO.",
-          description: "Step into the visual world and digital presence of Chils & Co."
+          description: "The world of CHILS & CO. on social media."
         },
         "/support": {
-          title: "Client Concierge & Support | CHILS & CO.",
-          description: "Get assistance with orders, custom fittings, shipping, and inquiries."
+          title: "Support | CHILS & CO.",
+          description: "Talk to the CHILS & CO. team on WhatsApp, email or phone, Monday to Saturday, 10 AM to 6 PM."
         },
         "/shipping-delivery": {
-          title: "Shipping & Express Delivery | CHILS & CO.",
-          description: "Comprehensive information on shipping timelines, tracking, and international delivery."
+          title: "Shipping & delivery | CHILS & CO.",
+          description: "Delivery across India from \u20B980. Packed within 24\u201348 hours, delivered in 2\u20137 business days. Free store pickup."
         },
         "/returns-refunds": {
-          title: "Returns & Exchanges Policy | CHILS & CO.",
-          description: "Hassle-free size exchanges, style swaps, and return guidelines for Chils & Co."
+          title: "Returns & refunds | CHILS & CO.",
+          description: "Return within 7 days of delivery for a refund, exchange or store credit."
         },
         "/privacy-policy": {
           title: "Privacy Policy | CHILS & CO.",
-          description: "Detailed overview of how Chils & Co. protects client data and privacy."
+          description: "How CHILS & CO. looks after your data and privacy."
         },
         "/terms-conditions": {
           title: "Terms & Conditions | CHILS & CO.",
-          description: "Official terms of service and usage conditions for Chils & Co."
+          description: "Terms of service for shopping with CHILS & CO."
         }
       };
       const PRIVATE_ROUTE_PREFIXES = ["/checkout", "/onboarding", "/console", "/admin", "/auth", "/wishlist"];
       app.get("*", async (req, res) => {
-        const indexPath = path.resolve(distPath, "index.html");
+        const indexPath = path2.resolve(distPath, "index.html");
         let cleanPath = req.path || "/";
         if (cleanPath.length > 1 && cleanPath.endsWith("/")) {
           cleanPath = cleanPath.slice(0, -1);
         }
-        let html = fs.readFileSync(indexPath, "utf-8");
+        let html = fs2.readFileSync(indexPath, "utf-8");
         const escAttr = (s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         const canonicalUrl = `https://chilsandco.com${cleanPath === "/" ? "" : cleanPath}`;
         const isPrivate = PRIVATE_ROUTE_PREFIXES.some((prefix) => cleanPath.startsWith(prefix));
@@ -4027,13 +4898,13 @@ ${xmlItems}
         if (productMatch) {
           const productId = productMatch[1];
           try {
-            const wc = getWooCommerce();
-            if (wc) {
-              const response = await wcSafeCall(wc, "get", `products/${productId}`);
+            const wc2 = getWooCommerce();
+            if (wc2) {
+              const response = await wcSafeCall(wc2, "get", `products/${productId}`);
               const product = response.data;
               if (product) {
                 const productName = (product.name || "Product").replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">");
-                const productDesc = (product.short_description || product.description || "").replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"').replace(/&nbsp;/g, " ").substring(0, 200).trim() || "Premium luxury garment by Chils & Co.";
+                const productDesc = (product.short_description || product.description || "").replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"').replace(/&nbsp;/g, " ").substring(0, 200).trim() || "Premium tee by CHILS & CO. Delivered across India with 7-day returns.";
                 const productImage = Array.isArray(product.images) && product.images.length > 0 ? product.images[0].src : DEFAULT_OG_IMAGE;
                 const productPrice = product.price || "0";
                 const ogTitle = escAttr(`${productName} | CHILS & CO.`);
@@ -4099,12 +4970,13 @@ ${xmlItems}
       });
     }
   }
-  setInterval(async () => {
+  if (process.env.PAYMENT_RECON === "off") console.log("[CHILS RECON] Payment reconciliation is off (PAYMENT_RECON=off).");
+  else setInterval(async () => {
     console.log("[CHILS RECON] Triggering routine synchronization...");
-    const wc = getWooCommerce();
-    if (!wc) return;
+    const wc2 = getWooCommerce();
+    if (!wc2) return;
     try {
-      const response = await wcSafeCall(wc, "get", "orders", {
+      const response = await wcSafeCall(wc2, "get", "orders", {
         status: "pending,on-hold",
         per_page: 50,
         after: new Date(Date.now() - 30 * 24 * 60 * 60 * 1e3).toISOString()
@@ -4123,7 +4995,7 @@ ${xmlItems}
           if (!statusData) continue;
           if (statusData.success && statusData.code === "PAYMENT_SUCCESS") {
             console.log(`[CHILS RECON] Order ${order.id} verified as SUCCESS. Updating WC...`);
-            const updateRes = await wcSafeCall(wc, "put", `orders/${order.id}`, {
+            const updateRes = await wcSafeCall(wc2, "put", `orders/${order.id}`, {
               status: "processing",
               set_paid: true,
               customer_note: "Payment verified via system reconciliation job."
@@ -4133,7 +5005,7 @@ ${xmlItems}
             });
           } else if (statusData.code === "PAYMENT_ERROR" || statusData.code === "PAYMENT_DECLINED" || statusData.code === "TIMED_OUT") {
             console.log(`[CHILS RECON] Order ${order.id} verified as FAILED (${statusData.code}). Updating WC...`);
-            await wcSafeCall(wc, "put", `orders/${order.id}`, {
+            await wcSafeCall(wc2, "put", `orders/${order.id}`, {
               status: "failed",
               customer_note: `Payment resolution: ${statusData.message}`
             });
@@ -4143,7 +5015,7 @@ ${xmlItems}
           if (is404) {
             console.warn(`[CHILS RECON] Order ${order.id} not found in PhonePe records. Marking as failed after 30 mins.`);
             if (ageInMins > 30) {
-              await wcSafeCall(wc, "put", `orders/${order.id}`, { status: "failed", customer_note: "Archived due to payment abandonment." });
+              await wcSafeCall(wc2, "put", `orders/${order.id}`, { status: "failed", customer_note: "Archived due to payment abandonment." });
             }
           } else {
             console.error(`[CHILS RECON] Error processing order ${order.id}:`, err.message || err);
@@ -4156,6 +5028,10 @@ ${xmlItems}
   }, 6e5);
   try {
     const numericPort = typeof PORT === "string" ? parseInt(PORT, 10) : Number(PORT);
+    startSlackBot({
+      wc: (method, ...args) => wcSafeCall(getWooCommerce(), method, ...args),
+      adminUrl: (process.env.WOOCOMMERCE_URL || "https://api.chilsandco.com").trim()
+    });
     app.listen(numericPort, "0.0.0.0", () => {
       console.log(`[CHILS & CO.] Server started successfully`);
       console.log(`[CHILS & CO.] Listening on port: ${numericPort}`);
@@ -4198,7 +5074,7 @@ async function sendEmailViaBrevo(toEmail, toName, subject, htmlContent) {
       subject,
       htmlContent
     };
-    const response = await axios.post("https://api.brevo.com/v3/smtp/email", data, {
+    const response = await axios2.post("https://api.brevo.com/v3/smtp/email", data, {
       headers: {
         "accept": "application/json",
         "api-key": BREVO_API_KEY,
@@ -4470,12 +5346,14 @@ async function triggerOrderConfirmationEmails(order) {
   const customerName = `${order.billing?.first_name || ""} ${order.billing?.last_name || ""}`.trim() || "Customer";
   const signalId = toSignalId(order.id);
   console.log(`[CHILS & CO. EMAIL] Preparing order emails for Signal #${signalId}`);
+  sendPurchase(order);
   if (customerEmail) {
     const customerHtml = compileOrderConfirmationHtml(order);
     await sendEmailViaBrevo(customerEmail, customerName, `Transmission Confirmed // Signal #${signalId}`, customerHtml);
   }
   const adminHtml = compileAdminNotificationHtml(order);
   await sendEmailViaBrevo("chilsandco@gmail.com", "Chils & Co. Admin", `[ALERT] New Signal Generated // #${signalId}`, adminHtml);
+  notifyNewOrder(order);
   triggerWhatsAppOrderConfirmation(order).catch((err) => {
     console.error("[CHILS & CO. WHATSAPP] Failed to send order confirmation:", err?.message || "Unknown error");
   });
@@ -4484,10 +5362,10 @@ async function triggerReturnRequestEmails(orderId, reason, description, products
   console.log(`[CHILS & CO. EMAIL] Preparing return request emails for Order ${orderId}`);
   const html = compileReturnRequestHtml(orderId, reason, description, products);
   const signalId = toSignalId(orderId);
-  const wc = getWooCommerce();
-  if (wc) {
+  const wc2 = getWooCommerce();
+  if (wc2) {
     try {
-      const response = await wcSafeCall(wc, "get", `orders/${orderId}`);
+      const response = await wcSafeCall(wc2, "get", `orders/${orderId}`);
       const order = response.data;
       const customerEmail = order.billing?.email;
       const customerName = `${order.billing?.first_name || ""} ${order.billing?.last_name || ""}`.trim() || "Customer";
@@ -4564,7 +5442,7 @@ async function sendWhatsAppMessage(toPhone, templateName, languageCode = "en_US"
     if (components.length > 0) {
       data.template.components = components;
     }
-    const response = await axios.post(`https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, data, {
+    const response = await axios2.post(`https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, data, {
       headers: {
         "Authorization": `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
         "Content-Type": "application/json"

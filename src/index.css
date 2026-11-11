@@ -1,9 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Space Grotesk", sans-serif;
+  --font-sans: "Geist", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Geist", "Inter", ui-sans-serif, sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+  --font-brand: "Space Grotesk", "Geist", sans-serif;
+  --color-ink: #0e0e0c;
+  --color-paper: #f3f2ee;
+  --color-floor: #e7e5df;
+  --color-stone: #76746e;
   --color-accent: #d4af37; /* Gold accent */
   --color-brand-navy: #001e3c;
   
@@ -70,14 +76,14 @@
   animation: fade-in 0.8s ease-out forwards;
 }
 
-/* Custom Hardware Cursor (Zero Lag, Hardware-Accelerated) - Desktop Only */
+/* The snowflake cursor: black with a thin white edge so it shows on any background. Desktop only. */
 @media (hover: hover) and (pointer: fine) {
   html, body {
-    cursor: url('https://res.cloudinary.com/ddatd5ruz/image/upload/w_20,h_20,c_scale,co_rgb:D4AF37,e_colorize:100/v1774668881/chils_simple_logo_transparent_kdfrfk.png') 10 10, auto !important;
+    cursor: url('/cursor.svg') 10 11, auto !important;
   }
 
   a, button, [data-cursor], .interactive, select, input, textarea {
-    cursor: url('https://res.cloudinary.com/ddatd5ruz/image/upload/w_20,h_20,c_scale,co_rgb:D4AF37,e_colorize:100/v1774668881/chils_simple_logo_transparent_kdfrfk.png') 10 10, pointer !important;
+    cursor: url('/cursor.svg') 10 11, pointer !important;
   }
 }
 
@@ -103,3 +109,114 @@
   scrollbar-width: none;  /* Firefox */
 }
 
+
+/* ───────── Premium light theme ─────────
+   Applied via <div class="theme-light"> (see App.tsx). Remaps the legacy
+   dark utilities so un-rebuilt pages inherit the new look. */
+.theme-light {
+  --bg: #ffffff;
+  --paper: #f4f3f0;
+  --ink: #111111;
+  --muted: #6b6b6b;
+  --line: rgba(0, 0, 0, 0.1);
+  --color-accent: #111111;
+  background: var(--bg);
+  color: var(--ink);
+}
+.theme-light .bg-black { background-color: #fff; }
+.theme-light .bg-black\/95, .theme-light .bg-black\/98 { background-color: rgba(255,255,255,.96); }
+.theme-light .bg-black\/60, .theme-light .bg-black\/50 { background-color: rgba(0,0,0,.35); }
+.theme-light .text-white { color: var(--ink); }
+.theme-light .text-white\/70, .theme-light .text-white\/60 { color: #555; }
+.theme-light .text-white\/50, .theme-light .text-white\/40, .theme-light .text-white\/30 { color: var(--muted); }
+.theme-light .bg-white { background-color: var(--ink); }
+.theme-light .text-black, .theme-light .text-neutral-950 { color: #fff; }
+.theme-light .bg-white\/5, .theme-light .bg-white\/10 { background-color: rgba(0,0,0,.04); }
+.theme-light .text-neutral-200, .theme-light .text-neutral-300 { color: #333; }
+.theme-light .text-neutral-400, .theme-light .text-neutral-500 { color: #5f5f5f; }
+.theme-light .text-neutral-600, .theme-light .text-neutral-700 { color: #7a7a7a; }
+.theme-light .text-neutral-800, .theme-light .text-neutral-900 { color: #999; }
+.theme-light [class*="bg-neutral-950"], .theme-light [class*="bg-neutral-900"] { background-color: var(--paper); }
+.theme-light .bg-neutral-800, .theme-light .bg-neutral-200 { background-color: #e6e4df; }
+.theme-light [class*="border-neutral-9"], .theme-light [class*="border-neutral-8"], .theme-light [class*="border-neutral-7"],
+.theme-light [class*="border-white\/"] { border-color: var(--line); }
+.theme-light .border-white { border-color: var(--ink); }
+.theme-light .divide-neutral-900 > :not(:last-child) { border-color: var(--line); }
+.theme-light .stroke-neutral-800, .theme-light .stroke-neutral-900, .theme-light .stroke-neutral-700 { stroke: #ddd; }
+.theme-light .gold-icon { filter: none; }
+.theme-light ::selection { background: #111; color: #fff; }
+.theme-light input, .theme-light select, .theme-light textarea { color: var(--ink); }
+.theme-light .bg-accent\/5, .theme-light .bg-accent\/10, .theme-light .bg-accent\/15 { background-color: rgba(0,0,0,.05); }
+
+/* Premium type + motion defaults */
+.theme-light h1, .theme-light h2 { letter-spacing: -0.035em; }
+.eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.seamless { background: radial-gradient(120% 70% at 50% 18%, #f8f7f4 0%, var(--color-paper) 48%, var(--color-floor) 100%); }
+@media (prefers-reduced-motion: reduce) { .theme-light * { scroll-behavior: auto !important; } }
+
+/* One continuous studio floor: light wall, a soft horizon where the models stand. */
+.floor-band { background: linear-gradient(180deg, #faf9f6 0%, var(--color-paper) 62%, var(--color-floor) 84%, var(--color-paper) 100%); }
+
+/* The CHILS & CO. wordmark keeps the original brand font. */
+.wordmark { font-family: var(--font-brand); font-weight: 700; }
+.wordmark-outline {
+  font-family: var(--font-brand);
+  font-weight: 500;
+  color: transparent;
+  -webkit-text-stroke: 1.25px #f5f4f0;
+}
+.theme-light .wordmark-outline { -webkit-text-stroke-color: var(--color-ink); }
+
+/* ── Phones and iPhones ───────────────────────────────────────────────────── */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html, body { -webkit-tap-highlight-color: transparent; }
+a, button, label, select { touch-action: manipulation; }
+
+/* the overscroll bounce shows the page behind the site, so it must not be black */
+html:has(.theme-light), html:has(.theme-light) body { background: #fff; }
+
+/* mobile browser bars come and go; these units ignore them */
+@supports (height: 100svh) {
+  .min-h-screen { min-height: 100svh; }
+  .h-screen { height: 100svh; }
+}
+
+/* iOS zooms the whole page when a field smaller than 16px is focused */
+@media (max-width: 767px) {
+  input, select, textarea { font-size: 16px !important; }
+}
+
+/* a sheet's scroll must never drag the page behind it */
+[data-lenis-prevent] { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+
+/* keep fixed bars clear of the notch in landscape */
+nav.fixed, header.fixed { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+
+/* ── The phone look: light grey page, white rounded surfaces, pill buttons ── */
+@media (max-width: 767px) {
+  .theme-light main > div { background: #efefef !important; }
+  .theme-light main h1:not(.keep) {
+    font-size: 30px !important; line-height: 1.1 !important; letter-spacing: -0.02em !important;
+    font-style: normal !important; text-transform: none !important;
+  }
+  .theme-light main a, .theme-light main p, .theme-light main h2, .theme-light main h3 { overflow-wrap: anywhere; }
+  .theme-light main button.bg-ink, .theme-light main a.bg-ink, .theme-light aside button.bg-ink, .theme-light main button[type="submit"] { border-radius: 9999px; }
+  .theme-light main .border, .theme-light aside .border { border-radius: 12px; }
+  /* white cards on the grey page, but never inside a dark panel, where it would hide white text */
+  .theme-light main .border:not([class*="bg-"]):not(.bg-ink *) { background-color: #fff; }
+  .theme-light main input, .theme-light main select, .theme-light main textarea { border-radius: 10px; }
+  .theme-light main p.uppercase { text-transform: none; letter-spacing: 0; font-size: 14px; line-height: 1.55; font-family: var(--font-sans); }
+}
+
+/* ── Custom Studio: the original builder, in the current look ─────────────── */
+.studio-plain .font-mono { font-family: var(--font-sans) !important; }
+.studio-plain .uppercase { text-transform: none !important; }
+.studio-plain [class*="tracking-"] { letter-spacing: normal !important; }
+.studio-plain .italic { font-style: normal !important; }
+.studio-plain [class*="text-[7px]"], .studio-plain [class*="text-[8px]"], .studio-plain [class*="text-[9px]"] { font-size: 12px !important; }
+.studio-plain [class*="text-[10px]"] { font-size: 13px !important; }
+.studio-plain .border-b.border-neutral-900 { border-bottom-color: transparent; }
+.studio-plain section .border:not([class*="rounded-full"]), .studio-card { border-radius: 16px; }
+.studio-plain section .border:not([class*="rounded-full"]):not([class*="bg-"]):not(.bg-ink *), .studio-card { background-color: #fff; border-color: transparent; }
+.studio-plain button[class*="tracking-"], .studio-plain a[class*="tracking-"][class*="bg-"] { border-radius: 9999px; }
+.studio-plain input, .studio-plain textarea, .studio-plain select { border-radius: 12px; }

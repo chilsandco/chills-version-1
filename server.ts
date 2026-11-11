@@ -10,6 +10,9 @@ import WooCommerceRestApi from "@woocommerce/woocommerce-rest-api";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
+import { couponProblem, findVariation, mapWooVariation, trustedPrice } from "./orderVariations";
+import { notifyNewOrder, notifyShipping, startSlackBot } from "./slackBot";
+import { browserContext, orderMetaFrom, sendAddToCart, sendPurchase } from "./metaCapi";
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest, CallbackType } from 'pg-sdk-node';
 import { NextFunction } from 'express';
 import { GoogleGenAI } from "@google/genai";
@@ -18,7 +21,8 @@ dotenv.config();
 
 // Ensure NODE_ENV is set to something, default to development for the preview environment
 const IS_PROD = process.env.NODE_ENV === "production";
-const JWT_SECRET = process.env.JWT_SECRET || 'X1jtvpOK_J<.x%yEe3pm^pGN6!BwN_TLv@ibyA4Ix)3$+IA8I@=^G-5BRRqB9H_M';
+const JWT_SECRET = process.env.JWT_SECRET || '';
+if (!JWT_SECRET) console.error('[CHILS & CO.] JWT_SECRET is not set: customer logins will fail until it is added to the environment.');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1455,9 +1459,42 @@ async function startServer() {
     }
   });
 
+  // Checks a code against WooCommerce so the bag can show the saving.
+  app.post("/api/coupons/validate", async (req, res) => {
+    try {
+      const wc = getWooCommerce();
+      const code = String(req.body?.code || "").trim().toLowerCase().replace(/\s+/g, "");
+      if (!wc || !code) return res.status(400).json({ valid: false, message: "That code isn't valid." });
+      const { data } = await wcSafeCall(wc, "get", "coupons", { code });
+      const coupon = Array.isArray(data) ? data[0] : undefined;
+      const problem = couponProblem(coupon, Number(req.body?.subtotal) || 0, !!req.body?.hasSet);
+      if (problem) return res.json({ valid: false, message: problem });
+      return res.json({ valid: true, code: coupon.code, discountType: coupon.discount_type, amount: Number(coupon.amount) });
+    } catch (err) {
+      console.error("[CHILS & CO.] Coupon check failed:", err);
+      return res.status(500).json({ valid: false, message: "We couldn't check that code. Please try again." });
+    }
+  });
+
+  // Relays browser AddToCart events to the Meta Conversions API (same event_id as the Pixel).
+  app.post("/api/meta/event", (req, res) => {
+    const { event, eventId, value, contentIds, contentName, url } = req.body || {};
+    if (event !== "AddToCart" || typeof eventId !== "string" || eventId.length > 100) {
+      return res.status(400).json({ ok: false });
+    }
+    const ids = Array.isArray(contentIds) ? contentIds.slice(0, 20).map(String) : [];
+    sendAddToCart(browserContext(req), eventId, {
+      value: Math.max(0, Math.min(Number(value) || 0, 100000)),
+      contentIds: ids,
+      contentName: typeof contentName === "string" ? contentName.slice(0, 200) : undefined,
+      url: typeof url === "string" ? url.slice(0, 500) : undefined,
+    });
+    res.status(202).json({ ok: true });
+  });
+
   app.post("/api/checkout/create-order", async (req, res) => {
     try {
-      const { amount, currency, customerDetails, lineItems, shippingMethod } = req.body;
+      const { amount, currency, customerDetails, lineItems, shippingMethod, couponCode } = req.body;
       const wc = getWooCommerce();
       
       if (!req.headers.authorization) {
@@ -1500,6 +1537,62 @@ async function startServer() {
       });
 
       if (wc) {
+        // Items added from the product list arrive without variations, so look
+        // them up. A failed lookup must never block a paying customer.
+        const needsLookup = flattenedLineItems.filter((item: any) => item.selectedSize || item.selectedColor);
+        const lookups = new Map<string, Promise<any[]>>();
+        for (const item of needsLookup) {
+          const id = String(item.id);
+          if (!lookups.has(id)) {
+            lookups.set(id, (async () => {
+              const all: any[] = [];
+              for (let page = 1; ; page++) {
+                const { data } = await wcSafeCall(wc, "get", `products/${id}/variations`, { per_page: 100, page });
+                if (!Array.isArray(data) || data.length === 0) break;
+                all.push(...data.map(mapWooVariation));
+                if (data.length < 100) break;
+              }
+              return all;
+            })().catch((err: any) => {
+              console.warn(`[CHILS & CO.] Could not load variations for product ${id}: ${err.message}`);
+              return [];
+            }));
+          }
+        }
+        await Promise.all(needsLookup.map(async (item: any) => {
+          item.variations = await lookups.get(String(item.id));
+        }));
+
+        // Prices always come from WooCommerce; whatever the browser sent is ignored.
+        const productPrices = new Map<string, unknown>();
+        await Promise.all([...new Set(flattenedLineItems.map((item: any) => String(item.id)))].map(async id => {
+          const { data } = await wcSafeCall(wc, "get", `products/${id}`);
+          productPrices.set(id, data?.price);
+        }));
+        for (const item of flattenedLineItems) {
+          const match = Array.isArray(item.variations) && item.variations.length
+            ? findVariation(item.variations, item.selectedSize, item.selectedColor)
+            : undefined;
+          const price = trustedPrice(match, productPrices.get(String(item.id)));
+          if (price === null) {
+            return res.status(409).json({ message: `${item.name || "An item"} is unavailable right now. Please remove it and try again.` });
+          }
+          item.price = price;
+        }
+
+        // Codes are re-checked here: the bag's check can't be relied on.
+        let couponLines: { code: string }[] = [];
+        if (couponCode) {
+          const code = String(couponCode).trim().toLowerCase().replace(/\s+/g, "");
+          const { data } = await wcSafeCall(wc, "get", "coupons", { code });
+          const coupon = Array.isArray(data) ? data[0] : undefined;
+          const subtotal = flattenedLineItems.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
+          const hasSet = lineItems.some((item: any) => item.isCombo);
+          const problem = couponProblem(coupon, subtotal, hasSet);
+          if (problem) return res.status(400).json({ message: problem });
+          couponLines = [{ code: coupon.code }];
+        }
+
         const isPickup = shippingMethod === "pickup";
         const realShippingCount = flattenedLineItems.reduce((sum: number, item: any) => {
           if (item.id && item.id.toString() === "1672") return sum;
@@ -1552,14 +1645,13 @@ async function startServer() {
           line_items: flattenedLineItems.map((item: any) => {
             let variationId: number | undefined = undefined;
             if (item.variations && Array.isArray(item.variations)) {
-              const match = item.variations.find((v: any) => {
-                const matchesSize = item.selectedSize ? (v.attributes?.size === item.selectedSize) : true;
-                const matchesColor = item.selectedColor ? (v.attributes?.color === item.selectedColor) : true;
-                return matchesSize && matchesColor;
-              });
+              const match = findVariation(item.variations, item.selectedSize, item.selectedColor);
               if (match) {
-                variationId = parseInt(match.id, 10);
+                variationId = parseInt(String(match.id), 10);
               }
+            }
+            if (!variationId && item.selectedSize) {
+              console.warn(`[CHILS & CO.] No variation found for product ${item.id} (size ${item.selectedSize}, colour ${item.selectedColor || "none"})`);
             }
 
             const meta_data: any[] = [];
@@ -1601,6 +1693,7 @@ async function startServer() {
               total: shippingFee.toString()
             }
           ],
+          ...(couponLines.length ? { coupon_lines: couponLines } : {}),
           meta_data: [
             {
               key: "Packaging Selection",
@@ -1611,7 +1704,9 @@ async function startServer() {
             {
               key: "Delivery Method",
               value: isPickup ? "Collect in Store" : "Home Delivery"
-            }
+            },
+            // Browser identifiers for the Meta Purchase event sent once this order is paid
+            ...orderMetaFrom(browserContext(req))
           ]
         };
 
@@ -1636,6 +1731,7 @@ async function startServer() {
         return res.json({
           id: response.data.id.toString(), // Return WC Order ID
           merchantTransactionId: merchantTransactionId, // Also return the unique ID
+          total: response.data.total, // What WooCommerce will actually charge
           amount: amount * 100,
           currency: currency || "INR",
           receipt: `receipt_${response.data.id}`
@@ -1658,7 +1754,7 @@ async function startServer() {
 
   app.post("/api/checkout/phonepe/pay", async (req, res) => {
     try {
-      const { amount, merchantTransactionId, merchantUserId, mobileNumber } = req.body;
+      const { merchantTransactionId } = req.body;
       
       const phonePeClient = getPhonePeClient();
       
@@ -1684,7 +1780,21 @@ async function startServer() {
       const orderId = merchantTransactionId.split('_')[0];
       const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?signal=${toSignalId(orderId)}`;
       const callbackUrl = process.env.PHONEPE_CALLBACK_URL || `${currentOrigin}/api/checkout/phonepe/callback`;
-      const amountPaise = Math.max(100, Math.round(Number(amount) * 100)); 
+
+      // Always charge the order's total from WooCommerce, never the browser's amount.
+      const wc = getWooCommerce();
+      if (!wc) {
+        return res.status(503).json({ success: false, message: "Payments are unavailable right now. Please try again." });
+      }
+      const { data: wcOrder } = await wcSafeCall(wc, "get", `orders/${orderId}`);
+      if (!["pending", "failed"].includes(wcOrder?.status)) {
+        return res.status(409).json({ success: false, message: "This order can't be paid again." });
+      }
+      const orderTotal = parseFloat(wcOrder.total);
+      if (!Number.isFinite(orderTotal) || orderTotal <= 0) {
+        return res.status(409).json({ success: false, message: "We couldn't confirm this order's total. Please try again." });
+      }
+      const amountPaise = Math.round(orderTotal * 100);
 
       console.log(`[CHILS & CO.] PhonePe SDK - Initiating Checkout:
         - Transaction ID: ${merchantTransactionId}
@@ -3492,7 +3602,7 @@ async function startServer() {
     swapInfoList: any[],
     paidTxId?: string
   ) => {
-    const rmaSecret = process.env.RMA_API_SECRET || "wps_e48738cedfb75d113a6e3f11a6dc18ff5ca4b9b4";
+    const rmaSecret = process.env.RMA_API_SECRET || "";
     const rawWpUrl = process.env.WOOCOMMERCE_URL || "https://chilsandco.com";
     const wpUrl = rawWpUrl.endsWith('/') ? rawWpUrl.slice(0, -1) : rawWpUrl;
     const rmaSecretClean = rmaSecret.trim();
@@ -4328,7 +4438,7 @@ Format your response strictly as a single JSON object. Ensure the keys and value
   app.post("/api/webhooks/logistics-relay", async (req, res) => {
     try {
       const token = req.query.token || req.headers['x-api-key'];
-      const expectedToken = process.env.SHIPROCKET_WEBHOOK_TOKEN || "chils_secure_relay_token_109283";
+      const expectedToken = process.env.SHIPROCKET_WEBHOOK_TOKEN || "";
       
       if (!token || token !== expectedToken) {
         console.warn(`[LOGISTICS WEBHOOK] Unauthorized access attempt: token mismatch.`);
@@ -4436,6 +4546,7 @@ Format your response strictly as a single JSON object. Ensure the keys and value
         console.log(`[LOGISTICS WEBHOOK] Order #${orderId} metadata updated (no status change).`);
       }
 
+      notifyShipping(orderId, String(trackingStatus), updatedStatus);
       return res.status(200).send("OK");
     } catch (error: any) {
       console.error("[LOGISTICS WEBHOOK] Error processing webhook:", error.message || error);
@@ -4521,7 +4632,8 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       { loc: "https://chilsandco.com/", priority: "1.0", changefreq: "daily" },
 
       { loc: "https://chilsandco.com/collection", priority: "0.9", changefreq: "daily" },
-      { loc: "https://chilsandco.com/combos", priority: "0.8", changefreq: "weekly" },
+      { loc: "https://chilsandco.com/pick-your-three", priority: "0.9", changefreq: "weekly" },
+      { loc: "https://chilsandco.com/our-promise", priority: "0.6", changefreq: "monthly" },
       { loc: "https://chilsandco.com/bespoke", priority: "0.9", changefreq: "weekly" },
       { loc: "https://chilsandco.com/co-creator", priority: "0.8", changefreq: "weekly" },
       { loc: "https://chilsandco.com/customize", priority: "0.8", changefreq: "weekly" },
@@ -4604,59 +4716,75 @@ ${xmlItems}
     
     if (fs.existsSync(distPath)) {
       console.log(`[CHILS & CO.] Production mode: Serving static files from ${distPath}`);
-      app.use(express.static(distPath));
+      // index.html must go through the route below (titles, share previews), never served raw.
+      // Built assets carry a hash in their name, so they can be cached for a long time.
+      app.use(express.static(distPath, {
+        index: false,
+        setHeaders: (res, filePath) => {
+          if (/[\\/]assets[\\/]/.test(filePath)) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          else if (/\.(webp|png|jpe?g|svg|woff2?)$/i.test(filePath)) res.setHeader("Cache-Control", "public, max-age=604800");
+        },
+      }));
 
       const DEFAULT_OG_IMAGE = "https://res.cloudinary.com/ddatd5ruz/image/upload/w_1200,h_630,c_fill,f_jpg,q_80/v1782039896/ChatGPT_Image_Jun_21_2026_04_34_04_PM_avhfel.png";
 
       // Meta map for static indexable pages
       const PUBLIC_PAGE_META: Record<string, { title: string; description: string }> = {
         "/": {
-          title: "CHILS & CO. | Extraordinary Bespoke Luxury & High Fashion",
-          description: "Chils & Co. (also known as Chills & Co.) delivers high-end bespoke garments and luxury ready-to-wear. Handcrafted precision for the modern individual."
+          title: "CHILS & CO. | Premium Tees and Polos for People Who Build",
+          description: "Premium tees and polos designed by techies in Hyderabad. Quiet colour, good fabric, delivered across India from ₹80."
         },
         "/collection": {
-          title: "Haute Couture Collection | CHILS & CO.",
-          description: "Explore the luxury ready-to-wear and bespoke garment collection by Chils & Co."
+          title: "Shop all tees and polos | CHILS & CO.",
+          description: "Polos, minimal tees, blacks, oversized and regular-fit tees by CHILS & CO. Delivered across India with 7-day returns."
+        },
+        "/pick-your-three": {
+          title: "Trilogies: three tees, save 10% | CHILS & CO.",
+          description: "Three tees chosen to go together, banded as a numbered Trilogy. Pick your size and save 10%."
         },
         "/combos": {
-          title: "Curated Style Combos | CHILS & CO.",
-          description: "Exclusive multi-garment luxury pairings designed for modern elegance."
+          title: "Trilogies: three tees, save 10% | CHILS & CO.",
+          description: "Three tees chosen to go together, banded as a numbered Trilogy. Pick your size and save 10%."
+        },
+        "/our-promise": {
+          title: "Our promise | CHILS & CO.",
+          description: "Plastic-free, reusable packaging and tees made to last. How CHILS & CO. thinks about what it makes."
         },
         "/bespoke": {
-          title: "Bespoke Garments & Custom Tailoring | CHILS & CO.",
-          description: "Handcrafted bespoke tailoring tailored precisely to your personal measurements."
+          title: "Bespoke | CHILS & CO.",
+          description: "Custom pieces made with the CHILS & CO. team."
         },
         "/co-creator": {
-          title: "Co-Creator Design Studio | CHILS & CO.",
-          description: "Collaborate directly with our design house to create one-of-a-kind fashion pieces."
+          title: "Co-Creator | CHILS & CO.",
+          description: "Design a tee with CHILS & CO. and earn from every one sold."
         },
         "/customize": {
-          title: "Customization Studio | CHILS & CO.",
-          description: "Personalize high-end garments with custom fabrics, cuts, and bespoke finishes."
+          title: "Custom Studio | CHILS & CO.",
+          description: "Design your own tee in the CHILS & CO. Custom Studio."
         },
         "/social-vault": {
           title: "Social Vault | CHILS & CO.",
-          description: "Step into the visual world and digital presence of Chils & Co."
+          description: "The world of CHILS & CO. on social media."
         },
         "/support": {
-          title: "Client Concierge & Support | CHILS & CO.",
-          description: "Get assistance with orders, custom fittings, shipping, and inquiries."
+          title: "Support | CHILS & CO.",
+          description: "Talk to the CHILS & CO. team on WhatsApp, email or phone, Monday to Saturday, 10 AM to 6 PM."
         },
         "/shipping-delivery": {
-          title: "Shipping & Express Delivery | CHILS & CO.",
-          description: "Comprehensive information on shipping timelines, tracking, and international delivery."
+          title: "Shipping & delivery | CHILS & CO.",
+          description: "Delivery across India from ₹80. Packed within 24–48 hours, delivered in 2–7 business days. Free store pickup."
         },
         "/returns-refunds": {
-          title: "Returns & Exchanges Policy | CHILS & CO.",
-          description: "Hassle-free size exchanges, style swaps, and return guidelines for Chils & Co."
+          title: "Returns & refunds | CHILS & CO.",
+          description: "Return within 7 days of delivery for a refund, exchange or store credit."
         },
         "/privacy-policy": {
           title: "Privacy Policy | CHILS & CO.",
-          description: "Detailed overview of how Chils & Co. protects client data and privacy."
+          description: "How CHILS & CO. looks after your data and privacy."
         },
         "/terms-conditions": {
           title: "Terms & Conditions | CHILS & CO.",
-          description: "Official terms of service and usage conditions for Chils & Co."
+          description: "Terms of service for shopping with CHILS & CO."
         }
       };
 
@@ -4707,7 +4835,7 @@ ${xmlItems}
                   .replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"')
                   .replace(/&nbsp;/g, " ")
                   .substring(0, 200)
-                  .trim() || "Premium luxury garment by Chils & Co.";
+                  .trim() || "Premium tee by CHILS & CO. Delivered across India with 7-day returns.";
                 
                 const productImage = Array.isArray(product.images) && product.images.length > 0 ? product.images[0].src : DEFAULT_OG_IMAGE;
                 const productPrice = product.price || "0";
@@ -4787,7 +4915,10 @@ ${xmlItems}
 
   // Background Reconciliation Service
   // Checks for pending orders every 10 minutes and verifies status with PhonePe
-  setInterval(async () => {
+  // A local copy talks to PhonePe's test system but to the live store, so it must never
+  // reconcile real orders. Set PAYMENT_RECON=off there; the live server leaves it unset.
+  if (process.env.PAYMENT_RECON === "off") console.log("[CHILS RECON] Payment reconciliation is off (PAYMENT_RECON=off).");
+  else setInterval(async () => {
     console.log("[CHILS RECON] Triggering routine synchronization...");
     const wc = getWooCommerce();
     if (!wc) return;
@@ -4859,6 +4990,11 @@ ${xmlItems}
 
   try {
     const numericPort = typeof PORT === 'string' ? parseInt(PORT, 10) : Number(PORT);
+    // the team's order bot in Slack (stays off until its tokens are set)
+    startSlackBot({
+      wc: (method, ...args) => wcSafeCall(getWooCommerce(), method, ...args),
+      adminUrl: (process.env.WOOCOMMERCE_URL || "https://api.chilsandco.com").trim(),
+    });
     app.listen(numericPort, "0.0.0.0", () => {
       console.log(`[CHILS & CO.] Server started successfully`);
       console.log(`[CHILS & CO.] Listening on port: ${numericPort}`);
@@ -5209,7 +5345,10 @@ async function triggerOrderConfirmationEmails(order: any) {
   const signalId = toSignalId(order.id);
   
   console.log(`[CHILS & CO. EMAIL] Preparing order emails for Signal #${signalId}`);
-  
+
+  // Every paid order passes through here, so this is where Meta hears about the sale.
+  sendPurchase(order);
+
   // 1. Send Customer Receipt
   if (customerEmail) {
     const customerHtml = compileOrderConfirmationHtml(order);
@@ -5220,7 +5359,10 @@ async function triggerOrderConfirmationEmails(order: any) {
   const adminHtml = compileAdminNotificationHtml(order);
   await sendEmailViaBrevo("chilsandco@gmail.com", "Chils & Co. Admin", `[ALERT] New Signal Generated // #${signalId}`, adminHtml);
 
-  // 3. Send WhatsApp Confirmation
+  // 3. Tell the team in Slack
+  notifyNewOrder(order);
+
+  // 4. Send WhatsApp Confirmation
   triggerWhatsAppOrderConfirmation(order).catch(err => {
     console.error("[CHILS & CO. WHATSAPP] Failed to send order confirmation:", err?.message || "Unknown error");
   });
