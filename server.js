@@ -1122,6 +1122,26 @@ async function startServer() {
   let globalProductsCache = null;
   let lastProductsFetch = 0;
   const PRODUCTS_CACHE_TTL = 1e3 * 60 * 5;
+  const metaCache = /* @__PURE__ */ new Map();
+  const productForMeta = (id) => {
+    const entry = metaCache.get(id) ?? { data: null, at: 0, refresh: null };
+    metaCache.set(id, entry);
+    if (Date.now() - entry.at > 10 * 60 * 1e3 && !entry.refresh) {
+      entry.refresh = wcSafeCall(getWooCommerce(), "get", `products/${id}`).then((r) => {
+        entry.data = r.data;
+        entry.at = Date.now();
+        return r.data;
+      }).finally(() => {
+        entry.refresh = null;
+      });
+      entry.refresh.catch(() => {
+        if (!entry.data) metaCache.delete(id);
+      });
+    }
+    return entry.data ? Promise.resolve(entry.data) : entry.refresh;
+  };
+  const PRODUCT_TTL = 60 * 1e3;
+  const productCache = /* @__PURE__ */ new Map();
   let productsBody = null;
   let productsRefresh = null;
   const refreshProducts = () => {
@@ -1151,6 +1171,9 @@ async function startServer() {
   const invalidateProductsCache = () => {
     console.log("[CHILS & CO.] Refreshing products cache.");
     lastProductsFetch = 0;
+    productCache.forEach((e) => {
+      e.at = 0;
+    });
     refreshProducts().catch((e) => console.error("[CHILS & CO.] Products refresh failed:", e?.message));
   };
   const fetchSwatches = async () => {
@@ -1775,6 +1798,115 @@ async function startServer() {
       res.status(500).json({ message: "Failed to fetch products from WooCommerce" });
     }
   });
+  const buildProductJson = async (id) => {
+    const wc2 = getWooCommerce();
+    const response = await wcSafeCall(wc2, "get", `products/${id}`);
+    let productData = response.data;
+    console.log(`[CHILS & CO. DEBUG] Product ${id} Type: '${productData.type}'`);
+    let resolvedMediaUrls = {};
+    if (productData.type === "variable") {
+      let allVariations = [];
+      let page = 1;
+      let hasMore = true;
+      while (hasMore) {
+        console.log(`[CHILS & CO. DEBUG] Fetching variations page ${page} for product ${id}...`);
+        const variationsResponse = await wcSafeCall(wc2, "get", `products/${id}/variations`, {
+          per_page: 100,
+          page
+        });
+        const pageData = variationsResponse.data;
+        if (Array.isArray(pageData) && pageData.length > 0) {
+          allVariations = [...allVariations, ...pageData];
+          if (pageData.length < 100) {
+            hasMore = false;
+          } else {
+            page++;
+          }
+        } else {
+          hasMore = false;
+        }
+      }
+      productData.variations_data = allVariations;
+      console.log(`[CHILS & CO. DEBUG] Fetched ${productData.variations_data.length} variations total for product ${id}`);
+      const allGalleryIds = /* @__PURE__ */ new Set();
+      productData.variations_data.forEach((v) => {
+        if (v.gallery_image_ids && Array.isArray(v.gallery_image_ids)) {
+          v.gallery_image_ids.forEach((id2) => allGalleryIds.add(String(id2)));
+        }
+        if (v.meta_data && Array.isArray(v.meta_data)) {
+          const metaKeys = [
+            "_woo_variation_gallery_images",
+            "woo_variation_gallery_images",
+            "_wc_additional_variation_images",
+            "wc_additional_variation_images",
+            "_additional_variation_images",
+            "additional_variation_images",
+            "variation_image_gallery",
+            "_wpg_variation_gallery",
+            "wpg_variation_gallery",
+            "rtwpvg_images",
+            "_rtwpvg_images",
+            "vargal_params",
+            "_vargal_params",
+            "vargal_gallery"
+          ];
+          metaKeys.forEach((key) => {
+            const meta = v.meta_data.find((m) => m.key === key);
+            if (meta && typeof meta.value === "string") {
+              meta.value.split(",").forEach((id2) => {
+                if (id2.trim()) allGalleryIds.add(id2.trim());
+              });
+            } else if (meta && Array.isArray(meta.value)) {
+              meta.value.forEach((id2) => allGalleryIds.add(String(id2)));
+            } else if (meta && typeof meta.value === "object") {
+              Object.values(meta.value).forEach((id2) => allGalleryIds.add(String(id2)));
+            }
+          });
+        }
+      });
+      const parentImageIds = new Set((productData.images || []).map((img) => String(img.id)));
+      const unresolvedIds = Array.from(allGalleryIds).filter((id2) => !parentImageIds.has(id2));
+      if (unresolvedIds.length > 0) {
+        console.log(`[CHILS & CO. DEBUG] Fetching ${unresolvedIds.length} unresolved media URLs from WordPress API...`);
+        try {
+          const wpUrl = (process.env.WOOCOMMERCE_URL || "").replace(/\/$/, "");
+          const mediaResponse = await axios3.get(`${wpUrl}/wp-json/wp/v2/media`, {
+            params: { include: unresolvedIds.join(",") }
+          });
+          if (mediaResponse.data && Array.isArray(mediaResponse.data)) {
+            mediaResponse.data.forEach((media) => {
+              if (media.source_url) {
+                resolvedMediaUrls[String(media.id)] = media.source_url;
+              }
+            });
+          }
+        } catch (err) {
+          console.error("[CHILS & CO. DEBUG] Failed to fetch media URLs:", err.message);
+        }
+      }
+    }
+    const swatchesData = await fetchSwatches();
+    return JSON.stringify(mapProduct(productData, resolvedMediaUrls, swatchesData || {}));
+  };
+  const productJson = (id) => {
+    const entry = productCache.get(id) ?? { body: null, at: 0, refresh: null };
+    productCache.set(id, entry);
+    const stale = Date.now() - entry.at > PRODUCT_TTL;
+    if (stale && !entry.refresh) {
+      entry.refresh = buildProductJson(id).then((json) => {
+        entry.body = json;
+        entry.at = Date.now();
+        return json;
+      }).finally(() => {
+        entry.refresh = null;
+      });
+      entry.refresh.catch((e) => {
+        console.error(`[CHILS & CO.] Product ${id} refresh failed:`, e?.message);
+        if (!entry.body) productCache.delete(id);
+      });
+    }
+    return entry.body ? Promise.resolve(entry.body) : entry.refresh;
+  };
   app.get("/api/products/:id", async (req, res) => {
     try {
       const wc2 = getWooCommerce();
@@ -1782,93 +1914,10 @@ async function startServer() {
         const mockProduct = mockProducts.find((product) => product.id === req.params.id);
         return mockProduct ? res.json(mockProduct) : res.status(404).json({ message: "Product not found (Mock Mode)" });
       }
-      const response = await wcSafeCall(wc2, "get", `products/${req.params.id}`);
-      let productData = response.data;
-      console.log(`[CHILS & CO. DEBUG] Product ${req.params.id} Type: '${productData.type}'`);
-      let resolvedMediaUrls = {};
-      if (productData.type === "variable") {
-        let allVariations = [];
-        let page = 1;
-        let hasMore = true;
-        while (hasMore) {
-          console.log(`[CHILS & CO. DEBUG] Fetching variations page ${page} for product ${req.params.id}...`);
-          const variationsResponse = await wcSafeCall(wc2, "get", `products/${req.params.id}/variations`, {
-            per_page: 100,
-            page
-          });
-          const pageData = variationsResponse.data;
-          if (Array.isArray(pageData) && pageData.length > 0) {
-            allVariations = [...allVariations, ...pageData];
-            if (pageData.length < 100) {
-              hasMore = false;
-            } else {
-              page++;
-            }
-          } else {
-            hasMore = false;
-          }
-        }
-        productData.variations_data = allVariations;
-        console.log(`[CHILS & CO. DEBUG] Fetched ${productData.variations_data.length} variations total for product ${req.params.id}`);
-        const allGalleryIds = /* @__PURE__ */ new Set();
-        productData.variations_data.forEach((v) => {
-          if (v.gallery_image_ids && Array.isArray(v.gallery_image_ids)) {
-            v.gallery_image_ids.forEach((id) => allGalleryIds.add(String(id)));
-          }
-          if (v.meta_data && Array.isArray(v.meta_data)) {
-            const metaKeys = [
-              "_woo_variation_gallery_images",
-              "woo_variation_gallery_images",
-              "_wc_additional_variation_images",
-              "wc_additional_variation_images",
-              "_additional_variation_images",
-              "additional_variation_images",
-              "variation_image_gallery",
-              "_wpg_variation_gallery",
-              "wpg_variation_gallery",
-              "rtwpvg_images",
-              "_rtwpvg_images",
-              "vargal_params",
-              "_vargal_params",
-              "vargal_gallery"
-            ];
-            metaKeys.forEach((key) => {
-              const meta = v.meta_data.find((m) => m.key === key);
-              if (meta && typeof meta.value === "string") {
-                meta.value.split(",").forEach((id) => {
-                  if (id.trim()) allGalleryIds.add(id.trim());
-                });
-              } else if (meta && Array.isArray(meta.value)) {
-                meta.value.forEach((id) => allGalleryIds.add(String(id)));
-              } else if (meta && typeof meta.value === "object") {
-                Object.values(meta.value).forEach((id) => allGalleryIds.add(String(id)));
-              }
-            });
-          }
-        });
-        const parentImageIds = new Set((productData.images || []).map((img) => String(img.id)));
-        const unresolvedIds = Array.from(allGalleryIds).filter((id) => !parentImageIds.has(id));
-        if (unresolvedIds.length > 0) {
-          console.log(`[CHILS & CO. DEBUG] Fetching ${unresolvedIds.length} unresolved media URLs from WordPress API...`);
-          try {
-            const wpUrl = (process.env.WOOCOMMERCE_URL || "").replace(/\/$/, "");
-            const mediaResponse = await axios3.get(`${wpUrl}/wp-json/wp/v2/media`, {
-              params: { include: unresolvedIds.join(",") }
-            });
-            if (mediaResponse.data && Array.isArray(mediaResponse.data)) {
-              mediaResponse.data.forEach((media) => {
-                if (media.source_url) {
-                  resolvedMediaUrls[String(media.id)] = media.source_url;
-                }
-              });
-            }
-          } catch (err) {
-            console.error("[CHILS & CO. DEBUG] Failed to fetch media URLs:", err.message);
-          }
-        }
-      }
-      const swatchesData = await fetchSwatches();
-      res.json(mapProduct(productData, resolvedMediaUrls, swatchesData || {}));
+      if (!/^\d+$/.test(req.params.id)) return res.status(404).json({ message: "Product not found" });
+      const json = await productJson(req.params.id);
+      res.setHeader("Cache-Control", "public, max-age=30, stale-while-revalidate=300");
+      res.type("application/json").send(json);
     } catch (error) {
       console.error("WooCommerce API Error:", error);
       res.status(404).json({ message: "Product not found" });
@@ -4938,8 +4987,7 @@ ${xmlItems}
           try {
             const wc2 = getWooCommerce();
             if (wc2) {
-              const response = await wcSafeCall(wc2, "get", `products/${productId}`);
-              const product = response.data;
+              const product = await productForMeta(productId);
               if (product) {
                 const productName = (product.name || "Product").replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">");
                 const productDesc = (product.short_description || product.description || "").replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"').replace(/&nbsp;/g, " ").substring(0, 200).trim() || "Premium tee by CHILS & CO. Delivered across India with 7-day returns.";

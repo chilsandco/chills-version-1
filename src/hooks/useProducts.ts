@@ -27,14 +27,20 @@ export function useProducts() {
   return { products, loading };
 }
 
-const full = new Map<string, Promise<Product | null>>();
+const full = new Map<string, { at: number; p: Promise<Product | null> }>();
 
-/** The list endpoint omits variations; orders and stock checks need them. */
+/** The list endpoint omits variations; orders and stock checks need them. Shared by everything on
+ *  the page that needs the same product, and fetched again after a minute so stock stays current. */
 export function fetchFullProduct(id: string) {
-  if (!full.has(id)) {
-    full.set(id, fetch(`/api/products/${id}`).then(r => (r.ok ? r.json() : null)).then(p => (p ? applyStudio(p as Product) : null)).catch(() => { full.delete(id); return null; }));
+  const hit = full.get(id);
+  if (!hit || Date.now() - hit.at > 60_000) {
+    full.set(id, {
+      at: Date.now(),
+      p: fetch(`/api/products/${id}`).then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+        .then(p => applyStudio(p as Product)).catch(() => { full.delete(id); return null; }),
+    });
   }
-  return full.get(id)!;
+  return full.get(id)!.p;
 }
 
 /** Colour to order: only sent when the product's variations actually carry one. */

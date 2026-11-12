@@ -386,6 +386,25 @@ async function startServer() {
   let lastProductsFetch = 0;
   const PRODUCTS_CACHE_TTL = 1000 * 60 * 5; // 5 minutes cache
 
+  // The share preview of a product page (title, description, image) needs the product, but must not
+  // make the page wait for the store each time: keep it for 10 minutes, refresh in the background.
+  const metaCache = new Map<string, { data: any; at: number; refresh: Promise<any> | null }>();
+  const productForMeta = (id: string): Promise<any> => {
+    const entry = metaCache.get(id) ?? { data: null, at: 0, refresh: null };
+    metaCache.set(id, entry);
+    if (Date.now() - entry.at > 10 * 60 * 1000 && !entry.refresh) {
+      entry.refresh = wcSafeCall(getWooCommerce(), "get", `products/${id}`)
+        .then((r: any) => { entry.data = r.data; entry.at = Date.now(); return r.data; })
+        .finally(() => { entry.refresh = null; });
+      entry.refresh.catch(() => { if (!entry.data) metaCache.delete(id); });
+    }
+    return entry.data ? Promise.resolve(entry.data) : entry.refresh!;
+  };
+
+  // Single products (sizes and stock), see productJson below.
+  const PRODUCT_TTL = 60 * 1000;
+  const productCache = new Map<string, { body: string | null; at: number; refresh: Promise<string> | null }>();
+
   // The list as ready-to-send JSON: with and without the hidden test product.
   let productsBody: { all: string; visible: string } | null = null;
   let productsRefresh: Promise<any[]> | null = null;
@@ -418,6 +437,7 @@ async function startServer() {
   const invalidateProductsCache = () => {
     console.log("[CHILS & CO.] Refreshing products cache.");
     lastProductsFetch = 0;
+    productCache.forEach(e => { e.at = 0; });
     refreshProducts().catch(e => console.error("[CHILS & CO.] Products refresh failed:", e?.message));
   };
 
@@ -1147,18 +1167,14 @@ async function startServer() {
     }
   });
 
-  app.get("/api/products/:id", async (req, res) => {
-    try {
-      const wc = getWooCommerce();
-      if (!wc) {
-        const mockProduct = mockProducts.find(product => product.id === req.params.id);
-        return mockProduct
-          ? res.json(mockProduct)
-          : res.status(404).json({ message: "Product not found (Mock Mode)" });
-      }
-      const response = await wcSafeCall(wc, "get", `products/${req.params.id}`);
+  // One product with its sizes and stock. Kept for a minute and refreshed in the background, so a
+  // product page never waits for the store; refreshed straight after an order changes stock.
+
+  const buildProductJson = async (id: string): Promise<string> => {
+    const wc = getWooCommerce();
+      const response = await wcSafeCall(wc, "get", `products/${id}`);
       let productData = response.data;
-      console.log(`[CHILS & CO. DEBUG] Product ${req.params.id} Type: '${productData.type}'`);
+      console.log(`[CHILS & CO. DEBUG] Product ${id} Type: '${productData.type}'`);
       
       let resolvedMediaUrls: Record<string, string> = {};
 
@@ -1168,8 +1184,8 @@ async function startServer() {
         let hasMore = true;
         
         while (hasMore) {
-          console.log(`[CHILS & CO. DEBUG] Fetching variations page ${page} for product ${req.params.id}...`);
-          const variationsResponse = await wcSafeCall(wc, "get", `products/${req.params.id}/variations`, { 
+          console.log(`[CHILS & CO. DEBUG] Fetching variations page ${page} for product ${id}...`);
+          const variationsResponse = await wcSafeCall(wc, "get", `products/${id}/variations`, { 
             per_page: 100,
             page: page
           });
@@ -1188,7 +1204,7 @@ async function startServer() {
         }
         
         productData.variations_data = allVariations;
-        console.log(`[CHILS & CO. DEBUG] Fetched ${productData.variations_data.length} variations total for product ${req.params.id}`);
+        console.log(`[CHILS & CO. DEBUG] Fetched ${productData.variations_data.length} variations total for product ${id}`);
         
         // Harvest all gallery IDs from variations to fetch their URLs if missing
         const allGalleryIds = new Set<string>();
@@ -1253,7 +1269,35 @@ async function startServer() {
       }
       
       const swatchesData = await fetchSwatches();
-      res.json(mapProduct(productData, resolvedMediaUrls, swatchesData || {}));
+      return JSON.stringify(mapProduct(productData, resolvedMediaUrls, swatchesData || {}));
+  };
+
+  const productJson = (id: string): Promise<string> => {
+    const entry = productCache.get(id) ?? { body: null, at: 0, refresh: null };
+    productCache.set(id, entry);
+    const stale = Date.now() - entry.at > PRODUCT_TTL;
+    if (stale && !entry.refresh) {
+      entry.refresh = buildProductJson(id)
+        .then(json => { entry.body = json; entry.at = Date.now(); return json; })
+        .finally(() => { entry.refresh = null; });
+      entry.refresh.catch(e => { console.error(`[CHILS & CO.] Product ${id} refresh failed:`, e?.message); if (!entry.body) productCache.delete(id); });
+    }
+    return entry.body ? Promise.resolve(entry.body) : entry.refresh!;
+  };
+
+  app.get("/api/products/:id", async (req, res) => {
+    try {
+      const wc = getWooCommerce();
+      if (!wc) {
+        const mockProduct = mockProducts.find(product => product.id === req.params.id);
+        return mockProduct
+          ? res.json(mockProduct)
+          : res.status(404).json({ message: "Product not found (Mock Mode)" });
+      }
+      if (!/^\d+$/.test(req.params.id)) return res.status(404).json({ message: "Product not found" });
+      const json = await productJson(req.params.id);
+      res.setHeader('Cache-Control', 'public, max-age=30, stale-while-revalidate=300');
+      res.type('application/json').send(json);
     } catch (error) {
       console.error("WooCommerce API Error:", error);
       res.status(404).json({ message: "Product not found" });
@@ -4793,8 +4837,7 @@ ${xmlItems}
           try {
             const wc = getWooCommerce();
             if (wc) {
-              const response = await wcSafeCall(wc, "get", `products/${productId}`);
-              const product = response.data;
+              const product = await productForMeta(productId);
               if (product) {
                 const productName = (product.name || "Product").replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">");
                 const productDesc = (product.short_description || product.description || "")

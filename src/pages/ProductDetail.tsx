@@ -14,7 +14,7 @@ import { useAuth } from '../AuthContext';
 import { ProductReview } from '../types';
 import { ModelFloor, isStanding } from '../components/ModelFloor';
 import { applyStudio, isPoster, small, srcSet } from '../data/studio';
-import { loadProducts } from '../hooks/useProducts';
+import { loadProducts, fetchFullProduct } from '../hooks/useProducts';
 import { productTone } from '../data/groups';
 import { STORIES, keySpecs } from '../data/stories';
 import TrilogyHint from '../components/TrilogyHint';
@@ -168,21 +168,18 @@ const ProductDetail: React.FC = () => {
 
   useEffect(() => {
     setLoading(true);
-    // one brief API hiccup shouldn't throw a shopper back to the collection
+    // one brief API hiccup shouldn't throw a shopper back to the collection; shared with the
+    // other parts of the page that need this product, so it is fetched once
     const loadProduct = (retries: number): Promise<any> =>
-      fetch(`/api/products/${id}`)
-        .then(res => {
-          if (!res.ok) throw new Error();
-          return res.json();
-        })
-        .catch(err => {
-          if (retries <= 0) throw err;
-          return new Promise(resolve => setTimeout(resolve, 700)).then(() => loadProduct(retries - 1));
-        });
+      fetchFullProduct(String(id)).then(p => {
+        if (p) return p;
+        if (retries <= 0) throw new Error('not found');
+        return new Promise(resolve => setTimeout(resolve, 700)).then(() => loadProduct(retries - 1));
+      });
 
     loadProduct(2)
       .then(data => {
-        setProduct(applyStudio(data));
+        setProduct(data);
         track('view_item', { currency: 'INR', value: data.price, items: [itemOf(data)] });
         setLoading(false);
       })
