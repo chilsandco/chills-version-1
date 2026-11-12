@@ -35,7 +35,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, quickAdd = false, la
   return (
     <div className="group relative min-w-0" onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}>
       <Link to={to} className="block">
-        <div className="relative aspect-[3/4] bg-paper overflow-hidden">
+        <div className="relative aspect-[3/4] bg-bone overflow-hidden rounded-[14px]">
           {img && (
             <img
               src={small(img)}
@@ -45,7 +45,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, quickAdd = false, la
               loading="lazy"
               decoding="async"
               referrerPolicy="no-referrer"
-              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+              className="w-full h-full object-cover transition-transform duration-[900ms] ease-soft group-hover:scale-[1.04]"
             />
           )}
 
@@ -53,7 +53,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, quickAdd = false, la
             <>
               <button
                 onClick={e => { e.preventDefault(); e.stopPropagation(); openQuickView(product); }}
-                className="hidden md:block absolute inset-x-2 bottom-2 z-10 bg-[#fff]/95 backdrop-blur text-ink py-3 text-[13px] font-medium opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 focus:opacity-100 transition-all duration-300 hover:bg-ink hover:text-[#fff]"
+                className="hidden md:block absolute inset-x-2 bottom-2 z-10 rounded-full bg-[#fff]/95 backdrop-blur text-ink py-3 text-[13px] font-medium opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 focus:opacity-100 transition-all duration-[350ms] ease-soft hover:bg-ink hover:text-paper"
               >
                 Quick view
               </button>
@@ -68,7 +68,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, quickAdd = false, la
           )}
 
           {product.status === 'Coming Soon' && (
-            <span className="absolute bottom-2 left-2 bg-ink text-[#fff] font-mono text-[10px] px-1.5 py-0.5">
+            <span className="absolute bottom-2 left-2 rounded-full bg-ink text-paper font-mono text-[10px] px-2 py-0.5">
               Coming soon
             </span>
           )}

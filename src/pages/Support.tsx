@@ -42,7 +42,7 @@ const Support: React.FC = () => {
             { to: '/console/orders', label: 'Track an order' },
             { to: '/auth', label: 'Your account' },
           ].map(l => (
-            <Link key={l.to} to={l.to} className="inline-flex items-center gap-2 w-fit border-b border-ink pb-0.5">{l.label} <ArrowRight size={13} /></Link>
+            <Link key={l.to} to={l.to} className="link-brass inline-flex items-center gap-2 w-fit">{l.label} <ArrowRight size={13} /></Link>
           ))}
         </div>
       </Section>

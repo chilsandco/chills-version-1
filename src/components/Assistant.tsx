@@ -560,7 +560,7 @@ const Assistant: React.FC = () => {
           )}
         </AnimatePresence>
         {!open && (
-          <button onClick={() => start()} aria-label="Ask CHILS" className="h-12 pl-4 pr-5 rounded-full bg-ink text-[#fff] flex items-center gap-2 text-sm font-medium shadow-[0_10px_30px_-10px_rgba(0,0,0,.5)] hover:opacity-90 transition-opacity cursor-pointer">
+          <button onClick={() => start()} aria-label="Ask CHILS" className="btn-primary h-12 pl-4 pr-5 flex items-center gap-2 text-sm shadow-[0_10px_30px_-10px_rgba(0,0,0,.5)] cursor-pointer">
             <Snowflake className="w-[15px] h-[17px]" /> Ask CHILS
           </button>
         )}
@@ -602,7 +602,7 @@ const Assistant: React.FC = () => {
                     </div>
                   ))}
                   {m.link && (
-                    <Link to={m.link.to} onClick={() => setOpen(false)} className="block mt-2 ml-8 text-sm border-b border-ink w-fit pb-0.5">{m.link.label}</Link>
+                    <Link to={m.link.to} onClick={() => setOpen(false)} className="link-brass block mt-2 ml-8 text-sm w-fit">{m.link.label}</Link>
                   )}
                   {m.cards && (
                     <div className="mt-2 -mx-4 px-4 flex gap-2 overflow-x-auto snap-x [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -614,7 +614,7 @@ const Assistant: React.FC = () => {
                           <div className="p-2.5">
                             <p className="text-[13px] font-medium truncate">{p.name}</p>
                             <p className="text-[11px] text-neutral-500 truncate">{reason(p)}</p>
-                            <button onClick={() => (m.size ? add(p, m.size) : pickSize(p))} className="mt-2 w-full bg-ink text-[#fff] rounded-full py-2 text-xs font-medium cursor-pointer">
+                            <button onClick={() => (m.size ? add(p, m.size) : pickSize(p))} className="btn-primary mt-2 w-full py-2 text-xs cursor-pointer">
                               {m.size ? `Add · ${m.size}` : 'Choose size'}
                             </button>
                           </div>
@@ -641,7 +641,7 @@ const Assistant: React.FC = () => {
                 aria-label="Ask CHILS"
                 className="flex-1 h-11 px-4 rounded-full bg-[#f1f1ef] text-[16px] outline-none placeholder:text-neutral-400"
               />
-              <button type="submit" aria-label="Send" className="w-11 h-11 rounded-full bg-ink text-[#fff] flex items-center justify-center cursor-pointer"><ArrowUp size={18} /></button>
+              <button type="submit" aria-label="Send" className="btn-primary w-11 h-11 flex items-center justify-center cursor-pointer"><ArrowUp size={18} /></button>
             </form>
           </motion.section>
         )}

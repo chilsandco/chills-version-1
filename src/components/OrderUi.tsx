@@ -49,9 +49,9 @@ export const StatusPill: React.FC<{ status: string; className?: string }> = ({ s
 /** A tee picture with a quiet placeholder when an old order has none. */
 export const Thumb: React.FC<{ src?: string | null; alt: string; className?: string }> = ({ src, alt, className = 'w-14 h-[72px]' }) =>
   src ? (
-    <img src={src} alt={alt} loading="lazy" referrerPolicy="no-referrer" className={`${className} object-cover rounded-lg bg-[#ebe9e3] shrink-0`} />
+    <img src={src} alt={alt} loading="lazy" referrerPolicy="no-referrer" className={`${className} object-cover rounded-lg bg-bone shrink-0`} />
   ) : (
-    <div className={`${className} rounded-lg bg-[#ebe9e3] shrink-0 grid place-items-center text-[10px] text-neutral-400`}>CHILS</div>
+    <div className={`${className} rounded-lg bg-bone shrink-0 grid place-items-center text-[10px] text-neutral-400`}>CHILS</div>
   );
 
 /** The paper page frame used by every after-purchase page. */
@@ -64,7 +64,7 @@ export const OrderPage: React.FC<{
   width?: string;
   children: React.ReactNode;
 }> = ({ eyebrow, title, intro, back, aside, width = 'max-w-[880px]', children }) => (
-  <div className="bg-[#f3f2ee] text-ink pt-24 md:pt-32 pb-20 min-h-screen">
+  <div className="bg-paper text-ink pt-24 md:pt-32 pb-20 min-h-screen">
     <div className={`${width} mx-auto px-3 md:px-6`}>
       {back && (
         <Link to={back.to} className="inline-flex items-center gap-1.5 text-sm text-neutral-500 hover:text-ink mx-2 mb-5">
@@ -92,7 +92,7 @@ export const Card: React.FC<{ title?: React.ReactNode; className?: string; child
 );
 
 export const Spinner: React.FC<{ label?: string }> = ({ label }) => (
-  <div className="min-h-screen bg-[#f3f2ee] grid place-items-center">
+  <div className="min-h-screen bg-paper grid place-items-center">
     <div className="text-center">
       <div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin mx-auto" />
       {label && <p className="mt-4 text-sm text-neutral-500">{label}</p>}
@@ -100,5 +100,5 @@ export const Spinner: React.FC<{ label?: string }> = ({ label }) => (
   </div>
 );
 
-export const btnInk = 'inline-flex items-center justify-center gap-2 whitespace-nowrap bg-ink text-[#fff] rounded-full px-6 py-3.5 text-sm font-medium hover:bg-neutral-800 transition-colors disabled:opacity-40';
-export const btnLine = 'inline-flex items-center justify-center gap-2 whitespace-nowrap border border-ink/15 bg-[#fff] text-ink rounded-full px-6 py-3.5 text-sm font-medium hover:border-ink transition-colors';
+export const btnInk = 'btn-primary px-6 py-3.5 text-sm';
+export const btnLine = 'btn-secondary px-6 py-3.5 text-sm';

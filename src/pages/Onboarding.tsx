@@ -17,7 +17,7 @@ const Onboarding: React.FC = () => {
   ];
 
   return (
-    <div className="bg-[#f3f2ee] text-ink pt-24 md:pt-32 pb-20 min-h-screen">
+    <div className="bg-paper text-ink pt-24 md:pt-32 pb-20 min-h-screen">
       <div className="max-w-[880px] mx-auto px-3 md:px-6">
         <header className="px-2 mb-8 md:mb-12">
           <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 18 }}
@@ -34,7 +34,7 @@ const Onboarding: React.FC = () => {
         <div className="grid md:grid-cols-3 gap-2">
           {perks.map(({ icon: I, t, d }, i) => (
             <motion.div key={t} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.08 }} className="bg-[#fff] rounded-2xl p-5 md:p-6">
-              <span className="w-10 h-10 rounded-full bg-[#f3f2ee] grid place-items-center mb-4"><I size={18} /></span>
+              <span className="w-10 h-10 rounded-full bg-paper grid place-items-center mb-4"><I size={18} /></span>
               <p className="font-semibold text-lg">{t}</p>
               <p className="text-[15px] text-neutral-600 mt-1 leading-relaxed">{d}</p>
             </motion.div>

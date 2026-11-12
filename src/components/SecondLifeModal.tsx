@@ -108,7 +108,7 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-xl max-h-[92vh] overflow-y-auto bg-[#f3f2ee] text-ink rounded-t-2xl sm:rounded-2xl p-4 md:p-6"
+            className="relative w-full max-w-xl max-h-[92vh] overflow-y-auto bg-paper text-ink rounded-t-2xl sm:rounded-2xl p-4 md:p-6"
             style={{ overscrollBehavior: 'contain' }}
             data-lenis-prevent
           >
@@ -132,7 +132,7 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
               </div>
               <div className="h-2 w-full bg-[#eeece6] rounded-full overflow-hidden"><div className="h-full w-1/2 bg-ink rounded-full" /></div>
               <div className="flex items-center gap-2 mt-3 text-sm">
-                <span className="inline-flex items-center gap-1.5 bg-[#f3f2ee] rounded-full px-3 py-1.5"><Leaf size={13} /> Eco bag</span>
+                <span className="inline-flex items-center gap-1.5 bg-paper rounded-full px-3 py-1.5"><Leaf size={13} /> Eco bag</span>
                 <ChevronRight size={14} className="text-neutral-400" />
                 <span className="inline-flex items-center gap-1.5 bg-ink text-[#fff] rounded-full px-3 py-1.5"><Package size={13} /> Second Life Box</span>
               </div>
@@ -165,7 +165,7 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
                         </div>
                       </div>
                       <button type="button" onClick={() => handleQuickAdd(product)} disabled={addedProductId !== null} aria-label={`Add ${product.name}, size ${chosen}`}
-                        className={`self-center w-11 h-11 rounded-full grid place-items-center shrink-0 transition-colors ${added ? 'bg-ink text-[#fff]' : 'bg-[#f3f2ee] hover:bg-ink hover:text-[#fff] disabled:opacity-30'}`}>
+                        className={`self-center w-11 h-11 rounded-full grid place-items-center shrink-0 transition-colors ${added ? 'bg-ink text-[#fff]' : 'bg-paper hover:bg-ink hover:text-[#fff] disabled:opacity-30'}`}>
                         {added ? <Check size={18} /> : <Plus size={18} />}
                       </button>
                     </motion.div>
@@ -177,7 +177,7 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
             )}
 
             <button type="button" onClick={onContinueWithEcoBag}
-              className="w-full mt-4 py-3.5 rounded-full border border-ink/15 bg-[#fff] text-sm font-medium hover:border-ink transition-colors flex items-center justify-center gap-2">
+              className="btn-secondary w-full mt-4 py-3.5 text-sm flex items-center justify-center gap-2">
               <Leaf size={14} /> Continue with the eco bag
             </button>
           </motion.div>

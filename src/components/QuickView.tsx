@@ -129,14 +129,14 @@ const QuickView: React.FC = () => {
                   </div>
                 </div>
 
-                <Link to={`/product/${item.id}`} className="inline-flex items-center gap-1.5 mt-6 text-sm border-b border-ink pb-0.5">
+                <Link to={`/product/${item.id}`} className="link-brass inline-flex items-center gap-1.5 mt-6 text-sm">
                   View full details <ArrowRight size={14} />
                 </Link>
               </div>
             </div>
 
             <div className="px-6 py-4 border-t border-black/10 pb-[max(1rem,env(safe-area-inset-bottom))]">
-              <button onClick={add} disabled={!full} className="w-full bg-ink text-[#fff] py-4 text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-40">
+              <button onClick={add} disabled={!full} className="btn-primary w-full py-4 text-sm disabled:opacity-40">
                 {full ? `Add to bag · ₹${item.price.toLocaleString()}` : 'Loading…'}
               </button>
             </div>

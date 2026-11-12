@@ -140,7 +140,7 @@ export const BuyBar: React.FC<{
           })}
         </div>
       </div>
-      <button onClick={add} className="mt-3 w-full bg-ink text-[#fff] py-4 flex items-center justify-center gap-3 text-sm font-medium hover:opacity-85 transition-opacity">
+      <button onClick={add} className="btn-primary mt-3 w-full py-4 flex items-center justify-center gap-3 text-sm">
         Add this Trilogy to bag
         <span className="opacity-40">·</span>
         <span>₹{price.toLocaleString()}</span>

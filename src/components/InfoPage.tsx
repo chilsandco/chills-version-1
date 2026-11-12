@@ -69,7 +69,7 @@ const InfoPage: React.FC<{
 }> = ({ seo, eyebrow, title, intro, facts, related, children }) => {
   const contact = useContact();
   return (
-    <div className="bg-[#f3f2ee] text-ink pt-24 md:pt-32 pb-20 min-h-screen">
+    <div className="bg-paper text-ink pt-24 md:pt-32 pb-20 min-h-screen">
       <SEO title={seo.title} description={seo.description} canonical={seo.canonical} />
       <div className="max-w-[880px] mx-auto px-3 md:px-6">
         <header className="px-2 mb-6 md:mb-10">
@@ -84,7 +84,7 @@ const InfoPage: React.FC<{
         </div>
         {related && (
           <nav className="px-2 mt-8 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            {related.map(r => <Link key={r.to} to={r.to} className="inline-flex items-center gap-1.5 border-b border-ink pb-0.5">{r.label} <ArrowRight size={13} /></Link>)}
+            {related.map(r => <Link key={r.to} to={r.to} className="link-brass inline-flex items-center gap-1.5">{r.label} <ArrowRight size={13} /></Link>)}
           </nav>
         )}
       </div>

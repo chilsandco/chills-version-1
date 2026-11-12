@@ -448,7 +448,7 @@ const Checkout: React.FC = () => {
       <div className="h-screen flex flex-col items-center justify-center px-6 text-center text-ink">
         <h1 className="text-4xl md:text-5xl font-semibold">Your bag is empty</h1>
         <p className="text-stone mt-3">Choose a Trilogy and save 10%.</p>
-        <Link to="/pick-your-three" className="mt-8 bg-ink text-[#fff] px-10 py-4 text-sm font-medium">Pick your three</Link>
+        <Link to="/pick-your-three" className="btn-primary mt-8 px-10 py-4 text-sm">Pick your three</Link>
         <Link to="/collection" className="mt-4 text-sm underline underline-offset-4">Browse all products</Link>
       </div>
     );
@@ -664,7 +664,7 @@ const Checkout: React.FC = () => {
                     <Field label="Phone for delivery (optional)" name="phone" type="tel" prefix="+91" maxLength={10} value={addressFormData.phone} onChange={handleAddressInputChange} />
                   </div>
                   <div className="flex gap-3 mt-5">
-                    <button type="button" onClick={saveAddress} className="bg-ink text-[#fff] px-7 py-3.5 text-sm font-medium cursor-pointer">Save address</button>
+                    <button type="button" onClick={saveAddress} className="btn-primary px-7 py-3.5 text-sm cursor-pointer">Save address</button>
                     <button type="button" onClick={() => { setShowAddressForm(false); setEditingAddressId(null); }} className="border border-black/20 px-7 py-3.5 text-sm cursor-pointer">Cancel</button>
                   </div>
                 </div>
@@ -737,7 +737,7 @@ const Checkout: React.FC = () => {
                         autoFocus
                         className="flex-1 min-w-0 h-11 px-3 bg-[#fff] border border-black/20 focus:border-ink outline-none text-[16px] text-ink uppercase placeholder:normal-case placeholder:text-black/35"
                       />
-                      <button type="button" onClick={applyCode} disabled={codeChecking || !codeInput.trim()} className="px-5 h-11 bg-ink text-[#fff] text-sm disabled:opacity-40 cursor-pointer">{codeChecking ? '…' : 'Apply'}</button>
+                      <button type="button" onClick={applyCode} disabled={codeChecking || !codeInput.trim()} className="btn-primary px-5 h-11 text-sm disabled:opacity-40 cursor-pointer">{codeChecking ? '…' : 'Apply'}</button>
                     </div>
                     {codeError && <p role="alert" className="text-xs text-red-700 mt-2">{codeError}</p>}
                   </>
@@ -752,7 +752,7 @@ const Checkout: React.FC = () => {
                 : 'Ships in a biodegradable bag. Add one more tee for our reusable Second Life box.'}
             </p>
 
-            <button type="submit" disabled={isProcessing} className="mt-5 w-full bg-ink text-[#fff] py-4 text-[15px] font-medium flex items-center justify-center gap-2.5 hover:opacity-90 transition-opacity disabled:opacity-50 cursor-pointer">
+            <button type="submit" disabled={isProcessing} className="btn-primary mt-5 w-full py-4 text-[15px] flex items-center justify-center gap-2.5 disabled:opacity-50 cursor-pointer">
               <Lock size={15} /> {isProcessing ? 'Processing…' : `Pay ₹${money(orderTotal)}`}
             </button>
             <p className="text-xs text-stone text-center mt-3">You'll complete payment securely on PhonePe.</p>

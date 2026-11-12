@@ -424,7 +424,7 @@ const CustomStudio: React.FC = () => {
   const stepLabels = ['Choose', 'Design', 'Send'];
 
   return (
-    <div className="bg-[#f3f2ee] text-ink min-h-screen pt-24 md:pt-32 pb-24 font-sans">
+    <div className="bg-paper text-ink min-h-screen pt-24 md:pt-32 pb-24 font-sans">
       <SEO
         title="Custom Studio | CHILS & CO."
         description="Custom tees, hoodies, drinkware, caps and stickers for teams, events and gifts. Upload your design or describe your idea, and get a quote on WhatsApp."
@@ -444,10 +444,10 @@ const CustomStudio: React.FC = () => {
                 From one personalised gift to hundreds of pieces for your startup, event, wedding or community. Tees, hoodies, drinkware, caps and stickers.
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-3">
-                <button onClick={scrollToConfigurator} className="inline-flex items-center gap-2 bg-ink text-[#fff] rounded-full px-6 py-3.5 text-sm font-medium cursor-pointer">
+                <button onClick={scrollToConfigurator} className="btn-primary items-center gap-2 px-6 py-3.5 text-sm cursor-pointer">
                   Start designing <ArrowRight size={15} />
                 </button>
-                <a href="https://wa.me/917842070404" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 border border-ink rounded-full px-6 py-3.5 text-sm font-medium">
+                <a href="https://wa.me/917842070404" target="_blank" rel="noopener noreferrer" className="btn-secondary items-center gap-2 px-6 py-3.5 text-sm">
                   WhatsApp us
                 </a>
               </div>
@@ -483,7 +483,7 @@ const CustomStudio: React.FC = () => {
               { emoji: '🎁', title: 'Personal gifts', desc: 'One-of-a-kind pieces designed for someone special.' },
             ].map((o) => (
               <div key={o.title} className="bg-[#fff] rounded-2xl p-5 flex items-start gap-4">
-                <span className="w-11 h-11 rounded-full bg-[#f3f2ee] grid place-items-center text-xl shrink-0">{o.emoji}</span>
+                <span className="w-11 h-11 rounded-full bg-paper grid place-items-center text-xl shrink-0">{o.emoji}</span>
                 <div>
                   <h3 className="font-semibold">{o.title}</h3>
                   <p className="text-[15px] text-neutral-600 mt-0.5 leading-relaxed">{o.desc}</p>
@@ -497,7 +497,7 @@ const CustomStudio: React.FC = () => {
         <section className="py-10 md:py-16">
           <div className="flex items-end justify-between gap-4">
             <SectionHead eyebrow="Products" title="Choose what to customise" />
-            <button onClick={scrollToConfigurator} className="hidden md:inline-flex items-center gap-1.5 text-sm border-b border-ink pb-0.5 mb-8 cursor-pointer">Go to the builder <ArrowRight size={13} /></button>
+            <button onClick={scrollToConfigurator} className="link-brass hidden md:inline-flex items-center gap-1.5 text-sm mb-8 cursor-pointer">Go to the builder <ArrowRight size={13} /></button>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
             {CUSTOM_PRODUCTS.map((prod) => {
@@ -505,7 +505,7 @@ const CustomStudio: React.FC = () => {
               return (
                 <button key={prod.id} onClick={() => handleProductSelect(prod)}
                   className={`group text-left bg-[#fff] rounded-2xl overflow-hidden transition-shadow duration-300 cursor-pointer ${on ? 'ring-2 ring-ink' : 'hover:shadow-[0_10px_30px_-15px_rgba(0,0,0,.35)]'}`}>
-                  <div className="aspect-square w-full bg-[#ebe9e3] relative overflow-hidden">
+                  <div className="aspect-square w-full bg-bone relative overflow-hidden">
                     <img src={prod.images[0]} alt={prod.name} loading="lazy" className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700" />
                     <span className="absolute top-3 left-3 bg-[#fff]/90 px-2.5 py-1 rounded-full text-[11px] text-neutral-600">{prod.category}</span>
                     {on && <span className="absolute top-3 right-3 w-6 h-6 bg-ink text-[#fff] rounded-full grid place-items-center"><Check size={12} strokeWidth={3} /></span>}
@@ -533,7 +533,7 @@ const CustomStudio: React.FC = () => {
                 <p className="text-[15px] text-neutral-600 mt-1 leading-relaxed">Upload it and we’ll prepare it for print. Small fixes and print tuning are free.</p>
               </div>
               <div className="bg-[#fff] rounded-2xl p-5 md:p-6">
-                <span className="inline-block text-xs bg-[#f3f2ee] text-neutral-600 rounded-full px-2.5 py-1 mb-3">Custom design work</span>
+                <span className="inline-block text-xs bg-paper text-neutral-600 rounded-full px-2.5 py-1 mb-3">Custom design work</span>
                 <h3 className="font-semibold text-lg">Need a design from scratch?</h3>
                 <p className="text-[15px] text-neutral-600 mt-1 leading-relaxed">Our team can create one from your idea. Design charges may apply.</p>
               </div>
@@ -550,7 +550,7 @@ const CustomStudio: React.FC = () => {
             <div className="lg:col-span-6 space-y-2 min-w-0">
               <div className="bg-[#fff] rounded-2xl p-3 md:p-4">
                 <div className="flex items-center justify-between gap-3 mb-3">
-                  <div className="inline-flex bg-[#f3f2ee] rounded-full p-1">
+                  <div className="inline-flex bg-paper rounded-full p-1">
                     {([['mockup', 'Photo', Eye], ['blueprint', 'Placement', Layers]] as const).map(([k, l, I]) => (
                       <button key={k} type="button" onClick={() => setViewMode(k)}
                         className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-sm transition-colors cursor-pointer ${viewMode === k ? 'bg-ink text-[#fff]' : 'text-neutral-600 hover:text-ink'}`}>
@@ -561,7 +561,7 @@ const CustomStudio: React.FC = () => {
                   <span className="text-sm text-neutral-500 truncate">{selectedProduct.name}</span>
                 </div>
 
-                <div className="relative aspect-[4/3] w-full bg-[#ebe9e3] rounded-xl overflow-hidden">
+                <div className="relative aspect-[4/3] w-full bg-bone rounded-xl overflow-hidden">
                   <AnimatePresence mode="wait">
                     {viewMode === 'mockup' ? (
                       <motion.img key={`mockup-${activeImageIndex}`} src={selectedProduct.images[activeImageIndex] || selectedProduct.images[0]} alt={selectedProduct.name}
@@ -584,7 +584,7 @@ const CustomStudio: React.FC = () => {
                   <div className="flex gap-2 mt-3">
                     {selectedProduct.images.map((img, idx) => (
                       <button key={idx} type="button" onClick={() => setActiveImageIndex(idx)} aria-label={`Photo ${idx + 1}`}
-                        className={`w-14 h-14 rounded-lg overflow-hidden bg-[#ebe9e3] cursor-pointer ${activeImageIndex === idx ? 'ring-2 ring-ink' : 'ring-1 ring-black/5'}`}>
+                        className={`w-14 h-14 rounded-lg overflow-hidden bg-bone cursor-pointer ${activeImageIndex === idx ? 'ring-2 ring-ink' : 'ring-1 ring-black/5'}`}>
                         <img src={img} alt="" className="w-full h-full object-cover" />
                       </button>
                     ))}
@@ -710,7 +710,7 @@ const CustomStudio: React.FC = () => {
                           { label: 'Gift', text: 'Custom text and illustration, personal gift, 1 piece.' },
                         ].map((p) => (
                           <button key={p.label} type="button" onClick={() => setDesignDescription(p.text)}
-                            className="px-3 py-1.5 rounded-full bg-[#f3f2ee] hover:bg-ink hover:text-[#fff] text-xs transition-colors cursor-pointer">+ {p.label}</button>
+                            className="px-3 py-1.5 rounded-full bg-paper hover:bg-ink hover:text-[#fff] text-xs transition-colors cursor-pointer">+ {p.label}</button>
                         ))}
                       </div>
                       <textarea value={designDescription} onChange={(e) => setDesignDescription(e.target.value)} rows={4}
@@ -819,7 +819,7 @@ const CustomStudio: React.FC = () => {
               );
             })}
           </div>
-          <a href="https://wa.me/917842070404" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 border-b border-ink pb-0.5 text-sm mt-8">
+          <a href="https://wa.me/917842070404" target="_blank" rel="noopener noreferrer" className="link-brass inline-flex items-center gap-1.5 text-sm mt-8">
             Still deciding? Chat with us on WhatsApp <ArrowRight size={13} />
           </a>
         </section>

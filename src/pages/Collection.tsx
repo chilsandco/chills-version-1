@@ -208,7 +208,7 @@ const Collection: React.FC = () => {
                     <div className="pb-2 md:pb-24">
                       <p className="eyebrow text-stone mb-3">Three tees, chosen to go together</p>
                       <h2 className="text-[38px] md:text-[80px] font-semibold leading-[1]">Pick your three. Save 10%.</h2>
-                      <Link to="/pick-your-three" className="mt-7 inline-flex items-center gap-2 bg-ink text-[#fff] px-7 py-4 text-sm font-medium hover:opacity-85 transition-opacity">See the Trilogies <ArrowRight size={15} /></Link>
+                      <Link to="/pick-your-three" className="btn-primary mt-7 items-center gap-2 px-7 py-4 text-sm">See the Trilogies <ArrowRight size={15} /></Link>
                     </div>
                     <div className="flex items-end justify-center gap-1 md:gap-3 h-[300px] md:h-[560px]">
                       {OPENING.slice(0, 3).map((id, n) => (
@@ -226,7 +226,7 @@ const Collection: React.FC = () => {
           <Search className="mx-auto mb-5 opacity-30" size={36} />
           <h2 className="text-2xl font-semibold">Nothing matches those filters</h2>
           <p className="text-stone mt-2">Try removing a filter or searching for something else.</p>
-          <button onClick={reset} className="mt-7 bg-ink text-[#fff] px-8 py-3 text-sm">Clear filters</button>
+          <button onClick={reset} className="btn-primary mt-7 px-8 py-3 text-sm">Clear filters</button>
         </section>
       ) : (
         <ModelFloor products={shown} eyebrow={group?.name} spreads={sort === 'featured'} black={group?.slug === 'blacks'} />
@@ -235,7 +235,7 @@ const Collection: React.FC = () => {
       {/* CUSTOM */}
       <section className="max-w-[1600px] mx-auto px-5 md:px-10 py-14 md:py-24 text-center">
         <p className="text-stone mb-5">Want to wear it your way?</p>
-        <Link to="/customize" className="inline-block border border-black/30 px-8 py-4 text-sm font-medium hover:bg-ink hover:text-[#fff] transition-colors">Design your own in Custom Studio</Link>
+        <Link to="/customize" className="btn-secondary px-8 py-4 text-sm">Design your own in Custom Studio</Link>
       </section>
 
       {/* FILTER DRAWER */}
@@ -286,7 +286,7 @@ const Collection: React.FC = () => {
 
               <div className="px-6 py-5 border-t border-black/10 flex gap-3">
                 <button onClick={reset} className="flex-1 border border-black/25 py-4 text-sm">Reset</button>
-                <button onClick={() => setDrawer(false)} className="flex-[2] bg-ink text-[#fff] py-4 text-sm font-medium">Show {shown.length} product{shown.length === 1 ? '' : 's'}</button>
+                <button onClick={() => setDrawer(false)} className="btn-primary flex-[2] py-4 text-sm">Show {shown.length} product{shown.length === 1 ? '' : 's'}</button>
               </div>
             </motion.aside>
           </>

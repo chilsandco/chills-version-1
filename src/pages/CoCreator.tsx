@@ -90,7 +90,7 @@ const CoCreator: React.FC = () => {
   );
 
   return (
-    <div className="bg-[#f3f2ee] text-ink pt-24 md:pt-32 pb-20 min-h-screen">
+    <div className="bg-paper text-ink pt-24 md:pt-32 pb-20 min-h-screen">
       <SEO
         title="Co-Creator"
         description="Design a tee with CHILS & CO. We make it and sell it, and you earn 5% of every one sold. No contracts, any tools."
@@ -103,7 +103,7 @@ const CoCreator: React.FC = () => {
           <h1 className="text-[38px] md:text-[64px] leading-[1.02] font-semibold tracking-[-0.035em]">Design a tee with us.</h1>
           <p className="mt-3 md:mt-5 text-neutral-600 md:text-lg">You design it. We make it and sell it. You earn 5% of every one sold.</p>
           <div className="mt-6 flex flex-wrap items-center gap-3 md:justify-center">
-            <a href="#join" className="inline-flex items-center gap-2 bg-ink text-[#fff] rounded-full px-6 py-3.5 text-sm font-medium">
+            <a href="#join" className="btn-primary items-center gap-2 px-6 py-3.5 text-sm">
               {joined ? 'You’re a Co-Creator' : 'Become a Co-Creator'} <ArrowRight size={15} />
             </a>
             {stats && <span className="text-sm text-neutral-500">{stats.coCreators} creators so far</span>}
@@ -140,7 +140,7 @@ const CoCreator: React.FC = () => {
           <section className="bg-[#fff] rounded-2xl p-5 md:p-8 mb-2">
             <div className="flex items-baseline justify-between gap-4 mb-5">
               <h2 className="text-xl md:text-2xl font-semibold">Already in the store</h2>
-              <Link to="/collection" className="text-sm border-b border-ink pb-0.5 shrink-0">Shop all</Link>
+              <Link to="/collection" className="link-brass text-sm shrink-0">Shop all</Link>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-2 gap-y-4">
               {coCreated.map(p => (
@@ -167,11 +167,11 @@ const CoCreator: React.FC = () => {
             </p>
           </div>
           {joined ? (
-            <a href={SUBMIT_FORM} target="_blank" rel="noopener noreferrer" className="mt-4 md:mt-0 shrink-0 inline-flex items-center gap-2 bg-ink text-[#fff] rounded-full px-6 py-3.5 text-sm font-medium">
+            <a href={SUBMIT_FORM} target="_blank" rel="noopener noreferrer" className="btn-primary mt-4 md:mt-0 shrink-0 items-center gap-2 px-6 py-3.5 text-sm">
               Submit a design <ArrowRight size={15} />
             </a>
           ) : (
-            <a href="#join" className="mt-4 md:mt-0 shrink-0 inline-flex items-center gap-2 border border-ink rounded-full px-6 py-3.5 text-sm font-medium">Join first <ArrowRight size={15} /></a>
+            <a href="#join" className="btn-secondary mt-4 md:mt-0 shrink-0 items-center gap-2 px-6 py-3.5 text-sm">Join first <ArrowRight size={15} /></a>
           )}
         </section>
 

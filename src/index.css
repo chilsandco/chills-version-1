@@ -6,11 +6,16 @@
   --font-display: "Geist", "Inter", ui-sans-serif, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
   --font-brand: "Space Grotesk", "Geist", sans-serif;
-  --color-ink: #0e0e0c;
-  --color-paper: #f3f2ee;
+  /* The CHILS palette: warm neutrals and one small accent */
+  --color-ink: #141311;     /* text and primary buttons: a warm near-black */
+  --color-paper: #f4f2ee;   /* page */
+  --color-bone: #e7e3dc;    /* photo backgrounds, secondary buttons, quiet sections */
   --color-floor: #e7e5df;
-  --color-stone: #76746e;
-  --color-accent: #d4af37; /* Gold accent */
+  --color-stone: #716c64;   /* secondary text (kept dark enough to read on paper) */
+  --color-brass: #9c8152;   /* accent, in small doses only: underlines, dots, active marks */
+  --color-moss: #3e4a3a;    /* confirmations ("Added") */
+  --color-accent: #d4af37; /* legacy gold, dark admin pages only */
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1); /* every animation: quick start, slow settle */
   --color-brand-navy: #001e3c;
   
   --animate-scan: scan 4s linear infinite;
@@ -115,8 +120,8 @@
    the old remap of dark utilities is gone. */
 .theme-light {
   --bg: #ffffff;
-  --paper: #f4f3f0;
-  --ink: #111111;
+  --paper: #f4f2ee;
+  --ink: #141311;
   --muted: #6b6b6b;
   --line: rgba(0, 0, 0, 0.1);
   --color-accent: #111111;
@@ -127,7 +132,54 @@
 .theme-light ::selection { background: #111; color: #fff; }
 .theme-light input, .theme-light select, .theme-light textarea { color: var(--ink); }
 
+/* ── Shared controls ───────────────────────────────────────────────────────
+   One button family, one link style, one card motion. Timings: 0.15s press,
+   0.25–0.35s hover, 0.9s photos. Turned off for people who ask for less motion. */
+@layer components {
+  .btn-primary, .btn-secondary {
+    display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+    border-radius: 9999px; font-weight: 500; white-space: nowrap; cursor: pointer;
+    transition: transform .25s var(--ease-soft), background-color .25s var(--ease-soft), color .25s var(--ease-soft), opacity .2s;
+  }
+  .btn-primary { background-color: var(--color-ink); color: var(--color-paper); }
+  .btn-primary:hover:not(:disabled) { background-color: #2a2825; transform: translateY(-1px); }
+  .btn-secondary { background-color: var(--color-bone); color: var(--color-ink); }
+  .btn-secondary:hover:not(:disabled) { background-color: #ddd8cf; transform: translateY(-1px); }
+  .btn-primary:active:not(:disabled), .btn-secondary:active:not(:disabled) { transform: scale(.97); transition-duration: .15s; }
+  .btn-primary:disabled, .btn-secondary:disabled { opacity: .4; cursor: not-allowed; }
+  .btn-primary svg, .btn-secondary svg { transition: transform .35s var(--ease-soft); }
+  .btn-primary:hover .lucide-arrow-right, .btn-secondary:hover .lucide-arrow-right,
+  .btn-primary:hover .lucide-arrow-up-right, .btn-secondary:hover .lucide-arrow-up-right { transform: translateX(4px); }
+  .btn-secondary:hover .lucide-ruler { transform: rotate(-12deg); }
+  .btn-primary.is-done { background-color: var(--color-moss); }
+  /* a button's label changing (Add to bag → Added): the new words rise in */
+  .label-swap { display: inline-flex; align-items: center; gap: .4rem; animation: label-in .28s var(--ease-soft); }
+
+  /* text link: a brass underline draws in from the left */
+  .link-brass {
+    background:
+      linear-gradient(var(--color-brass), var(--color-brass)) left bottom / 0 1.5px no-repeat,
+      linear-gradient(rgb(20 19 17 / .25), rgb(20 19 17 / .25)) left bottom / 100% 1px no-repeat;
+    padding-bottom: 3px; transition: background-size .4s var(--ease-soft);
+  }
+  .link-brass:hover { background-size: 100% 1.5px, 100% 1px; }
+  .link-brass svg { transition: transform .35s var(--ease-soft); }
+  .link-brass:hover .lucide-arrow-right { transform: translateX(3px); }
+
+  /* product cards: the card rises a little, the photo zooms slowly */
+  .card-lift { transition: transform .35s var(--ease-soft); }
+  .card-lift:hover { transform: translateY(-3px); }
+  .photo-zoom img { transition: transform .9s var(--ease-soft); }
+  .photo-zoom:hover img, .group:hover .photo-zoom img { transform: scale(1.04); }
+
+  :focus-visible { outline: 2px solid var(--color-ink); outline-offset: 2px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-primary, .btn-secondary, .btn-primary svg, .btn-secondary svg, .card-lift, .photo-zoom img, .link-brass { transition: none !important; transform: none !important; }
+}
+
 /* Photos fade in as they arrive. Skips images that manage their own opacity (crossfades). */
+@keyframes label-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 @keyframes img-in { from { opacity: 0; } to { opacity: 1; } }
 img[loading="lazy"].img-in:not([class*="opacity-"]) { animation: img-in .4s ease-out; }
 @media (prefers-reduced-motion: reduce) { img.img-in { animation: none !important; } }
@@ -178,7 +230,7 @@ nav.fixed, header.fixed { padding-left: env(safe-area-inset-left); padding-right
 
 /* ── The phone look: light grey page, white rounded surfaces, pill buttons ── */
 @media (max-width: 767px) {
-  .theme-light main > div { background: #efefef !important; }
+  .theme-light main > div { background: var(--color-paper) !important; }
   .theme-light main h1:not(.keep) {
     font-size: 30px !important; line-height: 1.1 !important; letter-spacing: -0.02em !important;
     font-style: normal !important; text-transform: none !important;

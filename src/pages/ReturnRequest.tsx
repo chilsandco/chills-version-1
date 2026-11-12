@@ -325,7 +325,7 @@ const ReturnRequest: React.FC = () => {
           <Card title={<span className="flex items-baseline justify-between gap-3">3. Photos <span className="text-sm font-normal text-neutral-500">{NEEDS_PHOTOS.includes(reason) ? 'Needed for this reason' : 'Optional'} · {images.length}/3</span></span>}>
             <div className="flex gap-2 flex-wrap">
               {images.map((src, idx) => (
-                <div key={idx} className="relative w-24 h-32 rounded-xl overflow-hidden bg-[#ebe9e3]">
+                <div key={idx} className="relative w-24 h-32 rounded-xl overflow-hidden bg-bone">
                   <img src={src} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
                   <button type="button" aria-label="Remove photo" onClick={() => setImages(prev => prev.filter((_, i) => i !== idx))}
                     className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-ink/80 text-[#fff] grid place-items-center"><X size={13} /></button>

@@ -84,7 +84,7 @@ const RecentOrders: React.FC = () => {
           </Link>
         ))}
       </div>
-      <Link to="/console/orders" className="inline-flex items-center gap-1.5 border-b border-ink pb-0.5 text-sm mt-4">
+      <Link to="/console/orders" className="link-brass inline-flex items-center gap-1.5 text-sm mt-4">
         All orders ({orders.length}) <ArrowRight size={13} />
       </Link>
     </div>
@@ -271,7 +271,7 @@ const Auth: React.FC = () => {
     const hasWaitlist = isFlagActive(user.onWaitlist, 'chils_bespoke_waitlist');
 
     return (
-      <div className="bg-[#f3f2ee] text-ink pt-24 md:pt-32 pb-20 min-h-screen">
+      <div className="bg-paper text-ink pt-24 md:pt-32 pb-20 min-h-screen">
         <SEO title="Your account" description="Your CHILS & CO. account: orders, tracking and your details." canonical="https://chilsandco.com/auth" keywords="chils and co account, my orders, track order" />
         <div className="max-w-[1080px] mx-auto px-3 md:px-6">
           <header className="px-2 mb-6 md:mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
@@ -344,7 +344,7 @@ const Auth: React.FC = () => {
 
   // ---------- Signed out: sign in or create an account ----------
   return (
-    <div className="min-h-screen bg-[#f3f2ee] text-ink pt-16 md:pt-20 flex flex-col md:flex-row">
+    <div className="min-h-screen bg-paper text-ink pt-16 md:pt-20 flex flex-col md:flex-row">
       <SEO
         title="Sign in"
         description="Sign in or create a CHILS & CO. account for faster checkout, order tracking and early access to limited drops."
@@ -374,7 +374,7 @@ const Auth: React.FC = () => {
           </div>
 
           <div className="bg-[#fff] rounded-2xl p-5 md:p-7">
-            <div className="grid grid-cols-2 bg-[#f3f2ee] rounded-full p-1 mb-6" role="tablist">
+            <div className="grid grid-cols-2 bg-paper rounded-full p-1 mb-6" role="tablist">
               {[{ k: false, l: 'Sign in' }, { k: true, l: 'Create account' }].map(t => (
                 <button key={t.l} type="button" role="tab" aria-selected={isRegister === t.k} onClick={() => { setIsRegister(t.k); setError(null); }}
                   className={`rounded-full py-2.5 text-sm font-medium transition-colors ${isRegister === t.k ? 'bg-ink text-[#fff]' : 'text-neutral-600 hover:text-ink'}`}>

@@ -13,7 +13,7 @@ const DWELL = 6500;
 const FIRST_TRILOGY = '1727';
 
 const Pill: React.FC<{ to: string; children: React.ReactNode }> = ({ to, children }) => (
-  <Link to={to} className="shrink-0 bg-ink text-[#fff] rounded-full px-4 py-2 text-xs font-medium">{children}</Link>
+  <Link to={to} className="btn-primary shrink-0 px-4 py-2 text-xs">{children}</Link>
 );
 
 export const Sheet: React.FC<{ title: string; to?: string; action?: string; children: React.ReactNode }> = ({ title, to, action = 'View all', children }) => (
@@ -124,7 +124,7 @@ const PhoneHome: React.FC = () => {
             <li>7-day returns</li>
             <li>From Miyapur, Hyderabad</li>
           </ul>
-          <Link to="/our-promise" className="inline-block mt-4 text-sm border-b border-ink pb-0.5">Our promise</Link>
+          <Link to="/our-promise" className="link-brass inline-block mt-4 text-sm">Our promise</Link>
         </section>
       </div>
     </div>

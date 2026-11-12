@@ -74,7 +74,7 @@ const LineUp: React.FC = () => {
       <div className="absolute z-20 left-12 top-[calc(2%+var(--title)*1.13)] max-w-sm">
         <p className="text-2xl leading-[1.2] font-semibold tracking-[-0.02em]">Designed by techies. For those who build.</p>
         <div className="mt-6 flex items-center gap-1">
-        <Link to="/collection" className="inline-flex items-center gap-2 bg-ink text-[#fff] px-7 py-3.5 text-sm font-medium hover:opacity-85 transition-opacity whitespace-nowrap">
+        <Link to="/collection" className="btn-primary items-center gap-2 px-7 py-3.5 text-sm">
           Shop the collection <ArrowRight size={15} />
         </Link>
         <button onClick={() => setStopped(v => !v)} aria-label={stopped ? 'Keep walking' : 'Stop the line-up'} className="p-3 text-neutral-400 hover:text-ink transition-colors cursor-pointer">

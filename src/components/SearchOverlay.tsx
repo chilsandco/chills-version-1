@@ -173,7 +173,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ isOpen, onClose }) => {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-0 z-50 bg-[#f3f2ee] text-ink flex flex-col pt-20 md:pt-24 pb-8 px-4 md:px-12"
+          className="fixed inset-0 z-50 bg-paper text-ink flex flex-col pt-20 md:pt-24 pb-8 px-4 md:px-12"
           data-lenis-prevent
         >
           <button onClick={onClose} aria-label="Close search"
@@ -195,7 +195,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ isOpen, onClose }) => {
                 style={{ paddingLeft: 52 }}
               />
               <button type="submit" disabled={!query.trim()} aria-label="Search"
-                className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 md:w-11 md:h-11 rounded-full bg-ink text-[#fff] grid place-items-center disabled:opacity-30 cursor-pointer">
+                className="btn-primary absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 md:w-11 md:h-11 grid place-items-center disabled:opacity-30 cursor-pointer">
                 {loading ? <Loader2 className="animate-spin" size={18} /> : <ArrowRight size={18} />}
               </button>
             </form>
@@ -235,7 +235,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ isOpen, onClose }) => {
                       ))}
                       {results.length > 6 && (
                         <button type="button" onClick={() => handleSearchSubmit()}
-                          className="w-full mt-2 py-3.5 rounded-full border border-ink/15 bg-[#fff] text-sm font-medium hover:border-ink transition-colors cursor-pointer">
+                          className="btn-secondary w-full mt-2 py-3.5 text-sm cursor-pointer">
                           See all {results.length} results
                         </button>
                       )}

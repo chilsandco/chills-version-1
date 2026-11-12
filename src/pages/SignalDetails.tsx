@@ -99,7 +99,7 @@ const SignalDetails: React.FC = () => {
                 ))}
               </ol>
               {isRefunded && (
-                <p className="mt-6 text-[15px] text-neutral-600 bg-[#f3f2ee] rounded-xl px-4 py-3">
+                <p className="mt-6 text-[15px] text-neutral-600 bg-paper rounded-xl px-4 py-3">
                   <strong className="text-ink font-medium">Refunded {inr(signal.total)}</strong> to your original payment method. Depending on your bank, it shows up in 3–7 business days.
                 </p>
               )}
@@ -154,7 +154,7 @@ const SignalDetails: React.FC = () => {
                         {sw.delta > 0 ? (sw.type === 'refund' ? `${inr(sw.delta)} to be refunded to you` : `${inr(sw.delta)} difference paid`) : 'Same price, nothing to pay'}
                       </p>
                     </div>
-                    <span className="text-xs bg-[#f3f2ee] rounded-full px-2.5 py-1 shrink-0">Requested</span>
+                    <span className="text-xs bg-paper rounded-full px-2.5 py-1 shrink-0">Requested</span>
                   </div>
                 ))}
               </div>
@@ -174,7 +174,7 @@ const SignalDetails: React.FC = () => {
                       <p className="text-sm text-neutral-500 mt-0.5">Qty {item.quantity} · {inr(item.price)} each</p>
                       {swap && <p className="text-sm text-neutral-600 mt-1 flex items-center gap-1.5"><RefreshCcw size={13} /> Exchanging for {swap.swapProductName} ({swap.swapSize})</p>}
                       {isPaid && !isRefunded && s === 'completed' && (
-                        <Link to={`/product/${item.productId}?writeReview=true`} className="inline-flex items-center gap-1.5 text-sm mt-2 border-b border-ink/30 hover:border-ink pb-0.5"><Star size={13} /> Write a review</Link>
+                        <Link to={`/product/${item.productId}?writeReview=true`} className="link-brass inline-flex items-center gap-1.5 text-sm mt-2"><Star size={13} /> Write a review</Link>
                       )}
                     </div>
                     <p className={`font-medium shrink-0 ${isRefunded ? 'line-through text-neutral-400' : ''}`}>{inr(item.total)}</p>

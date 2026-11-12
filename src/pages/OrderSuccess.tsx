@@ -139,7 +139,7 @@ const OrderSuccess: React.FC = () => {
   const iconTone = state === 'paid' ? 'bg-ink text-[#fff]' : state === 'pending' ? 'bg-amber-100 text-amber-900' : 'bg-[#e6e4df] text-ink';
 
   return (
-    <div className="bg-[#f3f2ee] text-ink pt-24 md:pt-32 pb-20 min-h-screen">
+    <div className="bg-paper text-ink pt-24 md:pt-32 pb-20 min-h-screen">
       <div className="max-w-[720px] mx-auto px-3 md:px-6">
         <motion.header initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }} className="px-2 mb-6 md:mb-10">
           <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.15, type: 'spring', stiffness: 260, damping: 18 }}
@@ -174,7 +174,7 @@ const OrderSuccess: React.FC = () => {
                   { icon: Home, t: 'It arrives', d: 'Most orders arrive in 3–7 days. Size not right? You have 7 days to ask for an exchange.' },
                 ].map(({ icon: I, t, d }) => (
                   <li key={t} className="flex gap-4">
-                    <span className="w-9 h-9 rounded-full bg-[#f3f2ee] grid place-items-center shrink-0"><I size={16} /></span>
+                    <span className="w-9 h-9 rounded-full bg-paper grid place-items-center shrink-0"><I size={16} /></span>
                     <div><p className="font-medium">{t}</p><p className="text-[15px] text-neutral-600 leading-relaxed">{d}</p></div>
                   </li>
                 ))}

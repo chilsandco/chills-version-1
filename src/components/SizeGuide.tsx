@@ -95,7 +95,7 @@ const SizeGuide: React.FC<SizeGuideProps> = ({ isOpen, onClose }) => {
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 30, opacity: 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            className="relative w-full max-w-5xl max-h-[92vh] overflow-y-auto bg-[#f3f2ee] text-ink rounded-t-2xl md:rounded-2xl p-4 md:p-8 scrollbar-none"
+            className="relative w-full max-w-5xl max-h-[92vh] overflow-y-auto bg-paper text-ink rounded-t-2xl md:rounded-2xl p-4 md:p-8 scrollbar-none"
             onClick={(e) => e.stopPropagation()}
             data-lenis-prevent
           >
@@ -129,9 +129,9 @@ const SizeGuide: React.FC<SizeGuideProps> = ({ isOpen, onClose }) => {
                         <tr key={row.size} className="border-t border-[#eeece6]">
                           <td className="py-3.5 px-3 font-semibold">{row.size}</td>
                           {cols.map(c => (
-                            <td key={c.k} className={`py-3.5 px-3 tabular-nums transition-colors ${hi(c.k) ? 'font-semibold bg-[#f3f2ee]' : 'text-ink/80'}`}>{(row as any)[c.k]}</td>
+                            <td key={c.k} className={`py-3.5 px-3 tabular-nums transition-colors ${hi(c.k) ? 'font-semibold bg-paper' : 'text-ink/80'}`}>{(row as any)[c.k]}</td>
                           ))}
-                          <td className="py-3.5 px-3 text-right"><span className="text-xs bg-[#f3f2ee] rounded-full px-2.5 py-1 whitespace-nowrap">{row.fit}</span></td>
+                          <td className="py-3.5 px-3 text-right"><span className="text-xs bg-paper rounded-full px-2.5 py-1 whitespace-nowrap">{row.fit}</span></td>
                         </tr>
                       ))}
                     </tbody>

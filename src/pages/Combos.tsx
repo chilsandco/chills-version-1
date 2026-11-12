@@ -145,7 +145,7 @@ const Combos: React.FC = () => {
         {!loading && closets.length === 0 && (
           <div className="h-[50vh] flex flex-col items-center justify-center text-center gap-5">
             <p className="text-neutral-500">No Trilogies are available right now.</p>
-            <Link to="/collection" className="border-b border-ink pb-0.5 text-sm">Shop the collection</Link>
+            <Link to="/collection" className="link-brass text-sm">Shop the collection</Link>
           </div>
         )}
 
@@ -159,7 +159,7 @@ const Combos: React.FC = () => {
                   <p className="text-sm md:text-base text-neutral-500 mt-0.5">{r.line}</p>
                 </div>
                 {shown.length < r.closets.length && (
-                  <button onClick={() => choose(r.index)} className="shrink-0 inline-flex items-center gap-1.5 text-sm border-b border-ink pb-0.5">
+                  <button onClick={() => choose(r.index)} className="link-brass shrink-0 inline-flex items-center gap-1.5 text-sm">
                     See all {r.closets.length} <ArrowRight size={14} />
                   </button>
                 )}

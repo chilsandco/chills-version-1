@@ -673,7 +673,7 @@ const ProductDetail: React.FC = () => {
     return () => ((window as any).cancelIdleCallback ?? clearTimeout)(handle);
   }, [galleryKey]);
 
-  if (loading || !product) return <div className="h-screen bg-[#f3f2ee] grid place-items-center"><div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin" /></div>;
+  if (loading || !product) return <div className="h-screen bg-paper grid place-items-center"><div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin" /></div>;
 
   const productStory = product.shortDescription || product.concept || product.description;
   const productDetails = product.description || product.shortDescription || "";
@@ -948,29 +948,28 @@ const ProductDetail: React.FC = () => {
           <div className="mt-4 flex flex-col gap-2">
             {product.status === 'Available' ? (
               isSelectedSizeOutOfStock ? (
-                <button disabled className="w-full border border-black/15 text-neutral-500 py-3.5 text-sm cursor-not-allowed">Size {selectedSize} is out of stock</button>
+                <button disabled className="w-full rounded-full bg-bone text-stone py-3.5 text-sm cursor-not-allowed">Size {selectedSize} is out of stock</button>
               ) : (
                 <>
                   <motion.button
                     ref={addToCartBtnRef}
                     onClick={handleAddToCart}
-                    whileTap={{ scale: 0.99 }}
-                    className="w-full bg-ink text-[#fff] py-3.5 text-sm font-medium tracking-wide hover:opacity-90 transition-opacity cursor-pointer"
+                    className={`btn-primary w-full py-3.5 text-sm tracking-wide cursor-pointer ${buttonText.startsWith('Added') ? 'is-done' : ''}`}
                   >
-                    {buttonText === 'Add to Cart' ? 'Add to bag' : buttonText}
+                    <span key={buttonText} className="label-swap">{buttonText === 'Add to Cart' ? 'Add to bag' : buttonText.startsWith('Added') ? <><Check size={15} /> Added to bag</> : buttonText === 'Adding...' ? 'Adding…' : buttonText}</span>
                   </motion.button>
                   <div className="flex gap-2">
-                    <button onClick={handleBuyNow} disabled={isBuyNowProcessing} className="flex-1 border border-ink py-3 text-sm font-medium hover:bg-ink hover:text-[#fff] transition-colors disabled:opacity-50 cursor-pointer">
+                    <button onClick={handleBuyNow} disabled={isBuyNowProcessing} className="btn-secondary flex-1 py-3 text-sm disabled:opacity-50 cursor-pointer">
                       {isBuyNowProcessing ? 'Taking you to checkout…' : 'Buy now'}
                     </button>
-                    <button onClick={() => toggleWishlist(product)} aria-label={isInWishlist(product.id) ? 'Remove from wishlist' : 'Save to wishlist'} aria-pressed={isInWishlist(product.id)} className="w-12 border border-ink flex items-center justify-center hover:bg-ink hover:text-[#fff] transition-colors cursor-pointer">
+                    <button onClick={() => toggleWishlist(product)} aria-label={isInWishlist(product.id) ? 'Remove from wishlist' : 'Save to wishlist'} aria-pressed={isInWishlist(product.id)} className="btn-secondary w-12 flex items-center justify-center cursor-pointer">
                       <Heart size={16} className={isInWishlist(product.id) ? 'fill-current' : ''} />
                     </button>
                   </div>
                 </>
               )
             ) : (
-              <button disabled className="w-full border border-black/15 text-neutral-500 py-3.5 text-sm cursor-not-allowed">Coming soon</button>
+              <button disabled className="w-full rounded-full bg-bone text-stone py-3.5 text-sm cursor-not-allowed">Coming soon</button>
             )}
           </div>
           <TrilogyHint ids={[product.id]} className="mt-3" />
@@ -1031,7 +1030,7 @@ const ProductDetail: React.FC = () => {
           <div className="min-w-0">
             <p className="text-[28px] lg:text-[48px] leading-[1.08] font-semibold tracking-[-0.03em]">{shortStory}</p>
             {productStory.length > 120 && (
-              <button onClick={() => setIsDescOpen(true)} className="mt-4 text-sm text-stone border-b border-black/20 pb-0.5 hover:text-ink hover:border-ink transition-colors cursor-pointer">Read the full story</button>
+              <button onClick={() => setIsDescOpen(true)} className="link-brass mt-4 text-sm text-stone cursor-pointer">Read the full story</button>
             )}
             <dl className="mt-8 lg:mt-12 pt-7 lg:pt-9 border-t border-black/10 grid grid-cols-2 gap-x-8 gap-y-7">
               {specs.map(spec => (
@@ -1070,9 +1069,9 @@ const ProductDetail: React.FC = () => {
                     addToCartBtnRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                   } else handleAddToCart();
                 }}
-                className="shrink-0 w-[46%] md:w-[280px] bg-ink text-[#fff] py-3.5 text-sm font-medium cursor-pointer"
+                className={`btn-primary shrink-0 w-[46%] md:w-[280px] py-3.5 text-sm cursor-pointer ${buttonText.startsWith('Added') ? 'is-done' : ''}`}
               >
-                {buttonText === 'Add to Cart' ? 'Add to bag' : buttonText}
+                <span key={buttonText} className="label-swap">{buttonText === 'Add to Cart' ? 'Add to bag' : buttonText.startsWith('Added') ? <><Check size={15} /> Added</> : buttonText === 'Adding...' ? 'Adding…' : buttonText}</span>
               </button>
             </div>
           </motion.div>
@@ -1085,7 +1084,7 @@ const ProductDetail: React.FC = () => {
           <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 text-ink">
             <p className="text-sm text-stone">Bought this one? Tell others how it fits.</p>
             <div className="flex items-center gap-5">
-              <button onClick={() => setShowReviewModal(true)} className="text-sm border-b border-ink pb-0.5 cursor-pointer">Write a review</button>
+              <button onClick={() => setShowReviewModal(true)} className="link-brass text-sm cursor-pointer">Write a review</button>
               <div className="w-[170px] relative"><ShareSignal productName={product.name} productUrl={window.location.href} productImage={product.images[0]} /></div>
             </div>
           </div>
@@ -1121,7 +1120,7 @@ const ProductDetail: React.FC = () => {
                   );
                 })}
               </div>
-              <button onClick={() => setShowReviewModal(true)} className="w-full bg-ink text-[#fff] rounded-full py-3.5 text-sm font-medium hover:bg-neutral-800 transition-colors cursor-pointer">
+              <button onClick={() => setShowReviewModal(true)} className="btn-primary w-full py-3.5 text-sm cursor-pointer">
                 Write a review
               </button>
             </div>
@@ -1218,7 +1217,7 @@ const ProductDetail: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
               data-lenis-prevent
             >
-              <button onClick={() => setShowReviewModal(false)} aria-label="Close" className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#f3f2ee] grid place-items-center hover:bg-ink hover:text-[#fff] transition-colors cursor-pointer">
+              <button onClick={() => setShowReviewModal(false)} aria-label="Close" className="absolute top-4 right-4 w-8 h-8 rounded-full bg-paper grid place-items-center hover:bg-ink hover:text-[#fff] transition-colors cursor-pointer">
                 <X size={16} />
               </button>
 
@@ -1292,7 +1291,7 @@ const ProductDetail: React.FC = () => {
                     </div>
 
                     <button type="submit" disabled={submitLoading}
-                      className="w-full bg-ink text-[#fff] rounded-full py-3.5 text-sm font-medium hover:bg-neutral-800 transition-colors disabled:opacity-50 cursor-pointer">
+                      className="btn-primary w-full py-3.5 text-sm disabled:opacity-50 cursor-pointer">
                       {submitLoading ? 'Sending…' : 'Post review'}
                     </button>
                   </>
@@ -1327,7 +1326,7 @@ const ProductDetail: React.FC = () => {
               onClick={(e) => e.stopPropagation()}
               data-lenis-prevent
             >
-              <button onClick={() => setIsDescOpen(false)} aria-label="Close" className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#f3f2ee] grid place-items-center hover:bg-ink hover:text-[#fff] transition-colors">
+              <button onClick={() => setIsDescOpen(false)} aria-label="Close" className="absolute top-4 right-4 w-8 h-8 rounded-full bg-paper grid place-items-center hover:bg-ink hover:text-[#fff] transition-colors">
                 <X size={16} />
               </button>
 

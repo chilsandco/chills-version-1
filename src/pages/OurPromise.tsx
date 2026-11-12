@@ -48,7 +48,7 @@ const OurPromise: React.FC = () => {
                 </div>
               ))}
             </dl>
-            <Link to="/collection" className="mt-9 inline-flex items-center gap-2 bg-ink text-[#fff] px-7 py-4 text-sm font-medium hover:opacity-85 transition-opacity">
+            <Link to="/collection" className="btn-primary mt-9 items-center gap-2 px-7 py-4 text-sm">
               Shop the collection <ArrowRight size={15} />
             </Link>
           </div>

@@ -38,7 +38,7 @@ const TrilogyHint: React.FC<{ ids: string[]; onGo?: () => void; className?: stri
   const t = useTrilogyFor(ids);
   if (!t) return null;
   return (
-    <Link to={`/combos?id=${t.combo.id}`} onClick={onGo} className={`group flex items-center gap-3 rounded-xl bg-[#f3f2ee] p-3 pr-4 ${className}`}>
+    <Link to={`/combos?id=${t.combo.id}`} onClick={onGo} className={`group flex items-center gap-3 rounded-xl bg-paper p-3 pr-4 ${className}`}>
       <MiniStack tees={t.tees} />
       <span className="min-w-0 flex-1">
         <span className="block text-sm font-medium leading-snug">{t.from ? `${t.from.name.replace(/^TwinTex Polo - /, '')} comes in ${t.name}` : t.name}</span>

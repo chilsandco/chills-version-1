@@ -72,10 +72,10 @@ const Home: React.FC = () => {
           <motion.div {...reveal} className="mt-12 md:mt-16 grid md:grid-cols-2 gap-8 items-end">
             <p className="text-stone text-lg max-w-md">Essential by design. Elevated by intent. Clothing that moves with you, from work to everything after.</p>
             <div className="flex flex-wrap gap-x-8 gap-y-3 md:justify-end">
-              <Link to="/collection" className="inline-flex items-center gap-2.5 border-b border-ink pb-1 hover:opacity-60 transition-opacity">
+              <Link to="/collection" className="link-brass inline-flex items-center gap-2.5 hover:opacity-60 transition-opacity">
                 Shop the collection <ArrowRight size={16} />
               </Link>
-              <Link to="/our-promise" className="inline-flex items-center gap-2.5 border-b border-black/20 pb-1 text-stone hover:text-ink hover:border-ink transition-colors">
+              <Link to="/our-promise" className="link-brass inline-flex items-center gap-2.5 text-stone">
                 Our promise
               </Link>
             </div>
@@ -89,7 +89,7 @@ const Home: React.FC = () => {
           <div className="max-w-[1500px] mx-auto px-5 md:px-12 pt-16 md:pt-32">
           <motion.div {...reveal} className="flex items-end justify-between mb-10 md:mb-14">
             <h2 className="text-[34px] md:text-6xl font-semibold">The essentials</h2>
-            <Link to="/collection" className="text-sm border-b border-ink pb-0.5">View all</Link>
+            <Link to="/collection" className="link-brass text-sm">View all</Link>
           </motion.div>
           </div>
           <ModelRow products={best.slice(0, 4)} />
@@ -103,7 +103,7 @@ const Home: React.FC = () => {
             <p className="eyebrow text-stone mb-3">Three tees, chosen to go together</p>
             <h2 className="text-[42px] md:text-[80px] font-semibold leading-[1]">Pick your three.</h2>
             <p className="text-stone mt-3 md:text-lg">Choose a Trilogy and save 10%.</p>
-            <Link to="/pick-your-three" className="mt-7 inline-flex items-center gap-2 bg-ink text-[#fff] px-7 py-4 text-sm font-medium hover:opacity-85 transition-opacity">See the Trilogies <ArrowRight size={15} /></Link>
+            <Link to="/pick-your-three" className="btn-primary mt-7 items-center gap-2 px-7 py-4 text-sm">See the Trilogies <ArrowRight size={15} /></Link>
           </motion.div>
           <div className="w-[76%] max-w-[380px] mx-auto pb-12 md:pb-20">
             {firstSet.length === 3 && <Trilogy edition="N° 01" tees={firstSet} onPick={() => navigate('/pick-your-three')} />}

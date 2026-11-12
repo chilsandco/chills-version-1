@@ -69,7 +69,7 @@ const ShareSignal: React.FC<ShareSignalProps> = ({ productName, productUrl, prod
       {!isOpen ? (
         <button
           onClick={() => setIsOpen(true)}
-          className="w-full flex items-center justify-center gap-2 py-2.5 text-sm text-ink border border-ink/15 rounded-full hover:border-ink transition-colors group cursor-pointer"
+          className="btn-secondary w-full flex items-center justify-center gap-2 py-2.5 text-sm group cursor-pointer"
         >
           <Share2 size={14} className="group-hover:scale-110 transition-transform" />
           Share

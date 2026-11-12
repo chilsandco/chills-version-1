@@ -133,7 +133,7 @@ const OrderSignals: React.FC = () => {
                 <p className="eyebrow text-neutral-500 mb-2">The Bespoke</p>
                 <p className="text-lg font-semibold">You’re on the waitlist</p>
                 <p className="text-[15px] text-neutral-600 mt-1">We’ll email you as soon as The Bespoke opens for early access.</p>
-                <Link to="/bespoke" className="inline-flex items-center gap-1.5 border-b border-ink pb-0.5 text-sm mt-4">About The Bespoke <ArrowRight size={13} /></Link>
+                <Link to="/bespoke" className="link-brass inline-flex items-center gap-1.5 text-sm mt-4">About The Bespoke <ArrowRight size={13} /></Link>
               </Card>
             )}
             {hasCoCreator && (
@@ -141,7 +141,7 @@ const OrderSignals: React.FC = () => {
                 <p className="eyebrow text-neutral-500 mb-2">Co-creators</p>
                 <p className="text-lg font-semibold">You’re a co-creator{user?.pseudoName ? `, ${user.pseudoName}` : ''}</p>
                 <p className="text-[15px] text-neutral-600 mt-1">We’ll invite you to share your designs when submissions open.</p>
-                <Link to="/co-creator" className="inline-flex items-center gap-1.5 border-b border-ink pb-0.5 text-sm mt-4">Co-creator page <ArrowRight size={13} /></Link>
+                <Link to="/co-creator" className="link-brass inline-flex items-center gap-1.5 text-sm mt-4">Co-creator page <ArrowRight size={13} /></Link>
               </Card>
             )}
           </div>

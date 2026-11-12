@@ -75,7 +75,7 @@ const BespokeSignals: React.FC = () => {
 
       <Card className="!p-0 overflow-hidden">
         <div className="p-4 md:p-5 border-b border-[#eeece6]">
-          <label className="flex items-center gap-2 bg-[#f3f2ee] rounded-full px-4 py-2.5 max-w-sm">
+          <label className="flex items-center gap-2 bg-paper rounded-full px-4 py-2.5 max-w-sm">
             <Search size={15} className="text-neutral-500" />
             <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search email or name" className="bg-transparent outline-none text-sm flex-1" />
           </label>

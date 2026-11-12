@@ -19,7 +19,7 @@ const Footer: React.FC = () => {
   }, []);
 
   return (
-    <footer className="bg-[#f3f2ee] text-ink border-t border-black/10 pt-16 pb-10 px-6 md:px-10 mt-auto">
+    <footer className="bg-paper text-ink border-t border-black/10 pt-16 pb-10 px-6 md:px-10 mt-auto">
       <div className="max-w-[1600px] mx-auto">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-14">
           <div className="col-span-2 md:col-span-1">

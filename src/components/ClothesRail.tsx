@@ -105,11 +105,11 @@ const Focus: React.FC<{ entry: Entry; index: number; total: number; onClose: () 
           <button
             disabled={!size}
             onClick={() => { if (size) { if (product.variations) addToCart(product, size, color); else return; window.dispatchEvent(new CustomEvent('pulse-cart')); onClose(); window.dispatchEvent(new CustomEvent('bag-open')); } }}
-            className="flex-1 bg-ink text-[#fff] py-4 text-sm font-medium disabled:opacity-30 flex items-center justify-center gap-2"
+            className={`btn-primary flex-1 py-4 text-sm disabled:opacity-30 flex items-center justify-center gap-2 ${added ? 'is-done' : ''}`}
           >
-            {added ? <><Check size={15} /> Added to bag</> : size ? 'Add to bag' : 'Select a size'}
+            <span key={added ? 'a' : size ? 's' : 'n'} className="label-swap">{added ? <><Check size={15} /> Added to bag</> : size ? 'Add to bag' : 'Select a size'}</span>
           </button>
-          <Link to={`/product/${product.id}`} className="flex-1 border border-ink py-4 text-sm font-medium text-center hover:bg-ink hover:text-[#fff] transition-colors">View details</Link>
+          <Link to={`/product/${product.id}`} className="btn-secondary flex-1 py-4 text-sm text-center">View details</Link>
         </div>
       </div>
     </motion.div>
@@ -231,7 +231,7 @@ const ClothesRail: React.FC = () => {
           </motion.div>
         </AnimatePresence>
         <div className="mt-5 flex justify-center gap-3">
-          <button onClick={() => setFocus(active)} className="bg-ink text-[#fff] rounded-full px-6 py-3 text-sm font-medium inline-flex items-center gap-2 hover:opacity-85 transition-opacity">
+          <button onClick={() => setFocus(active)} className="btn-primary px-6 py-3 text-sm items-center gap-2">
             Closer look <ArrowRight size={15} />
           </button>
           <Link to="/collection" className="border border-black/20 rounded-full px-7 py-3 text-sm font-medium hover:border-ink transition-colors">Shop all</Link>

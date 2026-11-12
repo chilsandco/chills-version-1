@@ -65,7 +65,7 @@ const Figure: React.FC<{
         <button
           onClick={() => openQuickView(product, c?.color)}
           aria-label={`Quick view ${product.name}`}
-          className="relative mt-2 inline-flex items-center gap-1.5 text-xs border-b border-ink pb-0.5 before:absolute before:-inset-x-3 before:-inset-y-3 before:content-[''] md:opacity-0 md:translate-y-1 md:group-hover:opacity-100 md:group-hover:translate-y-0 focus:opacity-100 transition-all duration-300 cursor-pointer"
+          className="link-brass relative mt-2 inline-flex items-center gap-1.5 text-xs before:absolute before:-inset-x-3 before:-inset-y-3 before:content-[''] md:opacity-0 md:translate-y-1 md:group-hover:opacity-100 md:group-hover:translate-y-0 focus:opacity-100 transition-all duration-300 cursor-pointer"
         >
           <Plus size={12} /> Quick view
         </button>
@@ -139,7 +139,7 @@ export const FeatureSpread: React.FC<{ product: Product; eyebrow?: string; flip?
           <h2 className="text-[52px] md:text-[96px] xl:text-[128px] leading-[.95] font-semibold">{product.name}</h2>
           <p className="mt-5 text-lg text-stone">₹{product.price.toLocaleString()} · {product.fit || product.category}</p>
           <div className="mt-8 flex flex-wrap gap-3">
-            <button onClick={() => openQuickView(product, c?.color)} className="px-8 py-4 text-sm font-medium cursor-pointer transition-opacity hover:opacity-85 bg-ink text-[#fff]">Quick view</button>
+            <button onClick={() => openQuickView(product, c?.color)} className="btn-primary px-8 py-4 text-sm cursor-pointer">Quick view</button>
             <Link to={`/product/${product.id}`} className="inline-flex items-center gap-2 px-2 py-4 text-sm border-b border-ink">View details <ArrowRight size={15} /></Link>
           </div>
         </motion.div>

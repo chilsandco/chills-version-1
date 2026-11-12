@@ -92,7 +92,7 @@ const Bespoke: React.FC = () => {
   };
 
   return (
-    <div className="bg-[#f3f2ee] text-ink pt-24 md:pt-32 pb-20 min-h-screen">
+    <div className="bg-paper text-ink pt-24 md:pt-32 pb-20 min-h-screen">
       <SEO
         title="Bespoke"
         description="Shirts made to your measurements, coming soon from CHILS & CO. Join the list for early access."
@@ -106,7 +106,7 @@ const Bespoke: React.FC = () => {
             <h1 className="text-[38px] md:text-[clamp(40px,5vw,60px)] leading-[1.02] font-semibold tracking-[-0.035em] [overflow-wrap:anywhere] [hyphens:auto]" lang="en">Shirts made to your measurements.</h1>
             <p className="mt-4 text-neutral-600 md:text-lg">Built around your body, your fit and your taste, instead of off the rack. Join the list for early access.</p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              <a href="#join" className="inline-flex items-center gap-2 bg-ink text-[#fff] rounded-full px-6 py-3.5 text-sm font-medium">
+              <a href="#join" className="btn-primary items-center gap-2 px-6 py-3.5 text-sm">
                 {onList ? 'You’re on the list' : 'Join the list'} <ArrowRight size={15} />
               </a>
               {/* like the original page, the count only shows once it is meaningful */}

@@ -89,7 +89,7 @@ const BagDrawer: React.FC = () => {
               <div className="flex-1 flex flex-col items-center justify-center text-center px-8">
                 <p className="text-2xl font-semibold">Your bag is empty</p>
                 <p className="text-stone mt-2 text-sm">Choose a Trilogy and save 10%.</p>
-                <Link to="/pick-your-three" className="mt-7 bg-ink text-[#fff] px-8 py-4 text-sm font-medium">Pick your three</Link>
+                <Link to="/pick-your-three" className="btn-primary mt-7 px-8 py-4 text-sm">Pick your three</Link>
                 <Link to="/collection" className="mt-4 text-sm underline underline-offset-4">Browse all products</Link>
               </div>
             ) : (
@@ -105,7 +105,7 @@ const BagDrawer: React.FC = () => {
                     <p className="text-xl font-semibold">₹{totalPrice.toLocaleString()}</p>
                   </div>
                   <p className="text-xs text-stone mt-1">Shipping is calculated at checkout. Collect in store is free.</p>
-                  <button onClick={() => navigate('/checkout')} className="mt-4 w-full bg-ink text-[#fff] py-4 text-sm font-medium hover:opacity-90 transition-opacity">Checkout</button>
+                  <button onClick={() => navigate('/checkout')} className="btn-primary mt-4 w-full py-4 text-sm">Checkout</button>
                   <button onClick={() => setOpen(false)} className="mt-3 w-full text-sm text-stone hover:text-ink">Continue shopping</button>
                 </div>
               </>

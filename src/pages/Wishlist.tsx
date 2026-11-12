@@ -29,7 +29,7 @@ const Wishlist: React.FC = () => {
   };
 
   return (
-    <div className="bg-[#f3f2ee] text-ink pt-24 md:pt-32 pb-20 min-h-screen">
+    <div className="bg-paper text-ink pt-24 md:pt-32 pb-20 min-h-screen">
       <SEO title="Wishlist" noindex={true} />
       <div className="max-w-[1200px] mx-auto px-3 md:px-6">
         <header className="px-2 mb-6 md:mb-10">
@@ -55,8 +55,8 @@ const Wishlist: React.FC = () => {
 
         {wishlist.length === 0 ? (
           <div className="px-2 flex flex-wrap gap-2">
-            <Link to="/collection" className="inline-flex items-center gap-2 bg-ink text-[#fff] rounded-full px-6 py-3.5 text-sm font-medium">Shop the collection <ArrowRight size={15} /></Link>
-            <Link to="/pick-your-three" className="inline-flex items-center gap-2 border border-ink/15 bg-[#fff] rounded-full px-6 py-3.5 text-sm font-medium">Pick your three</Link>
+            <Link to="/collection" className="btn-primary items-center gap-2 px-6 py-3.5 text-sm">Shop the collection <ArrowRight size={15} /></Link>
+            <Link to="/pick-your-three" className="btn-secondary items-center gap-2 px-6 py-3.5 text-sm">Pick your three</Link>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
@@ -87,7 +87,7 @@ const Wishlist: React.FC = () => {
 
                     <div className="px-1 pt-3">
                       {!canAdd ? (
-                        <Link to={to} className="w-full inline-flex items-center justify-center border border-ink/15 rounded-full py-2.5 text-sm font-medium hover:border-ink">View</Link>
+                        <Link to={to} className="btn-secondary w-full items-center justify-center py-2.5 text-sm">View</Link>
                       ) : open ? (
                         <div>
                           <div className="flex items-center justify-between mb-2">
@@ -104,7 +104,7 @@ const Wishlist: React.FC = () => {
                           </div>
                         </div>
                       ) : (
-                        <button onClick={() => setPicking(product.id)} className="w-full bg-ink text-[#fff] rounded-full py-2.5 text-sm font-medium hover:bg-neutral-800 transition-colors">
+                        <button onClick={() => setPicking(product.id)} className="btn-primary w-full py-2.5 text-sm">
                           Move to bag
                         </button>
                       )}
