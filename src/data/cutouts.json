@@ -1,148 +1,148 @@
 {
-"1003": {
+"636": {
 "kind": "full",
 "ratio": 0.288,
 "src": "/cutouts/1003.webp"
 },
-"1008": {
+"627": {
 "kind": "full",
 "ratio": 0.328,
 "src": "/cutouts/1008.webp"
 },
-"1041": {
+"618": {
 "kind": "full",
 "ratio": 0.334,
 "src": "/cutouts/1041.webp"
 },
-"1047": {
+"609": {
 "kind": "full",
 "ratio": 0.345,
 "src": "/cutouts/1047.webp"
 },
-"1053": {
+"600": {
 "kind": "bust",
 "ratio": 0.552,
 "src": "/cutouts/1053.webp"
 },
-"1059": {
+"591": {
 "kind": "bust",
 "ratio": 0.527,
 "src": "/cutouts/1059.webp"
 },
-"1081": {
+"582": {
 "kind": "bust",
 "ratio": 0.536,
 "src": "/cutouts/1081.webp"
 },
-"1092": {
+"573": {
 "kind": "bust",
 "ratio": 0.542,
 "src": "/cutouts/1092.webp"
 },
-"1105": {
+"564": {
 "kind": "full",
 "ratio": 0.338,
 "src": "/cutouts/1105.webp"
 },
-"1110": {
+"555": {
 "kind": "bust",
 "ratio": 0.495,
 "src": "/cutouts/1110.webp"
 },
-"1115": {
+"546": {
 "kind": "full",
 "ratio": 0.318,
 "src": "/cutouts/1115.webp"
 },
-"1128": {
+"536": {
 "alt": "/cutouts/1128-2.webp",
 "kind": "full",
 "ratio": 0.322,
 "src": "/cutouts/1128.webp"
 },
-"1134": {
+"526": {
 "kind": "full",
 "ratio": 0.315,
 "src": "/cutouts/1134.webp"
 },
-"1256": {
+"517": {
 "kind": "full",
 "ratio": 0.337,
 "src": "/cutouts/1256.webp"
 },
-"1261": {
+"508": {
 "kind": "full",
 "ratio": 0.303,
 "src": "/cutouts/1261.webp"
 },
-"1267": {
+"500": {
 "kind": "full",
 "ratio": 0.297,
 "src": "/cutouts/1267.webp"
 },
-"1276": {
+"491": {
 "kind": "full",
 "ratio": 0.282,
 "src": "/cutouts/1276.webp"
 },
-"1281": {
+"482": {
 "kind": "full",
 "ratio": 0.315,
 "src": "/cutouts/1281.webp"
 },
-"1286": {
+"473": {
 "kind": "full",
 "ratio": 0.302,
 "src": "/cutouts/1286.webp"
 },
-"1291": {
+"464": {
 "kind": "full",
 "ratio": 0.383,
 "src": "/cutouts/1291.webp"
 },
-"1296": {
+"455": {
 "kind": "full",
 "ratio": 0.281,
 "src": "/cutouts/1296.webp"
 },
-"1301": {
+"446": {
 "kind": "full",
 "ratio": 0.321,
 "src": "/cutouts/1301.webp"
 },
-"1306": {
+"438": {
 "kind": "full",
 "ratio": 0.321,
 "src": "/cutouts/1306.webp"
 },
-"1311": {
+"429": {
 "kind": "full",
 "ratio": 0.306,
 "src": "/cutouts/1311.webp"
 },
-"1315": {
+"420": {
 "kind": "full",
 "ratio": 0.294,
 "src": "/cutouts/1315.webp"
 },
-"1320": {
+"411": {
 "kind": "full",
 "ratio": 0.299,
 "src": "/cutouts/1320.webp"
 },
-"1325": {
+"402": {
 "alt": "/cutouts/1325-2.webp",
 "kind": "full",
 "ratio": 0.301,
 "src": "/cutouts/1325.webp"
 },
-"1364": {
+"393": {
 "alt": "/cutouts/1364-2.webp",
 "kind": "full",
 "ratio": 0.317,
 "src": "/cutouts/1364.webp"
 },
-"1421": {
+"379": {
 "colors": {
 "EverGreen": {
 "kind": "bust",
@@ -157,17 +157,17 @@
 "ratio": 0.513,
 "src": "/cutouts/1421.webp"
 },
-"1426": {
+"373": {
 "kind": "full",
 "ratio": 0.335,
 "src": "/cutouts/1426.webp"
 },
-"1447": {
+"364": {
 "kind": "full",
 "ratio": 0.303,
 "src": "/cutouts/1447.webp"
 },
-"1452": {
+"350": {
 "colors": {
 "Elemental Blue": {
 "kind": "bust",
@@ -182,7 +182,7 @@
 "ratio": 0.328,
 "src": "/cutouts/1452.webp"
 },
-"1479": {
+"330": {
 "colors": {
 "Black": {
 "kind": "bust",
@@ -201,7 +201,7 @@
 "ratio": 0.29,
 "src": "/cutouts/1479.webp"
 },
-"1505": {
+"315": {
 "colors": {
 "Grey Melange": {
 "kind": "bust",
@@ -216,7 +216,7 @@
 "ratio": 0.492,
 "src": "/cutouts/1505.webp"
 },
-"1571": {
+"282": {
 "colors": {
 "Carbon Grey": {
 "kind": "bust",
@@ -243,12 +243,12 @@
 "ratio": 0.503,
 "src": "/cutouts/1571.webp"
 },
-"1592": {
+"276": {
 "kind": "full",
 "ratio": 0.357,
 "src": "/cutouts/1592.webp"
 },
-"1608": {
+"240": {
 "alt": "/cutouts/1608-2.webp",
 "black": {
 "color": "Black",
@@ -285,17 +285,17 @@
 "ratio": 0.324,
 "src": "/cutouts/1608.webp"
 },
-"1683": {
+"231": {
 "kind": "full",
 "ratio": 0.313,
 "src": "/cutouts/1683.webp"
 },
-"1755": {
+"222": {
 "kind": "bust",
 "ratio": 0.521,
 "src": "/cutouts/1755.webp"
 },
-"1779": {
+"207": {
 "alt": "/cutouts/1779-2.webp",
 "black": {
 "color": "Black",
@@ -316,27 +316,27 @@
 "ratio": 0.302,
 "src": "/cutouts/1779.webp"
 },
-"1801": {
+"198": {
 "kind": "full",
 "ratio": 0.31,
 "src": "/cutouts/1801.webp"
 },
-"1813": {
+"185": {
 "kind": "pair",
 "ratio": 0.742,
 "src": "/cutouts/1813.webp"
 },
-"1885": {
+"174": {
 "kind": "pair",
 "ratio": 0.697,
 "src": "/cutouts/1885.webp"
 },
-"1890": {
+"165": {
 "kind": "full",
 "ratio": 0.322,
 "src": "/cutouts/1890.webp"
 },
-"1896": {
+"140": {
 "alt": "/cutouts/1896-2.webp",
 "colors": {
 "Carbon Grey": {
@@ -360,7 +360,7 @@
 "ratio": 0.325,
 "src": "/cutouts/1896.webp"
 },
-"1918": {
+"110": {
 "colors": {
 "Black": {
 "kind": "bust",
@@ -387,22 +387,22 @@
 "ratio": 0.313,
 "src": "/cutouts/1918.webp"
 },
-"1923": {
+"86": {
 "kind": "full",
 "ratio": 0.338,
 "src": "/cutouts/1923.webp"
 },
-"1952": {
+"77": {
 "kind": "pair",
 "ratio": 0.712,
 "src": "/cutouts/1952.webp"
 },
-"1961": {
+"68": {
 "kind": "pair",
 "ratio": 0.676,
 "src": "/cutouts/1961.webp"
 },
-"2011": {
+"54": {
 "colors": {
 "Green": {
 "kind": "bust",
@@ -413,17 +413,17 @@
 "ratio": 0.518,
 "src": "/cutouts/2011.webp"
 },
-"2026": {
+"45": {
 "kind": "bust",
 "ratio": 0.488,
 "src": "/cutouts/2026.webp"
 },
-"2031": {
+"36": {
 "kind": "full",
 "ratio": 0.275,
 "src": "/cutouts/2031.webp"
 },
-"2048": {
+"16": {
 "colors": {
 "Carbon Grey": {
 "kind": "bust",
@@ -442,22 +442,22 @@
 "ratio": 0.352,
 "src": "/cutouts/2048.webp"
 },
-"710": {
+"734": {
 "kind": "full",
 "ratio": 0.335,
 "src": "/cutouts/710.webp"
 },
-"719": {
+"725": {
 "kind": "bust",
 "ratio": 0.519,
 "src": "/cutouts/719.webp"
 },
-"753": {
+"716": {
 "kind": "bust",
 "ratio": 0.473,
 "src": "/cutouts/753.webp"
 },
-"754": {
+"706": {
 "kind": "full",
 "ratio": 0.308,
 "src": "/cutouts/754.webp"
@@ -467,22 +467,22 @@
 "ratio": 0.325,
 "src": "/cutouts/761.webp"
 },
-"770": {
+"697": {
 "kind": "full",
 "ratio": 0.361,
 "src": "/cutouts/770.webp"
 },
-"790": {
+"687": {
 "kind": "bust",
 "ratio": 0.535,
 "src": "/cutouts/790.webp"
 },
-"810": {
+"678": {
 "kind": "bust",
 "ratio": 0.563,
 "src": "/cutouts/810.webp"
 },
-"817": {
+"663": {
 "colors": {
 "Black": {
 "kind": "bust",
@@ -497,12 +497,12 @@
 "ratio": 0.511,
 "src": "/cutouts/817.webp"
 },
-"827": {
+"654": {
 "kind": "bust",
 "ratio": 0.576,
 "src": "/cutouts/827.webp"
 },
-"991": {
+"645": {
 "kind": "full",
 "ratio": 0.328,
 "src": "/cutouts/991.webp"

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { legacyId } from '../data/legacyIds';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { ArrowRight } from 'lucide-react';
 import { GROUPS } from '../data/groups';
@@ -42,7 +43,7 @@ const CollectionChooser: React.FC<{ count: (slug: string) => number; onPick: (sl
               {group.trio.map((id, i) => (
                 <motion.img
                   key={id}
-                  src={`/cutouts/${id}.webp`}
+                  src={`/cutouts/${legacyId(id)}.webp`}
                   alt=""
                   draggable={false}
                   initial={{ y: 26, opacity: 0 }} animate={{ y: 0, opacity: 1 }}

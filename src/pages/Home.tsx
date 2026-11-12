@@ -13,7 +13,7 @@ import { GROUPS, curateRows } from '../data/groups';
 import { Product } from '../types';
 import { Trilogy } from '../components/Trilogy';
 
-const FIRST_TRILOGY = '1727';
+const FIRST_TRILOGY = '739';
 
 const reveal = {
   initial: { opacity: 0, y: 28 },
