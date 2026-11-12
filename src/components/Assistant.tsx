@@ -532,7 +532,7 @@ const Assistant: React.FC = () => {
     return () => window.removeEventListener('bag-open', onBag);
   }, [offer]);
 
-  // product pages keep their buy panel bottom-right, so the helper steps aside
+  // product pages have a buy bar along the bottom, so the helper sits above it
   const lifted = pathname.startsWith('/product/');
 
   // at the very bottom the launcher would cover the footer's "Crafted by Uday", so it steps away
@@ -550,7 +550,7 @@ const Assistant: React.FC = () => {
   return (
     <>
       {/* launcher and the occasional suggestion */}
-      <div style={{ opacity: footerInView ? 0 : 1, pointerEvents: footerInView ? 'none' : undefined, transition: 'opacity .3s' }} className={`fixed z-[70] right-4 ${lifted ? 'bottom-24 md:bottom-6 md:right-auto md:left-6 md:items-start' : 'bottom-5 md:bottom-6 md:right-6'} flex flex-col items-end gap-2 pb-[env(safe-area-inset-bottom)]`}>
+      <div style={{ opacity: footerInView ? 0 : 1, pointerEvents: footerInView ? 'none' : undefined, transition: 'opacity .3s' }} className={`fixed z-[70] right-4 md:right-6 ${lifted ? 'bottom-24 md:bottom-24' : 'bottom-5 md:bottom-6'} flex flex-col items-end gap-2 pb-[env(safe-area-inset-bottom)]`}>
         <AnimatePresence>
           {nudge && !open && (
             <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: 0.35 }} className="max-w-[260px] bg-[#fff] text-ink rounded-2xl shadow-[0_10px_30px_-10px_rgba(0,0,0,.35)] pl-4 pr-2 py-3 flex items-start gap-2">
@@ -560,8 +560,11 @@ const Assistant: React.FC = () => {
           )}
         </AnimatePresence>
         {!open && (
-          <button onClick={() => start()} aria-label="Ask CHILS" className="btn-primary h-12 pl-4 pr-5 flex items-center gap-2 text-sm shadow-[0_10px_30px_-10px_rgba(0,0,0,.5)] cursor-pointer">
-            <Snowflake className="w-[15px] h-[17px]" /> Ask CHILS
+          // On a phone it shows its name; on a computer it stays a small round button over the page
+          // (so it never sits on a price) and says "Ask CHILS" when you point at it.
+          <button onClick={() => start()} aria-label="Ask CHILS" className="group btn-primary h-12 pl-4 pr-5 md:px-0 md:w-12 md:hover:w-[132px] md:transition-[width,transform,background-color] md:duration-300 md:ease-soft flex items-center justify-center gap-2 md:gap-0 text-sm shadow-[0_10px_30px_-10px_rgba(0,0,0,.5)] cursor-pointer overflow-hidden">
+            <Snowflake className="w-[15px] h-[17px] shrink-0" />
+            <span className="md:max-w-0 md:opacity-0 md:group-hover:max-w-[90px] md:group-hover:opacity-100 md:group-hover:ml-2 md:transition-all md:duration-300 whitespace-nowrap">Ask CHILS</span>
           </button>
         )}
       </div>

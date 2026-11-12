@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: CHILS Order Emails
- * Description: The CHILS "Dispatched" email (sent when an order is marked Dispatched) and the CHILS-styled "Completed" email. Works with any theme.
- * Version: 1.0.0
+ * Description: CHILS order emails: the "Dispatched" email, the CHILS-styled "Completed" email, welcome emails for accounts made on chilsandco.com, and replies to the team inbox.
+ * Version: 1.1.0
  * Author: CHILS & CO.
  * Requires Plugins: woocommerce
  */
@@ -60,3 +60,20 @@ add_filter( 'woocommerce_email_actions', function ( $actions ) {
 	$actions[] = 'woocommerce_order_status_dispatched-order';
 	return $actions;
 } );
+
+// Accounts made on chilsandco.com are created through the REST API, where WooCommerce doesn't send
+// its welcome email. Send it here, so every new customer gets one (sign-up form and Google alike).
+add_action( 'woocommerce_rest_insert_customer', function ( $customer, $request, $creating ) {
+	if ( ! $creating || ! is_a( $customer, 'WC_Customer' ) ) return;
+	WC()->mailer();
+	do_action( 'woocommerce_created_customer_notification', $customer->get_id(), array(), false );
+}, 10, 3 );
+
+// Replies go to the team's inbox rather than the no-reply sending address.
+add_filter( 'woocommerce_email_headers', function ( $headers, $email_id, $object, $email = null ) {
+	if ( $email && method_exists( $email, 'is_customer_email' ) && $email->is_customer_email() ) {
+		$reply = apply_filters( 'chils_reply_to', 'hello.chilsandco@gmail.com' );
+		$headers = preg_replace( '/^Reply-to:.*\r?\n/mi', '', (string) $headers ) . 'Reply-To: CHILS & CO. <' . $reply . ">\r\n";
+	}
+	return $headers;
+}, 10, 4 );

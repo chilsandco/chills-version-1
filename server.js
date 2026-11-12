@@ -2728,9 +2728,6 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       console.log(`[CHILS & CO.] Transmitting customer data to WooCommerce...`);
       const response = await wcSafeCall(wc2, "post", "customers", customerData);
       console.log(`[CHILS & CO.] WooCommerce Registration Successful: ${response.data.id}`);
-      triggerWelcomeEmail(response.data.email, response.data.first_name).catch((err) => {
-        console.error("[CHILS & CO. EMAIL] Welcome email failed:", err);
-      });
       res.status(201).json(response.data);
     } catch (error) {
       const errorData = error.response?.data;
@@ -2921,9 +2918,6 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
             customer = response.data;
             customerId = customer.id;
             console.log(`[CHILS & CO.] Successfully created WooCommerce customer: ${customerId}`);
-            triggerWelcomeEmail(email, firstName).catch((err) => {
-              console.error("[CHILS & CO. EMAIL] Google Welcome email failed:", err);
-            });
           } catch (createErr) {
             console.error("[CHILS & CO.] WooCommerce account auto-creation failed:", createErr.response?.data || createErr.message);
             if (createErr.response?.data?.code === "registration-error-email-exists") {
@@ -4089,9 +4083,10 @@ Reason: ${reason}`;
         console.error("[CHILS & CO.] Failed to write WooCommerce RMA metadata/notes:", err);
       }
     }
-    triggerReturnRequestEmails(orderId, reason, description, products).catch((err) => {
-      console.error("[CHILS & CO. EMAIL] Return emails failed:", err);
-    });
+    wcSafeCall(getWooCommerce(), "post", `orders/${orderId}/notes`, {
+      note: "We've received your return request. Our team looks at every request, usually within a day, and we'll email you once it's approved with the pickup details.",
+      customer_note: true
+    }).catch((err) => console.error("[CHILS & CO.] Return confirmation note failed:", err?.message));
   };
   app.post("/api/orders/:id/return", authenticateToken, async (req, res) => {
     try {
@@ -4650,56 +4645,6 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       if (topic === "order.updated" || topic === "order.refunded") {
         const status = payload?.status;
         console.log(`[CHILS & CO. WEBHOOK] Order ${orderId} status updated to: ${status}`);
-        if (status === "refunded") {
-          await triggerRefundEmail(payload).catch((err) => {
-            console.error("[CHILS & CO. EMAIL] Refund email failed:", err);
-          });
-        } else if (status === "completed") {
-          const customerEmail = payload.billing?.email;
-          const customerName = `${payload.billing?.first_name || ""} ${payload.billing?.last_name || ""}`.trim() || "Customer";
-          const signalId = toSignalId(orderId);
-          if (customerEmail) {
-            const html = `
-<!DOCTYPE html>
-<html>
-<body style="background-color: #000000; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px;">
-  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #050505; border: 1px solid #1a1a1a; padding: 40px;">
-    <tr>
-      <td align="center" style="padding-bottom: 40px; border-bottom: 1px solid #111;">
-        <img src="${LOGO_URL}" alt="Chils & Co." style="width: 120px; height: auto;" />
-        <p style="color: #666; font-family: monospace; font-size: 8px; letter-spacing: 0.4em; text-transform: uppercase; margin: 20px 0 0 0;">Build Dispatched</p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 40px 0 20px 0;">
-        <p style="font-family: monospace; font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.2em; margin: 0 0 5px 0;">Status Update</p>
-        <h2 style="font-family: monospace; font-size: 24px; font-weight: normal; letter-spacing: 0.05em; color: #D4AF37; text-transform: uppercase; margin: 0 0 20px 0;">Transmission Complete</h2>
-        <p style="font-size: 13px; line-height: 1.6; color: #ccc; font-weight: 300;">
-          The physical manifestation of your order signal has been fully assembled, authenticated, and dispatched from our build archives.
-        </p>
-        <div style="background-color: #0d0d0d; border: 1px solid #1a1a1a; padding: 20px; margin: 30px 0; font-family: monospace; font-size: 12px; line-height: 1.8;">
-          <span style="color: #666;">Signal ID:</span> <span style="color: #fff;">#${signalId}</span><br/>
-          <span style="color: #666;">Status:</span> <span style="color: #D4AF37;">Dispatched</span>
-        </div>
-        <p style="font-size: 12px; line-height: 1.6; color: #888; font-weight: 300;">
-          You can track your shipment and monitor logistics logs directly within your Chils & Co. Console.
-        </p>
-      </td>
-    </tr>
-    <tr>
-      <td align="center" style="padding-top: 40px; border-top: 1px solid #111; color: #444; font-family: monospace; font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; line-height: 1.6;">
-        CHILS & CO. &copy; ${(/* @__PURE__ */ new Date()).getFullYear()}<br/>
-        This is an automated transmission from the logistics terminal.<br/>
-        Contact: hello.chilsandco@gmail.com
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-            `;
-            await sendEmailViaBrevo(customerEmail, customerName, `Build Dispatched // Signal #${signalId}`, html);
-          }
-        }
       }
       res.status(200).send("OK");
     } catch (error) {
@@ -4759,38 +4704,20 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       const updatedMeta = Array.from(newMetaMap.entries()).map(([key, value]) => ({ key, value }));
       let updatedStatus = existingOrder.status;
       const normalStatus = String(trackingStatus).toLowerCase().trim();
-      if (["shipped", "dispatched", "out_for_delivery", "out-for-delivery", "in-transit", "in transit"].some((s) => normalStatus.includes(s))) {
-        updatedStatus = "dispatched";
+      if (["shipped", "dispatched", "out_for_delivery", "out-for-delivery", "in-transit", "in transit", "picked up", "pickup done"].some((s) => normalStatus.includes(s))) {
+        if (!["completed", "refunded", "cancelled"].includes(existingOrder.status)) updatedStatus = "dispatched-order";
       } else if (["delivered"].some((s) => normalStatus.includes(s))) {
         updatedStatus = "completed";
       }
-      const orderUpdatePayload = {
-        meta_data: updatedMeta
-      };
-      if (updatedStatus !== existingOrder.status) {
-        try {
-          console.log(`[LOGISTICS WEBHOOK] Attempting order status transition to: ${updatedStatus}`);
-          await wcSafeCall(wc2, "put", `orders/${orderId}`, {
-            ...orderUpdatePayload,
-            status: updatedStatus,
-            customer_note: `Logistics status update: ${trackingStatus}. Carrier: ${courier || "N/A"}, AWB: #${awb || "N/A"}`
-          });
-          console.log(`[LOGISTICS WEBHOOK] Order #${orderId} status & meta updated successfully to: ${updatedStatus}`);
-        } catch (statusErr) {
-          console.warn(`[LOGISTICS WEBHOOK] WooCommerce rejected status transition to '${updatedStatus}' (may be unregistered). Falling back to meta update only.`);
-          await wcSafeCall(wc2, "put", `orders/${orderId}`, {
-            ...orderUpdatePayload,
-            customer_note: `Logistics status update: ${trackingStatus} (In Transit). Carrier: ${courier || "N/A"}, AWB: #${awb || "N/A"}`
-          });
-          console.log(`[LOGISTICS WEBHOOK] Order #${orderId} metadata updated successfully (retained status: ${existingOrder.status})`);
-        }
-      } else {
-        await wcSafeCall(wc2, "put", `orders/${orderId}`, {
-          ...orderUpdatePayload,
-          customer_note: `Logistics details updated. Status: ${trackingStatus}. Carrier: ${courier || "N/A"}, AWB: #${awb || "N/A"}`
-        });
-        console.log(`[LOGISTICS WEBHOOK] Order #${orderId} metadata updated (no status change).`);
-      }
+      const orderUpdatePayload = { meta_data: updatedMeta };
+      if (updatedStatus !== existingOrder.status) orderUpdatePayload.status = updatedStatus;
+      await wcSafeCall(wc2, "put", `orders/${orderId}`, orderUpdatePayload);
+      await wcSafeCall(wc2, "post", `orders/${orderId}/notes`, {
+        note: `Courier update: ${trackingStatus}. ${courier || "Courier"}${awb ? `, AWB ${awb}` : ""}.`,
+        customer_note: false
+      }).catch(() => {
+      });
+      console.log(`[LOGISTICS WEBHOOK] Order #${orderId} updated${orderUpdatePayload.status ? ` to ${updatedStatus}` : ""}.`);
       notifyShipping(orderId, String(trackingStatus), updatedStatus);
       return res.status(200).send("OK");
     } catch (error) {
@@ -5173,355 +5100,13 @@ function getPhonePeClient() {
     false
   );
 }
-var BREVO_API_KEY = process.env.BREVO_API_KEY || "";
-var SENDER_EMAIL = "hello@chilsandco.com";
-var LOGO_URL = "https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png";
-async function sendEmailViaBrevo(toEmail, toName, subject, htmlContent) {
-  if (!BREVO_API_KEY) {
-    console.warn("[CHILS & CO. EMAIL] Brevo API Key missing. Skipping transmission.");
-    return null;
-  }
-  try {
-    const data = {
-      sender: { name: "Chils & Co.", email: SENDER_EMAIL },
-      to: [{ email: toEmail, name: toName }],
-      subject,
-      htmlContent
-    };
-    const response = await axios3.post("https://api.brevo.com/v3/smtp/email", data, {
-      headers: {
-        "accept": "application/json",
-        "api-key": BREVO_API_KEY,
-        "content-type": "application/json"
-      }
-    });
-    console.log(`[CHILS & CO. EMAIL] Transmission successful to ${toEmail}. ID: ${response.data?.messageId}`);
-    return response.data;
-  } catch (err) {
-    console.error("[CHILS & CO. EMAIL] Transmission failed:", err.response?.data || err.message);
-    return null;
-  }
-}
-function compileWelcomeHtml(email, firstName) {
-  return `
-<!DOCTYPE html>
-<html>
-<body style="background-color: #000000; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px;">
-  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #050505; border: 1px solid #1a1a1a; padding: 40px;">
-    <tr>
-      <td align="center" style="padding-bottom: 40px; border-bottom: 1px solid #111;">
-        <img src="${LOGO_URL}" alt="Chils & Co." style="width: 120px; height: auto;" />
-        <p style="color: #666; font-family: monospace; font-size: 8px; letter-spacing: 0.4em; text-transform: uppercase; margin: 20px 0 0 0;">Identity Synchronization</p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 40px 0 20px 0;">
-        <h2 style="font-family: monospace; font-size: 20px; font-weight: normal; letter-spacing: 0.1em; color: #D4AF37; text-transform: uppercase; margin: 0 0 20px 0; text-align: center;">Identity Initialized</h2>
-        <p style="font-size: 14px; line-height: 1.6; color: #ccc; font-weight: 300;">
-          Salutations ${firstName || "User"},<br/><br/>
-          Your access protocol has been successfully verified and registered in the system archives.
-        </p>
-        <div style="background-color: #0d0d0d; border: 1px solid #1a1a1a; padding: 20px; margin: 30px 0; font-family: monospace; font-size: 12px; line-height: 1.8;">
-          <span style="color: #666;">Identity Node:</span> <span style="color: #fff;">${email}</span><br/>
-          <span style="color: #666;">Clearance Level:</span> <span style="color: #D4AF37;">Customer 01</span><br/>
-          <span style="color: #666;">Status:</span> <span style="color: #00ff00;">Active</span>
-        </div>
-        <p style="font-size: 13px; line-height: 1.6; color: #999; font-weight: 300;">
-          You are now cleared to generate transaction signals and monitor custom build cycles. Welcome to the collective.
-        </p>
-      </td>
-    </tr>
-    <tr>
-      <td align="center" style="padding-top: 40px; border-top: 1px solid #111; color: #444; font-family: monospace; font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; line-height: 1.6;">
-        CHILS & CO. &copy; ${(/* @__PURE__ */ new Date()).getFullYear()}<br/>
-        This is an automated transmission from the identity database.<br/>
-        Contact: hello.chilsandco@gmail.com
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-  `;
-}
-function compileOrderConfirmationHtml(order) {
-  const signalId = toSignalId(order.id);
-  const itemsList = order.line_items.map((item) => {
-    const size = item.meta_data?.find((m) => m.key === "pa_size" || m.key === "size")?.value || "";
-    return `
-    <tr style="border-bottom: 1px solid #111;">
-      <td style="padding: 15px 0; font-family: monospace; font-size: 12px; color: #fff;">
-        ${item.name} ${size ? `<span style="color: #D4AF37;">[${size}]</span>` : ""}
-      </td>
-      <td style="padding: 15px 0; font-family: monospace; font-size: 12px; color: #666; text-align: center;">
-        x${item.quantity}
-      </td>
-      <td style="padding: 15px 0; font-family: monospace; font-size: 12px; color: #fff; text-align: right;">
-        \u20B9${parseFloat(item.total).toLocaleString()}
-      </td>
-    </tr>
-  `;
-  }).join("");
-  const address = order.shipping ? `${order.shipping.first_name || ""} ${order.shipping.last_name || ""}<br/>${order.shipping.address_1 || ""}<br/>${order.shipping.city || ""}, ${order.shipping.state || ""} ${order.shipping.postcode || ""}<br/>IN` : "No address provided";
-  const buyer = order.billing ? `${order.billing.first_name || ""} ${order.billing.last_name || ""}<br/>${order.billing.phone || ""}` : "Guest";
-  return `
-<!DOCTYPE html>
-<html>
-<body style="background-color: #000000; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px;">
-  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #050505; border: 1px solid #1a1a1a; padding: 40px;">
-    <tr>
-      <td align="center" style="padding-bottom: 40px; border-bottom: 1px solid #111;">
-        <img src="${LOGO_URL}" alt="Chils & Co." style="width: 120px; height: auto;" />
-        <p style="color: #666; font-family: monospace; font-size: 8px; letter-spacing: 0.4em; text-transform: uppercase; margin: 20px 0 0 0;">Transmission Confirmed</p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 40px 0 20px 0;">
-        <p style="font-family: monospace; font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.2em; margin: 0 0 5px 0;">Order Signal</p>
-        <h2 style="font-family: monospace; font-size: 26px; font-weight: normal; letter-spacing: -0.02em; color: #D4AF37; margin: 0 0 20px 0;">#${signalId}</h2>
-        <p style="font-size: 13px; line-height: 1.6; color: #ccc; font-weight: 300; margin-bottom: 30px;">
-          We have received payment verification and initialized the build protocol for your order signal. The archive is now processing the physical manifestation of this transmission.
-        </p>
-        
-        <h3 style="font-family: monospace; font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: #666; border-bottom: 1px solid #111; padding-bottom: 10px; margin: 40px 0 10px 0;">Build Contents</h3>
-        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
-          ${itemsList}
-          <tr>
-            <td style="padding: 20px 0; font-family: monospace; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.1em;">Output Value</td>
-            <td></td>
-            <td align="right" style="padding: 20px 0; font-family: monospace; font-size: 16px; font-weight: bold; color: #D4AF37;">\u20B9${parseFloat(order.total).toLocaleString()}</td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 30px 0; border-top: 1px solid #111; border-bottom: 1px solid #111;">
-        <table width="100%" cellpadding="0" cellspacing="0">
-          <tr>
-            <td width="50%" valign="top" style="padding-right: 15px; font-size: 12px; line-height: 1.6;">
-              <h4 style="font-family: monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.15em; color: #666; margin: 0 0 10px 0;">Destination Grid</h4>
-              <p style="color: #aaa; font-weight: 300; margin: 0;">${address}</p>
-            </td>
-            <td width="50%" valign="top" style="padding-left: 15px; font-size: 12px; line-height: 1.6;">
-              <h4 style="font-family: monospace; font-size: 9px; text-transform: uppercase; letter-spacing: 0.15em; color: #666; margin: 0 0 10px 0;">Identified Owner</h4>
-              <p style="color: #aaa; font-weight: 300; margin: 0;">${buyer}</p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-    <tr>
-      <td align="center" style="padding-top: 40px; color: #444; font-family: monospace; font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; line-height: 1.6;">
-        CHILS & CO. &copy; ${(/* @__PURE__ */ new Date()).getFullYear()}<br/>
-        This is an automated transmission from the build terminal.<br/>
-        Contact: hello.chilsandco@gmail.com
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-  `;
-}
-function compileAdminNotificationHtml(order) {
-  const signalId = toSignalId(order.id);
-  const itemsList = order.line_items.map((item) => `
-    <li>${item.name} (Qty: ${item.quantity}) - \u20B9${parseFloat(item.total).toLocaleString()}</li>
-  `).join("");
-  return `
-<!DOCTYPE html>
-<html>
-<body style="font-family: monospace; background-color: #000000; color: #ffffff; padding: 45px;">
-  <h2 style="color: #D4AF37; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 10px;">[ALERT] New Signal Generated</h2>
-  <p><strong style="color:#666;">Signal ID:</strong> #${signalId}</p>
-  <p><strong style="color:#666;">WC Order ID:</strong> ${order.id}</p>
-  <p><strong style="color:#666;">Customer Name:</strong> ${order.billing?.first_name} ${order.billing?.last_name}</p>
-  <p><strong style="color:#666;">Customer Email:</strong> ${order.billing?.email}</p>
-  <p><strong style="color:#666;">Customer Phone:</strong> ${order.billing?.phone}</p>
-  <p><strong style="color:#666;">Total Value:</strong> \u20B9${parseFloat(order.total).toLocaleString()}</p>
-  
-  <h3 style="color: #D4AF37; text-transform: uppercase; margin-top: 30px;">Build items:</h3>
-  <ul>${itemsList}</ul>
-  
-  <h3 style="color: #D4AF37; text-transform: uppercase; margin-top: 30px;">Shipping address:</h3>
-  <p>
-    ${order.shipping?.first_name} ${order.shipping?.last_name}<br/>
-    ${order.shipping?.address_1}<br/>
-    ${order.shipping?.city}, ${order.shipping?.state} ${order.shipping?.postcode}
-  </p>
-  <p style="margin-top: 40px;"><a href="https://api.chilsandco.com/wp-admin/post.php?post=${order.id}&action=edit" style="color: #D4AF37; text-decoration: none; border: 1px solid #D4AF37; padding: 10px 20px;">Process in WooCommerce</a></p>
-</body>
-</html>
-  `;
-}
-function compileReturnRequestHtml(orderId, reason, description, products) {
-  const signalId = toSignalId(orderId);
-  let itemsHtml = "";
-  if (products && Array.isArray(products)) {
-    itemsHtml = products.map((p) => {
-      let actionLabel = "Refund";
-      if (p.action === "size_exchange") {
-        actionLabel = `Exchange (Size: ${p.selectedSize || "?"})`;
-      } else if (p.action === "style_exchange") {
-        actionLabel = `Swap: ${p.exchangeProductName || "Alternative"} (Size: ${p.exchangeSize || "?"})`;
-      }
-      return `<li style="margin-bottom: 8px; color: #ccc;">Product ID: ${p.productId} (Qty: ${p.quantity}) &rarr; <strong style="color: #D4AF37;">${actionLabel}</strong></li>`;
-    }).join("");
-  }
-  return `
-<!DOCTYPE html>
-<html>
-<body style="background-color: #000000; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px;">
-  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #050505; border: 1px solid #1a1a1a; padding: 40px;">
-    <tr>
-      <td align="center" style="padding-bottom: 40px; border-bottom: 1px solid #111;">
-        <img src="${LOGO_URL}" alt="Chils & Co." style="width: 120px; height: auto;" />
-        <p style="color: #666; font-family: monospace; font-size: 8px; letter-spacing: 0.4em; text-transform: uppercase; margin: 20px 0 0 0;">Protocol Reversal</p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 40px 0 20px 0;">
-        <p style="font-family: monospace; font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.2em; margin: 0 0 5px 0;">Reversal Request</p>
-        <h2 style="font-family: monospace; font-size: 24px; font-weight: normal; letter-spacing: 0.05em; color: #ff3b30; text-transform: uppercase; margin: 0 0 20px 0;">Reversal Initialized</h2>
-        <p style="font-size: 13px; line-height: 1.6; color: #ccc; font-weight: 300;">
-          A reversal protocol has been initiated for your order signal. The transaction request has been transmitted to administrative archives for verification.
-        </p>
-        <div style="background-color: #0d0d0d; border: 1px solid #1a1a1a; padding: 20px; margin: 30px 0; font-family: monospace; font-size: 12px; line-height: 1.8;">
-          <span style="color: #666;">Signal ID:</span> <span style="color: #fff;">#${signalId}</span><br/>
-          <span style="color: #666;">Status:</span> <span style="color: #ffcc00;">Under Review</span><br/>
-          <span style="color: #666;">Reason:</span> <span style="color: #fff;">${reason}</span><br/>
-          <span style="color: #666;">Details:</span> <span style="color: #aaa;">${description || "None"}</span>
-          ${itemsHtml ? `<br/><br/><span style="color: #666;">Items & Actions:</span><ul style="margin: 5px 0 0 0; padding-left: 20px; font-size: 11px;">${itemsHtml}</ul>` : ""}
-        </div>
-        <p style="font-size: 12px; line-height: 1.6; color: #666;">
-          Your request is currently being audited. We will verify the status within 24-48 business hours.
-        </p>
-      </td>
-    </tr>
-    <tr>
-      <td align="center" style="padding-top: 40px; border-top: 1px solid #111; color: #444; font-family: monospace; font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; line-height: 1.6;">
-        CHILS & CO. &copy; ${(/* @__PURE__ */ new Date()).getFullYear()}<br/>
-        This is an automated transmission from the audit terminal.<br/>
-        Contact: hello.chilsandco@gmail.com
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-  `;
-}
-function compileRefundHtml(order) {
-  const signalId = toSignalId(order.id);
-  return `
-<!DOCTYPE html>
-<html>
-<body style="background-color: #000000; color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 40px 20px;">
-  <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #050505; border: 1px solid #1a1a1a; padding: 40px;">
-    <tr>
-      <td align="center" style="padding-bottom: 40px; border-bottom: 1px solid #111;">
-        <img src="${LOGO_URL}" alt="Chils & Co." style="width: 120px; height: auto;" />
-        <p style="color: #666; font-family: monospace; font-size: 8px; letter-spacing: 0.4em; text-transform: uppercase; margin: 20px 0 0 0;">Recoupment Complete</p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 40px 0 20px 0;">
-        <p style="font-family: monospace; font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.2em; margin: 0 0 5px 0;">Refund Resolved</p>
-        <h2 style="font-family: monospace; font-size: 24px; font-weight: normal; letter-spacing: 0.05em; color: #D4AF37; text-transform: uppercase; margin: 0 0 20px 0;">Reversal Confirmed</h2>
-        <p style="font-size: 13px; line-height: 1.6; color: #ccc; font-weight: 300;">
-          The reversal protocol for your order signal has been authorized and resolved.
-        </p>
-        <div style="background-color: #0d0d0d; border: 1px solid #1a1a1a; padding: 20px; margin: 30px 0; font-family: monospace; font-size: 12px; line-height: 1.8;">
-          <span style="color: #666;">Signal ID:</span> <span style="color: #fff;">#${signalId}</span><br/>
-          <span style="color: #666;">Protocol:</span> <span style="color: #D4AF37;">Refunded</span><br/>
-          <span style="color: #666;">Refunding Value:</span> <span style="color: #fff;">\u20B9${parseFloat(order.total).toLocaleString()}</span>
-        </div>
-        <p style="font-size: 12px; line-height: 1.6; color: #888; font-weight: 300;">
-          Financial recoupment has been routed back to your original source node. Funds will manifest in your account within 3-7 business cycles.
-        </p>
-      </td>
-    </tr>
-    <tr>
-      <td align="center" style="padding-top: 40px; border-top: 1px solid #111; color: #444; font-family: monospace; font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; line-height: 1.6;">
-        CHILS & CO. &copy; ${(/* @__PURE__ */ new Date()).getFullYear()}<br/>
-        This is an automated transmission from the financial terminal.<br/>
-        Contact: hello.chilsandco@gmail.com
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-  `;
-}
-async function triggerWelcomeEmail(email, firstName) {
-  const html = compileWelcomeHtml(email, firstName);
-  await sendEmailViaBrevo(email, firstName || "Customer", "Identity Initialized // Chils & Co.", html);
-}
 async function triggerOrderConfirmationEmails(order) {
   if (!order) return;
-  const customerEmail = order.billing?.email;
-  const customerName = `${order.billing?.first_name || ""} ${order.billing?.last_name || ""}`.trim() || "Customer";
-  const signalId = toSignalId(order.id);
-  console.log(`[CHILS & CO. EMAIL] Preparing order emails for Signal #${signalId}`);
   sendPurchase(order);
-  if (customerEmail) {
-    const customerHtml = compileOrderConfirmationHtml(order);
-    await sendEmailViaBrevo(customerEmail, customerName, `Transmission Confirmed // Signal #${signalId}`, customerHtml);
-  }
-  const adminHtml = compileAdminNotificationHtml(order);
-  await sendEmailViaBrevo("chilsandco@gmail.com", "Chils & Co. Admin", `[ALERT] New Signal Generated // #${signalId}`, adminHtml);
   notifyNewOrder(order);
   triggerWhatsAppOrderConfirmation(order).catch((err) => {
     console.error("[CHILS & CO. WHATSAPP] Failed to send order confirmation:", err?.message || "Unknown error");
   });
-}
-async function triggerReturnRequestEmails(orderId, reason, description, products) {
-  console.log(`[CHILS & CO. EMAIL] Preparing return request emails for Order ${orderId}`);
-  const html = compileReturnRequestHtml(orderId, reason, description, products);
-  const signalId = toSignalId(orderId);
-  const wc2 = getWooCommerce();
-  if (wc2) {
-    try {
-      const response = await wcSafeCall(wc2, "get", `orders/${orderId}`);
-      const order = response.data;
-      const customerEmail = order.billing?.email;
-      const customerName = `${order.billing?.first_name || ""} ${order.billing?.last_name || ""}`.trim() || "Customer";
-      if (customerEmail) {
-        await sendEmailViaBrevo(customerEmail, customerName, `Reversal Protocol Initialized // Signal #${signalId}`, html);
-      }
-    } catch (e) {
-      console.error("[CHILS & CO. EMAIL] Failed to load order billing for return email:", e.message);
-    }
-  }
-  const adminSubject = `[ALERT] Reversal Requested // Signal #${signalId}`;
-  const itemsList = products && Array.isArray(products) ? products.map((p) => {
-    let actDesc = "Refund";
-    if (p.action === "size_exchange") {
-      actDesc = `Exchange (Size: ${p.selectedSize})`;
-    } else if (p.action === "style_exchange") {
-      actDesc = `Swap to: ${p.exchangeProductName} (Size: ${p.exchangeSize})`;
-    }
-    return `<li>Product ID: ${p.productId} | Qty: ${p.quantity} | Action: <strong>${actDesc}</strong></li>`;
-  }).join("") : "";
-  const adminHtml = `
-    <h3>Return/Exchange Request Submitted</h3>
-    <p><strong>Order ID:</strong> ${orderId}</p>
-    <p><strong>Signal ID:</strong> #${signalId}</p>
-    <p><strong>Reason:</strong> ${reason}</p>
-    <p><strong>Description:</strong> ${description || "None"}</p>
-    <h4>Items & Actions:</h4>
-    <ul>
-      ${itemsList}
-    </ul>
-  `;
-  await sendEmailViaBrevo("chilsandco@gmail.com", "Chils & Co. Admin", adminSubject, adminHtml);
-}
-async function triggerRefundEmail(order) {
-  if (!order) return;
-  const customerEmail = order.billing?.email;
-  const customerName = `${order.billing?.first_name || ""} ${order.billing?.last_name || ""}`.trim() || "Customer";
-  const signalId = toSignalId(order.id);
-  if (customerEmail) {
-    const html = compileRefundHtml(order);
-    await sendEmailViaBrevo(customerEmail, customerName, `Reversal Confirmed // Recoupment Complete`, html);
-  }
 }
 var WHATSAPP_ACCESS_TOKEN = process.env.WHATSAPP_ACCESS_TOKEN || "";
 var WHATSAPP_PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID || "";

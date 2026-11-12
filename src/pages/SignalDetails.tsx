@@ -6,7 +6,7 @@ import { useAuth } from '../AuthContext';
 import { useContact, whatsappLink } from '../components/InfoPage';
 import { OrderPage, Card, StatusPill, Thumb, Spinner, inr, shortDate, statusOf, btnInk, btnLine } from '../components/OrderUi';
 
-const SHIPPED = ['dispatched', 'Dispatched', 'shipping', 'completed'];
+const SHIPPED = ['dispatched', 'dispatched-order', 'Dispatched', 'shipping', 'completed', 'return-requested', 'return-approved', 'return-cancelled'];
 
 /** One order: where it is, what's in it, and what you can do with it. */
 const SignalDetails: React.FC = () => {
@@ -54,14 +54,14 @@ const SignalDetails: React.FC = () => {
   const isRefunded = s === 'refunded';
   const isStopped = s === 'failed' || s === 'cancelled';
   const isPending = s === 'pending' || s === 'on-hold';
-  const isPaid = ['processing', 'completed', 'shipping', 'delivered', 'dispatched', 'Dispatched'].includes(s) || isRefunded;
+  const isPaid = ['processing', 'completed', 'shipping', 'delivered', 'dispatched', 'dispatched-order', 'Dispatched', 'return-requested', 'return-approved', 'return-cancelled'].includes(s) || isRefunded;
   const shipped = SHIPPED.includes(s) || !!signal.shipping?.awb || isRefunded;
 
   const steps = [
     { label: 'Ordered', done: true },
     { label: 'Packed', done: ['processing', ...SHIPPED].includes(s) || isRefunded },
     { label: 'On the way', done: shipped },
-    { label: 'Delivered', done: s === 'completed' || isRefunded },
+    { label: 'Delivered', done: s === 'completed' || s.startsWith('return-') || isRefunded },
   ];
   const current = steps.filter(x => x.done).length - 1;
 

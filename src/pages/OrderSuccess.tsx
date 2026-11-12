@@ -28,7 +28,7 @@ interface OrderStatus {
   currency: string;
 }
 
-const PAID = ['processing', 'completed', 'dispatched', 'Dispatched', 'shipping', 'delivered'];
+const PAID = ['processing', 'completed', 'dispatched', 'dispatched-order', 'Dispatched', 'shipping', 'delivered'];
 
 const OrderSuccess: React.FC = () => {
   const { orderId: fullOrderId } = useParams();
