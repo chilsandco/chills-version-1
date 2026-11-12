@@ -1,144 +1,50 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, Cpu, Database, Network, ShieldCheck, Activity } from 'lucide-react';
+import React from 'react';
+import { motion } from 'motion/react';
+import { Link } from 'react-router-dom';
+import { Check, ArrowRight, Zap, Package, Sparkles } from 'lucide-react';
+import { useAuth } from '../AuthContext';
+import { btnInk, btnLine } from '../components/OrderUi';
 
+/** Shown once, right after someone creates an account. */
 const Onboarding: React.FC = () => {
-  const [step, setStep] = useState(0);
-  const [coords, setCoords] = useState("17.4948, 78.3444");
-  const navigate = useNavigate();
+  const { user } = useAuth();
+  const name = user?.first_name || user?.firstName;
 
-  useEffect(() => {
-    fetch('/api/settings')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.coordinates) setCoords(data.coordinates);
-      })
-      .catch(err => console.error("Failed to sync coords:", err));
-  }, []);
-
-  const steps = [
-    {
-      title: "System Initialization",
-      subtitle: "Parsing identity protocols",
-      icon: <Database className="text-accent" size={32} />,
-      content: `Registering origin coordinates [${coords}] and establishing secure channel.`
-    },
-    {
-      title: "Signal Tuning",
-      subtitle: "Calibrating community output",
-      icon: <Network className="text-accent" size={32} />,
-      content: "Synchronizing with nearest Hub 01. Optimizing for limited hardware releases."
-    },
-    {
-      title: "Profile Verified",
-      subtitle: "Access level: Essential",
-      icon: <ShieldCheck className="text-accent" size={32} />,
-      content: "Identification complete. You are now a registered part of the CHILS & CO. system."
-    }
+  const perks = [
+    { icon: Zap, t: 'Faster checkout', d: 'Your details are filled in for you next time.' },
+    { icon: Package, t: 'Track every order', d: 'Delivery updates, returns and exchanges, all in My orders.' },
+    { icon: Sparkles, t: 'First to know', d: 'Early access to limited drops before they go public.' },
   ];
 
-  useEffect(() => {
-    if (step < steps.length) {
-      const timer = setTimeout(() => {
-        setStep(prev => prev + 1);
-      }, 2500);
-      return () => clearTimeout(timer);
-    } else {
-      // Final delay before redirect
-      const timer = setTimeout(() => {
-        navigate('/');
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [step, navigate, steps.length]);
-
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center p-6 sm:p-12 overflow-hidden">
-      <AnimatePresence mode="wait">
-        {step < steps.length ? (
-          <motion.div
-            key={step}
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 1.05 }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="max-w-md w-full text-center space-y-12"
-          >
-            <div className="flex flex-col items-center gap-6">
-              <motion.div
-                initial={{ rotate: -20, opacity: 0 }}
-                animate={{ rotate: 0, opacity: 1 }}
-                transition={{ duration: 1, type: "spring" }}
-                className="w-20 h-20 rounded-full border border-neutral-800 flex items-center justify-center bg-black"
-              >
-                {steps[step].icon}
-              </motion.div>
-              <div className="space-y-2">
-                <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase">{steps[step].subtitle}</p>
-                <h1 className="text-4xl md:text-5xl font-display font-bold tracking-tighter uppercase">{steps[step].title}</h1>
-              </div>
-            </div>
-
-            <p className="text-neutral-400 text-sm leading-relaxed max-w-xs mx-auto uppercase tracking-widest leading-loose">
-              {steps[step].content}
-            </p>
-
-            <div className="flex items-center justify-center gap-2">
-              {steps.map((_, i) => (
-                <div 
-                  key={i} 
-                  className={`h-1 transition-all duration-500 ${i === step ? 'w-8 bg-accent' : 'w-2 bg-neutral-800'}`} 
-                />
-              ))}
-            </div>
+    <div className="bg-[#f3f2ee] text-ink pt-24 md:pt-32 pb-20 min-h-screen">
+      <div className="max-w-[880px] mx-auto px-3 md:px-6">
+        <header className="px-2 mb-8 md:mb-12">
+          <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+            className="w-14 h-14 rounded-full bg-ink text-[#fff] grid place-items-center mb-6">
+            <Check size={26} strokeWidth={2.2} />
           </motion.div>
-        ) : (
-          <motion.div
-            key="final"
-            initial={{ opacity: 0, scale: 1.1 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
-            className="max-w-2xl w-full text-center space-y-16"
-          >
-            <div className="space-y-8">
-              <motion.div
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5, duration: 1 }}
-              >
-                <CheckCircle2 className="mx-auto text-accent mb-8" size={80} strokeWidth={1} />
-                <h2 className="text-6xl md:text-8xl font-display font-bold tracking-tighter uppercase leading-none">
-                  WELCOME TO THE COMMUNITY
-                </h2>
-              </motion.div>
-              
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 0.6 }}
-                transition={{ delay: 1.5, duration: 1 }}
-                className="space-y-4"
-              >
-                <p className="text-[12px] tracking-[0.4em] uppercase">Status: Initialized</p>
-                <p className="text-[10px] tracking-[0.2em] uppercase italic px-12">
-                  "You’re in. Welcome to CHILS & CO."
-                </p>
-              </motion.div>
-            </div>
-
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-12 h-[1px] bg-neutral-800" />
-              <p className="text-[8px] tracking-[0.8em] text-neutral-600 uppercase">Taking you to the store</p>
-              <Activity className="text-accent animate-pulse" size={16} />
-            </div>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1, duration: 0.5 }}>
+            <p className="eyebrow text-neutral-500 mb-3">Account created</p>
+            <h1 className="text-[34px] md:text-[56px] leading-[1.04] font-semibold tracking-[-0.03em]">Welcome to CHILS & CO.{name ? `, ${name}` : ''}</h1>
+            <p className="mt-3 md:mt-4 text-neutral-600 md:text-lg max-w-[560px]">Premium tees, designed in Hyderabad for people who build. Here’s what your account gets you.</p>
           </motion.div>
-        )}
-      </AnimatePresence>
+        </header>
 
-      {/* Decorative Elements */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden opacity-10">
-        <div className="absolute top-0 left-0 w-full h-full bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-accent/20 rounded-full blur-[160px]" />
+        <div className="grid md:grid-cols-3 gap-2">
+          {perks.map(({ icon: I, t, d }, i) => (
+            <motion.div key={t} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.08 }} className="bg-[#fff] rounded-2xl p-5 md:p-6">
+              <span className="w-10 h-10 rounded-full bg-[#f3f2ee] grid place-items-center mb-4"><I size={18} /></span>
+              <p className="font-semibold text-lg">{t}</p>
+              <p className="text-[15px] text-neutral-600 mt-1 leading-relaxed">{d}</p>
+            </motion.div>
+          ))}
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-2 mt-6 px-0">
+          <Link to="/collection" className={`${btnInk} sm:flex-1`}>Start shopping <ArrowRight size={15} /></Link>
+          <Link to="/pick-your-three" className={`${btnLine} sm:flex-1`}>Pick your three</Link>
+        </div>
       </div>
     </div>
   );

@@ -1,175 +1,111 @@
 import React, { useState, useEffect } from 'react';
 import { motion, useAnimation } from 'motion/react';
-import { ArrowRight, CheckCircle2, AlertCircle, LogOut, Package, ExternalLink } from 'lucide-react';
+import { ArrowRight, Check, AlertCircle, LogOut, ChevronRight } from 'lucide-react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../AuthContext';
 import SEO from '../components/SEO';
+import { Signal } from '../types';
+import { Card, StatusPill, Thumb, inr, shortDate, btnInk, btnLine } from '../components/OrderUi';
 
-
+/** Show/hide password toggle with a small blink while hidden. */
 const WinkingEye: React.FC<{ isVisible: boolean; onClick: () => void }> = ({ isVisible, onClick }) => {
   const controls = useAnimation();
-
   useEffect(() => {
     if (isVisible) return;
-
     const interval = setInterval(async () => {
-      // Winking blink sequence
-      await controls.start({
-        d: "M2 11C6 16 18 16 22 11",
-        transition: { duration: 0.12, ease: "easeInOut" }
-      });
-      await controls.start({
-        d: "M2 12C5 6 19 6 22 12C19 18 5 18 2 12Z",
-        transition: { duration: 0.12, ease: "easeInOut" }
-      });
+      await controls.start({ d: 'M2 11C6 16 18 16 22 11', transition: { duration: 0.12, ease: 'easeInOut' } });
+      await controls.start({ d: 'M2 12C5 6 19 6 22 12C19 18 5 18 2 12Z', transition: { duration: 0.12, ease: 'easeInOut' } });
     }, 4500);
-
     return () => clearInterval(interval);
   }, [isVisible, controls]);
-
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="text-white/40 hover:text-white transition-colors focus:outline-none p-1.5 z-10 cursor-pointer shrink-0"
-      aria-label={isVisible ? "Hide password" : "Show password"}
-    >
-      <svg
-        width="18"
-        height="18"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <motion.circle
-          cx="12"
-          cy="12"
-          r="3"
-          fill="currentColor"
-          animate={isVisible ? { scale: 0, opacity: 0 } : { scale: 1, opacity: 1 }}
-          transition={{ duration: 0.15 }}
-        />
-        <motion.path
-          animate={isVisible ? { d: "M2 11C6 16 18 16 22 11" } : controls}
-          initial={{ d: "M2 12C5 6 19 6 22 12C19 18 5 18 2 12Z" }}
-          transition={{ duration: 0.2, ease: "easeInOut" }}
-        />
+    <button type="button" onClick={onClick} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-ink p-1.5" aria-label={isVisible ? 'Hide password' : 'Show password'}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <motion.circle cx="12" cy="12" r="3" fill="currentColor" animate={isVisible ? { scale: 0, opacity: 0 } : { scale: 1, opacity: 1 }} transition={{ duration: 0.15 }} />
+        <motion.path animate={isVisible ? { d: 'M2 11C6 16 18 16 22 11' } : controls} initial={{ d: 'M2 12C5 6 19 6 22 12C19 18 5 18 2 12Z' }} transition={{ duration: 0.2, ease: 'easeInOut' }} />
       </svg>
     </button>
   );
 };
 
-import { Signal } from '../types';
+const inputCls = 'w-full bg-[#fff] border border-[#e3e0d8] rounded-xl px-4 py-3.5 text-[15px] outline-none focus:border-ink transition-colors placeholder:text-neutral-400';
 
-const Orders: React.FC = () => {
+const Field: React.FC<{ label: string; children: React.ReactNode; hint?: string }> = ({ label, children, hint }) => (
+  <label className="block">
+    <span className="block text-sm text-neutral-600 mb-1.5">{label}</span>
+    {children}
+    {hint && <span className="block text-xs text-neutral-500 mt-1.5">{hint}</span>}
+  </label>
+);
+
+const Notice: React.FC<{ tone: 'error' | 'ok'; children: React.ReactNode }> = ({ tone, children }) => (
+  <div className={`rounded-xl px-4 py-3 text-sm flex items-start gap-2.5 ${tone === 'error' ? 'bg-red-50 text-red-800' : 'bg-[#e8efe6] text-[#2f5130]'}`}>
+    {tone === 'error' ? <AlertCircle size={16} className="mt-0.5 shrink-0" /> : <Check size={16} className="mt-0.5 shrink-0" />}
+    <span>{children}</span>
+  </div>
+);
+
+/** The three most recent orders, with a link to all of them. */
+const RecentOrders: React.FC = () => {
   const { token } = useAuth();
   const [orders, setOrders] = useState<Signal[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const response = await fetch('/api/orders', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
-        if (response.ok && Array.isArray(data)) {
-          setOrders(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch orders:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (token) fetchOrders();
+    if (!token) return;
+    fetch('/api/orders', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json().then(d => ({ ok: r.ok, d })))
+      .then(({ ok, d }) => { if (ok && Array.isArray(d)) setOrders(d); })
+      .catch(err => console.error('Failed to fetch orders:', err))
+      .finally(() => setLoading(false));
   }, [token]);
 
-  if (loading) return <div className="text-[10px] text-white/40 tracking-widest uppercase">Loading your orders…</div>;
-
+  if (loading) return <p className="text-sm text-neutral-500">Getting your orders…</p>;
   if (orders.length === 0) {
     return (
-      <div className="py-8 text-center border border-white/10 bg-white/5 rounded-sm">
-        <Package className="mx-auto mb-3 opacity-20" size={32} />
-        <p className="text-[10px] text-white/40 tracking-widest uppercase italic">"No orders yet."</p>
+      <div>
+        <p className="text-[15px] text-neutral-600">No orders yet. When you buy something, it’ll show up here with its tracking.</p>
+        <Link to="/collection" className={`${btnInk} mt-4`}>Shop the collection <ArrowRight size={15} /></Link>
       </div>
     );
   }
-
   return (
-    <div className="space-y-4 text-left">
-      {orders.map((order) => (
-        <Link 
-          key={order.id} 
-          to={`/console/orders/${order.id}`}
-          className="block border border-white/10 bg-white/5 p-4 rounded-sm group hover:border-accent transition-all"
-        >
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <p className="text-[8px] text-white/40 tracking-widest uppercase mb-1">Order number</p>
-              <p className="text-xs font-bold tracking-tight font-mono group-hover:text-accent transition-colors">#{order.signalId}</p>
+    <div>
+      <div className="divide-y divide-[#eeece6]">
+        {orders.slice(0, 3).map(o => (
+          <Link key={o.id} to={`/console/orders/${o.id}`} className="group flex items-center gap-4 py-3 first:pt-0">
+            <Thumb src={o.items[0]?.image} alt={o.items[0]?.name || 'Order'} className="w-12 h-16" />
+            <div className="flex-1 min-w-0">
+              <p className="font-medium truncate">{o.items.map(i => i.name).join(', ') || o.signalId}</p>
+              <p className="text-sm text-neutral-500">{shortDate(o.date)} · {inr(o.total)}</p>
             </div>
-            <div className={`text-[9px] px-2 py-0.5 rounded-full uppercase font-bold tracking-widest ${
-              order.status === 'completed' ? 'bg-green-500/20 text-green-500' : 'bg-accent/20 text-accent animate-pulse'
-            }`}>
-              {order.status}
-            </div>
-          </div>
-          <div className="flex justify-between items-end">
-            <div>
-              <p className="text-[8px] text-white/40 tracking-widest uppercase mb-1">Registration</p>
-              <p className="text-xs text-white/60">
-                {new Date(order.date).toLocaleDateString()}
-              </p>
-            </div>
-            <p className="font-mono text-sm">₹{order.total.toLocaleString()}</p>
-          </div>
-
-          {/* Item Summary */}
-          <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-4">
-            <div className="flex -space-x-2">
-              {order.items.slice(0, 3).map((item, i) => (
-                <div key={i} className="w-8 h-10 border border-black bg-white/5 rounded-sm overflow-hidden relative">
-                   {item.image ? (
-                     <img src={item.image} alt={item.name} className="w-full h-full object-cover opacity-80" referrerPolicy="no-referrer" />
-                   ) : (
-                     <div className="w-full h-full flex items-center justify-center">
-                       <Package size={10} className="opacity-20" />
-                     </div>
-                   )}
-                   {order.items.length > 3 && i === 2 && (
-                     <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-[7px] font-bold">
-                       +{order.items.length - 2}
-                     </div>
-                   )}
-                </div>
-              ))}
-            </div>
-            <p className="text-[9px] text-white/30 uppercase tracking-[0.1em] truncate flex-1">
-              {order.items.map(i => i.name).join(' + ')}
-            </p>
-          </div>
-        </Link>
-      ))}
+            <span className="hidden sm:block"><StatusPill status={o.status} /></span>
+            <ChevronRight size={18} className="text-neutral-400 group-hover:text-ink" />
+          </Link>
+        ))}
+      </div>
+      <Link to="/console/orders" className="inline-flex items-center gap-1.5 border-b border-ink pb-0.5 text-sm mt-4">
+        All orders ({orders.length}) <ArrowRight size={13} />
+      </Link>
     </div>
   );
+};
+
+const ADMIN_EMAILS = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
+
+const isFlagActive = (val: any, sessionKey?: string) => {
+  if (val === true || val === 1 || val === '1') return true;
+  if (typeof val === 'string' && ['true', 'yes', 'active', 'on'].includes(val.trim().toLowerCase())) return true;
+  return !!(sessionKey && sessionStorage.getItem(sessionKey) === 'true');
 };
 
 const Auth: React.FC = () => {
   const { login: authLogin, user, logout, isAuthenticated, token, updateUser } = useAuth();
   const [searchParams] = useSearchParams();
   const redirectTo = searchParams.get('redirect');
-  const [isRegister, setIsRegister] = useState(true);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-    first_name: '',
-    last_name: ''
-  });
+  // Most people arriving here already have an account; ?mode=register opens the sign-up form.
+  const [isRegister, setIsRegister] = useState(searchParams.get('mode') === 'register');
+  const [formData, setFormData] = useState({ email: '', password: '', first_name: '', last_name: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -181,25 +117,13 @@ const Auth: React.FC = () => {
     setError(null);
     try {
       const googleResponse = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ idToken: response.credential })
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken: response.credential }),
       });
       const data = await googleResponse.json();
-      if (!googleResponse.ok) {
-        throw new Error(data.message || 'Google authentication failed.');
-      }
-
-      if (data.token && data.user) {
-        authLogin(data.token, data.user);
-        if (redirectTo) {
-          navigate(redirectTo);
-        } else {
-          navigate('/');
-        }
-      } else {
-        throw new Error('Invalid login response from system.');
-      }
+      if (!googleResponse.ok) throw new Error(data.message || 'Google sign-in didn’t work. Please try again.');
+      if (!data.token || !data.user) throw new Error('Google sign-in didn’t work. Please try again.');
+      authLogin(data.token, data.user);
+      navigate(redirectTo || '/');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -209,52 +133,24 @@ const Auth: React.FC = () => {
 
   useEffect(() => {
     const initializeGoogle = () => {
-      if ((window as any).google?.accounts?.id) {
-        (window as any).google.accounts.id.initialize({
-          client_id: '162390818288-j2fcothougcpmok54mojqmn7fq2i5goc.apps.googleusercontent.com',
-          callback: handleGoogleCallback,
-        });
-        
-        const btnContainer = document.getElementById('google-btn-container');
-        if (btnContainer) {
-          (window as any).google.accounts.id.renderButton(btnContainer, {
-            theme: 'outline',
-            size: 'large',
-            width: btnContainer.clientWidth || 384,
-            text: isRegister ? 'signup_with' : 'signin_with',
-          });
-        }
-      }
+      const g = (window as any).google?.accounts?.id;
+      if (!g) return;
+      g.initialize({ client_id: '162390818288-j2fcothougcpmok54mojqmn7fq2i5goc.apps.googleusercontent.com', callback: handleGoogleCallback });
+      const el = document.getElementById('google-btn-container');
+      if (el) g.renderButton(el, { theme: 'outline', size: 'large', shape: 'pill', width: Math.min(el.clientWidth || 384, 400), text: isRegister ? 'signup_with' : 'signin_with' });
     };
+    if ((window as any).google?.accounts?.id) initializeGoogle();
+    else document.querySelector('script[src*="gsi/client"]')?.addEventListener('load', initializeGoogle);
+  }, [isRegister, isAuthenticated]);
 
-    if ((window as any).google?.accounts?.id) {
-      initializeGoogle();
-    } else {
-      const script = document.querySelector('script[src*="gsi/client"]');
-      if (script) {
-        script.addEventListener('load', initializeGoogle);
-      }
-    }
-  }, [isRegister]);
-
-  // --- Admin panel state (always declared at top level — React Rules of Hooks) ---
+  // --- Store contact settings (team only) ---
   const [showSettingsEditor, setShowSettingsEditor] = useState(false);
-  const [globalSettings, setGlobalSettings] = useState({
-    mobileLink: '',
-    address: '',
-    coordinates: '',
-    email: ''
-  });
+  const [globalSettings, setGlobalSettings] = useState({ mobileLink: '', address: '', coordinates: '', email: '' });
   const [saveLoading, setSaveLoading] = useState(false);
+  const [settingsMsg, setSettingsMsg] = useState<{ tone: 'error' | 'ok'; text: string } | null>(null);
 
-  // --- Profile state & bindings ---
-  const [activeTab, setActiveTab] = useState<'profile' | 'orders'>('orders');
-  const [profileForm, setProfileForm] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: ''
-  });
+  // --- My details ---
+  const [profileForm, setProfileForm] = useState({ first_name: '', last_name: '', email: '', phone: '' });
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState(false);
@@ -265,53 +161,30 @@ const Auth: React.FC = () => {
         first_name: user.first_name || user.firstName || '',
         last_name: user.last_name || user.lastName || '',
         email: user.email || '',
-        phone: user.billing?.phone || (user as any).phone || ''
+        phone: user.billing?.phone || (user as any).phone || '',
       });
     }
   }, [user]);
 
-  const adminEmails = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
-  const isAdmin = user ? adminEmails.some(email => email.toLowerCase() === user.email.toLowerCase()) : false;
+  const isAdmin = user ? ADMIN_EMAILS.some(e => e.toLowerCase() === user.email.toLowerCase()) : false;
 
-  // Load admin settings when the authenticated admin views the page
   useEffect(() => {
     if (isAdmin && isAuthenticated) {
-      fetch('/api/settings')
-        .then(res => res.json())
-        .then(data => setGlobalSettings(data))
-        .catch(err => console.error("Failed to load settings:", err));
+      fetch('/api/settings').then(r => r.json()).then(d => setGlobalSettings(s => ({ ...s, ...d }))).catch(err => console.error('Failed to load settings:', err));
     }
   }, [isAdmin, isAuthenticated]);
-
-  const isFlagActive = (val: any, sessionKey?: string) => {
-    if (val === true || val === 1 || val === '1') return true;
-    if (typeof val === 'string') {
-      const v = val.trim().toLowerCase();
-      if (v === 'true' || v === 'yes' || v === 'active' || v === 'on') return true;
-    }
-    if (sessionKey && sessionStorage.getItem(sessionKey) === 'true') return true;
-    return false;
-  };
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setProfileLoading(true);
     setProfileError(null);
     setProfileSuccess(false);
-
     try {
       const response = await fetch('/api/auth/me', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(profileForm)
+        method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(profileForm),
       });
       const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to update identity profile.');
-      }
+      if (!response.ok) throw new Error(data.message || 'We couldn’t save your details. Please try again.');
       updateUser(data);
       setProfileSuccess(true);
       setTimeout(() => setProfileSuccess(false), 3000);
@@ -326,70 +199,47 @@ const Auth: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
     try {
-      const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+      const response = await fetch(isRegister ? '/api/auth/register' : '/api/auth/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(formData),
       });
-
-      let data;
+      let data: any;
       const text = await response.text();
-      try {
-        data = text ? JSON.parse(text) : {};
-      } catch (parseErr) {
-        throw new Error('Server returned an invalid response format.');
-      }
+      try { data = text ? JSON.parse(text) : {}; } catch { throw new Error('Something went wrong on our side. Please try again in a minute.'); }
 
       if (!response.ok) {
-        if (data.message?.toLowerCase().includes('password') && data.message?.toLowerCase().includes('incorrect')) {
-          throw new Error('Verification failed: The password provided is incorrect for this system identity.');
-        }
-        if (data.code === 'registration-error-email-exists') {
-          throw new Error('Identity already exists: This email is already registered. Please sign in instead.');
-        }
-        throw new Error(data.message || 'Transmission error. Please verify your connection.');
+        const m = (data.message || '').toLowerCase();
+        if (m.includes('password') && m.includes('incorrect')) throw new Error('That password doesn’t match this email. Try again, or reset it below.');
+        if (data.code === 'registration-error-email-exists') throw new Error('There’s already an account with this email. Sign in instead.');
+        throw new Error(data.message?.replace(/<[^>]+>/g, '') || 'We couldn’t reach the store. Please check your connection.');
       }
 
       if (isRegister) {
         setSuccess(true);
         try {
           const loginResponse = await fetch('/api/auth/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: formData.email, password: formData.password })
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: formData.email, password: formData.password }),
           });
           const loginData = await loginResponse.json();
           if (loginResponse.ok && loginData.token && loginData.user) {
-            const userWithNames = {
+            authLogin(loginData.token, {
               ...loginData.user,
               first_name: loginData.user.first_name || formData.first_name,
               last_name: loginData.user.last_name || formData.last_name,
               firstName: loginData.user.firstName || formData.first_name,
-              lastName: loginData.user.lastName || formData.last_name
-            };
-            authLogin(loginData.token, userWithNames);
-            setTimeout(() => navigate(redirectTo || '/onboarding'), 1500);
+              lastName: loginData.user.lastName || formData.last_name,
+            });
+            setTimeout(() => navigate(redirectTo || '/onboarding'), 1200);
           } else {
-            setTimeout(() => {
-              setIsRegister(false);
-              setSuccess(false);
-            }, 2000);
+            setTimeout(() => { setIsRegister(false); setSuccess(false); }, 2000);
           }
-        } catch (err) {
+        } catch {
           setTimeout(() => setIsRegister(false), 2000);
         }
       } else {
-        if (data.token && data.user) {
-          authLogin(data.token, data.user);
-          if (redirectTo) {
-            navigate(redirectTo);
-          }
-        } else {
-          throw new Error('Invalid login response');
-        }
+        if (!data.token || !data.user) throw new Error('Sign-in didn’t work. Please try again.');
+        authLogin(data.token, data.user);
+        if (redirectTo) navigate(redirectTo);
       }
     } catch (err: any) {
       setError(err.message);
@@ -400,478 +250,185 @@ const Auth: React.FC = () => {
 
   const handleSaveSettings = async () => {
     setSaveLoading(true);
+    setSettingsMsg(null);
     try {
       const response = await fetch('/api/settings', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(globalSettings)
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify(globalSettings),
       });
-      if (response.ok) {
-        alert("Global nodes successfully recalibrated.");
-        setShowSettingsEditor(false);
-      } else {
-        const data = await response.json();
-        alert(`Calibration Fault: ${data.message}`);
-      }
-    } catch (err) {
-      alert("Terminal connection error during calibration.");
+      if (response.ok) setSettingsMsg({ tone: 'ok', text: 'Saved. The site shows the new details now.' });
+      else setSettingsMsg({ tone: 'error', text: (await response.json()).message || 'Couldn’t save the settings.' });
+    } catch {
+      setSettingsMsg({ tone: 'error', text: 'Couldn’t reach the server. Please try again.' });
     } finally {
       setSaveLoading(false);
     }
   };
 
+  // ---------- Signed in: the account page ----------
   if (isAuthenticated && user) {
-    const hasCoCreatorBadge = isFlagActive(user.coCreatorInterest, 'chils_cocreator_interest');
-    const hasWaitlistBadge = isFlagActive(user.onWaitlist, 'chils_bespoke_waitlist');
+    const name = user.first_name || user.firstName || user.pseudoName || user.username || '';
+    const hasCoCreator = isFlagActive(user.coCreatorInterest, 'chils_cocreator_interest');
+    const hasWaitlist = isFlagActive(user.onWaitlist, 'chils_bespoke_waitlist');
 
     return (
-      <div className="min-h-screen pt-24 md:pt-32 pb-24 px-6">
-      <SEO 
-        title="Your account"
-        description="Access your Chils & Co. account, track your custom garment builds, secure co-creator badges, and view order history."
-        canonical="https://chilsandco.com/auth"
-        keywords="login, signup, chils and co account, authentication console, member console, track orders"
-      />
-      <div className="max-w-[1200px] mx-auto grid grid-cols-1 lg:grid-cols-3 gap-12">
-          {/* Profile Sidebar */}
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-white/5 border border-white/10 p-12 text-center rounded-sm h-fit"
-          >
-            <div className="relative inline-block mb-6">
-              <div className="w-24 h-24 bg-white text-black rounded-full flex items-center justify-center text-4xl font-bold mx-auto shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-                {(user.pseudoName || user.username || 'U').charAt(0).toUpperCase()}
+      <div className="bg-[#f3f2ee] text-ink pt-24 md:pt-32 pb-20 min-h-screen">
+        <SEO title="Your account" description="Your CHILS & CO. account: orders, tracking and your details." canonical="https://chilsandco.com/auth" keywords="chils and co account, my orders, track order" />
+        <div className="max-w-[1080px] mx-auto px-3 md:px-6">
+          <header className="px-2 mb-6 md:mb-10 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            <div className="flex items-center gap-4 md:gap-5">
+              <div className="w-14 h-14 md:w-16 md:h-16 rounded-full bg-ink text-[#fff] grid place-items-center text-2xl font-semibold shrink-0">
+                {(name || user.email).charAt(0).toUpperCase()}
               </div>
-              <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 border-4 border-black rounded-full" />
-              
-              {hasCoCreatorBadge && (
-                <div className="absolute -top-2 -right-2 bg-accent text-black text-[8px] font-bold px-2 py-0.5 rounded-full border border-black shadow-[0_0_10px_rgba(212,175,55,0.5)]">
-                  CO-CREATOR
-                </div>
-              )}
-              {hasWaitlistBadge && (
-                <div className="absolute -bottom-2 -left-2 bg-white text-black text-[8px] font-bold px-2 py-0.5 rounded-full border border-black uppercase tracking-tighter">
-                  THE BESPOKE POOL
-                </div>
-              )}
+              <div className="min-w-0">
+                <p className="eyebrow text-neutral-500 mb-1.5">Your account</p>
+                <h1 className="text-[32px] md:text-[48px] leading-[1.04] font-semibold tracking-[-0.03em] truncate">{name ? `Hi ${name}.` : 'Welcome back.'}</h1>
+                <p className="text-neutral-500 text-sm mt-1 truncate">{user.email}</p>
+              </div>
             </div>
-            
-            <h3 className="text-2xl font-display font-bold tracking-tight mb-1 flex items-center justify-center gap-2">
-              {(user.pseudoName || user.username || '').toUpperCase()}
-            </h3>
-            <p className="text-[10px] text-white/40 tracking-widest uppercase mb-10">{user.email}</p>
-            
-            <div className="space-y-4">
+            <button onClick={() => logout()} className={`${btnLine} self-start md:self-end`}><LogOut size={15} /> Sign out</button>
+          </header>
+
+          {(hasCoCreator || hasWaitlist) && (
+            <div className="px-2 mb-4 flex flex-wrap gap-2">
+              {hasCoCreator && <span className="text-xs bg-ink text-[#fff] rounded-full px-3 py-1.5">Co-creator{user.pseudoName ? ` · ${user.pseudoName}` : ''}</span>}
+              {hasWaitlist && <span className="text-xs bg-[#fff] rounded-full px-3 py-1.5">On The Bespoke waitlist</span>}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_380px] gap-2 items-start">
+            <div className="space-y-2 min-w-0">
+              <Card title="Recent orders"><RecentOrders /></Card>
+
               {isAdmin && (
-                <div className="pt-4 mt-4 border-t border-white/10 space-y-3">
-                  <p className="text-[9px] text-accent font-bold tracking-[0.2em] uppercase text-left mb-2">Admin Console</p>
-                  <button 
-                    onClick={() => navigate('/console/bespoke')}
-                    className="w-full bg-accent text-black py-4 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-accent/90 transition-colors flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(212,175,55,0.2)]"
-                  >
-                    THE BESPOKE SIGNALS
-                    <ExternalLink size={12} />
-                  </button>
-                  <button 
-                    onClick={() => navigate('/console/orders')}
-                    className="w-full border border-accent/40 text-accent py-4 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-accent/5 transition-colors flex items-center justify-center gap-2"
-                  >
-                    ORDERS
-                    <ExternalLink size={12} />
-                  </button>
-                  <button 
-                    onClick={() => setShowSettingsEditor(true)}
-                    className="w-full border border-white/10 text-white/60 py-4 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
-                  >
-                    CORE SETTINGS
-                    <ExternalLink size={12} />
-                  </button>
-                </div>
+                <Card title="Team">
+                  <div className="flex flex-wrap gap-2">
+                    <Link to="/console/bespoke" className={btnLine}>Bespoke waitlist</Link>
+                    <Link to="/console/amazon" className={btnLine}>Amazon</Link>
+                    <Link to="/admin/config" className={btnLine}>Site config</Link>
+                    <button onClick={() => { setShowSettingsEditor(v => !v); setSettingsMsg(null); }} className={btnLine}>{showSettingsEditor ? 'Close contact settings' : 'Contact settings'}</button>
+                  </div>
+                  {showSettingsEditor && (
+                    <div className="mt-6 pt-6 border-t border-[#eeece6] space-y-4">
+                      <p className="text-sm text-neutral-600">The phone, email and address shown across the site and in the help boxes.</p>
+                      <Field label="Phone"><input className={inputCls} value={globalSettings.mobileLink} onChange={e => setGlobalSettings({ ...globalSettings, mobileLink: e.target.value })} placeholder="+91 1234 56 7890" /></Field>
+                      <Field label="Support email"><input type="email" className={inputCls} value={globalSettings.email} onChange={e => setGlobalSettings({ ...globalSettings, email: e.target.value })} placeholder="hello@chilsandco.com" /></Field>
+                      <Field label="Address"><textarea rows={4} className={`${inputCls} resize-none`} value={globalSettings.address} onChange={e => setGlobalSettings({ ...globalSettings, address: e.target.value })} /></Field>
+                      <Field label="Map coordinates" hint="Latitude, longitude"><input className={inputCls} value={globalSettings.coordinates} onChange={e => setGlobalSettings({ ...globalSettings, coordinates: e.target.value })} placeholder="17.4948, 78.3444" /></Field>
+                      {settingsMsg && <Notice tone={settingsMsg.tone}>{settingsMsg.text}</Notice>}
+                      <button onClick={handleSaveSettings} disabled={saveLoading} className={btnInk}>{saveLoading ? 'Saving…' : 'Save settings'}</button>
+                    </div>
+                  )}
+                </Card>
               )}
-
-              <div className="pt-4 mt-4 border-t border-white/10 space-y-3">
-                <button 
-                  onClick={() => navigate('/collection')}
-                  className="w-full border border-white/20 py-4 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-white/5 transition-colors flex items-center justify-center gap-2"
-                >
-                  BROWSE PRODUCTS
-                  <ExternalLink size={12} />
-                </button>
-                <button 
-                  onClick={() => logout()}
-                  className="w-full bg-white text-black py-4 text-[10px] font-bold tracking-[0.3em] uppercase flex items-center justify-center gap-2 hover:bg-white/90 transition-colors"
-                >
-                  <LogOut size={14} />
-                  LOG OUT
-                </button>
-              </div>
             </div>
-          </motion.div>
-          {/* Orders/Profile Section */}
-          <div className="lg:col-span-2">
-            {showSettingsEditor ? (
-               <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-neutral-950 border border-white/10 p-12 rounded-sm"
-               >
-                 <div className="flex justify-between items-center mb-10">
-                   <div>
-                     <h4 className="text-3xl font-display font-bold tracking-tighter mb-2">CORE CALIBRATION</h4>
-                     <p className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-medium">Update global site identity nodes and transmission links.</p>
-                   </div>
-                   <button onClick={() => setShowSettingsEditor(false)} className="text-white/40 hover:text-white transition-colors">
-                     <AlertCircle size={20} />
-                   </button>
-                 </div>
 
-                 <div className="space-y-8">
-                   <div className="space-y-2">
-                     <label className="text-[10px] tracking-widest text-white/40 uppercase font-bold">Mobile Link (System Phone)</label>
-                     <input 
-                       type="text" 
-                       value={globalSettings.mobileLink}
-                       onChange={e => setGlobalSettings({...globalSettings, mobileLink: e.target.value})}
-                       className="w-full bg-white/5 border border-white/10 px-4 py-4 text-sm font-mono focus:border-accent outline-none transition-colors"
-                       placeholder="+91 1234 56 7890"
-                     />
-                   </div>
-
-                   <div className="space-y-2">
-                     <label className="text-[10px] tracking-widest text-white/40 uppercase font-bold">Support Email Interface</label>
-                     <input 
-                       type="email" 
-                       value={globalSettings.email}
-                       onChange={e => setGlobalSettings({...globalSettings, email: e.target.value})}
-                       className="w-full bg-white/5 border border-white/10 px-4 py-4 text-sm font-mono focus:border-accent outline-none transition-colors"
-                       placeholder="hello@chilsandco.com"
-                     />
-                   </div>
-
-                   <div className="space-y-2">
-                     <label className="text-[10px] tracking-widest text-white/40 uppercase font-bold">Global Address Coordinates (Physical)</label>
-                     <textarea 
-                       rows={4}
-                       value={globalSettings.address}
-                       onChange={e => setGlobalSettings({...globalSettings, address: e.target.value})}
-                       className="w-full bg-white/5 border border-white/10 px-4 py-4 text-sm font-mono focus:border-accent outline-none transition-colors resize-none"
-                       placeholder="Enter full physical address..."
-                     />
-                   </div>
-
-                   <div className="space-y-2">
-                     <label className="text-[10px] tracking-widest text-white/40 uppercase font-bold">Registration Lat/Long</label>
-                     <input 
-                       type="text" 
-                       value={globalSettings.coordinates}
-                       onChange={e => setGlobalSettings({...globalSettings, coordinates: e.target.value})}
-                       className="w-full bg-white/5 border border-white/10 px-4 py-4 text-sm font-mono focus:border-accent outline-none transition-colors"
-                       placeholder="17.4948, 78.3444"
-                     />
-                   </div>
-
-                   <div className="pt-6 flex gap-4">
-                     <button 
-                       onClick={handleSaveSettings}
-                       disabled={saveLoading}
-                       className="flex-1 bg-white text-black py-5 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-accent transition-colors disabled:opacity-50"
-                     >
-                       {saveLoading ? 'CALIBRATING...' : 'SYNC GLOBAL NODES'}
-                     </button>
-                     <button 
-                       onClick={() => setShowSettingsEditor(false)}
-                       className="px-8 border border-white/10 text-white/40 py-5 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-white/5 transition-colors"
-                     >
-                       ABORT
-                     </button>
-                   </div>
-                 </div>
-               </motion.div>
-            ) : (
-               <>
-                 {/* Tab Switcher */}
-                 <div className="flex gap-8 border-b border-white/10 mb-10">
-                   <button 
-                     onClick={() => setActiveTab('orders')}
-                     className={`pb-4 text-xs font-bold tracking-[0.2em] uppercase transition-colors relative ${
-                       activeTab === 'orders' ? 'text-white' : 'text-white/40 hover:text-white/80'
-                     }`}
-                   >
-                     MY ORDERS
-                     {activeTab === 'orders' && (
-                       <motion.div 
-                         layoutId="activeTabUnderline"
-                         className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent"
-                       />
-                     )}
-                   </button>
-                   <button 
-                     onClick={() => setActiveTab('profile')}
-                     className={`pb-4 text-xs font-bold tracking-[0.2em] uppercase transition-colors relative ${
-                       activeTab === 'profile' ? 'text-white' : 'text-white/40 hover:text-white/80'
-                     }`}
-                   >
-                     MY DETAILS
-                     {activeTab === 'profile' && (
-                       <motion.div 
-                         layoutId="activeTabUnderline"
-                         className="absolute bottom-0 left-0 right-0 h-[2px] bg-accent"
-                       />
-                     )}
-                   </button>
-                 </div>
-
-                 {activeTab === 'orders' ? (
-                   <>
-                     <div className="mb-10">
-                       <h4 className="text-3xl font-display font-bold tracking-tighter mb-2">MY ORDERS</h4>
-                       <p className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-medium">Your past orders and their status.</p>
-                     </div>
-                     
-                     <Orders />
-                   </>
-                 ) : (
-                   <motion.div
-                     initial={{ opacity: 0, y: 10 }}
-                     animate={{ opacity: 1, y: 0 }}
-                     className="bg-neutral-950 border border-white/10 p-8 md:p-12 rounded-sm"
-                   >
-                     <div className="mb-10">
-                       <h4 className="text-3xl font-display font-bold tracking-tighter mb-2">PASSWORD UPDATEDTINGS</h4>
-                       <p className="text-[10px] text-white/40 tracking-[0.2em] uppercase font-medium">Update your name, phone and password.</p>
-                     </div>
-
-                     <form onSubmit={handleProfileSubmit} className="space-y-6">
-                       {profileError && (
-                         <div className="bg-red-500/10 border border-red-500/20 p-4 flex items-center gap-3 text-red-500 text-sm">
-                           <AlertCircle size={18} />
-                           <span>{profileError}</span>
-                         </div>
-                       )}
-
-                       {profileSuccess && (
-                         <div className="bg-green-500/10 border border-green-500/20 p-4 flex items-center gap-3 text-green-500 text-sm">
-                           <CheckCircle2 size={18} />
-                           <span>Your details have been updated.</span>
-                         </div>
-                       )}
-
-                       <div className="grid grid-cols-2 gap-4">
-                         <div className="space-y-2">
-                           <label className="text-[10px] tracking-widest text-white/40 uppercase font-bold">First Name</label>
-                           <input 
-                             type="text" 
-                             required
-                             className="w-full bg-white/5 border border-white/10 px-4 py-4 text-sm focus:border-accent outline-none transition-colors"
-                             value={profileForm.first_name}
-                             onChange={e => setProfileForm({...profileForm, first_name: e.target.value})}
-                           />
-                         </div>
-                         <div className="space-y-2">
-                           <label className="text-[10px] tracking-widest text-white/40 uppercase font-bold">Last Name</label>
-                           <input 
-                             type="text" 
-                             required
-                             className="w-full bg-white/5 border border-white/10 px-4 py-4 text-sm focus:border-accent outline-none transition-colors"
-                             value={profileForm.last_name}
-                             onChange={e => setProfileForm({...profileForm, last_name: e.target.value})}
-                           />
-                         </div>
-                       </div>
-
-                       <div className="space-y-2">
-                         <label className="text-[10px] tracking-widest text-white/40 uppercase font-bold">Email Address</label>
-                         <input 
-                           type="email" 
-                           required
-                           className="w-full bg-white/5 border border-white/10 px-4 py-4 text-sm focus:border-accent outline-none transition-colors"
-                           value={profileForm.email}
-                           onChange={e => setProfileForm({...profileForm, email: e.target.value})}
-                         />
-                       </div>
-
-                       <div className="space-y-2">
-                         <label className="text-[10px] tracking-widest text-white/40 uppercase font-bold">Phone Number</label>
-                         <input 
-                           type="text" 
-                           placeholder="Enter 10-digit phone"
-                           className="w-full bg-white/5 border border-white/10 px-4 py-4 text-sm focus:border-accent outline-none transition-colors"
-                           value={profileForm.phone}
-                           onChange={e => setProfileForm({...profileForm, phone: e.target.value})}
-                         />
-                       </div>
-
-                       <div className="pt-6">
-                         <button 
-                           type="submit"
-                           disabled={profileLoading}
-                           className="w-full bg-white text-black py-5 text-[10px] font-bold tracking-[0.3em] uppercase hover:bg-accent transition-colors disabled:opacity-50"
-                         >
-                           {profileLoading ? 'TRANSMITTING...' : 'SYNC IDENTITY'}
-                         </button>
-                       </div>
-                     </form>
-                   </motion.div>
-                 )}
-               </>
-            )}
+            <Card title="My details">
+              <form onSubmit={handleProfileSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="First name"><input required className={inputCls} value={profileForm.first_name} onChange={e => setProfileForm({ ...profileForm, first_name: e.target.value })} autoComplete="given-name" /></Field>
+                  <Field label="Last name"><input required className={inputCls} value={profileForm.last_name} onChange={e => setProfileForm({ ...profileForm, last_name: e.target.value })} autoComplete="family-name" /></Field>
+                </div>
+                <Field label="Email"><input type="email" required className={inputCls} value={profileForm.email} onChange={e => setProfileForm({ ...profileForm, email: e.target.value })} autoComplete="email" /></Field>
+                <Field label="Phone" hint="Used for delivery updates."><input type="tel" inputMode="tel" placeholder="10-digit mobile" className={inputCls} value={profileForm.phone} onChange={e => setProfileForm({ ...profileForm, phone: e.target.value })} autoComplete="tel" /></Field>
+                {profileError && <Notice tone="error">{profileError}</Notice>}
+                {profileSuccess && <Notice tone="ok">Your details are saved.</Notice>}
+                <button type="submit" disabled={profileLoading} className={`${btnInk} w-full`}>{profileLoading ? 'Saving…' : 'Save details'}</button>
+                <a href="https://api.chilsandco.com/wp-login.php?action=lostpassword" target="_blank" rel="noopener noreferrer" className="block text-center text-sm text-neutral-500 hover:text-ink">Change password</a>
+              </form>
+            </Card>
           </div>
         </div>
       </div>
     );
   }
 
+  // ---------- Signed out: sign in or create an account ----------
   return (
-    <div className="min-h-screen pt-24 md:pt-32 flex flex-col md:flex-row">
-      <SEO 
+    <div className="min-h-screen bg-[#f3f2ee] text-ink pt-16 md:pt-20 flex flex-col md:flex-row">
+      <SEO
         title="Sign in"
-        description="Sign in or register to join the Chils & Co. community. Gain early access to limited bespoke drops and personalized fittings."
+        description="Sign in or create a CHILS & CO. account for faster checkout, order tracking and early access to limited drops."
         canonical="https://chilsandco.com/auth"
-        keywords="login, signup, register identity, authentication gate, bespoke access"
+        keywords="login, sign up, chils and co account"
       />
-      {/* Left: Branding */}
-      <div className="hidden md:flex flex-1 seamless text-ink relative overflow-hidden items-start p-12 lg:p-16">
-        <div className="max-w-md relative z-10">
-          <h2 className="text-5xl lg:text-6xl font-semibold leading-none">Welcome in.</h2>
-          <p className="mt-5 text-stone text-lg">Early access to limited drops, faster checkout and every order in one place.</p>
+      <div className="hidden md:flex flex-1 seamless relative overflow-hidden flex-col px-12 lg:px-16 pt-12 lg:pt-16">
+        <div className="max-w-md relative z-10 pt-12">
+          <p className="eyebrow text-neutral-500 mb-3">CHILS & CO.</p>
+          <h2 className="text-5xl lg:text-6xl font-semibold leading-none tracking-[-0.03em]">Welcome in.</h2>
+          <ul className="mt-6 space-y-2.5 text-stone text-lg">
+            {['Early access to limited drops', 'Faster checkout', 'Every order and its tracking in one place'].map(t => (
+              <li key={t} className="flex items-center gap-2.5"><Check size={17} className="text-ink" /> {t}</li>
+            ))}
+          </ul>
         </div>
-        <img src="/looks/1683_3.webp" alt="" className="absolute bottom-0 right-[8%] h-[78%] object-contain object-bottom" />
+        <div className="flex-1 min-h-0 relative mt-8">
+          <img src="/looks/1683_3.webp" alt="" className="absolute inset-0 w-full h-full object-contain object-bottom" />
+        </div>
       </div>
 
-      {/* Right: Form */}
-      <div className="flex-1 flex items-center justify-center p-6 md:p-12 bg-black">
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="w-full max-w-sm"
-        >
-          <div className="mb-12">
-            <h3 className="text-3xl font-display font-bold tracking-tight mb-2">
-              {isRegister ? 'CREATE ACCOUNT' : 'WELCOME BACK'}
-            </h3>
-            <p className="text-xs text-white/40 tracking-[0.2em] uppercase">
-              {isRegister ? 'Enter your details to join us' : 'Sign in to your account'}
-            </p>
+      <div className="flex-1 flex items-start md:items-center justify-center px-4 py-10 md:p-12">
+        <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-[420px]">
+          <div className="mb-6 px-1">
+            <h1 className="text-[34px] md:text-[44px] leading-[1.04] font-semibold tracking-[-0.03em]">{isRegister ? 'Create your account' : 'Sign in'}</h1>
+            <p className="text-neutral-600 mt-2">{isRegister ? 'Takes a minute. You’ll check out faster next time.' : 'Use the email you ordered with. Your past orders are all here.'}</p>
           </div>
 
-          {success ? (
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              className="bg-white/5 border border-white/10 p-8 text-center rounded-sm"
-            >
-              <CheckCircle2 className="mx-auto mb-4 text-white" size={48} />
-              <h4 className="text-lg font-bold mb-2">REGISTRATION COMPLETE</h4>
-              <p className="text-sm text-white/60">
-                Welcome to the fold. Redirecting you to the home page...
-              </p>
-            </motion.div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {error && (
-                <div className="bg-red-500/10 border border-red-500/20 p-4 flex items-center gap-3 text-red-500 text-sm">
-                  <AlertCircle size={18} />
-                  <span>{error}</span>
-                </div>
-              )}
+          <div className="bg-[#fff] rounded-2xl p-5 md:p-7">
+            <div className="grid grid-cols-2 bg-[#f3f2ee] rounded-full p-1 mb-6" role="tablist">
+              {[{ k: false, l: 'Sign in' }, { k: true, l: 'Create account' }].map(t => (
+                <button key={t.l} type="button" role="tab" aria-selected={isRegister === t.k} onClick={() => { setIsRegister(t.k); setError(null); }}
+                  className={`rounded-full py-2.5 text-sm font-medium transition-colors ${isRegister === t.k ? 'bg-ink text-[#fff]' : 'text-neutral-600 hover:text-ink'}`}>
+                  {t.l}
+                </button>
+              ))}
+            </div>
 
-              <div className="space-y-4">
+            {success ? (
+              <div className="text-center py-6">
+                <div className="w-12 h-12 rounded-full bg-ink text-[#fff] grid place-items-center mx-auto mb-4"><Check size={22} /></div>
+                <p className="text-lg font-semibold">You’re in.</p>
+                <p className="text-[15px] text-neutral-600 mt-1">Setting up your account…</p>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
                 {isRegister && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-[10px] tracking-widest text-white/40 uppercase">First Name</label>
-                      <input 
-                        type="text" 
-                        required
-                        className="w-full bg-white/5 border border-white/10 px-4 py-3 text-sm focus:border-white outline-none transition-colors"
-                        value={formData.first_name}
-                        onChange={(e) => setFormData({...formData, first_name: e.target.value})}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] tracking-widest text-white/40 uppercase">Last Name</label>
-                      <input 
-                        type="text" 
-                        required
-                        className="w-full bg-white/5 border border-white/10 px-4 py-3 text-sm focus:border-white outline-none transition-colors"
-                        value={formData.last_name}
-                        onChange={(e) => setFormData({...formData, last_name: e.target.value})}
-                      />
-                    </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="First name"><input required className={inputCls} value={formData.first_name} onChange={e => setFormData({ ...formData, first_name: e.target.value })} autoComplete="given-name" /></Field>
+                    <Field label="Last name"><input required className={inputCls} value={formData.last_name} onChange={e => setFormData({ ...formData, last_name: e.target.value })} autoComplete="family-name" /></Field>
                   </div>
                 )}
-                
-                <div className="space-y-2">
-                  <label className="text-[10px] tracking-widest text-white/40 uppercase">Email Address</label>
-                  <input 
-                    type="email" 
-                    required
-                    className="w-full bg-white/5 border border-white/10 px-4 py-3 text-sm focus:border-white outline-none transition-colors"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] tracking-widest text-white/40 uppercase">Password</label>
-                  <div className="flex items-center gap-3">
-                    <input 
-                      type={showPassword ? "text" : "password"} 
-                      required
-                      className="flex-1 bg-white/5 border border-white/10 px-4 py-3 text-sm focus:border-white outline-none transition-colors"
-                      value={formData.password}
-                      onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    />
+                <Field label="Email"><input type="email" required className={inputCls} value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })} autoComplete="email" /></Field>
+                <div>
+                  <div className="flex items-baseline justify-between mb-1.5">
+                    <span className="text-sm text-neutral-600">Password</span>
+                    {!isRegister && (
+                      <a href="https://api.chilsandco.com/wp-login.php?action=lostpassword" target="_blank" rel="noopener noreferrer" className="text-sm text-neutral-500 hover:text-ink">Forgot password?</a>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input type={showPassword ? 'text' : 'password'} required aria-label="Password" className={`${inputCls} pr-12`} value={formData.password}
+                      onChange={e => setFormData({ ...formData, password: e.target.value })} autoComplete={isRegister ? 'new-password' : 'current-password'} />
                     <WinkingEye isVisible={showPassword} onClick={() => setShowPassword(!showPassword)} />
                   </div>
                 </div>
 
-                {!isRegister && (
-                  <div className="text-right">
-                    <a 
-                      href="https://api.chilsandco.com/wp-login.php?action=lostpassword"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] tracking-widest text-white/40 uppercase hover:text-white transition-colors"
-                    >
-                      Forgot Password?
-                    </a>
-                  </div>
-                )}
-              </div>
+                {error && <Notice tone="error">{error}</Notice>}
 
-              <button 
-                type="submit" 
-                disabled={loading}
-                className="w-full bg-white text-black py-4 text-xs font-bold tracking-[0.3em] uppercase flex items-center justify-center gap-2 hover:bg-white/90 transition-colors disabled:opacity-50"
-              >
-                {loading ? 'PROCESSING...' : (isRegister ? 'JOIN COMMUNITY' : 'LOG IN')}
-                <ArrowRight size={16} />
-              </button>
-
-              {/* Google OAuth Button Container */}
-              <div className="space-y-4 pt-4 border-t border-white/5">
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-black px-2 text-white/30 tracking-[0.2em] font-mono text-[9px]">OR CONTINUE WITH</span>
-                </div>
-                <div id="google-btn-container" className="w-full flex justify-center h-[44px] mt-2" />
-              </div>
-
-              <div className="text-center mt-8">
-                <button 
-                  type="button"
-                  onClick={() => setIsRegister(!isRegister)}
-                  className="text-[10px] tracking-widest text-white/40 uppercase hover:text-white transition-colors"
-                >
-                  {isRegister ? 'Already have an account? Sign In' : 'Need an account? Join Now'}
+                <button type="submit" disabled={loading} className={`${btnInk} w-full`}>
+                  {loading ? 'One moment…' : isRegister ? 'Create account' : 'Sign in'} {!loading && <ArrowRight size={15} />}
                 </button>
-              </div>
-            </form>
-          )}
+
+                <div className="flex items-center gap-3 pt-2 text-xs text-neutral-400">
+                  <span className="h-px flex-1 bg-[#eeece6]" /> or <span className="h-px flex-1 bg-[#eeece6]" />
+                </div>
+                <div id="google-btn-container" className="w-full flex justify-center min-h-[44px]" />
+              </form>
+            )}
+          </div>
+
+          <p className="text-xs text-neutral-500 mt-4 px-1">
+            By continuing you agree to our <Link to="/terms-conditions" className="underline">terms</Link> and <Link to="/privacy-policy" className="underline">privacy policy</Link>.
+          </p>
         </motion.div>
       </div>
     </div>
