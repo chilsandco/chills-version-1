@@ -1,313 +1,153 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ArrowUpRight, Activity, Clock, Box, Package } from 'lucide-react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { ArrowRight, ChevronRight } from 'lucide-react';
 import { Signal } from '../types';
 import { useAuth } from '../AuthContext';
+import { OrderPage, Card, StatusPill, Thumb, Spinner, inr, shortDate, btnInk, btnLine } from '../components/OrderUi';
 
+const isFlagActive = (val: any, sessionKey?: string) => {
+  if (val === true || val === 1 || val === '1') return true;
+  if (typeof val === 'string' && ['true', 'yes', 'on', 'active'].includes(val.trim().toLowerCase())) return true;
+  return !!(sessionKey && sessionStorage.getItem(sessionKey) === 'true');
+};
+
+/** My orders: every order, newest first, each opening its details. */
 const OrderSignals: React.FC = () => {
   const [signals, setSignals] = useState<Signal[]>([]);
   const [loading, setLoading] = useState(true);
   const { user, token } = useAuth();
-  const navigate = useNavigate();
 
   const [searchParams] = useSearchParams();
   const txId = searchParams.get('tx');
   const rmaSuccess = searchParams.get('rma_success');
-  const [reconcilingRma, setReconcilingRma] = useState(false);
-  const [reconcileMessage, setReconcileMessage] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ text: string; busy: boolean } | null>(null);
 
+  const load = async () => {
+    const res = await fetch('/api/orders', { headers: { Authorization: `Bearer ${token}` } });
+    const data = await res.json();
+    if (Array.isArray(data)) setSignals(data);
+  };
+
+  // Back from paying the difference for an exchange: confirm that payment, then refresh the list.
   useEffect(() => {
-    if (rmaSuccess === 'true' && txId && token) {
-      const reconcileRma = async () => {
-        setReconcilingRma(true);
-        setReconcileMessage("Verifying swap payment signal with clearinghouse...");
-        try {
-          const res = await fetch(`/api/orders/rma/reconcile/${txId}`);
-          const data = await res.json();
-          if (data.success) {
-            setReconcileMessage("Reversal request successfully authorized and logged.");
-            // Re-fetch the orders list
-            const fetchRes = await fetch('/api/orders', {
-              headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const freshData = await fetchRes.json();
-            if (Array.isArray(freshData)) {
-              setSignals(freshData);
-            }
-          } else {
-            setReconcileMessage(`Authorization pending: ${data.message}`);
-          }
-        } catch (e) {
-          console.error("Failed to reconcile RMA:", e);
-          setReconcileMessage("Payment verified. Fetching transaction update...");
-        } finally {
-          setTimeout(() => {
-            setReconcilingRma(false);
-            setReconcileMessage(null);
-          }, 4000);
+    if (rmaSuccess !== 'true' || !txId || !token) return;
+    (async () => {
+      setNotice({ text: 'Confirming your exchange payment…', busy: true });
+      try {
+        const res = await fetch(`/api/orders/rma/reconcile/${txId}`);
+        const data = await res.json();
+        if (data.success) {
+          setNotice({ text: 'Payment received. Your exchange request is in, and we’ll email you the next steps.', busy: false });
+          await load();
+        } else {
+          setNotice({ text: `We’re still waiting for the payment to confirm. ${data.message || ''}`.trim(), busy: false });
         }
-      };
-      reconcileRma();
-    }
+      } catch (e) {
+        console.error('Failed to reconcile RMA:', e);
+        setNotice({ text: 'Payment received. Your order will update shortly.', busy: false });
+      } finally {
+        setTimeout(() => setNotice(null), 6000);
+      }
+    })();
   }, [rmaSuccess, txId, token]);
 
   useEffect(() => {
-    const fetchSignals = async () => {
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-      try {
-        const res = await fetch('/api/orders', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setSignals(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch signals:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchSignals();
+    if (!token) { setLoading(false); return; }
+    load().catch(err => console.error('Failed to fetch orders:', err)).finally(() => setLoading(false));
   }, [token]);
 
-  if (loading) {
-    return (
-      <div className="pt-32 pb-24 px-6 md:px-12 flex items-center justify-center min-h-screen">
-        <div className="flex flex-col items-center gap-4">
-          <Activity className="animate-pulse text-accent" size={32} />
-          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-neutral-500">Retrieving order history...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <Spinner label="Getting your orders…" />;
 
   if (!user && signals.length === 0) {
     return (
-      <div className="pt-32 pb-24 px-6 md:px-12 flex flex-col items-center justify-center min-h-screen text-center">
-        <h1 className="text-4xl font-display font-bold mb-8 uppercase tracking-tighter">No Order History</h1>
-        <p className="text-neutral-500 uppercase text-[10px] tracking-widest mb-12 max-w-sm">No records found in this origin.</p>
-        <Link 
-          to="/auth" 
-          className="bg-white text-black px-12 py-5 text-[11px] tracking-[0.3em] font-bold uppercase hover:bg-accent transition-colors"
-        >
-          Sign in
-        </Link>
-      </div>
+      <OrderPage eyebrow="My orders" title="Sign in to see your orders" intro="Use the email you ordered with. Every past order, its tracking and returns are in one place.">
+        <div className="px-2 flex flex-wrap gap-2">
+          <Link to="/auth" className={btnInk}>Sign in <ArrowRight size={15} /></Link>
+          <Link to="/collection" className={btnLine}>Browse the collection</Link>
+        </div>
+      </OrderPage>
     );
   }
 
-  const isFlagActive = (val: any, sessionKey?: string) => {
-    if (val === true || val === 1 || val === '1') return true;
-    if (typeof val === 'string') {
-      const v = val.trim().toLowerCase();
-      if (v === 'true' || v === 'yes' || v === 'on' || v === 'active') return true;
-    }
-    if (sessionKey && sessionStorage.getItem(sessionKey) === 'true') return true;
-    return false;
-  };
-
-  const hasWaitlistBadge = isFlagActive(user?.onWaitlist);
-  const hasCoCreatorBadge = isFlagActive(user?.coCreatorInterest, 'chils_cocreator_interest');
-  const paidStatuses = ['processing', 'completed', 'shipping', 'delivered', 'dispatched', 'Dispatched'];
+  const hasWaitlist = isFlagActive(user?.onWaitlist);
+  const hasCoCreator = isFlagActive(user?.coCreatorInterest, 'chils_cocreator_interest');
+  const name = user?.firstName || user?.first_name;
 
   return (
-    <div className="pt-24 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen">
-      {reconcileMessage && (
-        <motion.div 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8 p-4 border border-accent/20 bg-accent/5 font-mono text-[9px] uppercase tracking-widest text-accent flex items-center gap-3"
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-          {reconcileMessage}
-        </motion.div>
-      )}
-      <header className="mb-16">
-        <div className="flex items-center gap-3 mb-4">
-          <Activity className="text-accent" size={16} />
-          <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase">Your account</p>
-        </div>
-        <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter uppercase mb-4">My orders</h1>
-        <p className="text-neutral-500 uppercase text-[10px] tracking-widest max-w-xl">
-          Every piece you’ve owned.
-        </p>
-      </header>
-
-      {/* Bespoke Waitlist Status Card */}
-      {hasWaitlistBadge && (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6 p-8 border border-accent/20 bg-accent/5 rounded-sm relative overflow-hidden group"
-        >
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-accent rounded-full animate-pulse" />
-                <p className="text-[9px] tracking-[0.4em] font-bold uppercase text-accent">The Bespoke waitlist</p>
-              </div>
-              <h3 className="text-2xl font-display font-bold uppercase tracking-tight text-white italic">You’re on the list</h3>
-              <p className="text-neutral-400 text-xs tracking-tight font-light max-w-md">
-                You are currently prioritized in our build list for early access to The Bespoke engineering room. 
-                We’ll email you as soon as it opens.
-              </p>
-            </div>
-            <Link 
-              to="/bespoke" 
-              className="text-[10px] tracking-[0.3em] font-bold uppercase py-4 px-8 border border-accent text-accent hover:bg-accent hover:text-black transition-all text-center"
-            >
-              Monitor Progress
-            </Link>
-          </div>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-accent/5 blur-3xl rounded-full -mr-32 -mt-32 group-hover:bg-accent/10 transition-colors" />
+    <OrderPage
+      eyebrow="My orders"
+      title={name ? `Hi ${name}.` : 'My orders'}
+      intro={signals.length ? `${signals.length} ${signals.length === 1 ? 'order' : 'orders'} so far. Tap one to track it, review it or start a return.` : 'Your orders will show up here.'}
+    >
+      {notice && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-2 bg-ink text-[#fff] rounded-2xl px-5 py-4 text-[15px] flex items-center gap-3">
+          {notice.busy && <span className="w-4 h-4 border-2 border-[#fff] border-t-transparent rounded-full animate-spin shrink-0" />}
+          {notice.text}
         </motion.div>
       )}
 
-      {/* Co-Creator Status Card */}
-      {hasCoCreatorBadge && (
-        <motion.div 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-12 p-8 border border-accent/20 bg-accent/5 rounded-sm relative overflow-hidden group shadow-[0_0_30px_rgba(212,175,55,0.05)]"
-        >
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-8 relative z-10">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-accent rounded-full animate-pulse shadow-[0_0_10px_rgba(212,175,55,0.5)]" />
-                <p className="text-[9px] tracking-[0.4em] font-bold uppercase text-accent">Co-Creator network</p>
-              </div>
-              <h3 className="text-2xl font-display font-bold uppercase tracking-tight text-white italic">You’re in</h3>
-              <p className="text-neutral-400 text-xs tracking-tight font-light max-w-md">
-                Protocol {user?.pseudoName ? `"${user.pseudoName.toUpperCase()}"` : 'Co-Creator'} is active. 
-                Your passive authorship status is secured. Artifact submission portal access will be granted in the next cycle.
-              </p>
-            </div>
-            <Link 
-              to="/co-creator" 
-              className="text-[10px] tracking-[0.3em] font-bold uppercase py-4 px-8 bg-accent text-black hover:bg-white transition-all text-center"
-            >
-              Control Interface
-            </Link>
-          </div>
-          <div className="absolute top-0 right-0 w-64 h-64 bg-accent/10 blur-3xl rounded-full -mr-32 -mt-32 group-hover:bg-accent/20 transition-colors" />
-        </motion.div>
-      )}
-
-      <div className="space-y-[1px] bg-neutral-900 border border-neutral-900">
-        {signals.map((signal, idx) => (
-          <motion.div
-            key={signal.id}
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: idx * 0.1 }}
-            className="group block"
-          >
-            <div className="flex flex-col md:flex-row md:items-stretch bg-black border-b border-neutral-900 last:border-0 hover:bg-neutral-950 transition-all">
-              {/* Left Column: Metadata */}
-              <div 
-                onClick={() => navigate(`/console/orders/${signal.id}`)}
-                className="flex-1 flex flex-col md:flex-row md:items-center justify-between p-8 gap-8 cursor-pointer"
-              >
-                <div className="flex flex-col md:flex-row md:items-center gap-8 md:gap-16">
-                  <div className="w-40">
-                    <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Order number</p>
-                    <div className="flex items-center gap-2">
-                      <p className="font-mono text-sm tracking-widest group-hover:text-accent transition-colors">#{signal.signalId}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="w-32">
-                    <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Registration</p>
-                    <div className="flex items-center gap-2">
-                      <Clock size={12} className="text-neutral-700" />
-                      <p className="text-[10px] uppercase font-bold tracking-widest">
-                        {new Date(signal.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="w-24">
-                    <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Status</p>
-                    <div className="flex items-center gap-2">
-                      <div className={`w-1.5 h-1.5 rounded-full ${
-                        paidStatuses.includes(signal.status) 
-                          ? 'bg-green-500' 
-                          : ['failed', 'cancelled'].includes(signal.status)
-                            ? 'bg-red-500'
-                            : signal.status === 'refunded'
-                              ? 'bg-red-500/50'
-                              : 'bg-accent animate-pulse'
-                      }`} />
-                      <p className="text-[10px] uppercase font-bold tracking-widest">{signal.status}</p>
-                    </div>
-                  </div>
+      <div className="space-y-2">
+        {signals.map((o, idx) => (
+          <motion.div key={o.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: Math.min(idx, 8) * 0.04 }}>
+            <Link to={`/console/orders/${o.id}`} className="group block bg-[#fff] rounded-2xl p-4 md:p-6 hover:ring-1 hover:ring-ink/15 transition">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm text-neutral-500">{shortDate(o.date)} · <span className="font-mono whitespace-nowrap">{o.signalId}</span></p>
+                  <p className="text-xl md:text-2xl font-semibold tracking-[-0.02em] mt-0.5">{inr(o.total)}</p>
                 </div>
-
-                <div className="flex items-center gap-8 md:gap-12">
-                  <div className="text-right">
-                    <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-2">Output Value</p>
-                    <p className="font-mono text-sm tracking-widest uppercase">₹{signal.total.toLocaleString()}</p>
-                  </div>
-                  <div className="w-10 h-10 rounded-full border border-neutral-800 flex items-center justify-center group-hover:bg-white group-hover:text-black transition-all">
-                    <ArrowUpRight size={16} />
-                  </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <StatusPill status={o.status} />
+                  <ChevronRight size={18} className="text-neutral-400 group-hover:text-ink group-hover:translate-x-0.5 transition" />
                 </div>
               </div>
-
-              {/* Right Column: Build Contents (Images & Names) */}
-              <div className="md:w-1/3 bg-neutral-900/10 p-8 border-l border-neutral-900 flex flex-col justify-center">
-                <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-4">Order Content</p>
-                <div className="space-y-4">
-                  {signal.items.map((item, i) => (
-                    <div key={i} className="flex items-center gap-4">
-                      {item.image ? (
-                        <img 
-                          src={item.image} 
-                          alt={item.name} 
-                          className="w-12 h-16 object-cover bg-neutral-900 flex-shrink-0" 
-                          referrerPolicy="no-referrer"
-                        />
-                      ) : (
-                        <div className="w-12 h-16 bg-neutral-900 flex items-center justify-center flex-shrink-0">
-                          <Package size={14} className="text-neutral-700" />
-                        </div>
-                      )}
-                      <div>
-                        <Link 
-                          to={`/product/${item.productId}`}
-                          className="text-[10px] uppercase font-bold tracking-widest hover:text-accent transition-colors block leading-tight mb-1"
-                        >
-                          {item.name}
-                        </Link>
-                        <p className="text-[9px] text-neutral-500 uppercase tracking-widest">Qty: {item.quantity}</p>
+              {o.items.length > 0 && (
+                <div className="mt-4 flex gap-3 overflow-x-auto -mx-1 px-1 pb-1">
+                  {o.items.map((it, i) => (
+                    <div key={i} className="flex items-center gap-3 shrink-0 max-w-[260px]">
+                      <Thumb src={it.image} alt={it.name} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium leading-snug line-clamp-2">{it.name}</p>
+                        <p className="text-xs text-neutral-500 mt-0.5">Qty {it.quantity}</p>
                       </div>
                     </div>
                   ))}
-                  {signal.items.length === 0 && (
-                    <p className="text-[9px] text-neutral-600 uppercase italic">Signal metadata only</p>
-                  )}
                 </div>
-              </div>
-            </div>
+              )}
+            </Link>
           </motion.div>
         ))}
-      </div>
 
-      {signals.length === 0 && !loading && (
-        <div className="py-24 text-center border border-dashed border-neutral-800">
-          <Box className="mx-auto mb-4 text-neutral-800" size={32} />
-          <p className="text-[10px] text-neutral-500 uppercase tracking-[0.2em] italic">"No orders yet."</p>
-        </div>
-      )}
-    </div>
+        {signals.length === 0 && (
+          <Card>
+            <p className="text-lg font-semibold">No orders yet</p>
+            <p className="text-[15px] text-neutral-600 mt-1">When you buy something, it’ll appear here with its tracking.</p>
+            <Link to="/collection" className={`${btnInk} mt-5`}>Shop the collection <ArrowRight size={15} /></Link>
+          </Card>
+        )}
+
+        {(hasWaitlist || hasCoCreator) && (
+          <div className="grid md:grid-cols-2 gap-2 pt-6">
+            {hasWaitlist && (
+              <Card>
+                <p className="eyebrow text-neutral-500 mb-2">The Bespoke</p>
+                <p className="text-lg font-semibold">You’re on the waitlist</p>
+                <p className="text-[15px] text-neutral-600 mt-1">We’ll email you as soon as The Bespoke opens for early access.</p>
+                <Link to="/bespoke" className="inline-flex items-center gap-1.5 border-b border-ink pb-0.5 text-sm mt-4">About The Bespoke <ArrowRight size={13} /></Link>
+              </Card>
+            )}
+            {hasCoCreator && (
+              <Card>
+                <p className="eyebrow text-neutral-500 mb-2">Co-creators</p>
+                <p className="text-lg font-semibold">You’re a co-creator{user?.pseudoName ? `, ${user.pseudoName}` : ''}</p>
+                <p className="text-[15px] text-neutral-600 mt-1">We’ll invite you to share your designs when submissions open.</p>
+                <Link to="/co-creator" className="inline-flex items-center gap-1.5 border-b border-ink pb-0.5 text-sm mt-4">Co-creator page <ArrowRight size={13} /></Link>
+              </Card>
+            )}
+          </div>
+        )}
+      </div>
+    </OrderPage>
   );
 };
 

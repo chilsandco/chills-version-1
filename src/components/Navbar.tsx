@@ -46,7 +46,7 @@ const Navbar: React.FC = () => {
     { name: 'Pick your three', path: '/pick-your-three' },
     { name: 'Custom Studio', path: '/customize' },
     ...(isAdmin ? [
-      { name: 'Signals', path: '/console/bespoke' },
+      { name: 'Waitlist', path: '/console/bespoke' },
       { name: 'Amazon', path: '/console/amazon' },
       { name: 'Config', path: '/admin/config' },
     ] : []),

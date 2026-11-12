@@ -50,7 +50,7 @@ const SocialVault = page(() => import('./pages/SignalNetwork'));
 const CustomStudio = page(() => import('./pages/CustomStudio'));
 
 // Internal admin tools keep the original dark console look
-const DARK_PREFIXES = ['/console/bespoke', '/console/amazon', '/admin'];
+const DARK_PREFIXES = ['/console/amazon', '/admin'];
 
 function Shell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();

@@ -1,561 +1,257 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { motion } from 'motion/react';
-import { Activity, Box, MapPin, CreditCard, ChevronLeft, Package, Sparkles, ShieldAlert, RefreshCcw, CheckCircle2, User, MessageSquare } from 'lucide-react';
+import { Check, ExternalLink, RefreshCcw, Star, ArrowRight, MessageCircle, Mail } from 'lucide-react';
 import { Signal } from '../types';
 import { useAuth } from '../AuthContext';
+import { useContact, whatsappLink } from '../components/InfoPage';
+import { OrderPage, Card, StatusPill, Thumb, Spinner, inr, shortDate, statusOf, btnInk, btnLine } from '../components/OrderUi';
 
+const SHIPPED = ['dispatched', 'Dispatched', 'shipping', 'completed'];
+
+/** One order: where it is, what's in it, and what you can do with it. */
 const SignalDetails: React.FC = () => {
   const { id } = useParams();
   const [signal, setSignal] = useState<Signal | null>(null);
   const [loading, setLoading] = useState(true);
   const { token } = useAuth();
-  const pollStart = React.useRef(Date.now());
+  const contact = useContact();
+  const pollStart = useRef(Date.now());
 
+  // While the payment is still confirming, look again every 10 s for up to 5 minutes.
   useEffect(() => {
     let pollTimer: any;
     const fetchSignal = async () => {
-      if (!token) {
-        setLoading(false);
-        return;
-      }
+      if (!token) { setLoading(false); return; }
       try {
-        const res = await fetch(`/api/orders/${id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+        const res = await fetch(`/api/orders/${id}`, { headers: { Authorization: `Bearer ${token}` } });
         const data = await res.json();
-        setSignal(data);
-
-        // Polling logic: if pending or on-hold, poll again in 10s
-        if (data.status === 'pending' || data.status === 'on-hold') {
-          const elapsed = Date.now() - pollStart.current;
-          if (elapsed < 300000) { // 5 minutes
-            pollTimer = setTimeout(fetchSignal, 10000);
-          }
+        if (res.ok && data?.id) setSignal(data);
+        if ((data.status === 'pending' || data.status === 'on-hold') && Date.now() - pollStart.current < 300000) {
+          pollTimer = setTimeout(fetchSignal, 10000);
         }
       } catch (err) {
-        console.error("Failed to fetch signal details:", err);
+        console.error('Failed to fetch order details:', err);
       } finally {
         setLoading(false);
       }
     };
-
     fetchSignal();
-    return () => {
-      if (pollTimer) clearTimeout(pollTimer);
-    };
+    return () => { if (pollTimer) clearTimeout(pollTimer); };
   }, [id, token]);
 
-  if (loading) {
+  if (loading) return <Spinner label="Getting your order…" />;
+
+  if (!signal) {
     return (
-      <div className="pt-28 md:pt-32 pb-24 px-6 md:px-12 flex items-center justify-center min-h-screen">
-        <Activity className="animate-pulse text-accent" size={32} />
-      </div>
+      <OrderPage back={{ to: '/console/orders', label: 'My orders' }} eyebrow="Order" title={token ? 'We couldn’t find this order' : 'Sign in to see this order'}
+        intro={token ? 'It may belong to a different account. Your orders are all in My orders.' : 'Use the email you ordered with.'}>
+        <div className="px-2"><Link to={token ? '/console/orders' : '/auth'} className={btnInk}>{token ? 'My orders' : 'Sign in'} <ArrowRight size={15} /></Link></div>
+      </OrderPage>
     );
   }
 
-  if (!signal) return null;
-
-  const isRefunded = signal.status === 'refunded';
-  const isFailed = ['failed', 'cancelled', 'refunded'].includes(signal.status);
-  const isPending = ['pending', 'on-hold'].includes(signal.status);
-  const isSuccessful = ['processing', 'completed', 'shipping', 'delivered', 'dispatched', 'Dispatched'].includes(signal.status);
+  const s = signal.status;
+  const isRefunded = s === 'refunded';
+  const isStopped = s === 'failed' || s === 'cancelled';
+  const isPending = s === 'pending' || s === 'on-hold';
+  const isPaid = ['processing', 'completed', 'shipping', 'delivered', 'dispatched', 'Dispatched'].includes(s) || isRefunded;
+  const shipped = SHIPPED.includes(s) || !!signal.shipping?.awb || isRefunded;
 
   const steps = [
-    { 
-      label: signal.status === 'failed' 
-        ? "Order Failed" 
-        : signal.status === 'cancelled' 
-          ? "Order Cancelled" 
-          : "Order Received", 
-      status: ['failed', 'cancelled'].includes(signal.status) ? 'failed' : 'completed' 
-    },
-    { label: "Processing", status: (['processing', 'dispatched', 'Dispatched', 'shipping', 'completed'].includes(signal.status) || isRefunded) ? 'completed' : 'pending' },
-    { label: "Dispatched", status: (['dispatched', 'Dispatched', 'shipping', 'completed'].includes(signal.status) || !!signal.shipping?.awb || isRefunded) ? 'completed' : 'pending' },
-    { label: "Delivered", status: (signal.status === 'completed' || isRefunded) ? 'completed' : 'pending' },
+    { label: 'Ordered', done: true },
+    { label: 'Packed', done: ['processing', ...SHIPPED].includes(s) || isRefunded },
+    { label: 'On the way', done: shipped },
+    { label: 'Delivered', done: s === 'completed' || isRefunded },
   ];
+  const current = steps.filter(x => x.done).length - 1;
+
+  // Returns: a delivered order, not itself an exchange, within 7 days of delivery.
+  const deliveredAt = signal.dateCompleted ? new Date(signal.dateCompleted) : new Date(signal.date);
+  const hoursSince = (Date.now() - deliveredAt.getTime()) / 36e5;
+  const returnState = s !== 'completed' || isRefunded ? null : signal.parentExchangeOrderId ? 'exchange' : hoursSince <= 168 ? 'open' : 'closed';
+  const daysLeft = Math.max(0, Math.ceil((168 - hoursSince) / 24));
+
+  const help = whatsappLink(contact.mobileLink, `Hi CHILS & CO., I have a question about my order ${signal.signalId}.`);
 
   return (
-    <div className="pt-24 md:pt-32 pb-24 px-6 md:px-12 max-w-[1000px] mx-auto min-h-screen">
-      <Link 
-        to="/console/orders" 
-        className="inline-flex items-center gap-2 group mb-12 text-[10px] uppercase font-bold tracking-[0.2em] text-neutral-500 hover:text-white transition-colors"
-      >
-        <ChevronLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-        Back to My orders
-      </Link>
-
-      <header className="mb-16">
-        <div className="flex justify-between items-end gap-8 flex-wrap">
-          <div>
-            <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase mb-3">
-              {isFailed ? 'Transmission Interrupted' : isPending ? 'Transmission Pending' : 'Order Confirmation'}
-            </p>
-            <h1 className="text-5xl font-display font-bold tracking-tighter uppercase mb-4">
-              {isRefunded ? 'Refund Complete' : isFailed ? 'Order Terminated' : 'Order Details'}
-            </h1>
-            <div className="flex items-center gap-4">
-              <p className={`font-mono text-xl tracking-tighter ${['failed', 'cancelled', 'refunded'].includes(signal.status) ? 'text-red-500' : 'text-accent'}`}>#{signal.signalId}</p>
-              <span className="w-1 h-1 rounded-full bg-neutral-800" />
-              <p className="text-[10px] text-neutral-600 uppercase tracking-widest">
-                Date: {new Date(signal.date).toLocaleDateString()}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <div className={`px-6 py-4 border rounded-sm ${['failed', 'cancelled', 'refunded'].includes(signal.status) ? 'bg-red-500/5 border-red-500/20' : 'bg-neutral-950 border-neutral-900'}`}>
-              <p className={`text-[8px] tracking-[0.3em] uppercase mb-1 ${['failed', 'cancelled', 'refunded'].includes(signal.status) ? 'text-red-500/50' : 'text-neutral-600'}`}>Status</p>
-              <p className={`text-[11px] font-bold uppercase tracking-widest ${['failed', 'cancelled', 'refunded'].includes(signal.status) ? 'text-red-500' : ''}`}>
-                {signal.status === 'refunded' ? '✅ Refunded' : signal.status === 'failed' ? '❌ Failed' : signal.status === 'cancelled' ? '🚫 Cancelled' : signal.status}
-              </p>
-            </div>
-          </div>
-      </div>
-    </header>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-        <div className="lg:col-span-2 space-y-12">
-          {isRefunded && (
-             <motion.section 
-               initial={{ opacity: 0, y: 10 }}
-               animate={{ opacity: 1, y: 0 }}
-               className="bg-white/5 border border-white/10 p-10 md:p-14"
-             >
-               <div className="flex flex-col md:flex-row gap-10">
-                 <div className="w-16 h-16 rounded-full bg-accent flex items-center justify-center shrink-0">
-                    <CheckCircle2 size={24} className="text-black" />
-                 </div>
-                 <div className="flex-grow">
-                    <h3 className="text-[11px] font-bold uppercase tracking-[0.3em] text-accent mb-6 italic">This piece has completed its cycle with you.</h3>
-                    
-                    <div className="space-y-6 text-[13px] text-white/70 leading-relaxed font-light mb-10">
-                      <p>Your refund has been successfully processed. The value has been returned to your original payment method. Depending on your bank, it may take 3–7 business days to reflect in your account.</p>
-                      <p className="italic">We appreciate you experiencing Chils & Co — every product is built with intention, and your support means a lot to us.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 py-8 border-y border-white/5">
-                      <div>
-                        <p className="text-[8px] text-white/30 uppercase tracking-widest mb-1 font-bold">Amount Refunded</p>
-                        <p className="text-lg font-display font-bold text-red-500">₹{signal.total.toLocaleString()}</p>
-                      </div>
-                      <div>
-                        <p className="text-[8px] text-white/30 uppercase tracking-widest mb-1 font-bold">Status</p>
-                        <p className="text-[10px] uppercase font-bold tracking-widest text-green-500">Success</p>
-                      </div>
-                    </div>
-
-                    <div className="flex gap-4 mt-10">
-                      <Link to="/collection" className="bg-white text-black px-8 py-3 text-[10px] tracking-widest font-bold uppercase hover:bg-accent transition-colors">Shop Again</Link>
-                      <a href="mailto:chilsandco@gmail.com" className="border border-white/10 px-8 py-3 text-[10px] tracking-widest font-bold uppercase hover:border-white transition-colors text-center inline-block">Support</a>
-                    </div>
-                 </div>
-               </div>
-             </motion.section>
+    <OrderPage
+      width="max-w-[1080px]"
+      back={{ to: '/console/orders', label: 'My orders' }}
+      eyebrow={`Ordered ${shortDate(signal.date)}`}
+      title={<span className="font-mono tracking-[-0.04em]">{signal.signalId}</span>}
+      intro={statusOf(s).note}
+      aside={<StatusPill status={s} className="self-start md:self-end text-sm px-3 py-1.5" />}
+    >
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-2 items-start">
+        <div className="space-y-2 min-w-0">
+          {/* Where it is */}
+          {!isStopped && (
+            <Card>
+              <ol className="grid grid-cols-4">
+                {steps.map((st, i) => (
+                  <li key={st.label} className="relative flex flex-col items-center text-center">
+                    {i > 0 && <span className={`absolute top-[13px] right-1/2 w-full h-[2px] ${st.done ? 'bg-ink' : 'bg-[#e6e3dc]'}`} />}
+                    <span className={`relative z-10 w-7 h-7 rounded-full grid place-items-center text-xs font-medium ${st.done ? 'bg-ink text-[#fff]' : 'bg-[#fff] border-2 border-[#e6e3dc] text-neutral-400'} ${i === current && !isRefunded && s !== 'completed' ? 'ring-4 ring-ink/10' : ''}`}>
+                      {st.done ? <Check size={14} strokeWidth={2.6} /> : i + 1}
+                    </span>
+                    <span className={`mt-2 text-xs md:text-sm ${st.done ? 'text-ink font-medium' : 'text-neutral-400'}`}>{st.label}</span>
+                  </li>
+                ))}
+              </ol>
+              {isRefunded && (
+                <p className="mt-6 text-[15px] text-neutral-600 bg-[#f3f2ee] rounded-xl px-4 py-3">
+                  <strong className="text-ink font-medium">Refunded {inr(signal.total)}</strong> to your original payment method. Depending on your bank, it shows up in 3–7 business days.
+                </p>
+              )}
+              {isPending && (
+                <p className="mt-6 text-[15px] text-neutral-600 flex items-center gap-3">
+                  <span className="w-4 h-4 border-2 border-ink border-t-transparent rounded-full animate-spin shrink-0" /> Waiting for the payment to confirm. This page updates on its own.
+                </p>
+              )}
+            </Card>
           )}
 
-          {['failed', 'cancelled'].includes(signal.status) ? (
-            <section className="bg-red-500/5 border border-red-500/20 p-8 md:p-10 relative overflow-hidden">
-              <div className="absolute top-0 right-0 p-8 opacity-5 text-red-500">
-                <ShieldAlert size={120} />
+          {isStopped && (
+            <Card title={s === 'failed' ? 'The payment didn’t go through' : 'This order was cancelled'}>
+              <p className="text-[15px] text-neutral-600 leading-relaxed">
+                {s === 'failed' ? 'Nothing was shipped for this order.' : 'Nothing will be shipped for this order.'} If money left your account anyway, message us with the order number and we’ll sort it out.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-5">
+                <Link to="/collection" className={btnInk}>Shop again</Link>
+                <a href={help} target="_blank" rel="noopener noreferrer" className={btnLine}><MessageCircle size={15} /> Message us</a>
               </div>
-              <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-8 flex items-center gap-3 text-red-500">
-                <ShieldAlert size={16} />
-                Transaction Terminated
-              </h2>
-              <div className="space-y-4 max-w-lg relative z-10">
-                <p className="text-[13px] font-medium text-white leading-relaxed">
-                  {signal.status === 'failed' 
-                    ? "The payment for this order could not be authenticated. The checkout flow has been interrupted."
-                    : "This order has been cancelled."}
-                </p>
-                <p className="text-[11px] text-neutral-500 uppercase tracking-widest leading-relaxed">
-                  If any amount was deducted from your account, it will automatically revert within 3-5 business days. You can initiate a new order from our archive collection.
-                </p>
+            </Card>
+          )}
+
+          {/* Tracking */}
+          {signal.shipping.awb && !isRefunded && (
+            <Card title="Tracking">
+              <div className="grid sm:grid-cols-3 gap-4 text-[15px]">
+                <div><p className="text-sm text-neutral-500">Courier</p><p className="font-medium mt-0.5">{signal.shipping.courier || 'Our delivery partner'}</p></div>
+                <div><p className="text-sm text-neutral-500">Latest update</p><p className="font-medium mt-0.5">{signal.shipping.trackingStatus || 'Shipped'}</p></div>
+                {signal.shipping.etd && <div><p className="text-sm text-neutral-500">Expected by</p><p className="font-medium mt-0.5">{shortDate(signal.shipping.etd)}</p></div>}
               </div>
-              <div className="flex gap-4 mt-8 relative z-10">
-                <Link to="/collection" className="bg-white text-black px-6 py-3 text-[10px] tracking-widest font-bold uppercase hover:bg-accent transition-colors">
-                  Create New Order
-                </Link>
-                <a href="mailto:chilsandco@gmail.com" className="border border-white/10 px-6 py-3 text-[10px] tracking-widest font-bold uppercase hover:border-white transition-colors text-center inline-block">
-                  Need help?
-                </a>
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                {signal.shipping.trackingUrl && (
+                  <a href={signal.shipping.trackingUrl} target="_blank" rel="noopener noreferrer" className={btnInk}>Track package <ExternalLink size={14} /></a>
+                )}
+                <span className="text-sm text-neutral-500">Tracking number <span className="font-mono text-ink">{signal.shipping.awb}</span></span>
               </div>
-            </section>
-          ) : (
-            <section className="bg-neutral-950 border border-neutral-900 p-8">
-              <h2 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-12 flex items-center gap-3">
-                <Activity size={14} className={isRefunded ? 'text-white/20' : 'text-accent'} />
-                Order Status
-              </h2>
-              
-              <div className="relative pl-8 space-y-12">
-                <div className="absolute left-[3px] top-1 bottom-1 w-[1px] bg-neutral-900" />
-                {steps.map((step, idx) => (
-                  <div key={idx} className="relative">
-                    <div className={`absolute -left-[32px] top-1 w-2.5 h-2.5 rounded-full border border-black ${
-                      step.status === 'completed' 
-                        ? (isRefunded ? 'bg-white/10' : 'bg-accent') 
-                        : step.status === 'failed' 
-                          ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' 
-                          : 'bg-neutral-800'
-                    }`} />
-                    <div>
-                      <p className={`text-[11px] font-bold uppercase tracking-widest mb-1 ${
-                        step.status === 'completed' 
-                           ? 'text-white/40' 
-                          : step.status === 'failed' 
-                            ? 'text-red-500' 
-                            : 'text-neutral-600'
-                      }`}>
-                        {step.label}
+            </Card>
+          )}
+
+          {/* Exchanges */}
+          {signal.rmaSwaps && signal.rmaSwaps.length > 0 && (
+            <Card title="Your exchange">
+              <div className="space-y-4">
+                {signal.rmaSwaps.map((sw, i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    <Thumb src={sw.swapProductImage} alt={sw.swapProductName} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm text-neutral-500 line-through truncate">{sw.originalProductName}</p>
+                      <p className="font-medium leading-snug">{sw.swapProductName} · {sw.swapSize}</p>
+                      <p className="text-sm text-neutral-500 mt-0.5">
+                        {sw.delta > 0 ? (sw.type === 'refund' ? `${inr(sw.delta)} to be refunded to you` : `${inr(sw.delta)} difference paid`) : 'Same price, nothing to pay'}
                       </p>
                     </div>
-                  </div>
-                ))}
-                {isRefunded && (
-                  <div className="relative">
-                    <div className="absolute -left-[32px] top-1 w-2.5 h-2.5 rounded-full border border-black bg-red-500" />
-                    <div>
-                      <p className="text-[11px] font-bold uppercase tracking-widest mb-1 text-red-500">Refunded</p>
-                      <p className="text-[9px] text-red-500/50 uppercase tracking-widest italic">Recoupment successful</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </section>
-          )}
-
-          {/* Reversal Swaps Protocol Card */}
-          {signal.rmaSwaps && signal.rmaSwaps.length > 0 && (
-            <motion.section 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-neutral-950 border border-neutral-900 p-8 md:p-10 space-y-8"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
-                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase text-accent font-mono">
-                  REVERSAL SWAPS // TRANSACTION LOGS
-                </h3>
-              </div>
-              
-              <div className="space-y-6">
-                {signal.rmaSwaps.map((swap, idx) => (
-                  <div key={idx} className="pb-6 border-b border-neutral-900 last:border-0 last:pb-0 space-y-3 font-mono text-[11px]">
-                    <div className="flex justify-between items-center text-[10px]">
-                      <span className="text-white uppercase font-bold">SIZE EXCHANGE</span>
-                      <span className="text-green-500 font-bold tracking-widest">REQUESTED</span>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-neutral-500">ORIGINAL ORDER:</p>
-                      <p className="text-white uppercase tracking-tight">{swap.originalProductName}</p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-accent">SWAPPED TARGET:</p>
-                      <div className="flex gap-4 items-center mt-2">
-                        {swap.swapProductImage ? (
-                          <img 
-                            src={swap.swapProductImage} 
-                            alt={swap.swapProductName} 
-                            className="w-12 h-16 object-cover bg-neutral-900 border border-white/5 flex-shrink-0"
-                            referrerPolicy="no-referrer"
-                          />
-                        ) : (
-                          <div className="w-12 h-16 bg-neutral-900 flex items-center justify-center flex-shrink-0 border border-white/5">
-                            <Package size={16} className="text-neutral-700" />
-                          </div>
-                        )}
-                        <p className="text-white uppercase tracking-tight font-bold text-xs">
-                          {swap.swapProductName} <span className="text-accent font-mono block text-[10px] mt-1">SIZE: {swap.swapSize}</span>
-                        </p>
-                      </div>
-                    </div>
-                    <div className="pt-2 border-t border-neutral-900 flex justify-between items-center text-[10px]">
-                      {swap.type === 'refund' ? (
-                        <>
-                          <span className="text-green-500 font-bold uppercase">DELTA AMOUNT REFUND DUE:</span>
-                          <span className="text-green-500 font-bold text-xs font-sans">₹{swap.delta.toLocaleString()}</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="text-accent font-bold uppercase">DELTA AMOUNT PAID:</span>
-                          <span className="text-accent font-bold text-xs font-sans">₹{swap.delta.toLocaleString()}</span>
-                        </>
-                      )}
-                    </div>
+                    <span className="text-xs bg-[#f3f2ee] rounded-full px-2.5 py-1 shrink-0">Requested</span>
                   </div>
                 ))}
               </div>
-            </motion.section>
+            </Card>
           )}
 
-          <section className="bg-neutral-950 border border-neutral-900 p-8">
-            <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase mb-8 flex items-center gap-3">
-              <Box size={14} className="text-accent" />
-              Order Summary
-            </h3>
-            <div className="space-y-6">
-              {signal.items.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center pb-6 border-b border-neutral-900 last:border-0 last:pb-0">
-                  <div className="flex items-center gap-6">
-                    {item.image ? (
-                      <img 
-                        src={item.image} 
-                        alt={item.name} 
-                        className={`w-16 h-20 object-cover flex-shrink-0 ${isRefunded ? 'grayscale opacity-10' : 'bg-neutral-900'}`} 
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <div className="w-16 h-20 bg-neutral-900 flex items-center justify-center flex-shrink-0">
-                        <Package size={20} className="text-neutral-700" />
-                      </div>
-                    )}
-                    <div>
-                      <Link 
-                        to={`/product/${item.productId}`}
-                        className={`text-[11px] font-bold uppercase tracking-widest mb-1 transition-colors block ${isRefunded ? 'text-white/40' : 'hover:text-accent'}`}
-                      >
-                        {item.name}
-                      </Link>
-                      <p className="text-[10px] text-neutral-600 uppercase tracking-widest">Quantity: {item.quantity}</p>
-                      {!isRefunded && (
-                        <Link 
-                          to={`/product/${item.productId}?writeReview=true`}
-                          className="mt-2 text-[9px] font-mono tracking-widest text-accent hover:text-white uppercase flex items-center gap-1.5 transition-colors"
-                        >
-                          <MessageSquare size={10} />
-                          Write a review
-                        </Link>
+          {/* What's in it */}
+          <Card title={`In this order (${signal.items.reduce((a, b) => a + b.quantity, 0)})`}>
+            <div className="divide-y divide-[#eeece6]">
+              {signal.items.map((item, idx) => {
+                const swap = signal.rmaSwaps?.find(x => String(x.originalProductId) === String(item.productId));
+                return (
+                  <div key={idx} className="flex gap-4 py-4 first:pt-0 last:pb-0">
+                    <Link to={`/product/${item.productId}`} className="shrink-0"><Thumb src={item.image} alt={item.name} className={`w-16 h-20 ${isRefunded ? 'opacity-50 grayscale' : ''}`} /></Link>
+                    <div className="flex-1 min-w-0">
+                      <Link to={`/product/${item.productId}`} className="font-medium leading-snug hover:underline">{item.name}</Link>
+                      <p className="text-sm text-neutral-500 mt-0.5">Qty {item.quantity} · {inr(item.price)} each</p>
+                      {swap && <p className="text-sm text-neutral-600 mt-1 flex items-center gap-1.5"><RefreshCcw size={13} /> Exchanging for {swap.swapProductName} ({swap.swapSize})</p>}
+                      {isPaid && !isRefunded && s === 'completed' && (
+                        <Link to={`/product/${item.productId}?writeReview=true`} className="inline-flex items-center gap-1.5 text-sm mt-2 border-b border-ink/30 hover:border-ink pb-0.5"><Star size={13} /> Write a review</Link>
                       )}
-                      {(() => {
-                        const swapDetail = signal.rmaSwaps?.find((s: any) => s.originalProductId.toString() === item.productId.toString());
-                        if (swapDetail) {
-                          return (
-                            <div className="mt-2 flex items-center gap-1.5 text-accent text-[8px] uppercase tracking-widest font-mono font-bold">
-                              <RefreshCcw size={10} className="animate-spin-slow" />
-                              Swapped for: {swapDetail.swapProductName} ({swapDetail.swapSize})
-                            </div>
-                          );
-                        }
-                        return null;
-                      })()}
                     </div>
+                    <p className={`font-medium shrink-0 ${isRefunded ? 'line-through text-neutral-400' : ''}`}>{inr(item.total)}</p>
                   </div>
-                  <p className={`font-mono text-xs ${isRefunded ? 'line-through text-white/20' : ''}`}>₹{item.total.toLocaleString()}</p>
-                </div>
-              ))}
-              <div className="pt-6 flex justify-between items-center bg-neutral-900/10 -mx-8 px-8 mb-4">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Order Total</p>
-                <p className={`text-lg font-display font-bold tracking-tighter ${isRefunded ? 'text-white/40' : ''}`}>₹{signal.total.toLocaleString()}</p>
-              </div>
-
-              {!isRefunded && signal.status === 'completed' && (
-                <div className="pt-4 border-t border-white/5">
-                  {(() => {
-                    if (signal.parentExchangeOrderId) {
-                      return (
-                        <div className="w-full bg-neutral-900/10 border border-neutral-900/20 text-neutral-600 p-4 text-[9px] tracking-[0.2em] font-bold uppercase flex items-center justify-center gap-2 cursor-not-allowed">
-                          <ShieldAlert size={12} className="opacity-30" />
-                          Style exchange is limited to 1 cycle for this piece
-                        </div>
-                      );
-                    }
-
-                    const now = new Date();
-                    const deliveryDate = signal.dateCompleted ? new Date(signal.dateCompleted) : new Date(signal.date);
-                    const diffHours = (now.getTime() - deliveryDate.getTime()) / (1000 * 60 * 60);
-                    const isWindowActive = diffHours <= 168;
-
-                    if (isWindowActive) {
-                      return (
-                        <Link 
-                          to={`/console/orders/${signal.id}/return`}
-                          className="w-full bg-white/5 border border-white/10 text-white p-4 uppercase hover:bg-accent hover:border-accent hover:text-black transition-all flex flex-col items-center justify-center gap-1 group"
-                        >
-                          <div className="flex items-center gap-3 text-[10px] tracking-[0.3em] font-bold uppercase">
-                            <RefreshCcw size={14} className="group-hover:rotate-180 transition-transform duration-500" />
-                            Return item
-                          </div>
-                          <span className="text-[9px] tracking-widest opacity-40 font-medium italic">Request a return for this order</span>
-                        </Link>
-                      );
-                    } else {
-                      return (
-                        <div className="w-full bg-neutral-900/10 border border-neutral-900/20 text-neutral-600 p-4 text-[9px] tracking-[0.2em] font-bold uppercase flex items-center justify-center gap-2 cursor-not-allowed">
-                          <ShieldAlert size={12} className="opacity-30" />
-                          Authorized Return window closed (7 days)
-                        </div>
-                      );
-                    }
-                  })()}
-                </div>
-              )}
+                );
+              })}
             </div>
-          </section>
-
-          <section className="bg-accent/5 border border-accent/20 p-8 relative overflow-hidden group">
-            <Sparkles className="absolute -right-4 -top-4 text-accent/10 w-24 h-24 rotate-12 group-hover:scale-110 transition-transform duration-1000" />
-            <div className="relative z-10">
-              <div className="flex items-center gap-3 mb-4">
-                <Package size={18} className="text-accent" />
-                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase">Packaging Unit</h3>
-              </div>
-              <p className="text-[13px] font-medium leading-relaxed mb-3">
-                This shipment includes a reusable packaging unit.
-              </p>
-              <p className="text-[11px] text-neutral-500 uppercase tracking-widest leading-relaxed mb-6">
-                Connect it to your space. Convert it into a storage module for socks or stationery.
-              </p>
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-black border border-neutral-800 rounded-full">
-                <div className="w-1 h-1 rounded-full bg-accent animate-pulse" />
-                <p className="text-[8px] tracking-[0.3em] text-neutral-400 uppercase">Secondary function enabled</p>
-              </div>
+            <div className="mt-5 pt-4 border-t border-[#eeece6] flex justify-between items-baseline">
+              <span className="text-neutral-600">Total{isPaid ? ' paid' : ''}</span>
+              <span className={`text-2xl font-semibold tracking-[-0.02em] ${isRefunded ? 'text-neutral-400' : ''}`}>{inr(signal.total)}</span>
             </div>
-          </section>
+          </Card>
+
+          {/* Returns */}
+          {returnState === 'open' && (
+            <Card>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <p className="text-lg font-semibold">Size not right?</p>
+                  <p className="text-[15px] text-neutral-600">You can ask for a return or exchange for {daysLeft} more {daysLeft === 1 ? 'day' : 'days'}.</p>
+                </div>
+                <Link to={`/console/orders/${signal.id}/return`} className={btnInk}><RefreshCcw size={15} /> Return or exchange</Link>
+              </div>
+            </Card>
+          )}
+          {returnState === 'closed' && (
+            <p className="px-2 py-2 text-sm text-neutral-500">The 7-day return window for this order has closed. Something wrong with the tee? <a href={help} target="_blank" rel="noopener noreferrer" className="underline text-ink">Message us</a>.</p>
+          )}
+          {returnState === 'exchange' && (
+            <p className="px-2 py-2 text-sm text-neutral-500">This order is already an exchange, so it can’t be exchanged again. <a href={help} target="_blank" rel="noopener noreferrer" className="underline text-ink">Message us</a> if something’s wrong.</p>
+          )}
         </div>
 
-        <div className="space-y-8">
-          {signal.shipping.awb && (
-            <motion.section 
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-neutral-950 border border-accent/20 p-8 relative overflow-hidden group shadow-[0_0_25px_rgba(212,175,55,0.02)]"
-            >
-              <div className="absolute top-0 right-0 w-32 h-32 bg-accent/5 blur-2xl rounded-full -mr-16 -mt-16 group-hover:bg-accent/10 transition-colors duration-1000" />
-              
-              <div className="flex items-center gap-3 mb-6 relative z-10">
-                <div className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase text-accent">Logistics Terminal</h3>
-              </div>
-              
-              <div className="space-y-5 relative z-10">
-                <div>
-                  <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Delivery</span>
-                  <p className="text-xs uppercase font-bold tracking-widest text-white">{signal.shipping.courier || 'Verified partner'}</p>
-                </div>
-                
-                <div>
-                  <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Relay AWB</span>
-                  <a 
-                    href={signal.shipping.trackingUrl || '#'} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="font-mono text-[13px] tracking-widest text-white hover:text-accent transition-colors flex items-center gap-1.5 decoration-neutral-800 underline underline-offset-4 decoration-dotted hover:decoration-accent"
-                  >
-                    #{signal.shipping.awb}
-                    <span className="text-[9px] text-neutral-500 font-sans">↗</span>
-                  </a>
-                </div>
-
-                <div>
-                  <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Logistics Status</span>
-                  <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                    <p className="text-[11px] uppercase font-bold tracking-widest text-green-400">{signal.shipping.trackingStatus || 'Dispatched'}</p>
-                  </div>
-                </div>
-
-                {signal.shipping.etd && (
-                  <div className="pt-4 border-t border-neutral-900">
-                    <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Estimated Delivery</span>
-                    <p className="text-[11px] uppercase font-bold tracking-widest text-neutral-400 font-mono">
-                      {new Date(signal.shipping.etd as string).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </motion.section>
-          )}
-
-          <section className="bg-neutral-950 border border-neutral-900 p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <MapPin size={14} className="text-accent" />
-              <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase">Destination</h3>
-            </div>
-            <p className="text-[12px] font-medium leading-relaxed mb-4">{signal.shipping.address}</p>
-            <div className="pt-4 border-t border-neutral-900">
-              <p className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1">Method</p>
-              <p className="text-[10px] font-bold uppercase tracking-widest">{signal.shipping.method}</p>
-            </div>
-          </section>
+        {/* Side column */}
+        <div className="space-y-2">
+          <Card title="Delivery">
+            <p className="text-[15px] leading-relaxed">{signal.shipping.address}</p>
+            <p className="text-sm text-neutral-500 mt-2">{signal.shipping.method}</p>
+          </Card>
 
           {signal.billing && (signal.billing.email || signal.billing.phone) && (
-            <section className="bg-neutral-950 border border-neutral-900 p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <User size={14} className="text-accent" />
-                <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase">Contact details</h3>
+            <Card title="Contact">
+              <div className="text-[15px] space-y-1">
+                <p className="font-medium">{[signal.billing.first_name, signal.billing.last_name].filter(Boolean).join(' ')}</p>
+                {signal.billing.email && <p className="text-neutral-600 break-all">{signal.billing.email}</p>}
+                {signal.billing.phone && <p className="text-neutral-600">{signal.billing.phone}</p>}
               </div>
-              <div className="space-y-4">
-                <div>
-                  <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Name</span>
-                  <p className="text-xs uppercase font-bold tracking-widest text-white">
-                    {signal.billing.first_name} {signal.billing.last_name}
-                  </p>
-                </div>
-                {signal.billing.email && (
-                  <div>
-                    <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Email</span>
-                    <p className="text-xs font-mono tracking-wider text-neutral-400">{signal.billing.email}</p>
-                  </div>
-                )}
-                {signal.billing.phone && (
-                  <div>
-                    <span className="text-[8px] tracking-[0.3em] text-neutral-600 uppercase mb-1 block">Phone</span>
-                    <p className="text-xs font-mono tracking-widest text-neutral-400">{signal.billing.phone}</p>
-                  </div>
-                )}
-                <div className="pt-4 border-t border-neutral-900">
-                  <p className="text-[9px] text-neutral-500 uppercase tracking-widest leading-relaxed mb-3 italic">
-                    These details were saved at checkout for this order.
-                  </p>
-                  <Link 
-                    to="/auth"
-                    className="inline-flex items-center gap-1.5 text-[9px] font-bold tracking-widest uppercase text-accent hover:text-white transition-colors"
-                  >
-                    Update my details ↗
-                  </Link>
-                </div>
-              </div>
-            </section>
+              <p className="text-sm text-neutral-500 mt-3">Saved at checkout for this order.</p>
+            </Card>
           )}
 
-          <section className="bg-neutral-950 border border-neutral-900 p-8">
-            <div className="flex items-center gap-3 mb-6">
-              <CreditCard size={14} className="text-accent" />
-              <h3 className="text-[11px] tracking-[0.2em] font-bold uppercase">Payment</h3>
-            </div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className={`w-2 h-2 rounded-full ${
-                (isSuccessful || isRefunded) 
-                  ? 'bg-green-500' 
-                  : ['failed', 'cancelled'].includes(signal.status) 
-                    ? 'bg-red-500' 
-                    : 'bg-amber-500 animate-pulse'
-              }`} />
-              <p className="text-[11px] font-bold uppercase tracking-widest">
-                {(isSuccessful || isRefunded) ? 'Authenticated' : ['failed', 'cancelled'].includes(signal.status) ? 'Failed' : 'Pending'}
-              </p>
-            </div>
-            <p className="text-[10px] text-neutral-500 uppercase tracking-widest leading-relaxed italic">
-              {(isSuccessful || isRefunded)
-                ? 'Payment was registered successfully.' 
-                : ['failed', 'cancelled'].includes(signal.status) 
-                  ? 'Payment was unsuccessful or cancelled.' 
-                  : 'Awaiting payment confirmation from gateway.'}
+          <Card title="Payment">
+            <p className="flex items-center gap-2 text-[15px]">
+              <span className={`w-2 h-2 rounded-full ${isPaid ? 'bg-[#2f5130]' : isStopped ? 'bg-neutral-400' : 'bg-amber-500 animate-pulse'}`} />
+              {isRefunded ? 'Paid, then refunded' : isPaid ? 'Paid' : isStopped ? 'Not paid' : 'Confirming'}
             </p>
-          </section>
+            <p className="text-sm text-neutral-500 mt-1">PhonePe · {inr(signal.total)}</p>
+          </Card>
 
-          <div className="p-8 border border-neutral-900 text-center">
-            <p className="text-[9px] text-neutral-600 uppercase tracking-[0.3em] leading-relaxed">
-              Need assistance?<br/>
-              <a href="mailto:chilsandco@gmail.com" className="text-white hover:text-accent transition-colors mt-2 block">Support</a>
-            </p>
-          </div>
+          {isPaid && !isRefunded && (
+            <Card>
+              <p className="font-semibold">Keep the box</p>
+              <p className="text-[15px] text-neutral-600 mt-1">Your tee comes in a sturdy box made to be reused for socks, cables or stationery.</p>
+            </Card>
+          )}
+
+          <section className="bg-ink text-[#fff] rounded-2xl p-5 md:p-6">
+            <p className="font-semibold text-lg">Need help with this order?</p>
+            <p className="text-[#fff]/60 text-sm mt-1">Monday to Saturday, 10 AM to 6 PM.</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <a href={help} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-[#fff] text-ink rounded-full px-4 py-2.5 text-sm font-medium"><MessageCircle size={14} /> WhatsApp</a>
+              <a href={`mailto:${contact.email}?subject=${encodeURIComponent(`Order ${signal.signalId}`)}`} className="inline-flex items-center gap-2 border border-[#fff]/30 rounded-full px-4 py-2.5 text-sm"><Mail size={14} /> Email</a>
+            </div>
+          </section>
         </div>
       </div>
-    </div>
+    </OrderPage>
   );
 };
 

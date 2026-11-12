@@ -1,188 +1,107 @@
-import React, { useEffect, useState } from 'react';
-import { motion } from 'motion/react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Download, Search } from 'lucide-react';
 import { useAuth } from '../AuthContext';
-import { Activity, Clock, User, Mail, Shield, Download } from 'lucide-react';
 import writeXlsxFile from 'write-excel-file';
+import { OrderPage, Card, Spinner, shortDate, btnInk } from '../components/OrderUi';
 
+const ADMIN_EMAILS = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
+
+/** The Bespoke waitlist, for the team: who signed up, and an Excel export. */
 const BespokeSignals: React.FC = () => {
   const [waitlist, setWaitlist] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [q, setQ] = useState('');
   const { token, user, isLoading: authLoading } = useAuth();
 
   useEffect(() => {
-    const fetchWaitlist = async () => {
-      if (authLoading || !token) {
-        if (!authLoading && !token) setLoading(false);
-        return;
-      }
-      try {
-        const res = await fetch('/api/bespoke/list', {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setWaitlist(data);
-        }
-      } catch (err) {
-        console.error("Failed to fetch bespoke signals:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchWaitlist();
+    if (authLoading) return;
+    if (!token) { setLoading(false); return; }
+    fetch('/api/bespoke/list', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.json())
+      .then(data => { if (Array.isArray(data)) setWaitlist(data); })
+      .catch(err => console.error('Failed to fetch the bespoke waitlist:', err))
+      .finally(() => setLoading(false));
   }, [token, authLoading]);
+
+  const shown = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    return t ? waitlist.filter(c => [c.email, c.billing_email, c.pseudo_name].some((v: string) => v?.toLowerCase().includes(t))) : waitlist;
+  }, [waitlist, q]);
 
   const exportToExcel = async () => {
     if (waitlist.length === 0) return;
-
-    // Define column schema
     const schema = [
       { column: 'ID', type: Number, value: (c: any) => c.id, width: 10 },
       { column: 'Registered Email', type: String, value: (c: any) => c.email, width: 30 },
       { column: 'Billing/Waitlist Email', type: String, value: (c: any) => c.billing_email || c.email, width: 30 },
       { column: 'Pseudo Name', type: String, value: (c: any) => c.pseudo_name || 'N/A', width: 20 },
-      { column: 'Co-Creator', type: String, value: (c: any) => c.is_co_creator ? 'Yes' : 'No', width: 12 },
+      { column: 'Co-Creator', type: String, value: (c: any) => (c.is_co_creator ? 'Yes' : 'No'), width: 12 },
       { column: 'Registration Date', type: String, value: (c: any) => new Date(c.date_created).toLocaleDateString(), width: 20 },
       { column: 'Status', type: String, value: () => 'Waitlisted', width: 12 },
     ];
-
-    // Generate and download xlsx file
-    await writeXlsxFile(waitlist, {
-      schema,
-      fileName: `Chils_Bespoke_Waitlist_${new Date().toISOString().split('T')[0]}.xlsx`,
-    });
+    await writeXlsxFile(waitlist, { schema, fileName: `Chils_Bespoke_Waitlist_${new Date().toISOString().split('T')[0]}.xlsx` });
   };
 
-  if (loading || authLoading) {
-    return (
-      <div className="pt-24 md:pt-32 pb-24 px-6 md:px-12 flex items-center justify-center min-h-screen bg-black">
-        <div className="flex flex-col items-center gap-4">
-          <Activity className="animate-pulse text-accent" size={32} />
-          <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-neutral-500">Scanning waitlist signals...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading || authLoading) return <Spinner label="Loading the waitlist…" />;
 
-  // Admin check: strictly restricted to system owners
-  const adminEmails = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
-  const canAccess = user && adminEmails.some(email => email.toLowerCase() === user.email.toLowerCase());
-
+  const canAccess = user && ADMIN_EMAILS.some(e => e.toLowerCase() === user.email.toLowerCase());
   if (!canAccess) {
     return (
-      <div className="pt-24 md:pt-32 pb-24 px-6 md:px-12 flex flex-col items-center justify-center min-h-screen text-center bg-black">
-        <Shield className="text-red-500 mb-8" size={48} />
-        <h1 className="text-4xl font-display font-bold mb-4 uppercase tracking-tighter text-white">Access Denied</h1>
-        <p className="text-neutral-500 uppercase text-[10px] tracking-widest max-w-sm mb-4">Insufficient clearance level for THE BESPOKE SIGNALS.</p>
-        <p className="text-neutral-700 font-mono text-[9px] uppercase tracking-widest">Identified as: {user?.email || 'Unknown Entity'}</p>
-      </div>
+      <OrderPage eyebrow="Team only" title="This page is for the CHILS team" intro={user ? `You’re signed in as ${user.email}, which doesn’t have access.` : 'Sign in with a team account to see it.'}>
+        <div className="px-2"><Link to={user ? '/' : '/auth'} className={btnInk}>{user ? 'Back to home' : 'Sign in'}</Link></div>
+      </OrderPage>
     );
   }
 
+  const coCreators = waitlist.filter(c => c.is_co_creator).length;
+
   return (
-    <div className="pt-24 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen bg-black text-white">
-      <header className="mb-16 flex flex-col md:flex-row md:items-end md:justify-between gap-8">
-        <div>
-          <div className="flex items-center gap-3 mb-4">
-            <Activity className="text-accent" size={16} />
-            <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase">System Intelligence</p>
+    <OrderPage
+      width="max-w-[1080px]"
+      eyebrow="Team · The Bespoke"
+      title="Bespoke waitlist"
+      intro="Everyone who asked for early access to The Bespoke, newest first."
+      aside={<button onClick={exportToExcel} disabled={waitlist.length === 0} className={btnInk}><Download size={15} /> Export to Excel</button>}
+    >
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-2">
+        {[{ v: waitlist.length, l: 'On the waitlist' }, { v: coCreators, l: 'Also co-creators' }].map(f => (
+          <div key={f.l} className="bg-[#fff] rounded-2xl p-5">
+            <p className="text-[26px] font-semibold tracking-[-0.02em] leading-tight">{f.v}</p>
+            <p className="text-sm text-neutral-500 mt-1">{f.l}</p>
           </div>
-          <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter uppercase mb-4">The Bespoke Signals</h1>
-          <p className="text-neutral-500 uppercase text-[10px] tracking-widest max-w-xl">
-            List of engineers who have requested early access to the construction system.
-          </p>
+        ))}
+      </div>
+
+      <Card className="!p-0 overflow-hidden">
+        <div className="p-4 md:p-5 border-b border-[#eeece6]">
+          <label className="flex items-center gap-2 bg-[#f3f2ee] rounded-full px-4 py-2.5 max-w-sm">
+            <Search size={15} className="text-neutral-500" />
+            <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search email or name" className="bg-transparent outline-none text-sm flex-1" />
+          </label>
         </div>
-
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={exportToExcel}
-          disabled={waitlist.length === 0}
-          className="flex items-center gap-2 px-6 py-3 bg-accent text-black uppercase text-[10px] font-bold tracking-widest rounded-sm hover:bg-accent/80 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
-        >
-          <Download size={14} />
-          Export to Excel
-        </motion.button>
-      </header>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {waitlist.map((customer, idx) => (
-          <motion.div
-            key={customer.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: idx * 0.05 }}
-            className="p-8 border border-neutral-900 bg-neutral-950/50 hover:border-accent/40 transition-all group"
-          >
-            <div className="flex items-start justify-between mb-8">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-accent/10 border border-accent/20 flex items-center justify-center rounded-sm">
-                  <User className="text-accent" size={20} />
-                </div>
-                {customer.is_co_creator && (
-                  <div className="bg-accent text-black text-[8px] font-bold px-2 py-0.5 rounded-full border border-black shadow-[0_0_10px_rgba(212,175,55,0.5)] uppercase">
-                    Co-Creator
-                  </div>
-                )}
-              </div>
-              <div className="text-right">
-                <p className="text-[9px] text-neutral-600 uppercase tracking-widest mb-1">Signal ID</p>
-                <p className="font-mono text-[11px] text-accent">#B-{customer.id}</p>
-              </div>
-            </div>
-
-            <div className="space-y-6">
-              {customer.pseudo_name && (
-                <div>
-                  <p className="text-[9px] text-accent uppercase tracking-widest mb-1">Pseudo Name</p>
-                  <p className="text-lg font-display font-medium text-white tracking-tighter">"{customer.pseudo_name.toUpperCase()}"</p>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <p className="text-[9px] text-neutral-600 uppercase tracking-widest mb-2">Registered Email</p>
-                  <div className="flex items-center gap-3">
-                    <Mail size={12} className="text-neutral-700" />
-                    <p className="text-[11px] font-medium tracking-tight text-white group-hover:text-accent transition-colors truncate">{customer.email}</p>
-                  </div>
-                </div>
-
-                {customer.billing_email && customer.billing_email !== customer.email && (
-                  <div>
-                    <p className="text-[9px] text-neutral-600 uppercase tracking-widest mb-2">Waitlist Email</p>
-                    <div className="flex items-center gap-3">
-                      <Mail size={12} className="text-neutral-700" />
-                      <p className="text-[11px] font-medium tracking-tight text-white/60 truncate">{customer.billing_email}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between pt-6 border-t border-neutral-900">
-                <div className="flex items-center gap-2">
-                  <Clock size={12} className="text-neutral-700" />
-                  <p className="text-[10px] uppercase font-bold tracking-widest text-neutral-400">
-                    {new Date(customer.date_created).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
+        {shown.length === 0 ? (
+          <p className="p-8 text-center text-neutral-500">{waitlist.length ? 'No one matches that search.' : 'No one on the waitlist yet.'}</p>
+        ) : (
+          <ul className="divide-y divide-[#eeece6]">
+            {shown.map(c => (
+              <li key={c.id} className="px-4 md:px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-6">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">
+                    {c.pseudo_name || c.email}
+                    {c.is_co_creator && <span className="ml-2 align-middle text-[11px] bg-ink text-[#fff] rounded-full px-2 py-0.5">Co-creator</span>}
+                  </p>
+                  <p className="text-sm text-neutral-500 truncate">
+                    {c.pseudo_name ? c.email : ''}{c.billing_email && c.billing_email !== c.email ? `${c.pseudo_name ? ' · ' : ''}waitlist: ${c.billing_email}` : ''}
                   </p>
                 </div>
-                <p className="text-[10px] text-neutral-600 uppercase tracking-widest">Waitlisted</p>
-              </div>
-            </div>
-          </motion.div>
-        ))}
-
-        {waitlist.length === 0 && (
-          <div className="col-span-full py-32 text-center border border-dashed border-neutral-900">
-            <Activity className="mx-auto mb-4 text-neutral-800" size={32} />
-            <p className="text-[10px] text-neutral-500 uppercase tracking-[0.2em] italic">"No signals detected in this cycle."</p>
-          </div>
+                <p className="text-sm text-neutral-500 shrink-0"><span className="font-mono">B-{c.id}</span> · {shortDate(c.date_created)}</p>
+              </li>
+            ))}
+          </ul>
         )}
-      </div>
-    </div>
+      </Card>
+    </OrderPage>
   );
 };
 

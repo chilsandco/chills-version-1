@@ -1,50 +1,25 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { trackPurchase } from '../lib/track';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { CheckCircle2, Activity, ArrowRight, UserPlus, XCircle, Clock, AlertCircle } from 'lucide-react';
-import ShareSignal from '../components/ShareSignal';
+import { Check, Clock, X, ArrowRight, Package, Truck, Home, Share2 } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import { useCart } from '../CartContext';
 import confetti from 'canvas-confetti';
+import { useContact, whatsappLink, HelpBox } from '../components/InfoPage';
+import { Card, inr, btnInk, btnLine, Spinner } from '../components/OrderUi';
 
-interface GoldConfettiProps {
-  trigger: boolean;
+/** A short, quiet burst in the brand's paper and ink tones. */
+function celebrate() {
+  const end = Date.now() + 1800;
+  const colors = ['#0e0e0c', '#cfcac0', '#b9a274', '#ffffff'];
+  const frame = () => {
+    confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0, y: 0.75 }, colors });
+    confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1, y: 0.75 }, colors });
+    if (Date.now() < end) requestAnimationFrame(frame);
+  };
+  frame();
 }
-
-const GoldConfetti: React.FC<GoldConfettiProps> = ({ trigger }) => {
-  useEffect(() => {
-    if (trigger) {
-      const duration = 3 * 1000;
-      const end = Date.now() + duration;
-
-      const frame = () => {
-        confetti({
-          particleCount: 3,
-          angle: 60,
-          spread: 55,
-          origin: { x: 0, y: 0.8 },
-          colors: ['#D4AF37', '#F3E5AB', '#AA771C']
-        });
-        confetti({
-          particleCount: 3,
-          angle: 120,
-          spread: 55,
-          origin: { x: 1, y: 0.8 },
-          colors: ['#D4AF37', '#F3E5AB', '#AA771C']
-        });
-
-        if (Date.now() < end) {
-          requestAnimationFrame(frame);
-        }
-      };
-
-      frame();
-    }
-  }, [trigger]);
-
-  return null;
-};
 
 interface OrderStatus {
   id: string;
@@ -53,20 +28,24 @@ interface OrderStatus {
   currency: string;
 }
 
+const PAID = ['processing', 'completed', 'dispatched', 'Dispatched', 'shipping', 'delivered'];
+
 const OrderSuccess: React.FC = () => {
   const { orderId: fullOrderId } = useParams();
   const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const { clearCart } = useCart();
+  const contact = useContact();
   const [loading, setLoading] = useState(true);
   const [orderInfo, setOrderInfo] = useState<OrderStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const cartCleared = useRef(false);
-  
+  const celebrated = useRef(false);
   const [retrying, setRetrying] = useState(false);
   const [retryError, setRetryError] = useState<string | null>(null);
-  
-  // Extract original order ID if suffix exists (e.g. 123_1715535555 -> 123)
+  const [copied, setCopied] = useState(false);
+
+  // The payment reference can carry a suffix (123_1715535555); the order number is the part before it.
   const orderId = fullOrderId?.split('_')[0];
   const signalId = searchParams.get('signal');
 
@@ -77,267 +56,180 @@ const OrderSuccess: React.FC = () => {
     try {
       const response = await fetch('/api/checkout/phonepe/retry', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          orderId: orderId,
-          signal: signalId
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId, signal: signalId }),
       });
-      
       const data = await response.json();
-      if (!response.ok || !data.success || !data.url) {
-        throw new Error(data.message || 'Failed to initiate payment retry.');
-      }
-      
-      // Redirect to PhonePe portal
-      window.location.href = data.url;
+      if (!response.ok || !data.success || !data.url) throw new Error(data.message || 'We couldn’t start the payment again.');
+      window.location.href = data.url; // to PhonePe
     } catch (err: any) {
-      console.error("Payment retry error:", err);
-      setRetryError(err.message || "Something went wrong. Please try again.");
+      console.error('Payment retry error:', err);
+      setRetryError(err.message || 'Something went wrong. Please try again.');
       setRetrying(false);
     }
   };
 
+  // Ask the store for the payment result, slowing down from every 5 s to every 30 s, for up to 5 minutes.
   useEffect(() => {
     let pollTimer: any;
-    let timeoutTimer: any;
-    let currentInterval = 5000; // Start with 5 seconds
-    const maxPollTime = 300000; // Stop after 5 minutes (300 seconds)
+    let currentInterval = 5000;
+    const maxPollTime = 300000;
     const startTime = Date.now();
 
     if (orderId && signalId) {
-      const resolvedOrderId = orderId;
-      const resolvedSignalId = signalId;
-      const resolvedTransactionId = fullOrderId;
-
       const verifyOrder = async () => {
         try {
-          const params = new URLSearchParams({ signal: resolvedSignalId });
-          if (resolvedTransactionId) params.set('transaction', resolvedTransactionId);
-          const response = await fetch(`/api/orders/status/${resolvedOrderId}?${params.toString()}`);
-          if (!response.ok) throw new Error("Signal verification failed");
-          
+          const params = new URLSearchParams({ signal: signalId });
+          if (fullOrderId) params.set('transaction', fullOrderId);
+          const response = await fetch(`/api/orders/status/${orderId}?${params.toString()}`);
+          if (!response.ok) throw new Error('Order check failed');
           const data = await response.json();
           setOrderInfo(data);
           if (['processing', 'completed'].includes(data.status)) trackPurchase(String(data.id), Number(data.total) || 0, data.currency || 'INR');
-          
-          // Terminal states - stop polling
-          const terminalStates = ['processing', 'completed', 'failed', 'cancelled', 'refunded'];
-          if (terminalStates.includes(data.status)) {
-            return true; // Stop
-          }
-          return false; // Continue
+          return ['processing', 'completed', 'failed', 'cancelled', 'refunded'].includes(data.status);
         } catch (err) {
-          console.error("Verification error:", err);
-          return true; // Stop on error to prevent infinite loops
+          console.error('Verification error:', err);
+          return true; // stop on error, never loop forever
         }
       };
-
       const poll = async () => {
-        const elapsed = Date.now() - startTime;
-        if (elapsed >= maxPollTime) {
-          console.log("[CHILS & CO.] Polling timed out after 5 minutes.");
-          setLoading(false);
-          return;
-        }
-
+        if (Date.now() - startTime >= maxPollTime) { setLoading(false); return; }
         const shouldStop = await verifyOrder();
         setLoading(false);
-
         if (!shouldStop) {
-          // Exponential backoff: increase interval by 1.5x until max 30s
           currentInterval = Math.min(currentInterval * 1.5, 30000);
           pollTimer = setTimeout(poll, currentInterval);
         }
       };
-
       poll();
     } else {
       setLoading(false);
-      setError("We couldn't find this order.");
+      setError('We couldn’t find this order.');
     }
-
-    return () => {
-      if (pollTimer) clearTimeout(pollTimer);
-    };
+    return () => { if (pollTimer) clearTimeout(pollTimer); };
   }, [orderId, signalId, fullOrderId]);
 
-  useEffect(() => {
-    if (!cartCleared.current && orderInfo && ['processing', 'completed', 'dispatched', 'Dispatched', 'shipping', 'delivered'].includes(orderInfo.status)) {
-      cartCleared.current = true;
-      clearCart();
-    }
-  }, [orderInfo?.status, clearCart]);
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="text-center space-y-6">
-          <motion.div 
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="w-12 h-12 border-2 border-accent border-t-transparent rounded-full mx-auto"
-          />
-          <p className="text-[10px] tracking-[0.5em] text-accent uppercase animate-pulse">Confirming your order…</p>
-        </div>
-      </div>
-    );
-  }
-
-  const isSuccessful = orderInfo ? ['processing', 'completed', 'dispatched', 'Dispatched', 'shipping', 'delivered'].includes(orderInfo.status) : false;
+  const isSuccessful = orderInfo ? PAID.includes(orderInfo.status) : false;
   const isPending = orderInfo ? ['pending', 'on-hold'].includes(orderInfo.status) : false;
-  const isFailed = orderInfo ? ['failed', 'cancelled', 'refunded'].includes(orderInfo.status) : false;
+  const isFailed = orderInfo ? ['failed', 'cancelled', 'refunded'].includes(orderInfo.status) : !!error;
+
+  useEffect(() => {
+    if (!cartCleared.current && isSuccessful) { cartCleared.current = true; clearCart(); }
+    if (!celebrated.current && isSuccessful) { celebrated.current = true; celebrate(); }
+  }, [isSuccessful, clearCart]);
+
+  const share = async () => {
+    const data = { title: 'CHILS & CO.', text: 'Just picked up a tee from CHILS & CO.', url: window.location.origin };
+    try {
+      if (navigator.share) await navigator.share(data);
+      else { await navigator.clipboard.writeText(data.url); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+    } catch { /* the person closed the share sheet */ }
+  };
+
+  if (loading) return <Spinner label="Confirming your payment…" />;
+
+  const state = isSuccessful ? 'paid' : isPending ? 'pending' : isFailed ? 'failed' : 'pending';
+  const copy = {
+    paid: { eyebrow: 'Order confirmed', title: 'Thank you. It’s yours.', intro: 'Your payment went through and your order is confirmed. We’ve emailed you the details.' },
+    pending: { eyebrow: 'Payment pending', title: 'Almost there.', intro: 'We’re waiting for PhonePe to confirm your payment. This page updates on its own, so you can keep it open.' },
+    failed: { eyebrow: 'Payment didn’t go through', title: error ? 'We couldn’t find this order.' : 'Your payment didn’t go through.', intro: error ? 'The link may be incomplete. Your orders are always in My orders.' : 'Your order is saved. If money left your account anyway, message us and we’ll sort it out.' },
+  }[state];
+
+  const Icon = state === 'paid' ? Check : state === 'pending' ? Clock : X;
+  const iconTone = state === 'paid' ? 'bg-ink text-[#fff]' : state === 'pending' ? 'bg-amber-100 text-amber-900' : 'bg-neutral-200 text-neutral-700';
 
   return (
-    <div className="pt-24 md:pt-32 pb-24 px-6 md:px-12 max-w-[800px] mx-auto min-h-screen flex flex-col items-center">
-      {isSuccessful && <GoldConfetti trigger={isSuccessful} />}
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-        className="w-full text-center space-y-12"
-      >
-        <div className="flex flex-col items-center gap-4">
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-            className={isFailed ? "text-red-500" : isPending ? "text-amber-500" : "text-accent"}
-          >
-            {isFailed ? <XCircle size={64} strokeWidth={1} /> : isPending ? <Clock size={64} strokeWidth={1} /> : <CheckCircle2 size={64} strokeWidth={1} />}
+    <div className="bg-[#f3f2ee] text-ink pt-24 md:pt-32 pb-20 min-h-screen">
+      <div className="max-w-[720px] mx-auto px-3 md:px-6">
+        <motion.header initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }} className="px-2 mb-6 md:mb-10">
+          <motion.div initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: 0.15, type: 'spring', stiffness: 260, damping: 18 }}
+            className={`w-14 h-14 rounded-full grid place-items-center mb-6 ${iconTone}`}>
+            <Icon size={26} strokeWidth={2.2} />
           </motion.div>
-            <div className="space-y-1">
-              <p className="text-[10px] tracking-[0.5em] text-neutral-500 uppercase">
-                {isFailed ? "Transmission Interrupted" : isPending ? "Awaiting Verification" : isSuccessful ? "Transmission Confirmed" : "Signal Synchronizing"}
-              </p>
-              <h1 className="text-5xl md:text-6xl font-display font-bold tracking-tighter uppercase">
-                {isFailed ? "Payment Failed" : isPending ? "Payment Pending" : isSuccessful ? "Order Confirmed" : "Processing..."}
-              </h1>
-            </div>
-        </div>
+          <p className="eyebrow text-neutral-500 mb-3">{copy.eyebrow}</p>
+          <h1 className="text-[34px] md:text-[56px] leading-[1.04] font-semibold tracking-[-0.03em]">{copy.title}</h1>
+          <p className="mt-3 md:mt-4 text-neutral-600 md:text-lg max-w-[560px]">{copy.intro}</p>
+        </motion.header>
 
-        <div className="bg-neutral-950 border border-neutral-900 p-8 md:p-12 space-y-12 text-left relative overflow-hidden">
-          <div className="absolute top-0 right-0 p-8 opacity-5">
-            <Activity size={120} />
-          </div>
-
-          <div className="flex flex-col md:flex-row justify-between items-start gap-8 border-b border-neutral-900 pb-12">
-            <div>
-              <p className="text-[9px] tracking-[0.3em] text-accent uppercase font-bold mb-2">Order number</p>
-              <p className="font-mono text-3xl tracking-tighter uppercase">{signalId || 'UNKNOWN'}</p>
-              <p className="text-[10px] text-neutral-500 uppercase tracking-widest mt-2 italic">
-                {isFailed 
-                  ? "This order couldn't be completed." 
-                  : isPending 
-                    ? "We're waiting for payment confirmation."
-                    : "Thank you. Your order is confirmed."}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-[9px] tracking-[0.2em] text-neutral-600 uppercase mb-2">Status</p>
-              <div className={`flex items-center gap-3 justify-end ${isFailed ? "text-red-500" : isPending ? "text-amber-500" : "text-accent"}`}>
-                <span className={`w-2 h-2 rounded-full animate-pulse shadow-[0_0_10px_rgba(255,255,255,0.5)] ${isFailed ? "bg-red-500" : isPending ? "bg-amber-500" : "bg-accent"}`} />
-                <p className="text-[11px] font-bold uppercase tracking-widest">
-                  {isFailed ? "Failed" : isPending ? "Pending" : "Confirmed"}
-                </p>
+        <div className="space-y-2">
+          {(signalId || orderInfo) && (
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-[#fff] rounded-2xl p-5">
+                <p className="text-sm text-neutral-500">Order number</p>
+                <p className="text-[20px] md:text-[24px] font-semibold tracking-[-0.02em] mt-1 font-mono">{signalId || `#${orderId}`}</p>
+              </div>
+              <div className="bg-[#fff] rounded-2xl p-5">
+                <p className="text-sm text-neutral-500">{state === 'paid' ? 'Paid' : 'Amount'}</p>
+                <p className="text-[20px] md:text-[24px] font-semibold tracking-[-0.02em] mt-1">{orderInfo ? inr(orderInfo.total) : '—'}</p>
               </div>
             </div>
-          </div>
+          )}
 
-          <div className="space-y-6">
-            <p className="text-[11px] text-neutral-400 uppercase tracking-widest leading-relaxed">
-              {isFailed 
-                ? "The payment for your order could not be processed. Please check your bank details or try again."
-                : isPending
-                  ? "We are currently awaiting confirmation from the payment gateway. Your order will process once verified."
-                  : "Your build is in progress. The archive is now processing the physical manifestation of this transmission."}
-            </p>
-          </div>
+          {state === 'paid' && (
+            <Card title="What happens next">
+              <ol className="space-y-4">
+                {[
+                  { icon: Package, t: 'We pack it', d: 'Every order is checked and packed by hand in Hyderabad, usually within 1–2 days.' },
+                  { icon: Truck, t: 'It ships', d: 'You’ll get an email with the courier and tracking link as soon as it leaves.' },
+                  { icon: Home, t: 'It arrives', d: 'Most orders arrive in 3–7 days. Size not right? You have 7 days to ask for an exchange.' },
+                ].map(({ icon: I, t, d }) => (
+                  <li key={t} className="flex gap-4">
+                    <span className="w-9 h-9 rounded-full bg-[#f3f2ee] grid place-items-center shrink-0"><I size={16} /></span>
+                    <div><p className="font-medium">{t}</p><p className="text-[15px] text-neutral-600 leading-relaxed">{d}</p></div>
+                  </li>
+                ))}
+              </ol>
+            </Card>
+          )}
 
-          {isFailed && (
-            <div className="pt-8 border-t border-neutral-900">
-               <div className="bg-red-500/5 border border-red-500/20 p-6 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex gap-4">
-                  <AlertCircle className="text-red-500" size={24} />
-                  <div>
-                    <h3 className="text-[11px] font-bold uppercase tracking-widest mb-1 text-red-500">Action Required</h3>
-                    <p className="text-[10px] text-white/40 uppercase tracking-widest">
-                      {retryError ? (
-                        <span className="text-red-400 font-bold">{retryError}</span>
-                      ) : (
-                        "Try the payment again."
-                      )}
-                    </p>
-                  </div>
+          {state === 'pending' && (
+            <Card>
+              <div className="flex items-center gap-3 text-[15px] text-neutral-600">
+                <div className="w-4 h-4 border-2 border-ink border-t-transparent rounded-full animate-spin shrink-0" />
+                Checking with PhonePe. If you paid and this doesn’t change in a few minutes, message us and we’ll sort it out.
+              </div>
+            </Card>
+          )}
+
+          {state === 'failed' && !error && (
+            <Card title="Try the payment again">
+              <p className="text-[15px] text-neutral-600 leading-relaxed">Your cart and order are saved. Pay again with PhonePe and we’ll confirm it straight away.</p>
+              {retryError && <p className="mt-3 text-sm text-red-700 bg-red-50 rounded-xl px-4 py-3">{retryError}</p>}
+              <button onClick={handleRetryPayment} disabled={retrying || !signalId} className={`${btnInk} mt-5 w-full sm:w-auto`}>
+                {retrying ? (<><span className="w-3.5 h-3.5 border-2 border-[#fff] border-t-transparent rounded-full animate-spin" /> Opening PhonePe…</>) : (<>Pay again <ArrowRight size={15} /></>)}
+              </button>
+            </Card>
+          )}
+
+          {!user && state === 'paid' && (
+            <Card>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <p className="font-semibold text-lg">Keep track of this order</p>
+                  <p className="text-[15px] text-neutral-600">Sign in with the same email to see its progress any time.</p>
                 </div>
-                <button 
-                  onClick={handleRetryPayment}
-                  disabled={retrying}
-                  className="bg-red-500 text-white px-8 py-3 text-[10px] tracking-[0.2em] font-bold uppercase hover:bg-red-600 disabled:opacity-50 transition-colors flex items-center gap-2"
-                >
-                  {retrying ? (
-                    <>
-                      Retrying...
-                      <motion.div 
-                        animate={{ rotate: 360 }}
-                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                        className="w-3.5 h-3.5 border border-white border-t-transparent rounded-full ml-1"
-                      />
-                    </>
-                  ) : (
-                    <>
-                      Retry Payment <ArrowRight size={12} />
-                    </>
-                  )}
-                </button>
+                <Link to="/auth" className={btnInk}>Sign in or create account</Link>
               </div>
-            </div>
+            </Card>
           )}
 
-          {!user && isSuccessful && (
-            <div className="pt-8 border-t border-neutral-900">
-              <div className="bg-white/5 border border-white/10 p-6 flex flex-col md:flex-row items-center justify-between gap-6">
-                <div className="flex gap-4">
-                  <UserPlus className="text-accent" size={24} />
-                  <div>
-                    <h3 className="text-[11px] font-bold uppercase tracking-widest mb-1">Save this order?</h3>
-                    <p className="text-[10px] text-neutral-500 uppercase tracking-widest">Sign in to track it anytime.</p>
-                  </div>
-                </div>
-                <Link 
-                  to="/auth" 
-                  className="bg-white text-black px-8 py-3 text-[10px] tracking-[0.2em] font-bold uppercase hover:bg-accent transition-colors flex items-center gap-2"
-                >
-                  Create Account <ArrowRight size={12} />
-                </Link>
-              </div>
-            </div>
-          )}
+          <div className="flex flex-col sm:flex-row gap-2 pt-2">
+            {state === 'paid' ? (
+              <>
+                <Link to={user ? '/console/orders' : '/collection'} className={`${btnInk} flex-1`}>{user ? 'View my orders' : 'Keep shopping'} <ArrowRight size={15} /></Link>
+                <button onClick={share} className={`${btnLine} flex-1`}><Share2 size={15} /> {copied ? 'Link copied' : 'Share CHILS & CO.'}</button>
+              </>
+            ) : (
+              <>
+                <Link to={user ? '/console/orders' : '/'} className={`${btnLine} flex-1`}>{user ? 'My orders' : 'Back to home'}</Link>
+                <a href={whatsappLink(contact.mobileLink, `Hi CHILS & CO., I need help with my payment${signalId ? ` for order ${signalId}` : ''}.`)} target="_blank" rel="noopener noreferrer" className={`${btnLine} flex-1`}>Message us on WhatsApp</a>
+              </>
+            )}
+          </div>
 
-          {isSuccessful && (
-            <div className="pt-8 border-t border-neutral-900">
-              <p className="text-[10px] text-neutral-500 text-center uppercase tracking-[0.3em] mb-8">Share</p>
-              <ShareSignal 
-                productName="Chils & Co Signal"
-                productUrl={window.location.origin}
-                isOrderSuccess={true}
-              />
-            </div>
-          )}
+          {state !== 'paid' && <div className="pt-6"><HelpBox contact={contact} /></div>}
         </div>
-
-        <div className="flex flex-col md:flex-row gap-6 justify-center">
-          <Link 
-            to={isSuccessful ? "/console/orders" : "/"} 
-            className="group flex items-center justify-center gap-3 px-12 py-5 border border-white text-[11px] tracking-[0.3em] font-bold uppercase bg-white text-black hover:bg-accent hover:border-accent transition-all"
-          >
-            {isSuccessful ? "Monitor Signals" : "Return Home"}
-            <ArrowRight size={14} className="group-hover:translate-x-2 transition-transform" />
-          </Link>
-        </div>
-      </motion.div>
+      </div>
     </div>
   );
 };
