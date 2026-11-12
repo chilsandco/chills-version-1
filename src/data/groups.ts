@@ -17,11 +17,11 @@ export interface Group {
 }
 
 export const GROUPS: Group[] = [
-  { slug: 'polos', name: 'Polos', category: 'Polos', line: 'TwinTex polos. Cotton inside, polyester outside.', model: '/looks/1301_3.webp', trio: ['517', '446', '455'], tone: '#e9edf0' },
-  { slug: 'minimals', name: 'Minimals', category: 'Minimals', line: 'Quiet colour and one small mark. Nothing extra.', model: '/looks/1281_3.webp', trio: ['411', '482', '491'], tone: '#f3f2ee' },
-  { slug: 'blacks', name: 'Blacks', category: 'Shades of Black', line: 'Every shade of black, in every fit.', model: '/looks/1134_3.webp', trio: ['697', '240', '526'], tone: '#e7e5df' },
-  { slug: 'oversized', name: 'Oversized', category: 'Drop Shoulder/Oversized', line: 'Drop shoulders in heavyweight 240 GSM cotton.', model: '/looks/2048_3.webp', trio: ['364', '16', '546'], tone: '#ece4d8' },
-  { slug: 'regular', name: 'Regular Fit', category: 'Regular Fit', line: 'A clean everyday cut, with graphics for people who build.', model: '/looks/1683_3.webp', trio: ['140', '231', '110'], tone: '#e6e9e2' },
+  { slug: 'polos', name: 'Polos', category: 'Polos', line: 'TwinTex polos. Cotton inside, polyester outside.', model: '/looks/1301_3.webp', trio: ['1256', '1301', '1296'], tone: '#e9edf0' },
+  { slug: 'minimals', name: 'Minimals', category: 'Minimals', line: 'Quiet colour and one small mark. Nothing extra.', model: '/looks/1281_3.webp', trio: ['1320', '1281', '1276'], tone: '#f3f2ee' },
+  { slug: 'blacks', name: 'Blacks', category: 'Shades of Black', line: 'Every shade of black, in every fit.', model: '/looks/1134_3.webp', trio: ['770', '1608', '1134'], tone: '#e7e5df' },
+  { slug: 'oversized', name: 'Oversized', category: 'Drop Shoulder/Oversized', line: 'Drop shoulders in heavyweight 240 GSM cotton.', model: '/looks/2048_3.webp', trio: ['1447', '2048', '1115'], tone: '#ece4d8' },
+  { slug: 'regular', name: 'Regular Fit', category: 'Regular Fit', line: 'A clean everyday cut, with graphics for people who build.', model: '/looks/1683_3.webp', trio: ['1896', '1683', '1918'], tone: '#e6e9e2' },
 ];
 
 // ── Shop all curation ────────────────────────────────────────────────────────

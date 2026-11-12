@@ -8,16 +8,15 @@ import { isPoster, small } from '../data/studio';
 import { SHOWN_COLOR } from '../data/lookbook';
 import { keySpecs, STORIES } from '../data/stories';
 import { useNarrow } from '../hooks/useNarrow';
-import { legacyId } from '../data/legacyIds';
 
 const SILK = [0.65, 0, 0.2, 1] as const;
 const SETTLE = [0.22, 1, 0.36, 1] as const;
 
-export const folded = (id: string) => `/folded/${legacyId(id)}.webp`;
+export const folded = (id: string) => `/folded/${id}.webp`;
 export const teeName = (p: Product) => p.name.replace(/^TwinTex Polo - /, '');
 
 /** Editions keep their number for good. New sets simply take the next one, oldest first. */
-const EDITIONS: Record<string, number> = { '739': 1, '740': 2, '741': 3, '742': 4, '743': 5, '745': 6, '744': 7, '747': 8, '746': 9 };
+const EDITIONS: Record<string, number> = { '1727': 1, '1726': 2, '1725': 3, '1717': 4, '1716': 5, '1711': 6, '1712': 7, '1709': 8, '1710': 9 };
 
 export function editionOf(combo: Product, all: Product[]) {
   const late = all.filter(c => !EDITIONS[c.id]).sort((a, b) => Number(a.id) - Number(b.id));
