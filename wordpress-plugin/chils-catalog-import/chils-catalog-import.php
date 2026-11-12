@@ -18,8 +18,35 @@ final class Chils_Catalog_Import {
 
 	static function boot() { add_action( 'plugins_loaded', array( __CLASS__, 'init' ) ); }
 
+	/* ------------------------------------------------------------------ original numbers */
+
+	/** The original number the next created product, size, coupon or photo should get (0 = let WordPress choose). */
+	static $want_id = 0;
+
+	/** Ask WordPress for that number; it is only used when nothing else holds it. */
+	static function with_id( $data ) {
+		if ( self::$want_id && ! get_post( self::$want_id ) ) $data['import_id'] = self::$want_id;
+		return $data;
+	}
+
+	/** Use the original number for whatever is created inside $fn. Returns $fn's result. */
+	static function as_number( $old, $fn ) {
+		self::$want_id = (int) $old;
+		try { return $fn(); } finally { self::$want_id = 0; }
+	}
+
+	/** Keep every later post above the old store's numbers, so nothing new ever takes an original one. */
+	static function raise_next_number( $min ) {
+		global $wpdb;
+		$next = max( (int) $min, (int) $wpdb->get_var( "SELECT MAX(ID) FROM {$wpdb->posts}" ) + 1 );
+		$wpdb->query( "ALTER TABLE {$wpdb->posts} AUTO_INCREMENT = " . (int) $next );
+	}
+
 	static function init() {
 		if ( ! class_exists( 'WooCommerce' ) ) return;
+		foreach ( array( 'woocommerce_new_product_data', 'woocommerce_new_product_variation_data', 'woocommerce_new_coupon_data' ) as $f ) {
+			add_filter( $f, array( __CLASS__, 'with_id' ), 99 );
+		}
 		add_action( 'admin_menu', function () {
 			add_management_page( 'CHILS catalog import', 'CHILS catalog import', 'manage_options', 'chils-catalog-import', array( __CLASS__, 'page' ) );
 		} );
@@ -131,14 +158,30 @@ final class Chils_Catalog_Import {
 		require_once ABSPATH . 'wp-admin/includes/file.php';
 		require_once ABSPATH . 'wp-admin/includes/media.php';
 		require_once ABSPATH . 'wp-admin/includes/image.php';
-		if ( file_exists( $local ) ) { $tmp = wp_tempnam( basename( $rel ) ); copy( $local, $tmp ); $from = 'upload folder'; }
-		else { $tmp = download_url( $b['image_base_url'] . implode( '/', array_map( 'rawurlencode', explode( '/', $rel ) ) ), 90 ); $from = 'old store'; }
-		if ( is_wp_error( $tmp ) ) { self::note( $s, "Picture $rel ($from): " . $tmp->get_error_message() ); self::bump( $s, 'pictures_failed' ); return 0; }
-		$id = media_handle_sideload( array( 'name' => basename( $rel ), 'tmp_name' => $tmp ), 0, $img['name'] ?: null );
-		if ( is_wp_error( $id ) ) { @unlink( $tmp ); self::note( $s, "Picture $rel: " . $id->get_error_message() ); self::bump( $s, 'pictures_failed' ); return 0; }
+		// the photo keeps its original path (uploads/2026/08/…) and, when free, its original number
+		$up = wp_upload_dir( null, false );
+		$dest = trailingslashit( $up['basedir'] ) . $rel;
+		if ( ! file_exists( $dest ) ) {
+			wp_mkdir_p( dirname( $dest ) );
+			if ( file_exists( $local ) ) { copy( $local, $dest ); $from = 'upload folder'; }
+			else {
+				$tmp = download_url( $b['image_base_url'] . implode( '/', array_map( 'rawurlencode', explode( '/', $rel ) ) ), 90 );
+				if ( is_wp_error( $tmp ) ) { self::note( $s, "Picture $rel (old store): " . $tmp->get_error_message() ); self::bump( $s, 'pictures_failed' ); return 0; }
+				rename( $tmp, $dest ); $from = 'old store';
+			}
+		}
+		$ft = wp_check_filetype( basename( $dest ), null );
+		$att = array( 'post_mime_type' => $ft['type'] ?: 'image/png', 'post_title' => $img['name'] ?: preg_replace( '/\.[^.]+$/', '', basename( $rel ) ),
+			'post_content' => '', 'post_status' => 'inherit', 'guid' => trailingslashit( $up['baseurl'] ) . $rel );
+		if ( ! empty( $img['id'] ) && ! get_post( (int) $img['id'] ) ) $att['import_id'] = (int) $img['id'];
+		$id = wp_insert_attachment( $att, $dest, 0, true );
+		if ( is_wp_error( $id ) ) { self::note( $s, "Picture $rel: " . $id->get_error_message() ); self::bump( $s, 'pictures_failed' ); return 0; }
+		wp_update_attachment_metadata( $id, wp_generate_attachment_metadata( $id, $dest ) );
 		update_post_meta( $id, '_chils_img_rel', $rel );
+		if ( ! empty( $img['id'] ) ) update_post_meta( $id, '_chils_old_id', (int) $img['id'] );
 		if ( $img['alt'] ) update_post_meta( $id, '_wp_attachment_image_alt', $img['alt'] );
 		self::bump( $s, 'pictures_imported' );
+		if ( ! empty( $img['id'] ) && $id !== (int) $img['id'] ) self::bump( $s, 'pictures_new_number' );
 		return $s['images'][ $rel ] = (int) $id;
 	}
 
@@ -196,7 +239,7 @@ final class Chils_Catalog_Import {
 				$prod->set_default_attributes( $d );
 			}
 			$prod->update_meta_data( self::OLD, (int) $p['old_id'] );
-			$prod->save();
+			self::as_number( $p['old_id'], function () use ( $prod ) { return $prod->save(); } );
 			$pid = $prod->get_id();
 
 			$linked = 0;
@@ -215,7 +258,7 @@ final class Chils_Catalog_Import {
 				if ( $v['old_id'] ) $var->update_meta_data( self::OLD, (int) $v['old_id'] );
 				if ( $v['vargal'] ) $var->update_meta_data( '_chils_old_vargal', $v['vargal'] ); // extra photos per colour, for later
 				$var->update_meta_data( '_chils_blank_sku', $v['blank'] );
-				$var->save();
+				self::as_number( $v['old_id'], function () use ( $var ) { return $var->save(); } );
 				self::bump( $s, 'sizes_created' );
 				if ( class_exists( 'Chils_Blank_Stock' ) && Chils_Blank_Stock::blank( $v['blank'] ) ) {
 					$r = Chils_Blank_Stock::link( $var->get_id(), $v['blank'] );
@@ -257,7 +300,7 @@ final class Chils_Catalog_Import {
 			if ( $c['expires'] ) $k->set_date_expires( self::ts( $c['expires'] ) );
 			$k->set_free_shipping( (bool) $c['free_shipping'] );
 			$k->update_meta_data( '_chils_imported', 1 );
-			$k->save();
+			self::as_number( $c['old_id'] ?? 0, function () use ( $k ) { return $k->save(); } );
 			self::bump( $s, 'coupons_created' );
 		}
 		foreach ( $b['reviews'] as $r ) {
@@ -288,6 +331,7 @@ final class Chils_Catalog_Import {
 			foreach ( $b['attributes'] as $a ) if ( ! wc_attribute_taxonomy_id_by_name( substr( $a['tax'], 3 ) ) ) self::bump( $s, 'attributes_would_create' );
 			if ( ! class_exists( 'Chils_Blank_Stock' ) ) self::note( $s, 'CHILS Blank Stock is not active: sizes would not be linked to blanks. Activate it and load the blank counts first.' );
 		} elseif ( empty( $s['setup'] ) ) {
+			self::raise_next_number( 10000 );
 			self::setup( $b, $s );
 			update_option( self::STATE, $s, false );
 		}
@@ -302,7 +346,7 @@ final class Chils_Catalog_Import {
 			if ( strpos( $res, 'error' ) === 0 ) self::note( $s, $p['name'] . ': ' . $res );
 			elseif ( ! $dry ) { $s['products'][ $p['old_id'] ] = $id; update_option( self::STATE, $s, false ); }
 		}
-		if ( $done ) { self::finish_combos( $b, $s, $dry ); self::coupons_and_reviews( $b, $s, $dry ); }
+		if ( $done ) { self::finish_combos( $b, $s, $dry ); self::coupons_and_reviews( $b, $s, $dry ); if ( ! $dry ) self::raise_next_number( 10000 ); }
 		if ( ! $dry ) { $s['finished'] = $done; update_option( self::STATE, $s, false ); }
 		return array( 'done' => $done, 'state' => $s );
 	}
@@ -343,6 +387,14 @@ final class Chils_Catalog_Import {
 			if ( $pr ) $bad[] = $p['name'] . ': ' . implode( '; ', array_slice( $pr, 0, 4 ) );
 		}
 		$R[] = array( $prods === (int) $e['products'], "Products in store: $prods of {$e['products']}" );
+		$same = 0; $same_v = 0; $want_v = 0; $same_i = 0; $want_i = 0;
+		foreach ( $b['products'] as $p ) {
+			if ( self::find( $p['old_id'] ) === (int) $p['old_id'] ) $same++;
+			foreach ( $p['variations'] as $v ) if ( $v['old_id'] ) { $want_v++; if ( wc_get_product_id_by_sku( $v['sku'] ) === (int) $v['old_id'] ) $same_v++; }
+			if ( $want_images ) foreach ( $p['images'] as $i ) if ( ! empty( $i['id'] ) ) { $want_i++; if ( get_post_meta( (int) $i['id'], '_chils_img_rel', true ) === $i['rel'] ) $same_i++; }
+		}
+		$R[] = array( $same === $prods && $same_v === $want_v, "Original numbers kept: products $same of $prods, sizes $same_v of $want_v" );
+		if ( $want_images ) $R[] = array( $same_i === $want_i, "Photos at their original number and address: $same_i of $want_i" );
 		$R[] = array( $var_ok === (int) $e['variations'], "Sizes correct (design code, price, size/colour, blank, no own stock): $var_ok of {$e['variations']}" );
 		if ( class_exists( 'Chils_Blank_Stock' ) ) $R[] = array( $blank_missing === 0, "Sizes whose blank exists in central stock: $linked of $vars" . ( $blank_missing ? " ($blank_missing blanks not loaded: import blanks.csv)" : '' ) );
 		else $R[] = array( false, 'CHILS Blank Stock is not active, so sizes are not linked to blanks' );
