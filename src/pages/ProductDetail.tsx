@@ -1360,7 +1360,7 @@ const ProductDetail: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-xl touch-none"
+            className="fixed inset-0 z-[100] bg-[#fff]/95 text-ink flex flex-col items-center justify-center p-4 backdrop-blur-xl touch-none"
             onClick={() => setSelectedImage(null)}
           >
             {/* Modal UI Controls */}
@@ -1370,21 +1370,21 @@ const ProductDetail: React.FC = () => {
             >
               <button 
                 onClick={handleZoomIn}
-                className="text-white/60 hover:text-white transition-colors p-2"
+                className="text-ink/60 hover:text-ink transition-colors p-2"
                 title="Zoom In"
               >
                 <ZoomIn size={24} />
               </button>
               <button 
                 onClick={handleZoomOut}
-                className="text-white/60 hover:text-white transition-colors p-2"
+                className="text-ink/60 hover:text-ink transition-colors p-2"
                 title="Zoom Out"
               >
                 <ZoomOut size={24} />
               </button>
               <button 
                 onClick={() => setSelectedImage(null)}
-                className="text-white/60 hover:text-white transition-colors p-2 ml-4"
+                className="text-ink/60 hover:text-ink transition-colors p-2 ml-4"
                 title="Close"
               >
                 <X size={24} />
@@ -1392,7 +1392,7 @@ const ProductDetail: React.FC = () => {
             </div>
 
             {/* Instruction Overlay on mobile */}
-            <div className="absolute top-8 left-8 hidden md:block text-xs text-white/50 pointer-events-none">
+            <div className="absolute top-8 left-8 hidden md:block text-xs text-neutral-500 pointer-events-none">
               Pinch to zoom · drag to look around · double-click to reset
             </div>
 
@@ -1416,7 +1416,7 @@ const ProductDetail: React.FC = () => {
             </div>
 
             {/* Bottom Info */}
-            <div className="absolute bottom-12 text-center text-sm text-white/60 pointer-events-none">
+            <div className="absolute bottom-12 text-center text-sm text-neutral-500 pointer-events-none">
               {product.name}
             </div>
           </motion.div>

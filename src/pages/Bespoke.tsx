@@ -103,7 +103,7 @@ const Bespoke: React.FC = () => {
         <section className="grid md:grid-cols-2 gap-2 mb-2">
           <div className="bg-[#fff] rounded-2xl p-6 md:p-10 flex flex-col justify-center">
             <p className="eyebrow text-neutral-500 mb-3 inline-flex items-center gap-2"><Snowflake className="w-3 h-3.5" /> Bespoke · Coming soon</p>
-            <h1 className="text-[38px] md:text-[60px] leading-[1.02] font-semibold tracking-[-0.035em]">Shirts made to your measurements.</h1>
+            <h1 className="text-[38px] md:text-[clamp(40px,5vw,60px)] leading-[1.02] font-semibold tracking-[-0.035em] [overflow-wrap:anywhere] [hyphens:auto]" lang="en">Shirts made to your measurements.</h1>
             <p className="mt-4 text-neutral-600 md:text-lg">Built around your body, your fit and your taste, instead of off the rack. Join the list for early access.</p>
             <div className="mt-6 flex flex-wrap items-center gap-3">
               <a href="#join" className="inline-flex items-center gap-2 bg-ink text-[#fff] rounded-full px-6 py-3.5 text-sm font-medium">

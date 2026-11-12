@@ -11,14 +11,7 @@ interface SearchOverlayProps {
   onClose: () => void;
 }
 
-const SEARCH_SUGGESTIONS = [
-  'Linen',
-  'Classic',
-  'Silk',
-  'Bespoke',
-  'Combos',
-  'Signature'
-];
+const SEARCH_SUGGESTIONS = ['Oversized', 'Polo', 'Black', 'Under 500', 'Combos', 'Regular fit'];
 
 export const parseSearchQuery = (rawQuery: string) => {
   let cleanQuery = rawQuery.replace(/[₹$,]/g, '').toLowerCase().trim();
@@ -187,150 +180,79 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ isOpen, onClose }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-0 z-50 bg-black/95 backdrop-blur-2xl flex flex-col pt-24 pb-12 px-6 md:px-12 select-none"
+          transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+          className="fixed inset-0 z-50 bg-[#f3f2ee] text-ink flex flex-col pt-20 md:pt-24 pb-8 px-4 md:px-12"
+          data-lenis-prevent
         >
-          {/* Header Close Bar */}
-          <div className="absolute top-6 right-6 md:right-12">
-            <button
-              onClick={onClose}
-              className="p-3 text-neutral-400 hover:text-white transition-colors duration-250 cursor-pointer rounded-full hover:bg-neutral-900 active:scale-95 border border-white/5"
-              aria-label="Close search"
-            >
-              <X size={20} />
-            </button>
-          </div>
+          <button onClick={onClose} aria-label="Close search"
+            className="absolute top-5 right-4 md:right-12 w-10 h-10 rounded-full bg-[#fff] grid place-items-center hover:bg-ink hover:text-[#fff] transition-colors cursor-pointer">
+            <X size={18} />
+          </button>
 
-          <div className="max-w-4xl mx-auto w-full flex flex-col flex-grow">
-            {/* Search Input Form */}
-            <form onSubmit={handleSearchSubmit} className="relative w-full border-b border-neutral-800 pb-4">
+          <div className="max-w-3xl mx-auto w-full flex flex-col min-h-0 flex-grow">
+            <form onSubmit={handleSearchSubmit} className="relative">
+              <Search size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-neutral-500" />
               <input
                 ref={inputRef}
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="TYPE TO SEARCH..."
-                className="w-full bg-transparent border-none text-3xl md:text-5xl font-display font-light uppercase tracking-widest text-white placeholder-neutral-800 focus:outline-none focus:ring-0 pr-12"
+                placeholder="Search tees, polos, colours…"
+                aria-label="Search"
+                className="w-full bg-[#fff] rounded-full pr-14 py-4 md:py-5 text-lg md:text-xl outline-none ring-1 ring-black/5 focus:ring-ink placeholder:text-neutral-400"
+                style={{ paddingLeft: 52 }}
               />
-              <button
-                type="submit"
-                className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-neutral-500 hover:text-accent transition-colors cursor-pointer"
-                disabled={!query.trim()}
-              >
-                {loading ? (
-                  <Loader2 className="animate-spin text-accent" size={24} />
-                ) : (
-                  <Search size={24} />
-                )}
+              <button type="submit" disabled={!query.trim()} aria-label="Search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 md:w-11 md:h-11 rounded-full bg-ink text-[#fff] grid place-items-center disabled:opacity-30 cursor-pointer">
+                {loading ? <Loader2 className="animate-spin" size={18} /> : <ArrowRight size={18} />}
               </button>
             </form>
+            <p className="text-xs text-neutral-500 mt-2 px-5">Tip: add a price, like “black under 500”.</p>
 
-            {/* Suggestions & Results Panel */}
-            <div className="mt-12 flex-grow overflow-y-auto pr-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-900">
+            <div className="mt-6 flex-grow overflow-y-auto min-h-0">
               {!query.trim() ? (
-                // Quick suggestions when empty
-                <div className="space-y-6 animate-fade-in">
-                  <h3 className="text-[10px] font-mono tracking-[0.3em] text-accent uppercase font-bold">
-                    // Suggested Keywords
-                  </h3>
-                  <div className="flex flex-wrap gap-3">
+                <div>
+                  <p className="text-sm text-neutral-500 mb-3 px-1">Popular searches</p>
+                  <div className="flex flex-wrap gap-2">
                     {SEARCH_SUGGESTIONS.map((suggestion) => (
-                      <button
-                        key={suggestion}
-                        type="button"
-                        onClick={() => {
-                          setQuery(suggestion);
-                          inputRef.current?.focus();
-                        }}
-                        className="px-4 py-2 border border-neutral-900 hover:border-accent text-neutral-400 hover:text-white transition-all duration-300 font-mono text-[10px] tracking-[0.2em] uppercase rounded-[2px] cursor-pointer"
-                      >
+                      <button key={suggestion} type="button" onClick={() => { setQuery(suggestion); inputRef.current?.focus(); }}
+                        className="px-4 py-2 rounded-full bg-[#fff] text-sm hover:bg-ink hover:text-[#fff] transition-colors cursor-pointer">
                         {suggestion}
                       </button>
                     ))}
                   </div>
                 </div>
               ) : (
-                // Results list
-                <div className="space-y-8">
-                  <div className="flex justify-between items-center border-b border-neutral-950 pb-2">
-                    <span className="text-[10px] font-mono tracking-[0.3em] text-accent uppercase font-bold">
-                      // Search Extraction Matrix
-                    </span>
-                    <span className="text-[9px] font-mono tracking-[0.25em] text-neutral-600 uppercase font-bold">
-                      {results.length} Matches Found
-                    </span>
-                  </div>
-
+                <div>
+                  <p className="text-sm text-neutral-500 mb-3 px-1">{results.length} {results.length === 1 ? 'result' : 'results'}</p>
                   {results.length > 0 ? (
-                    <div className="space-y-4">
-                      {results.slice(0, 5).map((product) => (
-                        <Link
-                          key={product.id}
-                          to={getProductLink(product)}
-                          onClick={onClose}
-                          className="flex gap-6 items-center p-3 border border-neutral-950 hover:border-neutral-800 bg-neutral-950/40 hover:bg-neutral-900/30 rounded-[2px] transition-all duration-300 group"
-                        >
-                          {/* Image */}
-                          <div className="w-16 h-20 bg-neutral-900 overflow-hidden relative flex-shrink-0 border border-neutral-900 group-hover:border-neutral-800 transition-colors">
-                            {product.images && product.images[0] ? (
-                              <img
-                                src={product.images[0]}
-                                alt={product.name}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                                referrerPolicy="no-referrer"
-                              />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-[8px] font-mono text-neutral-700">
-                                NO IMG
-                              </div>
-                            )}
+                    <div className="space-y-2">
+                      {results.slice(0, 6).map((product) => (
+                        <Link key={product.id} to={getProductLink(product)} onClick={onClose}
+                          className="flex gap-4 items-center p-2.5 pr-4 bg-[#fff] rounded-2xl hover:ring-1 hover:ring-ink/15 transition group">
+                          <div className="w-14 h-[72px] rounded-xl bg-paper overflow-hidden shrink-0">
+                            {product.images?.[0] && <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />}
                           </div>
-
-                          {/* Meta */}
                           <div className="flex-grow min-w-0">
-                            <span className="text-[9px] font-mono tracking-[0.15em] text-accent/60 uppercase">
-                              {product.category}
-                            </span>
-                            <h4 className="text-sm md:text-base font-display font-medium tracking-wide text-white group-hover:text-accent transition-colors truncate uppercase mt-0.5">
-                              {product.name}
-                            </h4>
+                            <p className="font-medium truncate">{product.name}</p>
+                            <p className="text-sm text-neutral-500 truncate">{product.category}</p>
                           </div>
-
-                          {/* Price / Arrow */}
-                          <div className="text-right flex items-center gap-4">
-                            <span className="text-sm font-mono text-neutral-400 font-bold whitespace-nowrap">
-                              ₹{product.price.toLocaleString()}
-                            </span>
-                            <ArrowRight
-                              size={16}
-                              className="text-neutral-600 group-hover:text-accent transform group-hover:translate-x-1 transition-all"
-                            />
-                          </div>
+                          <span className="font-semibold whitespace-nowrap">₹{product.price.toLocaleString('en-IN')}</span>
+                          <ArrowRight size={16} className="text-neutral-400 group-hover:text-ink group-hover:translate-x-0.5 transition" />
                         </Link>
                       ))}
-
-                      {results.length > 5 && (
-                        <button
-                          type="button"
-                          onClick={() => handleSearchSubmit()}
-                          className="w-full py-4 mt-6 border border-neutral-900 hover:border-white text-[11px] tracking-[0.2em] font-bold uppercase text-neutral-400 hover:text-white transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer active:scale-95 rounded-[2px]"
-                        >
-                          View All {results.length} Results
+                      {results.length > 6 && (
+                        <button type="button" onClick={() => handleSearchSubmit()}
+                          className="w-full mt-2 py-3.5 rounded-full border border-ink/15 bg-[#fff] text-sm font-medium hover:border-ink transition-colors cursor-pointer">
+                          See all {results.length} results
                         </button>
                       )}
                     </div>
                   ) : (
-                    <div className="py-20 text-center space-y-3">
-                      <p className="text-neutral-600 font-mono text-xs uppercase tracking-[0.2em]">
-                        No matching luxury identities retrieved.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setQuery('')}
-                        className="text-[9px] font-mono tracking-[0.2em] text-accent uppercase underline underline-offset-4 cursor-pointer"
-                      >
-                        Reset Matrix Search
-                      </button>
+                    <div className="bg-[#fff] rounded-2xl p-8 text-center">
+                      <p className="font-medium">Nothing matches “{query}”</p>
+                      <p className="text-sm text-neutral-500 mt-1">Try a simpler word, like “oversized” or “polo”.</p>
+                      <button type="button" onClick={() => setQuery('')} className="mt-4 text-sm underline cursor-pointer">Clear search</button>
                     </div>
                   )}
                 </div>

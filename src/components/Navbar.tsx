@@ -10,8 +10,8 @@ import { AnimatePresence, motion } from 'motion/react';
 
 const ADMIN_EMAILS = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
 
-// Uses the legacy utilities (bg-black, text-white…) on purpose: the theme
-// layer in index.css flips them, so the same bar works on light and dark pages.
+// Light everywhere, except the internal dark tools (Amazon console, site config).
+const DARK_PREFIXES = ['/console/amazon', '/admin'];
 const Navbar: React.FC = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -22,6 +22,7 @@ const Navbar: React.FC = () => {
   const { user, isAuthenticated } = useAuth();
   const location = useLocation();
 
+  const dark = DARK_PREFIXES.some(p => location.pathname.startsWith(p));
   const isAdmin = !!user && ADMIN_EMAILS.includes((user.email || '').toLowerCase());
 
   useEffect(() => { setMenuOpen(false); }, [location.pathname]);
@@ -57,7 +58,7 @@ const Navbar: React.FC = () => {
   return (
     <>
       <header
-        className={`fixed top-0 inset-x-0 z-50 bg-black/95 backdrop-blur-md text-white transition-shadow max-md:!bg-[#fff] max-md:!backdrop-blur-none max-md:!text-ink max-md:border-b max-md:border-black/10 ${
+        className={`fixed top-0 inset-x-0 z-50 backdrop-blur-md transition-shadow ${dark ? 'bg-black/95 text-white' : 'bg-[#fff]/95 text-ink'} max-md:!bg-[#fff] max-md:!backdrop-blur-none max-md:!text-ink max-md:border-b max-md:border-black/10 ${
           scrolled ? 'md:shadow-[0_1px_0_rgba(128,128,128,0.25)]' : ''
         }`}
       >
@@ -105,7 +106,7 @@ const Navbar: React.FC = () => {
                 <ShoppingBag size={20} strokeWidth={1.6} />
               </motion.span>
               {totalItems > 0 && (
-                <span className="absolute -top-1.5 -right-2 bg-white text-black text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">
+                <span className={`absolute -top-1.5 -right-2 ${dark ? 'bg-white text-black' : 'bg-ink text-[#fff]'} max-md:!bg-ink max-md:!text-[#fff] text-[10px] font-bold min-w-4 h-4 px-1 rounded-full flex items-center justify-center`}>
                   {totalItems}
                 </span>
               )}
@@ -118,18 +119,18 @@ const Navbar: React.FC = () => {
         {menuOpen && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 pt-16 z-40 bg-black text-white md:hidden overflow-y-auto"
+            className="fixed inset-0 pt-16 z-40 bg-[#fff] text-ink md:hidden overflow-y-auto"
           >
             <div className="px-6 py-8 flex flex-col">
               {links.map(l => (
-                <Link key={l.name} to={l.path} className="py-4 text-2xl font-display font-semibold border-b border-white/10">
+                <Link key={l.name} to={l.path} className="py-4 text-2xl font-semibold tracking-[-0.02em] border-b border-black/10">
                   {l.name}
                 </Link>
               ))}
-              <Link to="/wishlist" className="py-4 text-lg border-b border-white/10 flex justify-between">
+              <Link to="/wishlist" className="py-4 text-lg border-b border-black/10 flex justify-between">
                 <span>Wishlist</span><span className="opacity-50">{wishlist.length}</span>
               </Link>
-              <Link to="/auth" className="py-4 text-lg border-b border-white/10">
+              <Link to="/auth" className="py-4 text-lg border-b border-black/10">
                 {isAuthenticated ? 'Account' : 'Log in'}
               </Link>
               <Link to="/support" className="py-4 text-lg">Support</Link>

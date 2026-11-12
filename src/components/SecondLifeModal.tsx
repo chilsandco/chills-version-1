@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Recycle, Leaf, ChevronRight, X, Package, Sparkles, Plus, Check, Loader2 } from 'lucide-react';
+import { Recycle, Leaf, ChevronRight, X, Package, Plus, Check, Loader2 } from 'lucide-react';
 import { Product } from '../types';
 import { useCart } from '../CartContext';
 
@@ -46,7 +46,7 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
     .slice(0, 3);
 
   const handleQuickAdd = (product: Product) => {
-    const size = selectedSizes[product.id] || 'M'; // Default to M if not selected
+    const size = selectedSizes[product.id] || defaultSize(product);
     addToCart(product, size);
     setAddedProductId(product.id);
 
@@ -94,7 +94,8 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
     };
   }, [isOpen]);
 
-  const sizes = ['S', 'M', 'L', 'XL', 'XXL'];
+  const sizesFor = (p: Product) => (p.availableSizes?.length ? p.availableSizes : ['S', 'M', 'L', 'XL', 'XXL']);
+  function defaultSize(p: Product) { const s = sizesFor(p); return s.includes('M') ? 'M' : s[0]; }
 
   return (
     <AnimatePresence>
@@ -103,238 +104,89 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-[200] flex items-center justify-center px-4 overscroll-contain"
+          transition={{ duration: 0.25 }}
+          className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center sm:px-4 overscroll-contain bg-ink/50 backdrop-blur-sm"
           onWheel={(e) => e.stopPropagation()}
           onClick={onClose}
         >
-          {/* Backdrop */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/80 backdrop-blur-md"
-          />
-
-          {/* Modal */}
-          <motion.div
-            initial={{ opacity: 0, y: 40, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.97 }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-neutral-950 border border-neutral-800"
+            className="relative w-full max-w-xl max-h-[92vh] overflow-y-auto bg-[#f3f2ee] text-ink rounded-t-2xl sm:rounded-2xl p-4 md:p-6"
             style={{ overscrollBehavior: 'contain' }}
+            data-lenis-prevent
           >
-            {/* Top Accent Line */}
-            <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-accent to-transparent" />
-
-            {/* Corner Accents */}
-            <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-accent/40" />
-            <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-accent/40" />
-            <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-accent/40" />
-            <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-accent/40" />
-
-            {/* Close Button */}
-            <button
-              onClick={onClose}
-              className="absolute top-5 right-5 z-10 p-2 text-neutral-600 hover:text-white transition-colors"
-              aria-label="Close modal"
-            >
-              <X size={18} />
+            <button onClick={onClose} aria-label="Close" className="absolute top-4 right-4 w-9 h-9 rounded-full bg-[#fff] grid place-items-center hover:bg-ink hover:text-[#fff] transition-colors">
+              <X size={17} />
             </button>
 
-            {/* Header */}
-            <div className="p-8 pb-0 md:p-10 md:pb-0">
-              <div className="flex items-center gap-3 mb-4">
-                <motion.div
-                  animate={{ rotate: [0, 15, -15, 0] }}
-                  transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                  className="w-12 h-12 border border-accent/40 bg-accent/5 flex items-center justify-center"
-                >
-                  <Recycle size={22} className="text-accent" />
-                </motion.div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] uppercase tracking-[0.4em] font-bold text-accent">Second Life Protocol</span>
-                    <Sparkles size={12} className="text-accent/60" />
-                  </div>
-                  <p className="text-[9px] uppercase tracking-[0.2em] text-neutral-600 font-bold mt-0.5">Packaging Intelligence Activated</p>
-                </div>
-              </div>
-
-              <h2 className="text-2xl md:text-3xl font-display font-medium tracking-tight text-white leading-snug mt-6">
-                Sustain Our <span className="text-accent">Unboxing Experience</span>
-              </h2>
-              <p className="text-[12px] leading-relaxed text-neutral-400 tracking-wide max-w-lg mt-3">
-                We have put a lot of effort and care into creating a unique unboxing experience. To help us sustain these packaging standards and offset high individual shipping charges, we kindly request you to order at least 2 T-shirts. This enables us to send them in our premium, handcrafted <span className="text-white font-medium">Second Life Box</span>.
+            <div className="px-1 pr-12">
+              <span className="w-11 h-11 rounded-full bg-ink text-[#fff] grid place-items-center mb-4"><Recycle size={20} /></span>
+              <p className="eyebrow text-neutral-500 mb-2">Second Life Box</p>
+              <h2 className="text-[26px] md:text-[32px] leading-[1.08] font-semibold tracking-[-0.03em]">Add one more tee for our signature box</h2>
+              <p className="text-[15px] text-neutral-600 mt-2 leading-relaxed">
+                Orders of 2 or more tees ship in our handmade <strong className="text-ink font-medium">Second Life Box</strong>, made to be reused. A single tee ships in an eco-friendly, biodegradable bag.
               </p>
-
-              {/* Visual Progress Element */}
-              <div className="mt-6 border border-[#D4AF37]/20 bg-[linear-gradient(135deg,rgba(212,175,55,0.04),rgba(0,0,0,0)_60%)] p-4 relative overflow-hidden">
-                <div className="flex justify-between items-center text-[9px] uppercase tracking-[0.2em] font-bold text-neutral-400 mb-2">
-                  <span>Unboxing Unlock Progress</span>
-                  <span className="text-accent font-bold">1 / 2 Tees</span>
-                </div>
-                <div className="h-1.5 w-full bg-neutral-900 border border-white/5 rounded-full overflow-hidden mb-2">
-                  <div className="h-full w-1/2 bg-gradient-to-r from-[#D4AF37] to-[#f5d97a]" />
-                </div>
-                <p className="text-[9.5px] text-neutral-500 font-light tracking-wide uppercase">
-                  Add <strong className="text-white">1 more tee</strong> to unlock the premium <strong className="text-accent">Second Life Box</strong>
-                </p>
-              </div>
-
-              {/* Current vs Upgrade */}
-              <div className="flex items-center gap-4 mt-5 mb-2">
-                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-900/60 border border-neutral-800">
-                  <Leaf size={12} className="text-green-500/70" />
-                  <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-neutral-500">Current: Eco Bag</span>
-                </div>
-                <ChevronRight size={14} className="text-neutral-700" />
-                <div className="flex items-center gap-2 px-3 py-2 border border-accent/30 bg-accent/5">
-                  <Package size={12} className="text-accent" />
-                  <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-accent">Upgrade: Second Life Box</span>
-                </div>
-              </div>
-
-              {/* Top Eco Bag CTA */}
-              <button
-                type="button"
-                onClick={onContinueWithEcoBag}
-                className="w-full mt-6 py-3 text-[10px] tracking-[0.25em] font-bold uppercase text-neutral-500 hover:text-white transition-colors flex items-center justify-center gap-2 border border-neutral-900 hover:border-neutral-600"
-              >
-                <Leaf size={11} />
-                <span>Continue with Eco-friendly Biodegradable Bag</span>
-              </button>
             </div>
 
-            {/* Divider */}
-            <div className="mx-8 md:mx-10 my-6 h-[1px] bg-gradient-to-r from-transparent via-neutral-800 to-transparent" />
-
-            {/* Product Suggestions */}
-            <div className="px-8 md:px-10 pb-2">
-              <div className="flex items-center gap-3 mb-6">
-                <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-neutral-500">Quick Add</span>
-                <div className="flex-grow h-[1px] bg-neutral-900" />
-                <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-neutral-700">Select a tee below</span>
+            <div className="bg-[#fff] rounded-2xl p-4 mt-4">
+              <div className="flex justify-between items-center text-sm mb-2">
+                <span className="text-neutral-600">Your bag</span>
+                <span className="font-medium">1 of 2 tees</span>
               </div>
+              <div className="h-2 w-full bg-[#eeece6] rounded-full overflow-hidden"><div className="h-full w-1/2 bg-ink rounded-full" /></div>
+              <div className="flex items-center gap-2 mt-3 text-sm">
+                <span className="inline-flex items-center gap-1.5 bg-[#f3f2ee] rounded-full px-3 py-1.5"><Leaf size={13} /> Eco bag</span>
+                <ChevronRight size={14} className="text-neutral-400" />
+                <span className="inline-flex items-center gap-1.5 bg-ink text-[#fff] rounded-full px-3 py-1.5"><Package size={13} /> Second Life Box</span>
+              </div>
+            </div>
 
-              {loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <motion.div animate={{ rotate: 360 }} transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}>
-                    <Loader2 size={24} className="text-accent" />
-                  </motion.div>
-                  <span className="ml-3 text-[10px] uppercase tracking-[0.3em] text-neutral-600 font-bold">Loading inventory...</span>
-                </div>
-              ) : suggestions.length > 0 ? (
-                <div className="space-y-4">
-                  {suggestions.map((product, index) => (
-                    <motion.div
-                      key={product.id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.1, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-                      className={`flex gap-5 p-4 border transition-all duration-300 group ${
-                        addedProductId === product.id
-                          ? 'border-accent/60 bg-accent/5'
-                          : 'border-neutral-900 bg-neutral-950/60 hover:border-neutral-700'
-                      }`}
-                    >
-                      {/* Product Image */}
-                      <div className="w-20 h-24 md:w-24 md:h-28 bg-neutral-900 overflow-hidden flex-shrink-0 relative">
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="w-full h-full object-cover opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-500"
-                          referrerPolicy="no-referrer"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+            <p className="text-sm text-neutral-500 mt-5 mb-2 px-1">Pick a tee to add</p>
+            {loading ? (
+              <div className="bg-[#fff] rounded-2xl py-10 flex items-center justify-center text-sm text-neutral-500 gap-2"><Loader2 size={18} className="animate-spin" /> Loading tees…</div>
+            ) : suggestions.length > 0 ? (
+              <div className="space-y-2">
+                {suggestions.map((product, index) => {
+                  const added = addedProductId === product.id;
+                  const chosen = selectedSizes[product.id] || defaultSize(product);
+                  return (
+                    <motion.div key={product.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.06 }}
+                      className={`flex gap-3 p-2.5 rounded-2xl bg-[#fff] transition ${added ? 'ring-2 ring-ink' : ''}`}>
+                      <div className="w-20 h-24 rounded-xl bg-paper overflow-hidden shrink-0">
+                        <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                       </div>
-
-                      {/* Product Info */}
-                      <div className="flex-grow flex flex-col justify-between min-w-0 py-1">
-                        <div>
-                          <h4 className="text-[13px] md:text-[14px] tracking-tight font-display font-medium uppercase text-white group-hover:text-accent transition-colors truncate">
-                            {product.name}
-                          </h4>
-                          <p className="text-[10px] text-neutral-600 uppercase tracking-[0.15em] font-bold mt-1">
-                            ₹{product.price.toLocaleString()}
-                          </p>
-
-                          {/* Size Selector */}
-                          <div className="flex items-center gap-1.5 mt-3">
-                            {sizes.map(size => (
-                              <button
-                                key={size}
-                                type="button"
-                                onClick={() => handleSizeSelect(product.id, size)}
-                                className={`w-7 h-7 text-[8px] font-bold uppercase tracking-wider border transition-all ${
-                                  (selectedSizes[product.id] || 'M') === size
-                                    ? 'border-accent bg-accent/10 text-accent'
-                                    : 'border-neutral-800 text-neutral-600 hover:border-neutral-600'
-                                }`}
-                              >
-                                {size}
-                              </button>
-                            ))}
-                          </div>
+                      <div className="flex-grow min-w-0 py-0.5">
+                        <p className="font-medium truncate">{product.name}</p>
+                        <p className="text-sm font-semibold mt-0.5">₹{product.price.toLocaleString('en-IN')}</p>
+                        <div className="flex flex-wrap gap-1 mt-2">
+                          {sizesFor(product).map(size => (
+                            <button key={size} type="button" onClick={() => handleSizeSelect(product.id, size)}
+                              className={`min-w-8 h-8 px-1.5 rounded-lg text-xs font-medium border transition-colors ${chosen === size ? 'bg-ink text-[#fff] border-ink' : 'border-[#e3e0d8] hover:border-ink/40'}`}>
+                              {size}
+                            </button>
+                          ))}
                         </div>
                       </div>
-
-                      {/* Quick Add Button */}
-                      <div className="flex-shrink-0 flex items-center">
-                        <motion.button
-                          type="button"
-                          onClick={() => handleQuickAdd(product)}
-                          disabled={addedProductId !== null}
-                          whileHover={{ scale: 1.05 }}
-                          whileTap={{ scale: 0.95 }}
-                          className={`w-10 h-10 md:w-12 md:h-12 border flex items-center justify-center transition-all duration-300 ${
-                            addedProductId === product.id
-                              ? 'border-accent bg-accent text-black'
-                              : 'border-neutral-800 bg-transparent text-neutral-500 hover:border-accent hover:text-accent disabled:opacity-30'
-                          }`}
-                        >
-                          {addedProductId === product.id ? (
-                            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 400 }}>
-                              <Check size={18} />
-                            </motion.div>
-                          ) : (
-                            <Plus size={18} />
-                          )}
-                        </motion.button>
-                      </div>
+                      <button type="button" onClick={() => handleQuickAdd(product)} disabled={addedProductId !== null} aria-label={`Add ${product.name}, size ${chosen}`}
+                        className={`self-center w-11 h-11 rounded-full grid place-items-center shrink-0 transition-colors ${added ? 'bg-ink text-[#fff]' : 'bg-[#f3f2ee] hover:bg-ink hover:text-[#fff] disabled:opacity-30'}`}>
+                        {added ? <Check size={18} /> : <Plus size={18} />}
+                      </button>
                     </motion.div>
-                  ))}
-                </div>
-              ) : (
-                <div className="py-8 text-center">
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-neutral-600 font-bold">All available tees are in your cart</p>
-                </div>
-              )}
-            </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="bg-[#fff] rounded-2xl py-8 text-center text-sm text-neutral-500">Every available tee is already in your bag.</div>
+            )}
 
-            {/* Footer Actions */}
-            <div className="p-8 md:p-10 pt-6">
-              <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-neutral-800 to-transparent mb-6" />
-
-              {/* Bottom Eco Bag CTA */}
-              <button
-                type="button"
-                onClick={onContinueWithEcoBag}
-                className="w-full py-4 text-[10px] tracking-[0.3em] font-bold uppercase text-neutral-500 hover:text-white transition-colors flex items-center justify-center gap-2 border border-neutral-900 hover:border-neutral-700"
-              >
-                <Leaf size={12} />
-                <span>Continue with Eco-friendly Biodegradable Bag</span>
-              </button>
-
-              <p className="text-[8px] uppercase tracking-[0.2em] text-neutral-800 text-center leading-relaxed mt-4">
-                Second Life Box packaging is 100% sustainable. Your choice. Your signal.
-              </p>
-            </div>
-
-            {/* Bottom Accent Line */}
-            <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
+            <button type="button" onClick={onContinueWithEcoBag}
+              className="w-full mt-4 py-3.5 rounded-full border border-ink/15 bg-[#fff] text-sm font-medium hover:border-ink transition-colors flex items-center justify-center gap-2">
+              <Leaf size={14} /> Continue with the eco bag
+            </button>
           </motion.div>
         </motion.div>
       )}
