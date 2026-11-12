@@ -1,249 +1,85 @@
 import React from 'react';
-import { motion } from 'motion/react';
-import { Shield, Book, UserCheck, Package, CreditCard, Truck, RefreshCcw, Layout, UserX, Globe, AlertCircle, Mail, MapPin, Phone, Clock } from 'lucide-react';
-import SEO from '../components/SEO';
+import { Link } from 'react-router-dom';
+import InfoPage, { Section } from '../components/InfoPage';
 
+/** Terms & conditions. Same terms as before (last updated 11 May 2026), in the help-page layout. */
+const TermsConditions: React.FC = () => (
+  <InfoPage
+    seo={{
+      title: 'Terms & conditions',
+      description: 'The terms for using the CHILS & CO. website and buying from us, set by Chilamkuri Ventures.',
+      canonical: 'https://chilsandco.com/terms-conditions',
+    }}
+    eyebrow="Terms & conditions · Last updated 11 May 2026"
+    title="The terms, in plain sight"
+    intro="These terms cover your use of the CHILS & CO. website and everything you buy from us."
+    facts={[
+      { value: 'INR', label: 'All prices' },
+      { value: '7 days', label: 'To ask for a return' },
+      { value: 'Before dispatch', label: 'To cancel an order' },
+      { value: 'Hyderabad', label: 'Jurisdiction' },
+    ]}
+    related={[{ to: '/privacy-policy', label: 'Privacy policy' }, { to: '/returns-refunds', label: 'Returns & refunds' }, { to: '/shipping-delivery', label: 'Shipping & delivery' }]}
+  >
+    <Section title="1. Introduction">
+      <p>Welcome to CHILS & CO. These Terms & Conditions govern your access to and use of the CHILS & CO. website, products, services and related experiences.</p>
+      <p>By using this website, you agree to these terms, along with our <Link to="/privacy-policy" className="underline">Privacy Policy</Link>, <Link to="/shipping-delivery" className="underline">Shipping & Delivery Policy</Link> and <Link to="/returns-refunds" className="underline">Returns & Refunds Policy</Link>.</p>
+      <p>CHILS & CO. is a brand operated by <strong>Chilamkuri Ventures</strong>. If you don’t agree with any part of these terms, please don’t use the website.</p>
+    </Section>
 
-const TermsConditions: React.FC = () => {
-  return (
-    <div className="bg-black text-white min-h-screen pt-32 pb-24 px-6 md:px-12 selection:bg-accent selection:text-black font-sans">
-      <SEO 
-        title="Terms & Conditions"
-        description="Read the operational terms, binding criteria, pricing policies, and governance rules set forth by Chilamkuri Ventures for Chils & Co."
-        canonical="https://chilsandco.com/terms-conditions"
-        keywords="terms and conditions, user agreement, legal policy, governing law, hyderabad jurisdiction, chilamkuri ventures"
-      />
-      <div className="max-w-[1000px] mx-auto">
-        {/* Header Section */}
-        <motion.section 
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="mb-24"
-        >
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-8 h-[1px] bg-accent" />
-            <span className="text-[10px] tracking-[0.5em] text-accent font-bold uppercase">Operational Framework</span>
-          </div>
-          <h1 className="text-6xl md:text-8xl font-display font-bold tracking-tighter uppercase mb-8">
-            Terms & <br /> <span className="text-neutral-800 italic">Conditions</span>
-          </h1>
-          <div className="flex flex-col md:flex-row md:items-center gap-8 justify-between border-b border-neutral-900 pb-8">
-            <p className="text-neutral-500 text-[10px] uppercase tracking-widest font-bold font-mono">
-              Last Updated: May 11, 2026
-            </p>
-            <p className="text-neutral-400 text-sm italic">
-              "Essential by Design. Elevated by Intent."
-            </p>
-          </div>
-        </motion.section>
+    <Section title="2. Who can use the website">
+      <p>By using the website, you confirm that you:</p>
+      <ul>
+        <li>Are legally able to enter into a binding agreement</li>
+        <li>Have given accurate and complete information</li>
+        <li>Will follow all applicable laws</li>
+      </ul>
+    </Section>
 
-        {/* Content Section */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 0.2 }}
-          className="space-y-20"
-        >
-          <section className="space-y-6">
-            <h2 className="text-[11px] tracking-[0.3em] font-bold uppercase flex items-center gap-3">
-                <Book className="text-accent" size={16} /> 01 // Introduction
-            </h2>
-            <p className="text-neutral-300 leading-relaxed uppercase tracking-wider text-xs md:text-sm max-w-3xl">
-              Welcome to Chils & Co. These Terms & Conditions govern your access to and use of the Chils & Co. website, products, services, and related experiences.
-              By accessing or using this website, you agree to be bound by these Terms & Conditions, along with our Privacy Policy, Shipping & Delivery Policy, and Returns & Refunds Policy.
-            </p>
-            <div className="p-6 bg-neutral-900/30 border border-neutral-900">
-               <p className="text-[10px] tracking-[0.2em] uppercase font-bold text-neutral-500 mb-2">Legal Context</p>
-               <p className="text-sm font-display tracking-tight text-white uppercase italic">Chils & Co. is a brand operated by Chilamkuri Ventures.</p>
-            </div>
-            <p className="text-neutral-500 text-xs uppercase tracking-widest leading-relaxed">
-              If you do not agree with any part of these terms, please refrain from using the platform.
-            </p>
-          </section>
+    <Section title="3. Products and availability">
+      <ul>
+        <li>Colours may look slightly different because of screen differences.</li>
+        <li>Availability can change without notice.</li>
+        <li>We may change or discontinue products at any time.</li>
+      </ul>
+    </Section>
 
-          {/* Eligibility */}
-          <section className="space-y-8">
-            <div className="flex items-center gap-4">
-              <div className="p-2 bg-neutral-900 rounded">
-                <UserCheck className="text-accent" size={18} />
-              </div>
-              <h2 className="text-[11px] tracking-[0.3em] font-bold uppercase">02 // Eligibility</h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[
-                    "Legally capable of binding agreements",
-                    "Provided accurate and complete data",
-                    "Adherence to applicable laws"
-                ].map((item, idx) => (
-                    <div key={idx} className="p-6 border border-neutral-900 bg-black/40 hover:border-accent/20 transition-all group">
-                        <span className="text-[9px] text-neutral-600 block mb-2 font-mono">CRITERION_0{idx+1}</span>
-                        <p className="text-[10px] text-white uppercase tracking-widest leading-relaxed font-medium">{item}</p>
-                    </div>
-                ))}
-            </div>
-          </section>
+    <Section title="4. Pricing and payments">
+      <ul>
+        <li>Prices are in <strong>Indian Rupees (INR)</strong> unless stated otherwise.</li>
+        <li>Payments are processed securely through <strong>PhonePe</strong>.</li>
+        <li>We may cancel orders placed at a price shown in error because of a technical problem.</li>
+      </ul>
+    </Section>
 
-          {/* Products & Pricing */}
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-px bg-neutral-900 border border-neutral-900 rounded-sm overflow-hidden">
-             <div className="bg-black p-10 space-y-6">
-                <div className="flex items-center gap-3">
-                   <Package className="text-accent" size={18} />
-                   <h3 className="text-[11px] font-bold uppercase tracking-[0.2em]">03 // Products & Availability</h3>
-                </div>
-                <div className="space-y-4 text-[10px] text-neutral-400 uppercase tracking-widest leading-relaxed">
-                    <p>• Minor variations in color may occur due to display differences.</p>
-                    <p>• Availability is subject to change without notice.</p>
-                    <p>• We reserve the right to modify or discontinue lines at any time.</p>
-                </div>
-             </div>
-             <div className="bg-black p-10 space-y-6 border-t md:border-t-0 md:border-l border-neutral-900">
-                <div className="flex items-center gap-3">
-                   <CreditCard className="text-accent" size={18} />
-                   <h3 className="text-[11px] font-bold uppercase tracking-[0.2em]">04 // Pricing & Payments</h3>
-                </div>
-                <div className="space-y-4 text-[10px] text-neutral-400 uppercase tracking-widest leading-relaxed">
-                    <p>• Prices in INR unless stated otherwise.</p>
-                    <p>• Secure processing via PhonePe infrastructure.</p>
-                    <p>• Rights reserved to cancel orders with technical pricing errors.</p>
-                </div>
-             </div>
-          </section>
+    <Section title="5. Shipping and delivery">
+      <p>Timelines and estimates are in our <Link to="/shipping-delivery" className="underline">Shipping & Delivery Policy</Link>. We aim to be accurate, but things outside our control, such as weather or courier delays, can occasionally slow a delivery.</p>
+    </Section>
 
-          {/* Logistics & Returns */}
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-12">
-             <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <Truck className="text-accent" size={20} />
-                  <h2 className="text-[11px] tracking-[0.3em] font-bold uppercase">05 // Shipping & Delivery</h2>
-                </div>
-                <p className="text-neutral-400 text-[10px] leading-relaxed uppercase tracking-[0.15em]">
-                    Timelines and estimates are detailed in our Shipping Policy. While we aim for precision, external factors (weather, logistics partners) may occasionally cause delays.
-                </p>
-             </div>
-             <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <RefreshCcw className="text-accent" size={20} />
-                  <h2 className="text-[11px] tracking-[0.3em] font-bold uppercase">06 // Returns & Refunds</h2>
-                </div>
-                <p className="text-neutral-400 text-[10px] leading-relaxed uppercase tracking-[0.15em]">
-                    Governed by our Returns Policy. Requests must be initiated within 7 days of delivery. Orders can only be cancelled prior to dispatch.
-                </p>
-             </div>
-          </section>
+    <Section title="6. Returns and refunds">
+      <p>Covered by our <Link to="/returns-refunds" className="underline">Returns & Refunds Policy</Link>. Requests must be made <strong>within 7 days of delivery</strong>. Orders can only be cancelled <strong>before dispatch</strong>.</p>
+    </Section>
 
-          {/* Intellectual Property */}
-          <section className="p-12 border border-neutral-900 bg-[#050505] relative overflow-hidden group">
-             <div className="absolute -right-8 -top-8 opacity-[0.03] group-hover:opacity-[0.05] transition-opacity">
-                <Layout size={240} />
-             </div>
-             <div className="relative z-10 space-y-8">
-                <div className="flex items-center gap-4">
-                   <h2 className="text-[11px] tracking-[0.3em] font-bold uppercase italic">07 // Intellectual Property</h2>
-                </div>
-                <p className="text-neutral-300 text-xs md:text-sm leading-relaxed uppercase tracking-wider max-w-3xl">
-                    All content, including branding, product concepts, designs, and visual assets, are the intellectual property of Chils & Co. / Chilamkuri Ventures. 
-                    Unauthorized reproduction or commercial use is strictly prohibited.
-                </p>
-                <div className="flex flex-wrap gap-4 pt-4">
-                    {["Concepts", "Designs", "Logos", "Direction"].map(tag => (
-                        <span key={tag} className="px-3 py-1 bg-neutral-900 text-[9px] text-neutral-500 uppercase tracking-widest font-mono">
-                            {tag}_PROTECTED
-                        </span>
-                    ))}
-                </div>
-             </div>
-          </section>
+    <Section title="7. Intellectual property">
+      <p>All content, including branding, product concepts, designs, logos, creative direction and visual assets, is the intellectual property of CHILS & CO. / Chilamkuri Ventures. Copying it or using it commercially without permission is strictly prohibited.</p>
+    </Section>
 
-          {/* Conduct & Liability */}
-          <section className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-12 border-t border-neutral-900">
-             <div className="space-y-6">
-                <div className="flex items-center gap-3">
-                    <UserX className="text-neutral-600" size={16} />
-                    <h3 className="text-[11px] tracking-[0.3em] font-bold uppercase text-neutral-500">08 // User Conduct</h3>
-                </div>
-                <p className="text-[10px] text-neutral-400 leading-relaxed uppercase tracking-[0.15em]">
-                    You agree not to misuse the platform, attempt unauthorized access, or interfere with security. We reserve the right to restrict access if misuse is detected.
-                </p>
-             </div>
-             <div className="space-y-6">
-                <div className="flex items-center gap-3">
-                    <AlertCircle className="text-neutral-600" size={16} />
-                    <h3 className="text-[11px] tracking-[0.3em] font-bold uppercase text-neutral-500">10 // Limitation of Liability</h3>
-                </div>
-                <p className="text-[10px] text-neutral-400 leading-relaxed uppercase tracking-[0.15em]">
-                    Chils & Co. shall not be liable for indirect damages, technical interruptions, or loss arising from platform misuse. Use is at your own discretion.
-                </p>
-             </div>
-          </section>
+    <Section title="8. Using the website fairly">
+      <p>You agree not to misuse the website, try to gain unauthorised access, or interfere with its security. We may restrict access if we detect misuse.</p>
+    </Section>
 
-          {/* Legal Governance */}
-          <section className="p-10 border border-neutral-900 bg-black space-y-8">
-             <div className="flex items-center gap-4">
-               <Globe className="text-accent" size={18} />
-               <h2 className="text-[11px] tracking-[0.3em] font-bold uppercase">13 // Governing Law & Jurisdiction</h2>
-             </div>
-             <p className="text-neutral-300 text-[10px] md:text-xs leading-relaxed uppercase tracking-[0.2em] max-w-2xl">
-                 These Terms & Conditions are governed by the laws of India. Any disputes shall be subject to the jurisdiction of the courts located in Hyderabad, Telangana.
-             </p>
-          </section>
+    <Section title="9. Limitation of liability">
+      <p>CHILS & CO. is not liable for indirect damages, technical interruptions, or loss arising from misuse of the website. You use the website at your own discretion.</p>
+    </Section>
 
-          {/* Contact Section */}
-          <section className="pt-12 border-t border-neutral-900">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-                <div className="space-y-6">
-                    <h2 className="text-[11px] tracking-[0.3em] font-bold uppercase mb-8">Support Contact</h2>
-                    <div className="space-y-6">
-                        <div className="flex items-center gap-4">
-                            <Mail size={16} className="text-accent" />
-                            <a href="mailto:hello.chilsandco@gmail.com" className="text-sm font-display font-medium border-b border-white/10 pb-1">hello.chilsandco@gmail.com</a>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <Phone size={16} className="text-accent" />
-                            <p className="text-sm font-display font-medium">+91 7842 07 0404</p>
-                        </div>
-                        <div className="flex items-center gap-4">
-                            <Clock size={16} className="text-neutral-700" />
-                            <p className="text-[10px] text-neutral-500 uppercase tracking-widest">Mon–Sat · 10 AM – 6 PM IST</p>
-                        </div>
-                    </div>
-                </div>
-                <div className="space-y-6">
-                    <h2 className="text-[11px] tracking-[0.3em] font-bold uppercase mb-8">Physical Base</h2>
-                    <div className="flex gap-4">
-                        <MapPin size={16} className="text-accent flex-shrink-0" />
-                        <p className="text-sm font-display font-medium uppercase tracking-tight leading-relaxed">
-                            3rd Floor, Plot No. 38 & 39<br />
-                            Matrusri Nagar<br />
-                            Miyapur<br />
-                            Hyderabad, Telangana – 500049<br />
-                            India
-                        </p>
-                    </div>
-                </div>
-             </div>
-          </section>
+    <Section title="10. Governing law">
+      <p>These terms are governed by the laws of India. Any disputes are subject to the jurisdiction of the courts in <strong>Hyderabad, Telangana</strong>.</p>
+    </Section>
 
-          {/* System Footer Bar */}
-          <div className="py-16 border-y border-neutral-900 flex flex-col md:flex-row justify-between gap-12 font-mono text-[9px] uppercase tracking-[0.3em] text-neutral-700 italic">
-             <p>CHILAMKURI VENTURES // POLICY OPS</p>
-             <p>TERMS_VER_1.0_2026</p>
-             <p>ACC_REQUIRED</p>
-          </div>
-        </motion.div>
-
-        {/* Brand Signoff */}
-        <div className="pt-24 text-center">
-           <div className="inline-block p-4 border border-accent/20 rounded-full mb-8">
-              <Shield size={32} className="text-accent" strokeWidth={1} />
-           </div>
-           <p className="text-[10px] text-neutral-600 uppercase tracking-[1em] italic">
-             Integrity by Default.
-           </p>
-        </div>
-      </div>
-    </div>
-  );
-};
+    <Section title="Our address">
+      <p>Chilamkuri Ventures<br />3rd Floor, Plot No. 38 & 39, Matrusri Nagar, Miyapur<br />Hyderabad, Telangana – 500049, India</p>
+    </Section>
+  </InfoPage>
+);
 
 export default TermsConditions;

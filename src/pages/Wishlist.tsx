@@ -1,131 +1,120 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'motion/react';
+import { X, ArrowRight, Check } from 'lucide-react';
 import { useWishlist } from '../WishlistContext';
 import { useCart } from '../CartContext';
 import SEO from '../components/SEO';
-import { Trash2, ShoppingBag, ArrowRight, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
+import { studio, small } from '../data/studio';
+import { Product } from '../types';
 
+const FALLBACK_SIZES = ['S', 'M', 'L', 'XL', '2XL'];
+
+const hasCat = (p: Product, name: string) =>
+  p.category?.toLowerCase() === name || p.categories?.some(c => c.toLowerCase() === name);
+
+/** Saved tees: pick a size to move one to the bag, or remove it. */
 const Wishlist: React.FC = () => {
   const { wishlist, toggleWishlist } = useWishlist();
   const { addToCart } = useCart();
-  const [activeSelectSizeId, setActiveSelectSizeId] = useState<string | null>(null);
+  const [picking, setPicking] = useState<string | null>(null);
+  const [added, setAdded] = useState<string | null>(null);
 
-  if (wishlist.length === 0) {
-    return (
-      <div className="h-screen flex flex-col items-center justify-center px-6 text-center">
-        <SEO title="Wishlist" noindex={true} />
-        <h1 className="text-4xl font-display font-bold mb-8 uppercase tracking-tighter">Wishlist is empty</h1>
-        <Link 
-          to="/collection" 
-          className="bg-white text-black px-12 py-5 text-[11px] tracking-[0.3em] font-bold uppercase hover:bg-accent transition-colors"
-        >
-          Explore Collection
-        </Link>
-      </div>
-    );
-  }
+  const moveToBag = (product: Product, size: string) => {
+    addToCart(product, size);
+    setAdded(`${product.name} · ${size}`);
+    setPicking(null);
+    toggleWishlist(product);
+    setTimeout(() => setAdded(null), 2500);
+  };
 
   return (
-    <div className="pt-24 md:pt-32 pb-24 px-6 md:px-12 max-w-[1200px] mx-auto min-h-screen">
+    <div className="bg-[#f3f2ee] text-ink pt-24 md:pt-32 pb-20 min-h-screen">
       <SEO title="Wishlist" noindex={true} />
-      <div className="mb-16">
+      <div className="max-w-[1200px] mx-auto px-3 md:px-6">
+        <header className="px-2 mb-6 md:mb-10">
+          <p className="eyebrow text-neutral-500 mb-3">Wishlist</p>
+          <h1 className="text-[34px] md:text-[56px] leading-[1.04] font-semibold tracking-[-0.03em]">
+            {wishlist.length ? 'Saved for later' : 'Nothing saved yet'}
+          </h1>
+          <p className="mt-3 md:mt-4 text-neutral-600 md:text-lg max-w-[620px]">
+            {wishlist.length
+              ? `${wishlist.length} ${wishlist.length === 1 ? 'tee' : 'tees'}. Pick a size to move one to your bag.`
+              : 'Tap the heart on any tee to keep it here for later.'}
+          </p>
+        </header>
 
-        <p className="text-[8px] tracking-[0.5em] text-neutral-600 uppercase mb-3">Saved for later</p>
-        <h1 className="text-5xl font-display font-bold tracking-tighter uppercase">Wishlist</h1>
-      </div>
+        <AnimatePresence>
+          {added && (
+            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="mx-2 mb-4 bg-ink text-[#fff] rounded-2xl px-5 py-3.5 text-[15px] flex items-center gap-3">
+              <Check size={16} /> Added to your bag: {added}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <AnimatePresence mode="popLayout">
-          {wishlist.map(product => (
-            <motion.div 
-              key={product.id}
-              layout
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.3 }}
-              className="group relative border border-neutral-900 bg-neutral-950 p-4 transition-all duration-500 hover:border-neutral-700 overflow-hidden"
-            >
-              <div className="relative aspect-[3/4] mb-4 overflow-hidden bg-neutral-900">
-                <img 
-                  src={product.images[0]} 
-                  alt={product.name} 
-                  className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
-                  referrerPolicy="no-referrer"
-                />
-                <button 
-                  onClick={() => toggleWishlist(product)}
-                  className="absolute top-4 right-4 z-10 p-2 bg-black/50 backdrop-blur-md border border-neutral-800 text-white hover:text-accent transition-colors cursor-pointer"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-
-              <div className="space-y-4">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-[11px] font-bold tracking-[0.1em] uppercase mb-1">{product.name}</h3>
-                    <p className="text-[9px] text-neutral-600 uppercase tracking-widest">{product.category}</p>
-                  </div>
-                  <p className="text-sm font-medium">₹{product.price.toLocaleString()}</p>
-                </div>
-
-                <div className="flex gap-3">
-                  <Link 
-                    to={`/product/${product.id}`}
-                    className="flex-1 border border-neutral-900 py-3.5 text-[9px] tracking-[0.2em] font-bold uppercase hover:bg-neutral-900 transition-all flex items-center justify-center gap-1.5"
-                  >
-                    Details <ArrowRight size={10} />
-                  </Link>
-                  <button 
-                    onClick={() => setActiveSelectSizeId(product.id)}
-                    className="flex-1 border border-neutral-800 bg-white text-black py-3.5 text-[9px] tracking-[0.2em] font-bold uppercase hover:bg-accent hover:border-accent transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                  >
-                    <ShoppingBag size={10} /> Move to Cart
-                  </button>
-                </div>
-              </div>
-
-              {/* Size Selector Overlay */}
-              <AnimatePresence>
-                {activeSelectSizeId === product.id && (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 15 }}
-                    className="absolute inset-x-0 bottom-0 bg-black/95 backdrop-blur-md border-t border-neutral-800 p-6 flex flex-col justify-end z-20 space-y-4"
-                  >
-                    <div className="flex justify-between items-center">
-                      <p className="text-[9px] tracking-[0.2em] font-bold uppercase text-neutral-400">Select Size</p>
-                      <button 
-                        onClick={() => setActiveSelectSizeId(null)}
-                        className="text-neutral-500 hover:text-white transition-colors cursor-pointer"
-                      >
-                        <X size={14} />
+        {wishlist.length === 0 ? (
+          <div className="px-2 flex flex-wrap gap-2">
+            <Link to="/collection" className="inline-flex items-center gap-2 bg-ink text-[#fff] rounded-full px-6 py-3.5 text-sm font-medium">Shop the collection <ArrowRight size={15} /></Link>
+            <Link to="/pick-your-three" className="inline-flex items-center gap-2 border border-ink/15 bg-[#fff] rounded-full px-6 py-3.5 text-sm font-medium">Pick your three</Link>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+            <AnimatePresence mode="popLayout">
+              {wishlist.map(product => {
+                const to = product.type === 'grouped' || hasCat(product, 'combos') ? `/combos?id=${product.id}` : `/product/${product.id}`;
+                const sizes = product.availableSizes?.length ? product.availableSizes : FALLBACK_SIZES;
+                const canAdd = product.type !== 'grouped' && !hasCat(product, 'combos') && product.status !== 'Coming Soon';
+                const open = picking === product.id;
+                const img = product.images?.[0] ? small(studio(product.images[0])) : '';
+                return (
+                  <motion.div key={product.id} layout initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.96 }} transition={{ duration: 0.25 }}
+                    className="bg-[#fff] rounded-2xl p-2 md:p-3 flex flex-col min-w-0">
+                    <div className="relative">
+                      <Link to={to} className="block aspect-[3/4] rounded-xl overflow-hidden bg-paper">
+                        {img && <img src={img} alt={product.name} loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover hover:scale-[1.03] transition-transform duration-700" />}
+                      </Link>
+                      <button onClick={() => toggleWishlist(product)} aria-label={`Remove ${product.name} from wishlist`}
+                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-[#fff]/90 backdrop-blur grid place-items-center hover:bg-ink hover:text-[#fff] transition-colors">
+                        <X size={15} />
                       </button>
                     </div>
-                    <div className="flex flex-wrap gap-2 justify-center py-2">
-                      {['S', 'M', 'L', 'XL', '2XL'].map(size => (
-                        <button
-                          key={size}
-                          onClick={() => {
-                            addToCart(product, size);
-                            toggleWishlist(product);
-                            setActiveSelectSizeId(null);
-                          }}
-                          className="w-10 h-10 border border-neutral-800 hover:border-accent hover:text-accent font-mono text-xs uppercase transition-all flex items-center justify-center cursor-pointer rounded-sm"
-                        >
-                          {size}
+
+                    <div className="px-1 pt-3 flex-1">
+                      <Link to={to} className="block text-sm md:text-[15px] font-medium leading-snug truncate hover:underline">{product.name}</Link>
+                      <p className="text-sm font-semibold mt-1">₹{product.price.toLocaleString('en-IN')}</p>
+                    </div>
+
+                    <div className="px-1 pt-3">
+                      {!canAdd ? (
+                        <Link to={to} className="w-full inline-flex items-center justify-center border border-ink/15 rounded-full py-2.5 text-sm font-medium hover:border-ink">View</Link>
+                      ) : open ? (
+                        <div>
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs text-neutral-500">Choose a size</span>
+                            <button onClick={() => setPicking(null)} aria-label="Close sizes" className="text-neutral-400 hover:text-ink"><X size={14} /></button>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {sizes.map(sz => (
+                              <button key={sz} onClick={() => moveToBag(product, sz)}
+                                className="min-w-9 h-9 px-2 rounded-lg border border-[#e3e0d8] text-[13px] font-medium hover:bg-ink hover:text-[#fff] hover:border-ink transition-colors">
+                                {sz}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <button onClick={() => setPicking(product.id)} className="w-full bg-ink text-[#fff] rounded-full py-2.5 text-sm font-medium hover:bg-neutral-800 transition-colors">
+                          Move to bag
                         </button>
-                      ))}
+                      )}
                     </div>
                   </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+                );
+              })}
+            </AnimatePresence>
+          </div>
+        )}
       </div>
     </div>
   );
