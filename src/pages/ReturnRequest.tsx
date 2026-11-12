@@ -343,7 +343,7 @@ const ReturnRequest: React.FC = () => {
           {/* A word from us */}
           <section className="rounded-2xl p-5 md:p-7 bg-[#e9e6df]">
             <p className="font-semibold">A note from us</p>
-            <div className="text-[15px] text-neutral-700 leading-relaxed space-y-2 mt-2">
+            <div className="text-[15px] text-ink/80 leading-relaxed space-y-2 mt-2">
               <p>Every CHILS & CO. tee is designed, tested and packed with a lot of care, from fabric and colour to wash checks.</p>
               <p>If it’s about size, we completely understand and will take care of it. For anything else, we’d kindly ask you to think about the effort behind the piece before going ahead. It means a lot to a growing brand. Thank you 🤍</p>
             </div>

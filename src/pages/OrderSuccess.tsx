@@ -136,7 +136,7 @@ const OrderSuccess: React.FC = () => {
   }[state];
 
   const Icon = state === 'paid' ? Check : state === 'pending' ? Clock : X;
-  const iconTone = state === 'paid' ? 'bg-ink text-[#fff]' : state === 'pending' ? 'bg-amber-100 text-amber-900' : 'bg-neutral-200 text-neutral-700';
+  const iconTone = state === 'paid' ? 'bg-ink text-[#fff]' : state === 'pending' ? 'bg-amber-100 text-amber-900' : 'bg-[#e6e4df] text-ink';
 
   return (
     <div className="bg-[#f3f2ee] text-ink pt-24 md:pt-32 pb-20 min-h-screen">

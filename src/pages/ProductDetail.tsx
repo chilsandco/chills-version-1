@@ -5,7 +5,7 @@ import { useCart } from '../CartContext';
 import { useWishlist } from '../WishlistContext';
 import ShareSignal from '../components/ShareSignal';
 import { motion, AnimatePresence, useSpring } from 'motion/react';
-import { BookOpen, Check, CreditCard, Droplets, Heart, Ruler, Shirt, Sparkles, X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Star, MessageSquare, AlertCircle, RotateCcw, ExternalLink } from 'lucide-react';
+import { BookOpen, Check, CreditCard, Droplets, Heart, Ruler, Shirt, Sparkles, X, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, Star, AlertCircle, RotateCcw, ExternalLink } from 'lucide-react';
 import { useGesture } from '@use-gesture/react';
 import { Link } from 'react-router-dom';
 import SizeGuide from '../components/SizeGuide';
@@ -676,7 +676,7 @@ const ProductDetail: React.FC = () => {
     }
   );
 
-  if (loading || !product) return <div className="h-screen flex items-center justify-center font-display tracking-widest text-neutral-500 uppercase text-xs">Loading…</div>;
+  if (loading || !product) return <div className="h-screen bg-[#f3f2ee] grid place-items-center"><div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin" /></div>;
 
   const productStory = product.shortDescription || product.concept || product.description;
   const productDetails = product.description || product.shortDescription || "";
@@ -1088,143 +1088,87 @@ const ProductDetail: React.FC = () => {
             <p className="text-sm text-stone">Bought this one? Tell others how it fits.</p>
             <div className="flex items-center gap-5">
               <button onClick={() => setShowReviewModal(true)} className="text-sm border-b border-ink pb-0.5 cursor-pointer">Write a review</button>
-              <div className="w-[170px]"><ShareSignal productName={product.name} productUrl={window.location.href} productImage={product.images[0]} /></div>
+              <div className="w-[170px] relative"><ShareSignal productName={product.name} productUrl={window.location.href} productImage={product.images[0]} /></div>
             </div>
           </div>
         ) : (
         <>
-        <h2 className="text-2xl md:text-4xl font-semibold mb-8 md:mb-10">Reviews</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          {/* Rating Breakdown & Stats */}
-          <div className="lg:col-span-4 space-y-6">
-            <div className="border border-neutral-900 bg-neutral-950/40 p-6 rounded-[2px] relative overflow-hidden">
-              <div className="absolute top-0 left-0 w-2 h-[1px] bg-accent/40" />
-              <div className="absolute top-0 left-0 w-[1px] h-2 bg-accent/40" />
-              
-              <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-5xl font-display font-bold tracking-tighter text-white">
-                  {averageRating.toFixed(1)}
-                </span>
-                <span className="text-sm font-mono text-neutral-500">/ 5.0</span>
+        <h2 className="text-2xl md:text-4xl font-semibold mb-6 md:mb-8">Reviews</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-2">
+          {/* Rating summary */}
+          <div className="lg:col-span-4">
+            <div className="bg-[#fff] rounded-2xl p-5 md:p-7">
+              <div className="flex items-baseline gap-2">
+                <span className="text-5xl font-semibold tracking-[-0.03em]">{averageRating.toFixed(1)}</span>
+                <span className="text-sm text-neutral-500">out of 5</span>
               </div>
-
-              <div className="flex items-center gap-0.5 text-accent mb-4">
+              <div className="flex items-center gap-0.5 mt-2">
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    size={18}
-                    className={
-                      star <= Math.round(averageRating)
-                        ? "fill-accent stroke-accent"
-                        : "text-neutral-900 stroke-neutral-800"
-                    }
-                  />
+                  <Star key={star} size={18} className={star <= Math.round(averageRating) ? 'fill-ink stroke-ink' : 'stroke-neutral-300'} />
                 ))}
               </div>
-
-              <p className="text-[10px] font-mono tracking-widest text-neutral-500 uppercase mb-6">
-                Based on {totalReviews} verified review{totalReviews !== 1 ? 's' : ''}
-              </p>
-
-              {/* Star Breakdown Bars */}
-              <div className="space-y-2 mb-6">
+              <p className="text-sm text-neutral-500 mt-2 mb-5">From {totalReviews} verified {totalReviews === 1 ? 'buyer' : 'buyers'}</p>
+              <div className="space-y-1.5 mb-6">
                 {[5, 4, 3, 2, 1].map((stars) => {
                   const count = reviews.filter(r => r.rating === stars).length;
                   const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
                   return (
-                    <div key={stars} className="flex items-center gap-3 text-[10px] font-mono">
-                      <span className="w-12 text-neutral-500">{stars} star</span>
-                      <div className="flex-1 h-1 bg-neutral-900 overflow-hidden rounded-[1px]">
-                        <div 
-                          className="h-full bg-accent transition-all duration-500" 
-                          style={{ width: `${percentage}%` }}
-                        />
+                    <div key={stars} className="flex items-center gap-3 text-xs text-neutral-500">
+                      <span className="w-9">{stars} star</span>
+                      <div className="flex-1 h-1.5 bg-[#eeece6] rounded-full overflow-hidden">
+                        <div className="h-full bg-ink rounded-full transition-all duration-500" style={{ width: `${percentage}%` }} />
                       </div>
-                      <span className="w-6 text-right text-neutral-400">{count}</span>
+                      <span className="w-5 text-right">{count}</span>
                     </div>
                   );
                 })}
               </div>
-
-              <button
-                onClick={() => setShowReviewModal(true)}
-                className="w-full border border-accent/30 hover:border-accent bg-accent/5 hover:bg-accent/10 py-4 text-[11px] tracking-[0.25em] font-bold uppercase text-accent hover:text-white transition-all duration-300 rounded-[1px] cursor-pointer"
-              >
+              <button onClick={() => setShowReviewModal(true)} className="w-full bg-ink text-[#fff] rounded-full py-3.5 text-sm font-medium hover:bg-neutral-800 transition-colors cursor-pointer">
                 Write a review
               </button>
             </div>
           </div>
 
-          {/* Reviews List */}
+          {/* Reviews list */}
           <div className="lg:col-span-8">
-            <div className="border border-neutral-900 bg-neutral-950/20 p-6 rounded-[2px] relative min-h-[300px]">
-              <div className="absolute top-0 right-0 w-2 h-[1px] bg-neutral-800" />
-              <div className="absolute top-0 right-0 w-[1px] h-2 bg-neutral-800" />
-
+            <div className="bg-[#fff] rounded-2xl p-5 md:p-7 relative min-h-[240px]">
               {reviewsLoading ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-[10px] font-mono tracking-[0.3em] text-neutral-500 uppercase">
-                  <div className="w-6 h-6 border border-accent border-t-transparent rounded-full animate-spin mb-4" />
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-sm text-neutral-500">
+                  <div className="w-6 h-6 border-2 border-ink border-t-transparent rounded-full animate-spin mb-3" />
                   Loading reviews…
                 </div>
-              ) : reviews.length === 0 ? (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-[10px] font-mono tracking-[0.2em] text-neutral-600 uppercase text-center p-6">
-                  <MessageSquare size={20} className="text-neutral-800 mb-3" />
-                  NO DEPLOYED SIGNALS FOUND FOR THIS CO-CREATION.
-                </div>
               ) : (
-                <div className="divide-y divide-neutral-900">
+                <div className="divide-y divide-[#eeece6]">
                   {reviews.map((rev) => (
-                    <div key={rev.id} className="py-6 first:pt-0 last:pb-0">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-                        <div className="flex items-center gap-3">
-                          <span className="text-[11px] font-bold tracking-[0.2em] uppercase text-white font-mono">
-                            {rev.reviewer}
-                          </span>
-                          <span className="text-[8px] font-mono tracking-widest text-accent bg-accent/5 px-2 py-0.5 border border-accent/20 rounded-[1px] uppercase">
-                            Verified
-                          </span>
+                    <div key={rev.id} className="py-5 first:pt-0 last:pb-0">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{rev.reviewer}</span>
+                          <span className="text-[11px] bg-[#e8efe6] text-[#2f5130] rounded-full px-2 py-0.5">Verified buyer</span>
                         </div>
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-0.5 text-accent">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-0.5">
                             {[1, 2, 3, 4, 5].map((star) => (
-                              <Star
-                                key={star}
-                                size={10}
-                                className={
-                                  star <= rev.rating
-                                    ? "fill-accent stroke-accent"
-                                    : "text-neutral-950 stroke-neutral-900"
-                                }
-                              />
+                              <Star key={star} size={12} className={star <= rev.rating ? 'fill-ink stroke-ink' : 'stroke-neutral-300'} />
                             ))}
                           </div>
-                          <span className="text-[9px] font-mono text-neutral-500">
-                            {new Date(rev.date_created).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: '2-digit',
-                              day: '2-digit'
-                            }).replace(/\//g, '.')}
+                          <span className="text-xs text-neutral-500">
+                            {new Date(rev.date_created).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
                         </div>
                       </div>
-                      <p className="text-sm leading-relaxed text-neutral-400 font-light tracking-wide whitespace-pre-line pl-1 border-l border-neutral-900">
-                        {rev.review}
-                      </p>
+                      <p className="text-[15px] leading-relaxed text-ink/80 whitespace-pre-line">{rev.review}</p>
                       {rev.images && rev.images.length > 0 && (
-                        <div className="flex gap-3 mt-3 mb-1 pl-1">
+                        <div className="flex gap-2 mt-3">
                           {rev.images.map((imgUrl, imgIdx) => (
-                            <div 
-                              key={imgIdx} 
-                              className="w-20 h-20 md:w-24 md:h-24 border border-white/5 bg-neutral-950 overflow-hidden cursor-zoom-in rounded-[1px] hover:border-accent/30 transition-colors"
-                              onClick={() => {
-                                setSelectedImage(imgUrl);
-                                scale.set(1);
-                                positionX.set(0);
-                                positionY.set(0);
-                              }}
+                            <button
+                              key={imgIdx}
+                              type="button"
+                              className="w-20 h-20 md:w-24 md:h-24 rounded-xl overflow-hidden bg-paper cursor-zoom-in"
+                              onClick={() => { setSelectedImage(imgUrl); scale.set(1); positionX.set(0); positionY.set(0); }}
                             >
-                              <img src={imgUrl} alt="Customer Review attachment" className="w-full h-full object-cover" />
-                            </div>
+                              <img src={imgUrl} alt="Photo from the review" className="w-full h-full object-cover" />
+                            </button>
                           ))}
                         </div>
                       )}
@@ -1264,170 +1208,94 @@ const ProductDetail: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[120] flex items-center justify-center p-6 bg-black/95 backdrop-blur-xl animate-fade-in"
+            className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center sm:p-6 bg-ink/50 backdrop-blur-sm"
             onClick={() => setShowReviewModal(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="bg-neutral-950 border border-neutral-900 p-8 md:p-10 max-w-lg w-full relative"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 30 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="bg-[#fff] text-ink rounded-t-2xl sm:rounded-2xl p-5 md:p-7 max-w-lg w-full relative max-h-[92vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
+              data-lenis-prevent
             >
-              <button 
-                onClick={() => setShowReviewModal(false)}
-                className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors cursor-pointer"
-              >
-                <X size={20} />
+              <button onClick={() => setShowReviewModal(false)} aria-label="Close" className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#f3f2ee] grid place-items-center hover:bg-ink hover:text-[#fff] transition-colors cursor-pointer">
+                <X size={16} />
               </button>
 
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
-                <h2 className="text-[11px] tracking-[0.4em] font-bold uppercase text-accent font-mono">
-                  Write a review
-                </h2>
-              </div>
+              <p className="eyebrow text-neutral-500 mb-2">{product.name}</p>
+              <h2 className="text-2xl font-semibold tracking-[-0.02em] mb-5">Write a review</h2>
 
-              <form onSubmit={handleSubmitReview} className="space-y-5">
+              <form onSubmit={handleSubmitReview} className="space-y-4">
                 {submitError && (
-                  <div className="border border-red-500/20 bg-red-500/5 p-4 flex gap-3 text-red-400 text-xs items-start rounded-[1px]">
+                  <div className="rounded-xl bg-red-50 text-red-800 px-4 py-3 text-sm flex gap-2.5 items-start">
                     <AlertCircle size={16} className="shrink-0 mt-0.5" />
-                    <p className="leading-relaxed font-mono">{submitError}</p>
+                    <p>{submitError}</p>
                   </div>
                 )}
 
                 {submitSuccess ? (
-                  <div className="border border-accent/20 bg-accent/5 p-8 text-center space-y-3 rounded-[1px]">
-                    <div className="w-10 h-10 border border-accent rounded-full flex items-center justify-center mx-auto text-accent mb-2 font-bold animate-pulse">
-                      <Check size={20} />
-                    </div>
-                    <h3 className="text-sm font-bold tracking-[0.2em] uppercase text-white font-mono">
-                      REVIEW SUBMITTED SUCCESSFULLY
-                    </h3>
-                    <p className="text-[11px] text-neutral-400 leading-relaxed font-light">
-                      Your review has been recorded and embedded in the database. Thank you for your feedback!
-                    </p>
+                  <div className="text-center py-6">
+                    <div className="w-12 h-12 rounded-full bg-ink text-[#fff] grid place-items-center mx-auto mb-4"><Check size={22} /></div>
+                    <p className="text-lg font-semibold">Thank you for your review</p>
+                    <p className="text-[15px] text-neutral-600 mt-1">It helps others pick the right tee and size.</p>
                   </div>
                 ) : (
                   <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {/* Name */}
-                      <div>
-                        <label className="block text-[9px] font-mono tracking-[0.2em] text-neutral-500 uppercase mb-2 font-bold">
-                          Your Name / Pseudonym (Client Signature)
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          disabled={!!user}
-                          value={reviewerName}
-                          onChange={(e) => setReviewerName(e.target.value)}
-                          placeholder="e.g. UDAY B."
-                          className="w-full bg-black border border-neutral-800 focus:border-accent px-4 py-3 text-xs text-white focus:outline-none transition-colors rounded-[1px] disabled:opacity-50 disabled:cursor-not-allowed font-mono"
-                        />
-                      </div>
-
-                      {/* Email */}
-                      <div>
-                        <label className="block text-[9px] font-mono tracking-[0.2em] text-neutral-500 uppercase mb-2 font-bold">
-                          Your Email (Secure & Unpublished)
-                        </label>
-                        <input
-                          type="email"
-                          required
-                          disabled={!!user}
-                          value={reviewerEmail}
-                          onChange={(e) => setReviewerEmail(e.target.value)}
-                          placeholder="e.g. client@chilsandco.com"
-                          className="w-full bg-black border border-neutral-800 focus:border-accent px-4 py-3 text-xs text-white focus:outline-none transition-colors rounded-[1px] disabled:opacity-50 disabled:cursor-not-allowed font-mono"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Star Rating Select */}
                     <div>
-                      <label className="block text-[9px] font-mono tracking-[0.2em] text-neutral-500 uppercase mb-2 font-bold">
-                        Product Rating (1-5 Stars)
-                      </label>
+                      <span className="block text-sm text-neutral-600 mb-1.5">Your rating</span>
                       <div className="flex items-center gap-1">
                         {[1, 2, 3, 4, 5].map((star) => (
-                          <button
-                            key={star}
-                            type="button"
-                            onClick={() => setRating(star)}
-                            className="p-1 text-neutral-800 hover:text-accent focus:outline-none transition-colors cursor-pointer"
-                          >
-                            <Star
-                              size={22}
-                              className={
-                                star <= rating
-                                  ? "fill-accent stroke-accent"
-                                  : "stroke-neutral-800"
-                              }
-                            />
+                          <button key={star} type="button" onClick={() => setRating(star)} aria-label={`${star} star${star > 1 ? 's' : ''}`} className="p-0.5 cursor-pointer">
+                            <Star size={28} className={star <= rating ? 'fill-ink stroke-ink' : 'stroke-neutral-300 hover:stroke-ink'} />
                           </button>
                         ))}
                       </div>
                     </div>
 
-                    {/* Image Upload Input */}
-                    <div>
-                      <label className="block text-[9px] font-mono tracking-[0.2em] text-neutral-500 uppercase mb-2 font-bold">
-                        Attach Product Photos (Max 3, up to 5MB each)
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <label className="block">
+                        <span className="block text-sm text-neutral-600 mb-1.5">Name shown on the review</span>
+                        <input type="text" required disabled={!!user} value={reviewerName} onChange={(e) => setReviewerName(e.target.value)} placeholder="e.g. Uday B."
+                          className="w-full bg-[#fff] border border-[#e3e0d8] rounded-xl px-4 py-3 text-[15px] outline-none focus:border-ink disabled:bg-[#f7f6f3] disabled:text-neutral-500" />
                       </label>
-                      
-                      <div className="flex flex-wrap gap-3 mb-2">
+                      <label className="block">
+                        <span className="block text-sm text-neutral-600 mb-1.5">Email (not shown)</span>
+                        <input type="email" required disabled={!!user} value={reviewerEmail} onChange={(e) => setReviewerEmail(e.target.value)} placeholder="you@example.com"
+                          className="w-full bg-[#fff] border border-[#e3e0d8] rounded-xl px-4 py-3 text-[15px] outline-none focus:border-ink disabled:bg-[#f7f6f3] disabled:text-neutral-500" />
+                      </label>
+                    </div>
+
+                    <label className="block">
+                      <span className="block text-sm text-neutral-600 mb-1.5">Your review</span>
+                      <textarea required rows={4} value={reviewText} onChange={(e) => setReviewText(e.target.value)}
+                        placeholder="How’s the fit, the fabric, and how do you wear it?"
+                        className="w-full bg-[#fbfaf8] border border-[#e3e0d8] rounded-xl px-4 py-3 text-[15px] outline-none focus:border-ink resize-none leading-relaxed" />
+                    </label>
+
+                    <div>
+                      <span className="block text-sm text-neutral-600 mb-1.5">Photos <span className="text-neutral-400">(optional, up to 3)</span></span>
+                      <div className="flex flex-wrap gap-2">
                         {selectedImages.map((imgBase64, idx) => (
-                          <div key={idx} className="relative w-16 h-16 border border-neutral-800 bg-neutral-900 overflow-hidden group rounded-[1px]">
-                            <img src={imgBase64} alt={`Preview ${idx}`} className="w-full h-full object-cover" />
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveImage(idx)}
-                              className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 flex items-center justify-center text-red-400 transition-opacity duration-200 cursor-pointer"
-                            >
-                              <X size={14} />
-                            </button>
+                          <div key={idx} className="relative w-16 h-16 rounded-xl overflow-hidden bg-paper">
+                            <img src={imgBase64} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                            <button type="button" onClick={() => handleRemoveImage(idx)} aria-label="Remove photo"
+                              className="absolute top-1 right-1 w-5 h-5 rounded-full bg-ink/80 text-[#fff] grid place-items-center cursor-pointer"><X size={11} /></button>
                           </div>
                         ))}
-                        
                         {selectedImages.length < 3 && (
-                          <label className="w-16 h-16 border border-dashed border-neutral-800 hover:border-accent/40 flex flex-col items-center justify-center text-neutral-500 hover:text-accent transition-colors cursor-pointer rounded-[1px]">
-                            <span className="text-lg font-light">+</span>
-                            <span className="text-[7px] tracking-tighter uppercase font-mono">Upload</span>
-                            <input
-                              type="file"
-                              multiple
-                              accept="image/*"
-                              className="hidden"
-                              onChange={handleImageChange}
-                            />
+                          <label className="w-16 h-16 rounded-xl border-2 border-dashed border-[#d8d4cb] hover:border-ink/50 grid place-items-center text-neutral-500 text-xl cursor-pointer">
+                            +
+                            <input type="file" multiple accept="image/*" className="hidden" onChange={handleImageChange} />
                           </label>
                         )}
                       </div>
                     </div>
 
-                    {/* Review text */}
-                    <div>
-                      <label className="block text-[9px] font-mono tracking-[0.2em] text-neutral-500 uppercase mb-2 font-bold">
-                        Your Review / Feedback (Transmission Details)
-                      </label>
-                      <textarea
-                        required
-                        rows={4}
-                        value={reviewText}
-                        onChange={(e) => setReviewText(e.target.value)}
-                        placeholder="Tell others about the fit, the fabric and how you wear itment aesthetics..."
-                        className="w-full bg-black border border-neutral-800 focus:border-accent px-4 py-3 text-xs text-white focus:outline-none transition-colors rounded-[1px] resize-none font-light leading-relaxed tracking-wide"
-                      />
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={submitLoading}
-                      className="w-full bg-white text-black hover:bg-neutral-200 py-4 text-[11px] tracking-[0.3em] font-bold uppercase transition-all duration-300 disabled:opacity-50 cursor-pointer rounded-[1px]"
-                    >
-                      {submitLoading ? "Sending…" : "Submit review"}
+                    <button type="submit" disabled={submitLoading}
+                      className="w-full bg-ink text-[#fff] rounded-full py-3.5 text-sm font-medium hover:bg-neutral-800 transition-colors disabled:opacity-50 cursor-pointer">
+                      {submitLoading ? 'Sending…' : 'Post review'}
                     </button>
                   </>
                 )}
@@ -1449,57 +1317,36 @@ const ProductDetail: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-black/95 backdrop-blur-xl"
+            className="fixed inset-0 z-[110] flex items-end sm:items-center justify-center sm:p-6 bg-ink/50 backdrop-blur-sm"
             onClick={() => setIsDescOpen(false)}
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="bg-neutral-950 border border-neutral-900 p-8 md:p-12 max-w-2xl w-full max-h-[80vh] overflow-y-auto relative scrollbar-thin scrollbar-track-transparent scrollbar-thumb-neutral-800"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 30 }}
+              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+              className="bg-[#fff] text-ink rounded-t-2xl sm:rounded-2xl p-6 md:p-10 max-w-2xl w-full max-h-[85vh] overflow-y-auto relative"
               onClick={(e) => e.stopPropagation()}
               data-lenis-prevent
             >
-              <button 
-                onClick={() => setIsDescOpen(false)}
-                className="absolute top-6 right-6 text-neutral-500 hover:text-white transition-colors"
-              >
-                <X size={20} />
+              <button onClick={() => setIsDescOpen(false)} aria-label="Close" className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#f3f2ee] grid place-items-center hover:bg-ink hover:text-[#fff] transition-colors">
+                <X size={16} />
               </button>
-              
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-1.5 h-1.5 bg-accent rounded-full animate-pulse" />
-                <h2 className="text-[11px] tracking-[0.5em] font-bold uppercase text-accent">Story And Product Intelligence</h2>
-              </div>
-              
-              <div className="mb-10 border-l border-accent/30 pl-5">
-                <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-600">Story Behind The Design</p>
-                <div className="space-y-4">
+
+              <p className="eyebrow text-neutral-500 mb-2">The story</p>
+              <h2 className="text-2xl md:text-3xl font-semibold tracking-[-0.02em] mb-5 pr-10">{product.name}</h2>
+
+              {storyParagraphs.length > 0 && (
+                <div className="space-y-4 mb-8">
                   {storyParagraphs.map((paragraph, index) => (
-                    <p key={index} className="text-white text-lg md:text-xl font-light leading-relaxed tracking-tight">
-                      {paragraph}
-                    </p>
+                    <p key={index} className="text-lg md:text-xl leading-relaxed text-ink/85">{paragraph}</p>
                   ))}
                 </div>
-              </div>
+              )}
 
-              <div className="mb-12">
-                <p className="mb-4 text-[10px] font-bold uppercase tracking-[0.3em] text-neutral-600">Product Details</p>
-                <div className="space-y-4 text-neutral-300 text-sm leading-relaxed tracking-wide whitespace-pre-line">
-                  {productDetails}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-8 pt-8 border-t border-neutral-900 text-[10px] tracking-[0.2em] font-bold uppercase text-neutral-500">
-                <div>
-                  <p className="text-neutral-700 mb-1">Status</p>
-                  <p className="text-accent">Chils & Co.</p>
-                </div>
-                <div>
-                  <p className="text-neutral-700 mb-1">Index</p>
-                  <p className="text-white">RECORD-{product.id.padStart(3, '0')}</p>
-                </div>
+              <div className="pt-6 border-t border-[#eeece6]">
+                <p className="text-sm font-medium mb-3">Product details</p>
+                <div className="text-[15px] text-neutral-600 leading-relaxed whitespace-pre-line">{productDetails}</div>
               </div>
             </motion.div>
           </motion.div>
@@ -1545,8 +1392,8 @@ const ProductDetail: React.FC = () => {
             </div>
 
             {/* Instruction Overlay on mobile */}
-            <div className="absolute top-8 left-8 hidden md:block text-[9px] tracking-[0.3em] text-white/30 uppercase pointer-events-none">
-              Pinch to Zoom • Drag to Explore • Dbl Click to Reset
+            <div className="absolute top-8 left-8 hidden md:block text-xs text-white/50 pointer-events-none">
+              Pinch to zoom · drag to look around · double-click to reset
             </div>
 
             {/* Main Image Container */}
@@ -1569,8 +1416,8 @@ const ProductDetail: React.FC = () => {
             </div>
 
             {/* Bottom Info */}
-            <div className="absolute bottom-12 text-center text-[10px] tracking-[0.4em] text-white/40 uppercase pointer-events-none">
-              {product.name} — Surface Inspection
+            <div className="absolute bottom-12 text-center text-sm text-white/60 pointer-events-none">
+              {product.name}
             </div>
           </motion.div>
         )}

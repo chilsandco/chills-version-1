@@ -28,7 +28,7 @@ const ShareSignal: React.FC<ShareSignalProps> = ({ productName, productUrl, prod
   const copyToClipboard = async (text: string, type: 'link' | 'caption') => {
     try {
       await navigator.clipboard.writeText(text);
-      setCopyFeedback(type === 'link' ? 'Link Copied ✓' : 'Caption Copied ✓');
+      setCopyFeedback(type === 'link' ? 'Link copied' : 'Caption copied');
       setTimeout(() => setCopyFeedback(null), 3000);
     } catch (err) {
       console.error('Failed to copy text: ', err);
@@ -69,7 +69,7 @@ const ShareSignal: React.FC<ShareSignalProps> = ({ productName, productUrl, prod
       {!isOpen ? (
         <button
           onClick={() => setIsOpen(true)}
-          className="w-full flex items-center justify-center gap-3 py-4 text-[11px] tracking-[0.3em] font-bold uppercase text-neutral-400 border border-neutral-900 hover:border-neutral-700 hover:text-white transition-all group"
+          className="w-full flex items-center justify-center gap-2 py-2.5 text-sm text-ink border border-ink/15 rounded-full hover:border-ink transition-colors group cursor-pointer"
         >
           <Share2 size={14} className="group-hover:scale-110 transition-transform" />
           Share
@@ -78,13 +78,13 @@ const ShareSignal: React.FC<ShareSignalProps> = ({ productName, productUrl, prod
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="border border-neutral-900 bg-neutral-950/50 p-6 space-y-6"
+          className="absolute right-0 bottom-full mb-2 z-30 w-[300px] max-w-[calc(100vw-2rem)] bg-[#fff] text-ink rounded-2xl p-5 space-y-5 shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
         >
           <div className="flex justify-between items-center">
-            <h4 className="text-[10px] tracking-[0.4em] font-bold uppercase text-accent">Share</h4>
+            <h4 className="text-sm font-medium">Share</h4>
             <button 
               onClick={() => setIsOpen(false)}
-              className="text-[9px] tracking-[0.2em] uppercase text-neutral-600 hover:text-white transition-colors"
+              className="text-sm text-neutral-500 hover:text-ink transition-colors"
             >
               Close
             </button>
@@ -98,7 +98,7 @@ const ShareSignal: React.FC<ShareSignalProps> = ({ productName, productUrl, prod
                 href={platform.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-neutral-500 hover:text-white hover:scale-110 transition-all"
+                className="text-neutral-500 hover:text-ink hover:scale-110 transition-all"
                 title={`Share on ${platform.name}`}
               >
                 {platform.icon}
@@ -111,22 +111,22 @@ const ShareSignal: React.FC<ShareSignalProps> = ({ productName, productUrl, prod
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => copyToClipboard(fullMessage, 'link')}
-                className="flex items-center justify-center gap-2 py-3 border border-neutral-800 text-[9px] tracking-[0.2em] uppercase font-bold hover:bg-white hover:text-black transition-all"
+                className="flex items-center justify-center gap-2 py-2.5 border border-[#e3e0d8] rounded-full text-[13px] font-medium hover:bg-ink hover:text-[#fff] hover:border-ink transition-colors"
               >
                 <Copy size={12} />
-                Copy Link
+                Copy link
               </button>
               <button
                 onClick={() => copyToClipboard(caption, 'caption')}
-                className="flex items-center justify-center gap-2 py-3 border border-neutral-800 text-[9px] tracking-[0.2em] uppercase font-bold hover:bg-white hover:text-black transition-all"
+                className="flex items-center justify-center gap-2 py-2.5 border border-[#e3e0d8] rounded-full text-[13px] font-medium hover:bg-ink hover:text-[#fff] hover:border-ink transition-colors"
               >
                 <div className="w-3 h-3 flex items-center justify-center">#</div>
-                Copy Caption
+                Copy caption
               </button>
             </div>
             
-            <p className="text-[9px] text-neutral-600 text-center uppercase tracking-widest">
-              Paste this on Instagram / Threads / Snapchat
+            <p className="text-xs text-neutral-500 text-center">
+              Paste it on Instagram, Threads or Snapchat
             </p>
           </div>
 
@@ -137,7 +137,7 @@ const ShareSignal: React.FC<ShareSignalProps> = ({ productName, productUrl, prod
                 initial={{ opacity: 0, y: 5 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                className="flex items-center justify-center gap-2 text-accent text-[9px] font-bold uppercase tracking-[0.2em]"
+                className="flex items-center justify-center gap-2 text-[#2f5130] text-xs"
               >
                 <Check size={10} />
                 {copyFeedback}

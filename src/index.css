@@ -207,16 +207,3 @@ nav.fixed, header.fixed { padding-left: env(safe-area-inset-left); padding-right
   .theme-light main input, .theme-light main select, .theme-light main textarea { border-radius: 10px; }
   .theme-light main p.uppercase { text-transform: none; letter-spacing: 0; font-size: 14px; line-height: 1.55; font-family: var(--font-sans); }
 }
-
-/* ── Custom Studio: the original builder, in the current look ─────────────── */
-.studio-plain .font-mono { font-family: var(--font-sans) !important; }
-.studio-plain .uppercase { text-transform: none !important; }
-.studio-plain [class*="tracking-"] { letter-spacing: normal !important; }
-.studio-plain .italic { font-style: normal !important; }
-.studio-plain [class*="text-[7px]"], .studio-plain [class*="text-[8px]"], .studio-plain [class*="text-[9px]"] { font-size: 12px !important; }
-.studio-plain [class*="text-[10px]"] { font-size: 13px !important; }
-.studio-plain .border-b.border-neutral-900 { border-bottom-color: transparent; }
-.studio-plain section .border:not([class*="rounded-full"]), .studio-card { border-radius: 16px; }
-.studio-plain section .border:not([class*="rounded-full"]):not([class*="bg-"]):not(.bg-ink *), .studio-card { background-color: #fff; border-color: transparent; }
-.studio-plain button[class*="tracking-"], .studio-plain a[class*="tracking-"][class*="bg-"] { border-radius: 9999px; }
-.studio-plain input, .studio-plain textarea, .studio-plain select { border-radius: 12px; }
