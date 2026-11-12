@@ -1350,7 +1350,9 @@ async function startServer() {
         const imgMatch = reviewText.match(/__IMAGES__(\[.*?\])/);
         if (imgMatch) {
           try {
-            images = JSON.parse(imgMatch[1]);
+            // only photos whose file still exists (some early ones were lost to old deploys)
+            images = (JSON.parse(imgMatch[1]) as string[]).filter(u => typeof u === 'string' && (!u.startsWith('/uploads/') ||
+              fs.existsSync(path.join(UPLOADS_DIR, path.normalize(u.slice('/uploads/'.length)).replace(/^(\.\.[\/\\])+/, '')))));
             reviewText = reviewText.replace(/__IMAGES__\[.*?\]/, '').trim();
           } catch (e) {
             // Ignore parse errors

@@ -2009,7 +2009,7 @@ async function startServer() {
         const imgMatch = reviewText.match(/__IMAGES__(\[.*?\])/);
         if (imgMatch) {
           try {
-            images = JSON.parse(imgMatch[1]);
+            images = JSON.parse(imgMatch[1]).filter((u) => typeof u === "string" && (!u.startsWith("/uploads/") || fs4.existsSync(path4.join(UPLOADS_DIR, path4.normalize(u.slice("/uploads/".length)).replace(/^(\.\.[\/\\])+/, "")))));
             reviewText = reviewText.replace(/__IMAGES__\[.*?\]/, "").trim();
           } catch (e) {
           }
