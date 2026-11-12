@@ -1,8 +1,8 @@
 // server.ts
 import express from "express";
-import path3 from "path";
+import path4 from "path";
 import https from "https";
-import fs3 from "fs";
+import fs4 from "fs";
 import { fileURLToPath } from "url";
 import cors from "cors";
 import axios3 from "axios";
@@ -834,6 +834,47 @@ function uploadsPathOf(url) {
   }
 }
 
+// storage.ts
+import fs3 from "fs";
+import os2 from "os";
+import path3 from "path";
+var DATA_DIR = process.env.CHILS_DATA_DIR || path3.join(os2.homedir(), "chils-data");
+var UPLOADS_DIR = path3.join(DATA_DIR, "uploads");
+var SAFE_EXT = /^[a-z0-9]{1,5}$/;
+function saveUpload(kind, filename, data) {
+  const ext = path3.extname(filename).slice(1).toLowerCase();
+  const base = path3.basename(filename, path3.extname(filename)).replace(/[^\w.-]/g, "");
+  if (!base || !SAFE_EXT.test(ext)) throw new Error(`Refusing file name ${filename}`);
+  const dir = path3.join(UPLOADS_DIR, kind);
+  fs3.mkdirSync(dir, { recursive: true });
+  fs3.writeFileSync(path3.join(dir, `${base}.${ext}`), data);
+  return `/uploads/${kind}/${base}.${ext}`;
+}
+function dataFile(name) {
+  const target = path3.join(DATA_DIR, name);
+  const legacy = path3.join(process.cwd(), name);
+  try {
+    fs3.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs3.existsSync(target) && fs3.existsSync(legacy)) fs3.copyFileSync(legacy, target);
+  } catch (e) {
+    console.error(`[CHILS DATA] Could not prepare ${name}:`, e.message);
+  }
+  return target;
+}
+function adoptLegacyUploads(appDir) {
+  for (const root of [path3.join(appDir, "public", "uploads"), path3.join(appDir, "dist", "uploads")]) {
+    for (const kind of ["reviews", "custom_designs"]) {
+      const from = path3.join(root, kind);
+      if (!fs3.existsSync(from)) continue;
+      const to = path3.join(UPLOADS_DIR, kind);
+      fs3.mkdirSync(to, { recursive: true });
+      for (const f of fs3.readdirSync(from)) {
+        if (!fs3.existsSync(path3.join(to, f))) fs3.copyFileSync(path3.join(from, f), path3.join(to, f));
+      }
+    }
+  }
+}
+
 // server.ts
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest, CallbackType } from "pg-sdk-node";
 dotenv.config();
@@ -841,7 +882,7 @@ var IS_PROD = process.env.NODE_ENV === "production";
 var JWT_SECRET = process.env.JWT_SECRET || "";
 if (!JWT_SECRET) console.error("[CHILS & CO.] JWT_SECRET is not set: customer logins will fail until it is added to the environment.");
 var __filename = fileURLToPath(import.meta.url);
-var __dirname = path3.dirname(__filename);
+var __dirname = path4.dirname(__filename);
 function getWooCommerce() {
   const k = (process.env.WOOCOMMERCE_KEY || "").trim();
   const s = (process.env.WOOCOMMERCE_SECRET || "").trim();
@@ -1033,7 +1074,7 @@ async function startServer() {
   app.get("/api/ping", (req, res) => {
     res.json({ status: "alive", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
   });
-  const SETTINGS_FILE = path3.join(process.cwd(), "settings.json");
+  const SETTINGS_FILE = dataFile("settings.json");
   const DEFAULT_SETTINGS = {
     mobileLink: "+91 7842 07 0404",
     address: "3rd Floor, Plot No. 38 & 39\nMatrusri Nagar, Miyapur\nHyderabad, Telangana \u2013 500049\nIndia",
@@ -1055,11 +1096,11 @@ async function startServer() {
   };
   app.get("/api/settings", (req, res) => {
     try {
-      if (!fs3.existsSync(SETTINGS_FILE)) {
-        fs3.writeFileSync(SETTINGS_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2));
+      if (!fs4.existsSync(SETTINGS_FILE)) {
+        fs4.writeFileSync(SETTINGS_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2));
         return res.json(DEFAULT_SETTINGS);
       }
-      const nodeContent = fs3.readFileSync(SETTINGS_FILE, "utf-8");
+      const nodeContent = fs4.readFileSync(SETTINGS_FILE, "utf-8");
       const settings = JSON.parse(nodeContent);
       res.json({ ...DEFAULT_SETTINGS, ...settings });
     } catch (error) {
@@ -1074,6 +1115,16 @@ async function startServer() {
   app.use(cors());
   app.set("trust proxy", true);
   app.use(express.json({ limit: "10mb" }));
+  try {
+    adoptLegacyUploads(__dirname);
+  } catch (e) {
+    console.error("[CHILS DATA] Could not adopt old uploads:", e.message);
+  }
+  app.use("/uploads", (req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Content-Security-Policy", "sandbox");
+    next();
+  }, express.static(UPLOADS_DIR, { maxAge: "30d", index: false, fallthrough: false }));
   app.use(express.urlencoded({ limit: "10mb", extended: true }));
   const authenticateToken = (req, res, next) => {
     const authHeader = req.headers["authorization"];
@@ -2012,19 +2063,7 @@ async function startServer() {
               const base64Content = imgBase64.replace(/^data:image\/\w+;base64,/, "");
               const buffer = Buffer.from(base64Content, "base64");
               const filename = `rev-${productId}-${Date.now()}-${index}.${ext}`;
-              const publicUploadDir = path3.resolve(__dirname, "public", "uploads", "reviews");
-              const distUploadDir = path3.resolve(__dirname, "dist", "uploads", "reviews");
-              if (!fs3.existsSync(publicUploadDir)) {
-                fs3.mkdirSync(publicUploadDir, { recursive: true });
-              }
-              fs3.writeFileSync(path3.join(publicUploadDir, filename), buffer);
-              if (fs3.existsSync(path3.resolve(__dirname, "dist"))) {
-                if (!fs3.existsSync(distUploadDir)) {
-                  fs3.mkdirSync(distUploadDir, { recursive: true });
-                }
-                fs3.writeFileSync(path3.join(distUploadDir, filename), buffer);
-              }
-              savedUrls.push(`/uploads/reviews/${filename}`);
+              savedUrls.push(saveUpload("reviews", filename, buffer));
             }
           } catch (err) {
             console.error("Failed to save review image:", err);
@@ -3363,28 +3402,16 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
           const base64Content = parts[1];
           const buffer = Buffer.from(base64Content, "base64");
           const filename = `design-${Date.now()}-${Math.floor(Math.random() * 1e3)}.${ext}`;
-          const publicUploadDir = path3.resolve(__dirname, "public", "uploads", "custom_designs");
-          const distUploadDir = path3.resolve(__dirname, "dist", "uploads", "custom_designs");
-          if (!fs3.existsSync(publicUploadDir)) {
-            fs3.mkdirSync(publicUploadDir, { recursive: true });
-          }
-          fs3.writeFileSync(path3.join(publicUploadDir, filename), buffer);
-          if (fs3.existsSync(path3.resolve(__dirname, "dist"))) {
-            if (!fs3.existsSync(distUploadDir)) {
-              fs3.mkdirSync(distUploadDir, { recursive: true });
-            }
-            fs3.writeFileSync(path3.join(distUploadDir, filename), buffer);
-          }
-          fileUrl = `/uploads/custom_designs/${filename}`;
+          fileUrl = saveUpload("custom_designs", filename, buffer);
         } catch (err) {
           console.error("[CHILS & CO.] Failed to save design file:", err);
         }
       }
-      const QUOTES_FILE = path3.join(process.cwd(), "quotes.json");
+      const QUOTES_FILE = dataFile("quotes.json");
       let quotes = [];
-      if (fs3.existsSync(QUOTES_FILE)) {
+      if (fs4.existsSync(QUOTES_FILE)) {
         try {
-          quotes = JSON.parse(fs3.readFileSync(QUOTES_FILE, "utf-8"));
+          quotes = JSON.parse(fs4.readFileSync(QUOTES_FILE, "utf-8"));
         } catch (e) {
           quotes = [];
         }
@@ -3401,7 +3428,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         timestamp: (/* @__PURE__ */ new Date()).toISOString()
       };
       quotes.push(newQuote);
-      fs3.writeFileSync(QUOTES_FILE, JSON.stringify(quotes, null, 2));
+      fs4.writeFileSync(QUOTES_FILE, JSON.stringify(quotes, null, 2));
       console.log(`[CHILS & CO.] Custom quote request logged for ${email}`);
       res.json({ success: true, message: "Quote request successfully processed", quote: newQuote });
     } catch (error) {
@@ -3784,35 +3811,35 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       res.status(404).json({ message: "Signal not found in system archives." });
     }
   });
-  const PENDING_SWAPS_FILE = path3.join(process.cwd(), "pending_swaps.json");
+  const PENDING_SWAPS_FILE = dataFile("pending_swaps.json");
   const activeRmaSubmissions = /* @__PURE__ */ new Set();
   const savePendingSwap = (txId, payload) => {
     let pending = {};
-    if (fs3.existsSync(PENDING_SWAPS_FILE)) {
+    if (fs4.existsSync(PENDING_SWAPS_FILE)) {
       try {
-        pending = JSON.parse(fs3.readFileSync(PENDING_SWAPS_FILE, "utf8"));
+        pending = JSON.parse(fs4.readFileSync(PENDING_SWAPS_FILE, "utf8"));
       } catch (e) {
         pending = {};
       }
     }
     pending[txId] = payload;
-    fs3.writeFileSync(PENDING_SWAPS_FILE, JSON.stringify(pending, null, 2), "utf8");
+    fs4.writeFileSync(PENDING_SWAPS_FILE, JSON.stringify(pending, null, 2), "utf8");
   };
   const getPendingSwap = (txId) => {
-    if (!fs3.existsSync(PENDING_SWAPS_FILE)) return null;
+    if (!fs4.existsSync(PENDING_SWAPS_FILE)) return null;
     try {
-      const pending = JSON.parse(fs3.readFileSync(PENDING_SWAPS_FILE, "utf8"));
+      const pending = JSON.parse(fs4.readFileSync(PENDING_SWAPS_FILE, "utf8"));
       return pending[txId] || null;
     } catch (e) {
       return null;
     }
   };
   const removePendingSwap = (txId) => {
-    if (!fs3.existsSync(PENDING_SWAPS_FILE)) return;
+    if (!fs4.existsSync(PENDING_SWAPS_FILE)) return;
     try {
-      const pending = JSON.parse(fs3.readFileSync(PENDING_SWAPS_FILE, "utf8"));
+      const pending = JSON.parse(fs4.readFileSync(PENDING_SWAPS_FILE, "utf8"));
       delete pending[txId];
-      fs3.writeFileSync(PENDING_SWAPS_FILE, JSON.stringify(pending, null, 2), "utf8");
+      fs4.writeFileSync(PENDING_SWAPS_FILE, JSON.stringify(pending, null, 2), "utf8");
     } catch (e) {
     }
   };
@@ -4178,9 +4205,9 @@ Reason: ${reason}`;
       if (!isAdmin) {
         return res.status(403).json({ message: "Higher clearance required for core reconfiguration." });
       }
-      const currentSettings = fs3.existsSync(SETTINGS_FILE) ? JSON.parse(fs3.readFileSync(SETTINGS_FILE, "utf-8")) : DEFAULT_SETTINGS;
+      const currentSettings = fs4.existsSync(SETTINGS_FILE) ? JSON.parse(fs4.readFileSync(SETTINGS_FILE, "utf-8")) : DEFAULT_SETTINGS;
       const newSettings = { ...currentSettings, ...req.body };
-      fs3.writeFileSync(SETTINGS_FILE, JSON.stringify(newSettings, null, 2));
+      fs4.writeFileSync(SETTINGS_FILE, JSON.stringify(newSettings, null, 2));
       console.log("[CHILS & CO.] Global settings recalibrated successfully.");
       res.json({ success: true, settings: newSettings });
     } catch (error) {
@@ -4200,7 +4227,7 @@ Reason: ${reason}`;
       if (!productId) {
         return res.status(400).json({ message: "Product ID is required." });
       }
-      const settings = fs3.existsSync(SETTINGS_FILE) ? JSON.parse(fs3.readFileSync(SETTINGS_FILE, "utf-8")) : DEFAULT_SETTINGS;
+      const settings = fs4.existsSync(SETTINGS_FILE) ? JSON.parse(fs4.readFileSync(SETTINGS_FILE, "utf-8")) : DEFAULT_SETTINGS;
       groqKey = settings.groqApiKey || process.env.GROQ_API_KEY;
       if (!groqKey) {
         return res.status(400).json({ message: "GROQ_API_KEY is not configured. Please save your Groq API Key in your Admin panel settings." });
@@ -4298,11 +4325,11 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       if (!products || !enrichedData) {
         return res.status(400).json({ message: "Products and enrichedData are required." });
       }
-      const settings = JSON.parse(await fs3.promises.readFile("settings.json", "utf-8").catch(() => "{}"));
+      const settings = JSON.parse(await fs4.promises.readFile("settings.json", "utf-8").catch(() => "{}"));
       const tempId = Date.now() + "_" + Math.floor(Math.random() * 1e3);
-      const xlsmTempPath = path3.join(process.cwd(), `temp_${tempId}.xlsm`);
-      const templatePath = path3.join(process.cwd(), "amazon_blank_template.xlsm");
-      if (!fs3.existsSync(templatePath)) {
+      const xlsmTempPath = path4.join(process.cwd(), `temp_${tempId}.xlsm`);
+      const templatePath = path4.join(process.cwd(), "amazon_blank_template.xlsm");
+      if (!fs4.existsSync(templatePath)) {
         return res.status(500).json({ message: "Amazon blank template file is missing on the server." });
       }
       const XLSXModule = await import("xlsx");
@@ -4555,8 +4582,8 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       }
       console.log(`[AMAZON EXPORT] Saving macro-enabled workbook natively...`);
       XLSX.writeFile(wb, xlsmTempPath, { bookVBA: true });
-      const buffer = await fs3.promises.readFile(xlsmTempPath);
-      await fs3.promises.unlink(xlsmTempPath).catch(() => {
+      const buffer = await fs4.promises.readFile(xlsmTempPath);
+      await fs4.promises.unlink(xlsmTempPath).catch(() => {
       });
       res.setHeader("Content-Type", "application/vnd.ms-excel.sheet.macroEnabled.12");
       res.setHeader("Content-Disposition", `attachment; filename=Amazon_Bulk_Listing_Feed_${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}.xlsm`);
@@ -4889,8 +4916,8 @@ ${xmlItems}
     app.use(vite.middlewares);
     console.log(`[CHILS & CO.] Development mode: Vite middleware active`);
   } else {
-    const distPath = path3.resolve(__dirname, "dist");
-    if (fs3.existsSync(distPath)) {
+    const distPath = path4.resolve(__dirname, "dist");
+    if (fs4.existsSync(distPath)) {
       console.log(`[CHILS & CO.] Production mode: Serving static files from ${distPath}`);
       app.use(express.static(distPath, {
         index: false,
@@ -4960,12 +4987,12 @@ ${xmlItems}
       };
       const PRIVATE_ROUTE_PREFIXES = ["/checkout", "/onboarding", "/console", "/admin", "/auth", "/wishlist"];
       app.get("*", async (req, res) => {
-        const indexPath = path3.resolve(distPath, "index.html");
+        const indexPath = path4.resolve(distPath, "index.html");
         let cleanPath = req.path || "/";
         if (cleanPath.length > 1 && cleanPath.endsWith("/")) {
           cleanPath = cleanPath.slice(0, -1);
         }
-        let html = fs3.readFileSync(indexPath, "utf-8");
+        let html = fs4.readFileSync(indexPath, "utf-8");
         const escAttr = (s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         const canonicalUrl = `https://chilsandco.com${cleanPath === "/" ? "" : cleanPath}`;
         const isPrivate = PRIVATE_ROUTE_PREFIXES.some((prefix) => cleanPath.startsWith(prefix));

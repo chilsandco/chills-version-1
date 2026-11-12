@@ -14,6 +14,7 @@ import { couponProblem, findVariation, mapWooVariation, trustedPrice } from "./o
 import { notifyNewOrder, notifyShipping, startSlackBot } from "./slackBot";
 import { browserContext, orderMetaFrom, sendAddToCart, sendPurchase } from "./metaCapi";
 import { mediaHandler, uploadsPathOf } from "./mediaCache";
+import { UPLOADS_DIR, saveUpload, dataFile, adoptLegacyUploads } from "./storage";
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest, CallbackType } from 'pg-sdk-node';
 import { NextFunction } from 'express';
 import { GoogleGenAI } from "@google/genai";
@@ -277,7 +278,7 @@ async function startServer() {
   });
 
   // Settings API support for global address and mobile link
-  const SETTINGS_FILE = path.join(process.cwd(), "settings.json");
+  const SETTINGS_FILE = dataFile("settings.json");
   const DEFAULT_SETTINGS = {
     mobileLink: "+91 7842 07 0404",
     address: "3rd Floor, Plot No. 38 & 39\nMatrusri Nagar, Miyapur\nHyderabad, Telangana – 500049\nIndia",
@@ -323,6 +324,14 @@ async function startServer() {
   app.use(cors());
   app.set('trust proxy', true);
   app.use(express.json({ limit: '10mb' }));
+
+  // Customer uploads (review photos, custom designs) live outside the app folder so deploys keep them.
+  try { adoptLegacyUploads(__dirname); } catch (e: any) { console.error("[CHILS DATA] Could not adopt old uploads:", e.message); }
+  app.use("/uploads", (req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Content-Security-Policy", "sandbox"); // an uploaded file can never run as a page
+    next();
+  }, express.static(UPLOADS_DIR, { maxAge: "30d", index: false, fallthrough: false }));
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
   // JWT Middleware
@@ -1407,24 +1416,7 @@ async function startServer() {
               const buffer = Buffer.from(base64Content, 'base64');
               
               const filename = `rev-${productId}-${Date.now()}-${index}.${ext}`;
-              const publicUploadDir = path.resolve(__dirname, "public", "uploads", "reviews");
-              const distUploadDir = path.resolve(__dirname, "dist", "uploads", "reviews");
-
-              // Write to public folder for Vite development server
-              if (!fs.existsSync(publicUploadDir)) {
-                fs.mkdirSync(publicUploadDir, { recursive: true });
-              }
-              fs.writeFileSync(path.join(publicUploadDir, filename), buffer);
-
-              // Write to dist folder for Production mode if exists
-              if (fs.existsSync(path.resolve(__dirname, "dist"))) {
-                if (!fs.existsSync(distUploadDir)) {
-                  fs.mkdirSync(distUploadDir, { recursive: true });
-                }
-                fs.writeFileSync(path.join(distUploadDir, filename), buffer);
-              }
-
-              savedUrls.push(`/uploads/reviews/${filename}`);
+              savedUrls.push(saveUpload("reviews", filename, buffer));
             }
           } catch (err) {
             console.error("Failed to save review image:", err);
@@ -3019,27 +3011,13 @@ async function startServer() {
           const buffer = Buffer.from(base64Content, 'base64');
           const filename = `design-${Date.now()}-${Math.floor(Math.random() * 1000)}.${ext}`;
           
-          const publicUploadDir = path.resolve(__dirname, "public", "uploads", "custom_designs");
-          const distUploadDir = path.resolve(__dirname, "dist", "uploads", "custom_designs");
-
-          if (!fs.existsSync(publicUploadDir)) {
-            fs.mkdirSync(publicUploadDir, { recursive: true });
-          }
-          fs.writeFileSync(path.join(publicUploadDir, filename), buffer);
-
-          if (fs.existsSync(path.resolve(__dirname, "dist"))) {
-            if (!fs.existsSync(distUploadDir)) {
-              fs.mkdirSync(distUploadDir, { recursive: true });
-            }
-            fs.writeFileSync(path.join(distUploadDir, filename), buffer);
-          }
-          fileUrl = `/uploads/custom_designs/${filename}`;
+          fileUrl = saveUpload("custom_designs", filename, buffer);
         } catch (err) {
           console.error("[CHILS & CO.] Failed to save design file:", err);
         }
       }
 
-      const QUOTES_FILE = path.join(process.cwd(), "quotes.json");
+      const QUOTES_FILE = dataFile("quotes.json");
       let quotes = [];
       if (fs.existsSync(QUOTES_FILE)) {
         try {
@@ -3525,7 +3503,7 @@ async function startServer() {
     }
   });
 
-  const PENDING_SWAPS_FILE = path.join(process.cwd(), "pending_swaps.json");
+  const PENDING_SWAPS_FILE = dataFile("pending_swaps.json");
   const activeRmaSubmissions = new Set<string>();
 
   const savePendingSwap = (txId: string, payload: any) => {

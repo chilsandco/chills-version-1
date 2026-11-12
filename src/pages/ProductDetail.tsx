@@ -1164,7 +1164,7 @@ const ProductDetail: React.FC = () => {
                               className="w-20 h-20 md:w-24 md:h-24 rounded-xl overflow-hidden bg-paper cursor-zoom-in"
                               onClick={() => { setSelectedImage(imgUrl); scale.set(1); positionX.set(0); positionY.set(0); }}
                             >
-                              <img src={imgUrl} alt="Photo from the review" className="w-full h-full object-cover" />
+                              <img src={imgUrl} alt="Photo from the review" loading="lazy" className="w-full h-full object-cover" onError={e => { const box = e.currentTarget.parentElement; if (box) box.style.display = 'none'; }} />
                             </button>
                           ))}
                         </div>
