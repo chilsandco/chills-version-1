@@ -4,6 +4,7 @@ import { Check, Camera, X, ArrowRight, RefreshCcw } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import { Signal, SignalItem, Product } from '../types';
 import { useContact, whatsappLink } from '../components/InfoPage';
+import { loadProducts } from '../hooks/useProducts';
 import { OrderPage, Card, Thumb, Spinner, inr, btnInk, btnLine } from '../components/OrderUi';
 
 interface ReturnItemChoice {
@@ -103,8 +104,7 @@ const ReturnRequest: React.FC = () => {
     };
     const fetchCatalog = async () => {
       try {
-        const res = await fetch('/api/products');
-        if (res.ok) setProductsCatalog(await res.json());
+        setProductsCatalog(await loadProducts());
       } catch (err) {
         console.error('Failed to fetch products catalog:', err);
       }

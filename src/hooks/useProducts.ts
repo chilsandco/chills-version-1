@@ -4,7 +4,8 @@ import { applyStudio } from '../data/studio';
 
 let cache: Promise<Product[]> | null = null;
 
-const load = () => {
+/** The shared product list: one request per visit, started as the app boots (see main.tsx). */
+export const loadProducts = () => {
   if (!cache) {
     cache = fetch('/api/products')
       .then(r => r.json())
@@ -20,7 +21,7 @@ export function useProducts() {
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     let live = true;
-    load().then(p => { if (live) { setProducts(p); setLoading(false); } });
+    loadProducts().then(p => { if (live) { setProducts(p); setLoading(false); } });
     return () => { live = false; };
   }, []);
   return { products, loading };

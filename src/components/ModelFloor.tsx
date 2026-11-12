@@ -5,7 +5,7 @@ import { motion } from 'motion/react';
 import { ArrowRight, Plus } from 'lucide-react';
 import { Product } from '../types';
 import { useNarrow } from '../hooks/useNarrow';
-import { openQuickView } from './QuickView';
+import { openQuickView } from '../lib/quickView';
 import cutouts from '../data/cutouts.json';
 
 type Kind = 'full' | 'pair' | 'bust';

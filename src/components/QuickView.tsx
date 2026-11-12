@@ -11,8 +11,7 @@ import { keySpecs, STORIES } from '../data/stories';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-export const openQuickView = (product: Product, color?: string) =>
-  window.dispatchEvent(new CustomEvent('quick-view', { detail: { product, color } }));
+export { openQuickView } from '../lib/quickView';
 
 const SIZE_ORDER = ['XS', 'S', 'M', 'L', 'XL', 'XXL', '2XL', '3XL'];
 

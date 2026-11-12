@@ -5,9 +5,7 @@ import { CartProvider } from './CartContext';
 import { AuthProvider } from './AuthContext';
 import { WishlistProvider } from './WishlistContext';
 import Navbar from './components/Navbar';
-import QuickView from './components/QuickView';
-import BagDrawer from './components/BagDrawer';
-import Assistant from './components/Assistant';
+import { Deferred } from './components/Deferred';
 import PageLoader from './components/PageLoader';
 import Footer from './components/Footer';
 import SmoothScroll from './components/SmoothScroll';
@@ -106,9 +104,10 @@ export default function App() {
                 </React.Suspense>
               </main>
               <Footer />
-              <QuickView />
-              <BagDrawer />
-              <Assistant />
+              {/* not needed for the first paint: loaded when first opened, or once the page is idle */}
+              <Deferred load={() => import('./components/QuickView')} wakeOn={['quick-view']} />
+              <Deferred load={() => import('./components/BagDrawer')} wakeOn={['bag-open']} />
+              <Deferred load={() => import('./components/Assistant')} />
             </Shell>
           </SmoothScroll>
         </Router>

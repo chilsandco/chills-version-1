@@ -13,6 +13,7 @@ import crypto from "crypto";
 import { couponProblem, findVariation, mapWooVariation, trustedPrice } from "./orderVariations";
 import { notifyNewOrder, notifyShipping, startSlackBot } from "./slackBot";
 import { browserContext, orderMetaFrom, sendAddToCart, sendPurchase } from "./metaCapi";
+import { mediaHandler, uploadsPathOf } from "./mediaCache";
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest, CallbackType } from 'pg-sdk-node';
 import { NextFunction } from 'express';
 import { GoogleGenAI } from "@google/genai";
@@ -385,10 +386,39 @@ async function startServer() {
   let lastProductsFetch = 0;
   const PRODUCTS_CACHE_TTL = 1000 * 60 * 5; // 5 minutes cache
 
+  // The list as ready-to-send JSON: with and without the hidden test product.
+  let productsBody: { all: string; visible: string } | null = null;
+  let productsRefresh: Promise<any[]> | null = null;
+
+  /** Fetch every product from the store once, even if many visitors ask at the same moment. */
+  const refreshProducts = (): Promise<any[]> => {
+    if (productsRefresh) return productsRefresh;
+    productsRefresh = (async () => {
+      const wc = getWooCommerce();
+      if (!wc) return mockProducts as any[];
+      const swatchesData = await fetchSwatches();
+      let all: any[] = [];
+      for (let page = 1; ; page++) {
+        const response = await wcSafeCall(wc, "get", "products", { per_page: 100, page, status: 'publish' });
+        const rows = Array.isArray(response.data) ? response.data : [];
+        all = all.concat(rows);
+        if (rows.length < 100) break;
+      }
+      const mapped = all.map((p: any) => mapProduct(p, {}, swatchesData));
+      globalProductsCache = mapped;
+      lastProductsFetch = Date.now();
+      productsBody = { all: JSON.stringify(mapped), visible: JSON.stringify(mapped.filter((p: any) => p.id.toString() !== '1672')) };
+      console.log(`[CHILS & CO.] Products refreshed: ${mapped.length}`);
+      return mapped;
+    })().finally(() => { productsRefresh = null; });
+    return productsRefresh;
+  };
+
+  /** Stock or prices changed: refresh in the background, keep serving the current list until then. */
   const invalidateProductsCache = () => {
-    console.log("[CHILS & CO.] Invalidating products cache.");
-    globalProductsCache = null;
+    console.log("[CHILS & CO.] Refreshing products cache.");
     lastProductsFetch = 0;
+    refreshProducts().catch(e => console.error("[CHILS & CO.] Products refresh failed:", e?.message));
   };
 
   const fetchSwatches = async () => {
@@ -1096,67 +1126,21 @@ async function startServer() {
 
   // API Routes
   app.get("/api/products", async (req, res) => {
-    // Allow bypassing cache with ?fresh=true
-    const bypassCache = req.query.fresh === 'true';
-
-    if (!bypassCache && globalProductsCache && (Date.now() - lastProductsFetch < PRODUCTS_CACHE_TTL)) {
-      console.log("[CHILS & CO.] Serving products from memory cache.");
-      res.setHeader('X-Cache', 'HIT');
-      let productsToReturn = globalProductsCache;
-      if (req.query.show_test !== 'true') {
-        productsToReturn = globalProductsCache.filter((p: any) => p.id.toString() !== '1672');
-      }
-      return res.json(productsToReturn);
-    }
-
-    res.setHeader('X-Cache', 'MISS');
-    // Force no-cache for debugging / fresh fetches
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('Expires', '0');
-
+    const fresh = req.query.fresh === 'true';
+    const showTest = req.query.show_test === 'true';
     try {
-      const wc = getWooCommerce();
-      if (!wc) {
-        console.log("[CHILS & CO.] No WooCommerce credentials found. Serving mock data.");
-        return res.json(mockProducts);
+      if (!getWooCommerce()) return res.json(mockProducts);
+      if (fresh || !productsBody) {
+        await refreshProducts();
+        res.setHeader('X-Cache', 'MISS');
+      } else {
+        res.setHeader('X-Cache', 'HIT');
+        // Older than 5 minutes: answer now with what we have, refresh for the next visitor.
+        if (Date.now() - lastProductsFetch > PRODUCTS_CACHE_TTL) invalidateProductsCache();
       }
-      console.log(`[CHILS & CO.] Fetching ALL products from WooCommerce (paginated)...`);
-      const swatchesData = await fetchSwatches();
-
-      // Paginated fetch — WooCommerce max is 100 per page
-      let allRawProducts: any[] = [];
-      let page = 1;
-      let hasMore = true;
-      while (hasMore) {
-        const response = await wcSafeCall(wc, "get", "products", {
-          per_page: 100,
-          page,
-          status: 'publish'
-        });
-        console.log(`[CHILS & CO.] Page ${page}: got ${Array.isArray(response.data) ? response.data.length : 0} products`);
-        if (!Array.isArray(response.data) || response.data.length === 0) {
-          hasMore = false;
-        } else {
-          allRawProducts = [...allRawProducts, ...response.data];
-          // If fewer than 100 returned, we've hit the last page
-          if (response.data.length < 100) hasMore = false;
-          else page++;
-        }
-      }
-
-      console.log(`[CHILS & CO.] Total products fetched: ${allRawProducts.length}`);
-      const mappedProducts = allRawProducts.map((p: any) => mapProduct(p, {}, swatchesData));
-      
-      // Update cache
-      globalProductsCache = mappedProducts;
-      lastProductsFetch = Date.now();
-
-      let productsToReturn = mappedProducts;
-      if (req.query.show_test !== 'true') {
-        productsToReturn = mappedProducts.filter((p: any) => p.id.toString() !== '1672');
-      }
-      res.json(productsToReturn);
+      // Browsers may reuse it for a minute and show it instantly while checking for a newer one.
+      res.setHeader('Cache-Control', fresh || showTest ? 'no-store' : 'public, max-age=60, stale-while-revalidate=600');
+      res.type('application/json').send(showTest ? productsBody!.all : productsBody!.visible);
     } catch (error) {
       console.error("WooCommerce API Error:", error);
       res.status(500).json({ message: "Failed to fetch products from WooCommerce" });
@@ -4575,40 +4559,22 @@ Format your response strictly as a single JSON object. Ensure the keys and value
     }
     next();
   });
-  app.get("/api/media", async (req, res) => {
+  // Product photos not yet sized at build time: resized once, kept on disk, cached by the CDN.
+  app.get(/^\/media\//, mediaHandler(() => process.env.WOOCOMMERCE_URL || 'https://api.chilsandco.com'));
+
+  // Old proxy address (still in some product data and old browser caches): send it to the cached route.
+  app.get("/api/media", (req, res) => {
+    const imageUrl = typeof req.query.url === 'string' ? req.query.url : '';
+    const rel = imageUrl ? uploadsPathOf(imageUrl) : null;
+    let allowed = false;
     try {
-      const imageUrl = req.query.url;
-      if (!imageUrl || typeof imageUrl !== 'string') {
-        return res.status(400).send("URL is required");
-      }
-
-      // Security validation to prevent SSRF: Only proxy from our configured WooCommerce domain
-      const targetDomain = new URL(imageUrl).hostname;
-      const allowedDomain = new URL(process.env.WOOCOMMERCE_URL || 'https://api.chilsandco.com').hostname;
-      if (targetDomain !== allowedDomain && !targetDomain.endsWith(allowedDomain)) {
-        console.warn(`[CHILS MEDIA PROXY] Blocked SSRF attempt to non-allowed domain: ${targetDomain}`);
-        return res.status(403).send("Forbidden: Domain not whitelisted");
-      }
-
-      console.log(`[CHILS MEDIA PROXY] Fetching image from WooCommerce: ${imageUrl}`);
-      const response = await axios.get(imageUrl, {
-        responseType: 'arraybuffer',
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
-        },
-        timeout: 8000
-      });
-
-      const contentType = response.headers['content-type'];
-      res.setHeader('Content-Type', typeof contentType === 'string' ? contentType : 'image/png');
-      res.setHeader('Cache-Control', 'public, max-age=86400');
-      res.send(response.data);
-    } catch (err: any) {
-      console.error(`[CHILS MEDIA PROXY] Proxy failed for ${req.query.url}: ${err.message}`);
-      // Fallback redirect to high-quality branding logo placeholder
-      res.redirect("https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png");
-    }
+      const host = new URL(imageUrl).hostname;
+      const store = new URL(process.env.WOOCOMMERCE_URL || 'https://api.chilsandco.com').hostname;
+      allowed = host === store || host.endsWith(`.${store}`);
+    } catch { /* not a URL */ }
+    if (!rel || !allowed) return res.status(400).send("URL is required");
+    res.setHeader('Cache-Control', 'public, max-age=604800');
+    res.redirect(301, `/media/${rel.split('/').map(encodeURIComponent).join('/')}`);
   });
 
   // ── Host Normalization (www -> non-www) 301 Redirect Middleware ──────────
@@ -4721,8 +4687,9 @@ ${xmlItems}
       app.use(express.static(distPath, {
         index: false,
         setHeaders: (res, filePath) => {
-          if (/[\\/]assets[\\/]/.test(filePath)) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-          else if (/\.(webp|png|jpe?g|svg|woff2?)$/i.test(filePath)) res.setHeader("Cache-Control", "public, max-age=604800");
+          // Built assets and sized product photos carry an id in their name: cache for a year.
+          if (/[\\/](assets|studio|p)[\\/]/.test(filePath)) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          else if (/\.(webp|png|jpe?g|svg|woff2?)$/i.test(filePath)) res.setHeader("Cache-Control", "public, max-age=604800, stale-while-revalidate=86400");
         },
       }));
 
@@ -4999,6 +4966,8 @@ ${xmlItems}
       console.log(`[CHILS & CO.] Server started successfully`);
       console.log(`[CHILS & CO.] Listening on port: ${numericPort}`);
       console.log(`[CHILS & CO.] Mode: ${IS_PROD ? 'Production' : 'Development'}`);
+      // have the product list ready before the first visitor asks
+      if (getWooCommerce()) refreshProducts().catch(e => console.error("[CHILS & CO.] Products warm-up failed:", e?.message));
     });
   } catch (error) {
     console.error("[CHILS & CO.] Critical Failure during server startup:", error);

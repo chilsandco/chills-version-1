@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useProducts } from '../hooks/useProducts';
-import { openQuickView } from './QuickView';
+import { openQuickView } from '../lib/quickView';
 import { PhoneGrid } from './ModelFloor';
 import { Trilogy } from './Trilogy';
 import { GROUPS, curateRows } from '../data/groups';

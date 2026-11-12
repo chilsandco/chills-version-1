@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { Heart, Plus } from 'lucide-react';
 import { Product } from '../types';
 import { useWishlist } from '../WishlistContext';
-import { openQuickView } from './QuickView';
-import { studio, small } from '../data/studio';
+import { openQuickView } from '../lib/quickView';
+import { studio, small, srcSet } from '../data/studio';
 
 interface ProductCardProps {
   product: Product;
@@ -39,8 +39,11 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, quickAdd = false, la
           {img && (
             <img
               src={small(img)}
+              srcSet={srcSet(img)}
+              sizes="(min-width: 1024px) 25vw, (min-width: 768px) 33vw, 50vw"
               alt={product.name}
               loading="lazy"
+              decoding="async"
               referrerPolicy="no-referrer"
               className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
             />

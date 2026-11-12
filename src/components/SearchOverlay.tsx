@@ -4,7 +4,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Search, X, Loader2, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Product } from '../types';
-import { applyStudio } from '../data/studio';
+import { loadProducts } from '../hooks/useProducts';
 
 interface SearchOverlayProps {
   isOpen: boolean;
@@ -71,15 +71,7 @@ const SearchOverlay: React.FC<SearchOverlayProps> = ({ isOpen, onClose }) => {
   useEffect(() => {
     if (isOpen) {
       setLoading(true);
-      fetch('/api/products')
-        .then((res) => res.json())
-        .then((data) => {
-          if (Array.isArray(data)) {
-            setProducts(data.map(applyStudio));
-          }
-        })
-        .catch((err) => console.error('SearchOverlay: error fetching products', err))
-        .finally(() => setLoading(false));
+      loadProducts().then(setProducts).finally(() => setLoading(false));
 
       // Auto focus search input
       setTimeout(() => {

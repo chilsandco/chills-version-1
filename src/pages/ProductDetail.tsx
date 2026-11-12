@@ -13,7 +13,8 @@ import SEO from '../components/SEO';
 import { useAuth } from '../AuthContext';
 import { ProductReview } from '../types';
 import { ModelFloor, isStanding } from '../components/ModelFloor';
-import { applyStudio, isPoster } from '../data/studio';
+import { applyStudio, isPoster, small, srcSet } from '../data/studio';
+import { loadProducts } from '../hooks/useProducts';
 import { productTone } from '../data/groups';
 import { STORIES, keySpecs } from '../data/stories';
 import TrilogyHint from '../components/TrilogyHint';
@@ -261,17 +262,7 @@ const ProductDetail: React.FC = () => {
   }, [loading, searchParams, setSearchParams]);
 
   useEffect(() => {
-    fetch('/api/products')
-      .then(res => {
-        if (!res.ok) throw new Error();
-        return res.json();
-      })
-      .then(data => {
-        if (Array.isArray(data)) {
-          setAllProducts(data.map(applyStudio));
-        }
-      })
-      .catch(err => console.error("Error fetching products catalog:", err));
+    loadProducts().then(setAllProducts);
   }, []);
 
   // Recommendation logic prioritizing same-category items, sorted by match percentage
@@ -676,6 +667,15 @@ const ProductDetail: React.FC = () => {
     }
   );
 
+  // Once the page has settled, fetch the other gallery photos so switching between them is instant.
+  const galleryKey = product?.images?.slice(1, 6).join('|') ?? '';
+  useEffect(() => {
+    if (!galleryKey) return;
+    const idle = (window as any).requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 1200));
+    const handle = idle(() => galleryKey.split('|').forEach(src => { const im = new Image(); im.decoding = 'async'; im.src = src; }));
+    return () => ((window as any).cancelIdleCallback ?? clearTimeout)(handle);
+  }, [galleryKey]);
+
   if (loading || !product) return <div className="h-screen bg-[#f3f2ee] grid place-items-center"><div className="w-8 h-8 border-2 border-ink border-t-transparent rounded-full animate-spin" /></div>;
 
   const productStory = product.shortDescription || product.concept || product.description;
@@ -777,7 +777,7 @@ const ProductDetail: React.FC = () => {
         >
           {views.map((src, i) => (
             <button key={src + i} type="button" aria-label={`Zoom photo ${i + 1} of ${product.name}`} onClick={() => { setSelectedImage(src); scale.set(1); positionX.set(0); positionY.set(0); }} className="snap-center shrink-0 w-full aspect-[4/5]">
-              <img src={src} alt={product.name} loading={i === 0 ? 'eager' : 'lazy'} referrerPolicy="no-referrer" draggable={false} className="w-full h-full object-cover object-top" />
+              <img src={src} srcSet={srcSet(src)} sizes="100vw" alt={product.name} loading={i === 0 ? 'eager' : 'lazy'} fetchPriority={i === 0 ? 'high' : 'auto'} decoding="async" referrerPolicy="no-referrer" draggable={false} className="w-full h-full object-cover object-top" />
             </button>
           ))}
         </div>
@@ -818,6 +818,7 @@ const ProductDetail: React.FC = () => {
                 key={heroSrc}
                 src={heroSrc}
                 alt={product.name}
+                fetchPriority="high"
                 draggable={false}
                 referrerPolicy="no-referrer"
                 initial={{ opacity: 0, y: 26, scale: 0.985 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }}
@@ -998,7 +999,7 @@ const ProductDetail: React.FC = () => {
                       onClick={() => setCurrentImageIndex(i)}
                       className={`shrink-0 w-12 h-16 lg:w-14 lg:h-[74px] overflow-hidden bg-paper transition-opacity cursor-pointer ${i === stageIndex ? 'opacity-100 ring-1 ring-[#fff] ring-offset-2 ring-offset-ink' : 'opacity-45 hover:opacity-100'}`}
                     >
-                      <img src={src} alt="" loading="lazy" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
+                      <img src={small(src)} alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Recycle, Leaf, ChevronRight, X, Package, Plus, Check, Loader2 } from 'lucide-react';
 import { Product } from '../types';
 import { useCart } from '../CartContext';
+import { loadProducts } from '../hooks/useProducts';
 
 interface SecondLifeModalProps {
   isOpen: boolean;
@@ -28,15 +29,7 @@ const SecondLifeModal: React.FC<SecondLifeModalProps> = ({
   useEffect(() => {
     if (isOpen && products.length === 0) {
       setLoading(true);
-      fetch('/api/products')
-        .then(res => res.json())
-        .then(data => {
-          if (Array.isArray(data)) {
-            setProducts(data);
-          }
-        })
-        .catch(err => console.error('Failed to fetch products for upsell', err))
-        .finally(() => setLoading(false));
+      loadProducts().then(setProducts).finally(() => setLoading(false));
     }
   }, [isOpen]);
 

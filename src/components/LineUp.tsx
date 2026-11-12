@@ -3,7 +3,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { ArrowRight, Pause, Play } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useProducts } from '../hooks/useProducts';
-import { openQuickView } from './QuickView';
+import { openQuickView } from '../lib/quickView';
 import { OPENING, SHOWN_COLOR, WALK_PHOTOS, lookPhoto } from '../data/lookbook';
 import cutouts from '../data/cutouts.json';
 import { Product } from '../types';

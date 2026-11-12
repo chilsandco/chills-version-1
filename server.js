@@ -1,15 +1,15 @@
 // server.ts
 import express from "express";
-import path2 from "path";
+import path3 from "path";
 import https from "https";
-import fs2 from "fs";
+import fs3 from "fs";
 import { fileURLToPath } from "url";
 import cors from "cors";
-import axios2 from "axios";
+import axios3 from "axios";
 import WooCommerceRestApi from "@woocommerce/woocommerce-rest-api";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
-import crypto2 from "crypto";
+import crypto3 from "crypto";
 
 // orderVariations.ts
 var same = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -771,6 +771,69 @@ function sendPurchase(order) {
   });
 }
 
+// mediaCache.ts
+import fs2 from "fs";
+import os from "os";
+import path2 from "path";
+import crypto2 from "crypto";
+import axios2 from "axios";
+var DIR = process.env.MEDIA_CACHE_DIR || path2.join(os.homedir(), "chils-media-cache");
+var SAFE = /^[\w\-./ ()%,+@]+$/;
+var LONG = "public, max-age=2592000, stale-while-revalidate=86400";
+var sharpLoad = null;
+var getSharp = () => sharpLoad ??= import("sharp").then((m) => m.default).catch((e) => {
+  console.warn("[CHILS MEDIA] sharp unavailable, serving originals:", e.message);
+  return null;
+});
+var inflight = /* @__PURE__ */ new Map();
+async function build(rel, width, storeUrl) {
+  const sharp = await getSharp();
+  const hash = crypto2.createHash("sha1").update(rel).digest("hex").slice(0, 16);
+  const ext = sharp ? "webp" : path2.extname(rel).slice(1).toLowerCase() || "bin";
+  const file = path2.join(DIR, String(sharp ? width : "orig"), `${hash}.${ext}`);
+  const type = sharp ? "image/webp" : ext === "jpg" || ext === "jpeg" ? "image/jpeg" : `image/${ext}`;
+  if (fs2.existsSync(file)) return { file, type };
+  const src = `${storeUrl.replace(/\/$/, "")}/wp-content/uploads/${rel.split("/").map(encodeURIComponent).join("/")}`;
+  const { data } = await axios2.get(src, { responseType: "arraybuffer", timeout: 15e3, headers: { "User-Agent": "chils-media" } });
+  const out = sharp ? await sharp(Buffer.from(data)).rotate().resize({ width, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer() : Buffer.from(data);
+  await fs2.promises.mkdir(path2.dirname(file), { recursive: true });
+  const tmp = `${file}.${process.pid}.tmp`;
+  await fs2.promises.writeFile(tmp, out);
+  await fs2.promises.rename(tmp, file);
+  return { file, type };
+}
+function mediaHandler(storeUrl) {
+  return async (req, res) => {
+    const m = req.path.match(/^\/media\/(s\/)?(.+)$/);
+    let rel = "";
+    try {
+      rel = m ? decodeURIComponent(m[2]) : "";
+    } catch {
+    }
+    if (!rel || rel.includes("..") || !SAFE.test(rel)) return res.status(400).send("Bad path");
+    const width = m[1] ? 640 : 1e3;
+    const key = `${width}:${rel}`;
+    try {
+      if (!inflight.has(key)) inflight.set(key, build(rel, width, storeUrl()).finally(() => inflight.delete(key)));
+      const { file, type } = await inflight.get(key);
+      res.setHeader("Content-Type", type);
+      res.setHeader("Cache-Control", LONG);
+      res.sendFile(file);
+    } catch (e) {
+      console.error(`[CHILS MEDIA] ${rel}: ${e.message}`);
+      res.setHeader("Cache-Control", "no-store");
+      res.redirect(302, `${storeUrl().replace(/\/$/, "")}/wp-content/uploads/${rel.split("/").map(encodeURIComponent).join("/")}`);
+    }
+  };
+}
+function uploadsPathOf(url) {
+  try {
+    return decodeURIComponent(url).split("/wp-content/uploads/")[1]?.split(/[?#]/)[0] || null;
+  } catch {
+    return null;
+  }
+}
+
 // server.ts
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest, CallbackType } from "pg-sdk-node";
 dotenv.config();
@@ -778,7 +841,7 @@ var IS_PROD = process.env.NODE_ENV === "production";
 var JWT_SECRET = process.env.JWT_SECRET || "";
 if (!JWT_SECRET) console.error("[CHILS & CO.] JWT_SECRET is not set: customer logins will fail until it is added to the environment.");
 var __filename = fileURLToPath(import.meta.url);
-var __dirname = path2.dirname(__filename);
+var __dirname = path3.dirname(__filename);
 function getWooCommerce() {
   const k = (process.env.WOOCOMMERCE_KEY || "").trim();
   const s = (process.env.WOOCOMMERCE_SECRET || "").trim();
@@ -878,8 +941,8 @@ async function verifyPhonePeTransaction(merchantTransactionId) {
     return null;
   }
   const endpoint = `/pg/v1/status/${merchantId}/${merchantTransactionId}`;
-  const checksum = crypto2.createHash("sha256").update(endpoint + saltKey).digest("hex") + "###" + saltIndex;
-  const verifyRes = await axios2.get(`https://api.phonepe.com/apis/hermes${endpoint}`, {
+  const checksum = crypto3.createHash("sha256").update(endpoint + saltKey).digest("hex") + "###" + saltIndex;
+  const verifyRes = await axios3.get(`https://api.phonepe.com/apis/hermes${endpoint}`, {
     timeout: 3e3,
     headers: {
       "Content-Type": "application/json",
@@ -970,7 +1033,7 @@ async function startServer() {
   app.get("/api/ping", (req, res) => {
     res.json({ status: "alive", timestamp: (/* @__PURE__ */ new Date()).toISOString() });
   });
-  const SETTINGS_FILE = path2.join(process.cwd(), "settings.json");
+  const SETTINGS_FILE = path3.join(process.cwd(), "settings.json");
   const DEFAULT_SETTINGS = {
     mobileLink: "+91 7842 07 0404",
     address: "3rd Floor, Plot No. 38 & 39\nMatrusri Nagar, Miyapur\nHyderabad, Telangana \u2013 500049\nIndia",
@@ -992,11 +1055,11 @@ async function startServer() {
   };
   app.get("/api/settings", (req, res) => {
     try {
-      if (!fs2.existsSync(SETTINGS_FILE)) {
-        fs2.writeFileSync(SETTINGS_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2));
+      if (!fs3.existsSync(SETTINGS_FILE)) {
+        fs3.writeFileSync(SETTINGS_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2));
         return res.json(DEFAULT_SETTINGS);
       }
-      const nodeContent = fs2.readFileSync(SETTINGS_FILE, "utf-8");
+      const nodeContent = fs3.readFileSync(SETTINGS_FILE, "utf-8");
       const settings = JSON.parse(nodeContent);
       res.json({ ...DEFAULT_SETTINGS, ...settings });
     } catch (error) {
@@ -1059,10 +1122,36 @@ async function startServer() {
   let globalProductsCache = null;
   let lastProductsFetch = 0;
   const PRODUCTS_CACHE_TTL = 1e3 * 60 * 5;
+  let productsBody = null;
+  let productsRefresh = null;
+  const refreshProducts = () => {
+    if (productsRefresh) return productsRefresh;
+    productsRefresh = (async () => {
+      const wc2 = getWooCommerce();
+      if (!wc2) return mockProducts;
+      const swatchesData = await fetchSwatches();
+      let all = [];
+      for (let page = 1; ; page++) {
+        const response = await wcSafeCall(wc2, "get", "products", { per_page: 100, page, status: "publish" });
+        const rows = Array.isArray(response.data) ? response.data : [];
+        all = all.concat(rows);
+        if (rows.length < 100) break;
+      }
+      const mapped = all.map((p) => mapProduct(p, {}, swatchesData));
+      globalProductsCache = mapped;
+      lastProductsFetch = Date.now();
+      productsBody = { all: JSON.stringify(mapped), visible: JSON.stringify(mapped.filter((p) => p.id.toString() !== "1672")) };
+      console.log(`[CHILS & CO.] Products refreshed: ${mapped.length}`);
+      return mapped;
+    })().finally(() => {
+      productsRefresh = null;
+    });
+    return productsRefresh;
+  };
   const invalidateProductsCache = () => {
-    console.log("[CHILS & CO.] Invalidating products cache.");
-    globalProductsCache = null;
+    console.log("[CHILS & CO.] Refreshing products cache.");
     lastProductsFetch = 0;
+    refreshProducts().catch((e) => console.error("[CHILS & CO.] Products refresh failed:", e?.message));
   };
   const fetchSwatches = async () => {
     if (globalSwatchesCache && Date.now() - lastSwatchesFetch < 1e3 * 60 * 5) {
@@ -1070,7 +1159,7 @@ async function startServer() {
     }
     try {
       const wpUrl = (process.env.WOOCOMMERCE_URL || "").replace(/\/$/, "");
-      const res = await axios2.get(`${wpUrl}/wp-json/chils/v1/swatches`, { timeout: 4e3 });
+      const res = await axios3.get(`${wpUrl}/wp-json/chils/v1/swatches`, { timeout: 4e3 });
       if (res.data && typeof res.data === "object" && !res.data.code) {
         const swatches = {};
         Object.values(res.data).forEach((term) => {
@@ -1668,55 +1757,19 @@ async function startServer() {
     }
   };
   app.get("/api/products", async (req, res) => {
-    const bypassCache = req.query.fresh === "true";
-    if (!bypassCache && globalProductsCache && Date.now() - lastProductsFetch < PRODUCTS_CACHE_TTL) {
-      console.log("[CHILS & CO.] Serving products from memory cache.");
-      res.setHeader("X-Cache", "HIT");
-      let productsToReturn = globalProductsCache;
-      if (req.query.show_test !== "true") {
-        productsToReturn = globalProductsCache.filter((p) => p.id.toString() !== "1672");
-      }
-      return res.json(productsToReturn);
-    }
-    res.setHeader("X-Cache", "MISS");
-    res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
+    const fresh = req.query.fresh === "true";
+    const showTest = req.query.show_test === "true";
     try {
-      const wc2 = getWooCommerce();
-      if (!wc2) {
-        console.log("[CHILS & CO.] No WooCommerce credentials found. Serving mock data.");
-        return res.json(mockProducts);
+      if (!getWooCommerce()) return res.json(mockProducts);
+      if (fresh || !productsBody) {
+        await refreshProducts();
+        res.setHeader("X-Cache", "MISS");
+      } else {
+        res.setHeader("X-Cache", "HIT");
+        if (Date.now() - lastProductsFetch > PRODUCTS_CACHE_TTL) invalidateProductsCache();
       }
-      console.log(`[CHILS & CO.] Fetching ALL products from WooCommerce (paginated)...`);
-      const swatchesData = await fetchSwatches();
-      let allRawProducts = [];
-      let page = 1;
-      let hasMore = true;
-      while (hasMore) {
-        const response = await wcSafeCall(wc2, "get", "products", {
-          per_page: 100,
-          page,
-          status: "publish"
-        });
-        console.log(`[CHILS & CO.] Page ${page}: got ${Array.isArray(response.data) ? response.data.length : 0} products`);
-        if (!Array.isArray(response.data) || response.data.length === 0) {
-          hasMore = false;
-        } else {
-          allRawProducts = [...allRawProducts, ...response.data];
-          if (response.data.length < 100) hasMore = false;
-          else page++;
-        }
-      }
-      console.log(`[CHILS & CO.] Total products fetched: ${allRawProducts.length}`);
-      const mappedProducts = allRawProducts.map((p) => mapProduct(p, {}, swatchesData));
-      globalProductsCache = mappedProducts;
-      lastProductsFetch = Date.now();
-      let productsToReturn = mappedProducts;
-      if (req.query.show_test !== "true") {
-        productsToReturn = mappedProducts.filter((p) => p.id.toString() !== "1672");
-      }
-      res.json(productsToReturn);
+      res.setHeader("Cache-Control", fresh || showTest ? "no-store" : "public, max-age=60, stale-while-revalidate=600");
+      res.type("application/json").send(showTest ? productsBody.all : productsBody.visible);
     } catch (error) {
       console.error("WooCommerce API Error:", error);
       res.status(500).json({ message: "Failed to fetch products from WooCommerce" });
@@ -1799,7 +1852,7 @@ async function startServer() {
           console.log(`[CHILS & CO. DEBUG] Fetching ${unresolvedIds.length} unresolved media URLs from WordPress API...`);
           try {
             const wpUrl = (process.env.WOOCOMMERCE_URL || "").replace(/\/$/, "");
-            const mediaResponse = await axios2.get(`${wpUrl}/wp-json/wp/v2/media`, {
+            const mediaResponse = await axios3.get(`${wpUrl}/wp-json/wp/v2/media`, {
               params: { include: unresolvedIds.join(",") }
             });
             if (mediaResponse.data && Array.isArray(mediaResponse.data)) {
@@ -1910,17 +1963,17 @@ async function startServer() {
               const base64Content = imgBase64.replace(/^data:image\/\w+;base64,/, "");
               const buffer = Buffer.from(base64Content, "base64");
               const filename = `rev-${productId}-${Date.now()}-${index}.${ext}`;
-              const publicUploadDir = path2.resolve(__dirname, "public", "uploads", "reviews");
-              const distUploadDir = path2.resolve(__dirname, "dist", "uploads", "reviews");
-              if (!fs2.existsSync(publicUploadDir)) {
-                fs2.mkdirSync(publicUploadDir, { recursive: true });
+              const publicUploadDir = path3.resolve(__dirname, "public", "uploads", "reviews");
+              const distUploadDir = path3.resolve(__dirname, "dist", "uploads", "reviews");
+              if (!fs3.existsSync(publicUploadDir)) {
+                fs3.mkdirSync(publicUploadDir, { recursive: true });
               }
-              fs2.writeFileSync(path2.join(publicUploadDir, filename), buffer);
-              if (fs2.existsSync(path2.resolve(__dirname, "dist"))) {
-                if (!fs2.existsSync(distUploadDir)) {
-                  fs2.mkdirSync(distUploadDir, { recursive: true });
+              fs3.writeFileSync(path3.join(publicUploadDir, filename), buffer);
+              if (fs3.existsSync(path3.resolve(__dirname, "dist"))) {
+                if (!fs3.existsSync(distUploadDir)) {
+                  fs3.mkdirSync(distUploadDir, { recursive: true });
                 }
-                fs2.writeFileSync(path2.join(distUploadDir, filename), buffer);
+                fs3.writeFileSync(path3.join(distUploadDir, filename), buffer);
               }
               savedUrls.push(`/uploads/reviews/${filename}`);
             }
@@ -2466,7 +2519,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       }
       if (xVerifyHeader) {
         const stringToHash = base64Response + saltKey;
-        const sha256Hash = crypto2.createHash("sha256").update(stringToHash).digest("hex");
+        const sha256Hash = crypto3.createHash("sha256").update(stringToHash).digest("hex");
         const expectedVerify = sha256Hash + "###" + saltIndex;
         if (xVerifyHeader !== expectedVerify) {
           console.error("[CHILS & CO.] PhonePe Callback Signature Mismatch!");
@@ -2737,7 +2790,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       }
       const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "162390818288-j2fcothougcpmok54mojqmn7fq2i5goc.apps.googleusercontent.com";
       console.log("[CHILS & CO.] Verifying Google token...");
-      const verifyRes = await axios2.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`).catch((err) => {
+      const verifyRes = await axios3.get(`https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`).catch((err) => {
         console.error("Google verify token request failed:", err.message);
         throw new Error("Invalid or expired Google authentication token.");
       });
@@ -3261,28 +3314,28 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
           const base64Content = parts[1];
           const buffer = Buffer.from(base64Content, "base64");
           const filename = `design-${Date.now()}-${Math.floor(Math.random() * 1e3)}.${ext}`;
-          const publicUploadDir = path2.resolve(__dirname, "public", "uploads", "custom_designs");
-          const distUploadDir = path2.resolve(__dirname, "dist", "uploads", "custom_designs");
-          if (!fs2.existsSync(publicUploadDir)) {
-            fs2.mkdirSync(publicUploadDir, { recursive: true });
+          const publicUploadDir = path3.resolve(__dirname, "public", "uploads", "custom_designs");
+          const distUploadDir = path3.resolve(__dirname, "dist", "uploads", "custom_designs");
+          if (!fs3.existsSync(publicUploadDir)) {
+            fs3.mkdirSync(publicUploadDir, { recursive: true });
           }
-          fs2.writeFileSync(path2.join(publicUploadDir, filename), buffer);
-          if (fs2.existsSync(path2.resolve(__dirname, "dist"))) {
-            if (!fs2.existsSync(distUploadDir)) {
-              fs2.mkdirSync(distUploadDir, { recursive: true });
+          fs3.writeFileSync(path3.join(publicUploadDir, filename), buffer);
+          if (fs3.existsSync(path3.resolve(__dirname, "dist"))) {
+            if (!fs3.existsSync(distUploadDir)) {
+              fs3.mkdirSync(distUploadDir, { recursive: true });
             }
-            fs2.writeFileSync(path2.join(distUploadDir, filename), buffer);
+            fs3.writeFileSync(path3.join(distUploadDir, filename), buffer);
           }
           fileUrl = `/uploads/custom_designs/${filename}`;
         } catch (err) {
           console.error("[CHILS & CO.] Failed to save design file:", err);
         }
       }
-      const QUOTES_FILE = path2.join(process.cwd(), "quotes.json");
+      const QUOTES_FILE = path3.join(process.cwd(), "quotes.json");
       let quotes = [];
-      if (fs2.existsSync(QUOTES_FILE)) {
+      if (fs3.existsSync(QUOTES_FILE)) {
         try {
-          quotes = JSON.parse(fs2.readFileSync(QUOTES_FILE, "utf-8"));
+          quotes = JSON.parse(fs3.readFileSync(QUOTES_FILE, "utf-8"));
         } catch (e) {
           quotes = [];
         }
@@ -3299,7 +3352,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         timestamp: (/* @__PURE__ */ new Date()).toISOString()
       };
       quotes.push(newQuote);
-      fs2.writeFileSync(QUOTES_FILE, JSON.stringify(quotes, null, 2));
+      fs3.writeFileSync(QUOTES_FILE, JSON.stringify(quotes, null, 2));
       console.log(`[CHILS & CO.] Custom quote request logged for ${email}`);
       res.json({ success: true, message: "Quote request successfully processed", quote: newQuote });
     } catch (error) {
@@ -3682,35 +3735,35 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       res.status(404).json({ message: "Signal not found in system archives." });
     }
   });
-  const PENDING_SWAPS_FILE = path2.join(process.cwd(), "pending_swaps.json");
+  const PENDING_SWAPS_FILE = path3.join(process.cwd(), "pending_swaps.json");
   const activeRmaSubmissions = /* @__PURE__ */ new Set();
   const savePendingSwap = (txId, payload) => {
     let pending = {};
-    if (fs2.existsSync(PENDING_SWAPS_FILE)) {
+    if (fs3.existsSync(PENDING_SWAPS_FILE)) {
       try {
-        pending = JSON.parse(fs2.readFileSync(PENDING_SWAPS_FILE, "utf8"));
+        pending = JSON.parse(fs3.readFileSync(PENDING_SWAPS_FILE, "utf8"));
       } catch (e) {
         pending = {};
       }
     }
     pending[txId] = payload;
-    fs2.writeFileSync(PENDING_SWAPS_FILE, JSON.stringify(pending, null, 2), "utf8");
+    fs3.writeFileSync(PENDING_SWAPS_FILE, JSON.stringify(pending, null, 2), "utf8");
   };
   const getPendingSwap = (txId) => {
-    if (!fs2.existsSync(PENDING_SWAPS_FILE)) return null;
+    if (!fs3.existsSync(PENDING_SWAPS_FILE)) return null;
     try {
-      const pending = JSON.parse(fs2.readFileSync(PENDING_SWAPS_FILE, "utf8"));
+      const pending = JSON.parse(fs3.readFileSync(PENDING_SWAPS_FILE, "utf8"));
       return pending[txId] || null;
     } catch (e) {
       return null;
     }
   };
   const removePendingSwap = (txId) => {
-    if (!fs2.existsSync(PENDING_SWAPS_FILE)) return;
+    if (!fs3.existsSync(PENDING_SWAPS_FILE)) return;
     try {
-      const pending = JSON.parse(fs2.readFileSync(PENDING_SWAPS_FILE, "utf8"));
+      const pending = JSON.parse(fs3.readFileSync(PENDING_SWAPS_FILE, "utf8"));
       delete pending[txId];
-      fs2.writeFileSync(PENDING_SWAPS_FILE, JSON.stringify(pending, null, 2), "utf8");
+      fs3.writeFileSync(PENDING_SWAPS_FILE, JSON.stringify(pending, null, 2), "utf8");
     } catch (e) {
     }
   };
@@ -4076,9 +4129,9 @@ Reason: ${reason}`;
       if (!isAdmin) {
         return res.status(403).json({ message: "Higher clearance required for core reconfiguration." });
       }
-      const currentSettings = fs2.existsSync(SETTINGS_FILE) ? JSON.parse(fs2.readFileSync(SETTINGS_FILE, "utf-8")) : DEFAULT_SETTINGS;
+      const currentSettings = fs3.existsSync(SETTINGS_FILE) ? JSON.parse(fs3.readFileSync(SETTINGS_FILE, "utf-8")) : DEFAULT_SETTINGS;
       const newSettings = { ...currentSettings, ...req.body };
-      fs2.writeFileSync(SETTINGS_FILE, JSON.stringify(newSettings, null, 2));
+      fs3.writeFileSync(SETTINGS_FILE, JSON.stringify(newSettings, null, 2));
       console.log("[CHILS & CO.] Global settings recalibrated successfully.");
       res.json({ success: true, settings: newSettings });
     } catch (error) {
@@ -4098,7 +4151,7 @@ Reason: ${reason}`;
       if (!productId) {
         return res.status(400).json({ message: "Product ID is required." });
       }
-      const settings = fs2.existsSync(SETTINGS_FILE) ? JSON.parse(fs2.readFileSync(SETTINGS_FILE, "utf-8")) : DEFAULT_SETTINGS;
+      const settings = fs3.existsSync(SETTINGS_FILE) ? JSON.parse(fs3.readFileSync(SETTINGS_FILE, "utf-8")) : DEFAULT_SETTINGS;
       groqKey = settings.groqApiKey || process.env.GROQ_API_KEY;
       if (!groqKey) {
         return res.status(400).json({ message: "GROQ_API_KEY is not configured. Please save your Groq API Key in your Admin panel settings." });
@@ -4140,7 +4193,7 @@ You must return a single JSON object with the following fields:
 Format your response strictly as a single JSON object. Ensure the keys and values match the requested schema exactly.
 `;
       console.log(`[AMAZON ENRICH] Dispatching direct HTTP POST to Groq completions API...`);
-      const apiRes = await axios2.post(
+      const apiRes = await axios3.post(
         "https://api.groq.com/openai/v1/chat/completions",
         {
           model: "llama-3.3-70b-versatile",
@@ -4196,11 +4249,11 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       if (!products || !enrichedData) {
         return res.status(400).json({ message: "Products and enrichedData are required." });
       }
-      const settings = JSON.parse(await fs2.promises.readFile("settings.json", "utf-8").catch(() => "{}"));
+      const settings = JSON.parse(await fs3.promises.readFile("settings.json", "utf-8").catch(() => "{}"));
       const tempId = Date.now() + "_" + Math.floor(Math.random() * 1e3);
-      const xlsmTempPath = path2.join(process.cwd(), `temp_${tempId}.xlsm`);
-      const templatePath = path2.join(process.cwd(), "amazon_blank_template.xlsm");
-      if (!fs2.existsSync(templatePath)) {
+      const xlsmTempPath = path3.join(process.cwd(), `temp_${tempId}.xlsm`);
+      const templatePath = path3.join(process.cwd(), "amazon_blank_template.xlsm");
+      if (!fs3.existsSync(templatePath)) {
         return res.status(500).json({ message: "Amazon blank template file is missing on the server." });
       }
       const XLSXModule = await import("xlsx");
@@ -4453,8 +4506,8 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       }
       console.log(`[AMAZON EXPORT] Saving macro-enabled workbook natively...`);
       XLSX.writeFile(wb, xlsmTempPath, { bookVBA: true });
-      const buffer = await fs2.promises.readFile(xlsmTempPath);
-      await fs2.promises.unlink(xlsmTempPath).catch(() => {
+      const buffer = await fs3.promises.readFile(xlsmTempPath);
+      await fs3.promises.unlink(xlsmTempPath).catch(() => {
       });
       res.setHeader("Content-Type", "application/vnd.ms-excel.sheet.macroEnabled.12");
       res.setHeader("Content-Disposition", `attachment; filename=Amazon_Bulk_Listing_Feed_${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}.xlsm`);
@@ -4689,35 +4742,20 @@ Format your response strictly as a single JSON object. Ensure the keys and value
     }
     next();
   });
-  app.get("/api/media", async (req, res) => {
+  app.get(/^\/media\//, mediaHandler(() => process.env.WOOCOMMERCE_URL || "https://api.chilsandco.com"));
+  app.get("/api/media", (req, res) => {
+    const imageUrl = typeof req.query.url === "string" ? req.query.url : "";
+    const rel = imageUrl ? uploadsPathOf(imageUrl) : null;
+    let allowed2 = false;
     try {
-      const imageUrl = req.query.url;
-      if (!imageUrl || typeof imageUrl !== "string") {
-        return res.status(400).send("URL is required");
-      }
-      const targetDomain = new URL(imageUrl).hostname;
-      const allowedDomain = new URL(process.env.WOOCOMMERCE_URL || "https://api.chilsandco.com").hostname;
-      if (targetDomain !== allowedDomain && !targetDomain.endsWith(allowedDomain)) {
-        console.warn(`[CHILS MEDIA PROXY] Blocked SSRF attempt to non-allowed domain: ${targetDomain}`);
-        return res.status(403).send("Forbidden: Domain not whitelisted");
-      }
-      console.log(`[CHILS MEDIA PROXY] Fetching image from WooCommerce: ${imageUrl}`);
-      const response = await axios2.get(imageUrl, {
-        responseType: "arraybuffer",
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-          "Accept": "image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8"
-        },
-        timeout: 8e3
-      });
-      const contentType = response.headers["content-type"];
-      res.setHeader("Content-Type", typeof contentType === "string" ? contentType : "image/png");
-      res.setHeader("Cache-Control", "public, max-age=86400");
-      res.send(response.data);
-    } catch (err) {
-      console.error(`[CHILS MEDIA PROXY] Proxy failed for ${req.query.url}: ${err.message}`);
-      res.redirect("https://res.cloudinary.com/ddatd5ruz/image/upload/v1774668881/chils_simple_logo_transparent_kdfrfk.png");
+      const host = new URL(imageUrl).hostname;
+      const store = new URL(process.env.WOOCOMMERCE_URL || "https://api.chilsandco.com").hostname;
+      allowed2 = host === store || host.endsWith(`.${store}`);
+    } catch {
     }
+    if (!rel || !allowed2) return res.status(400).send("URL is required");
+    res.setHeader("Cache-Control", "public, max-age=604800");
+    res.redirect(301, `/media/${rel.split("/").map(encodeURIComponent).join("/")}`);
   });
   app.use((req, res, next) => {
     const host = req.headers.host || "";
@@ -4802,14 +4840,14 @@ ${xmlItems}
     app.use(vite.middlewares);
     console.log(`[CHILS & CO.] Development mode: Vite middleware active`);
   } else {
-    const distPath = path2.resolve(__dirname, "dist");
-    if (fs2.existsSync(distPath)) {
+    const distPath = path3.resolve(__dirname, "dist");
+    if (fs3.existsSync(distPath)) {
       console.log(`[CHILS & CO.] Production mode: Serving static files from ${distPath}`);
       app.use(express.static(distPath, {
         index: false,
         setHeaders: (res, filePath) => {
-          if (/[\\/]assets[\\/]/.test(filePath)) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
-          else if (/\.(webp|png|jpe?g|svg|woff2?)$/i.test(filePath)) res.setHeader("Cache-Control", "public, max-age=604800");
+          if (/[\\/](assets|studio|p)[\\/]/.test(filePath)) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          else if (/\.(webp|png|jpe?g|svg|woff2?)$/i.test(filePath)) res.setHeader("Cache-Control", "public, max-age=604800, stale-while-revalidate=86400");
         }
       }));
       const DEFAULT_OG_IMAGE = "https://res.cloudinary.com/ddatd5ruz/image/upload/w_1200,h_630,c_fill,f_jpg,q_80/v1782039896/ChatGPT_Image_Jun_21_2026_04_34_04_PM_avhfel.png";
@@ -4873,12 +4911,12 @@ ${xmlItems}
       };
       const PRIVATE_ROUTE_PREFIXES = ["/checkout", "/onboarding", "/console", "/admin", "/auth", "/wishlist"];
       app.get("*", async (req, res) => {
-        const indexPath = path2.resolve(distPath, "index.html");
+        const indexPath = path3.resolve(distPath, "index.html");
         let cleanPath = req.path || "/";
         if (cleanPath.length > 1 && cleanPath.endsWith("/")) {
           cleanPath = cleanPath.slice(0, -1);
         }
-        let html = fs2.readFileSync(indexPath, "utf-8");
+        let html = fs3.readFileSync(indexPath, "utf-8");
         const escAttr = (s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         const canonicalUrl = `https://chilsandco.com${cleanPath === "/" ? "" : cleanPath}`;
         const isPrivate = PRIVATE_ROUTE_PREFIXES.some((prefix) => cleanPath.startsWith(prefix));
@@ -5036,6 +5074,7 @@ ${xmlItems}
       console.log(`[CHILS & CO.] Server started successfully`);
       console.log(`[CHILS & CO.] Listening on port: ${numericPort}`);
       console.log(`[CHILS & CO.] Mode: ${IS_PROD ? "Production" : "Development"}`);
+      if (getWooCommerce()) refreshProducts().catch((e) => console.error("[CHILS & CO.] Products warm-up failed:", e?.message));
     });
   } catch (error) {
     console.error("[CHILS & CO.] Critical Failure during server startup:", error);
@@ -5074,7 +5113,7 @@ async function sendEmailViaBrevo(toEmail, toName, subject, htmlContent) {
       subject,
       htmlContent
     };
-    const response = await axios2.post("https://api.brevo.com/v3/smtp/email", data, {
+    const response = await axios3.post("https://api.brevo.com/v3/smtp/email", data, {
       headers: {
         "accept": "application/json",
         "api-key": BREVO_API_KEY,
@@ -5442,7 +5481,7 @@ async function sendWhatsAppMessage(toPhone, templateName, languageCode = "en_US"
     if (components.length > 0) {
       data.template.components = components;
     }
-    const response = await axios2.post(`https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, data, {
+    const response = await axios3.post(`https://graph.facebook.com/v25.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`, data, {
       headers: {
         "Authorization": `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
         "Content-Type": "application/json"
