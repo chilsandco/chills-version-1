@@ -1115,6 +1115,101 @@ async function startServer() {
   app.use(cors());
   app.set("trust proxy", true);
   app.use(express.json({ limit: "10mb" }));
+  const HOLDING = (process.env.SITE_MODE || "").trim().toLowerCase() === "holding";
+  const PREVIEW_KEY = (process.env.PREVIEW_KEY || "").trim();
+  const PREVIEW_COOKIE = "chils_preview";
+  const previewToken = PREVIEW_KEY ? crypto3.createHmac("sha256", PREVIEW_KEY).update("chils-preview-v1").digest("hex") : "";
+  const safeEq = (a, b) => crypto3.timingSafeEqual(crypto3.createHash("sha256").update(a).digest(), crypto3.createHash("sha256").update(b).digest());
+  const cookieOf = (req, name) => {
+    const hit = (req.headers.cookie || "").split(";").map((c) => c.trim()).find((c) => c.startsWith(`${name}=`));
+    return hit ? decodeURIComponent(hit.slice(name.length + 1)) : "";
+  };
+  const hasPreview = (req) => !!previewToken && safeEq(cookieOf(req, PREVIEW_COOKIE), previewToken);
+  const cookieFlags = (req) => `Path=/; HttpOnly; SameSite=Lax${(req.headers["x-forwarded-proto"] || req.protocol) === "https" ? "; Secure" : ""}`;
+  app.get("/preview", (req, res, next) => {
+    const key = typeof req.query.key === "string" ? req.query.key : "";
+    if (!previewToken || !key || !safeEq(key, PREVIEW_KEY)) return next();
+    res.setHeader("Set-Cookie", `${PREVIEW_COOKIE}=${previewToken}; Max-Age=2592000; ${cookieFlags(req)}`);
+    res.setHeader("Cache-Control", "no-store");
+    res.redirect(302, "/");
+  });
+  app.get("/preview/off", (req, res) => {
+    res.setHeader("Set-Cookie", `${PREVIEW_COOKIE}=; Max-Age=0; ${cookieFlags(req)}`);
+    res.setHeader("Cache-Control", "no-store");
+    res.redirect(302, "/");
+  });
+  const HOLDING_OPEN = [
+    /^\/api\/ping$/,
+    /^\/api\/launch-list$/,
+    /^\/api\/settings$/,
+    /^\/api\/checkout\/phonepe\/callback$/,
+    /^\/api\/webhooks\//,
+    /^\/api\/orders\/status\//,
+    /^\/order-success\//,
+    /^\/assets\//,
+    /^\/folded\//,
+    /^\/snowflake\.svg$/,
+    /^\/coming-soon\.html$/,
+    /^\/robots\.txt$/,
+    /^\/google[\w]+\.html$/,
+    /^\/apple-touch-icon\.png$/,
+    /^\/favicon/
+  ];
+  let holdingHtml = null;
+  const readHolding = () => {
+    if (holdingHtml) return holdingHtml;
+    for (const p of [path4.resolve(__dirname, "dist", "coming-soon.html"), path4.resolve(__dirname, "public", "coming-soon.html")]) {
+      try {
+        return holdingHtml = fs4.readFileSync(p, "utf-8");
+      } catch {
+      }
+    }
+    return "<!doctype html><title>CHILS & CO.</title><p style='font:16px sans-serif;padding:40px'>We're restitching the store. Back shortly.</p>";
+  };
+  if (HOLDING) {
+    console.log(`[CHILS & CO.] HOLDING MODE: visitors see the coming-soon page${PREVIEW_KEY ? "; preview link is on" : "; NO PREVIEW_KEY set, nobody can open the store"}`);
+    app.use((req, res, next) => {
+      if (hasPreview(req) || HOLDING_OPEN.some((r) => r.test(req.path))) return next();
+      res.setHeader("Retry-After", "3600");
+      res.setHeader("Cache-Control", "no-store");
+      if ((req.method === "GET" || req.method === "HEAD") && !req.path.startsWith("/api/")) {
+        return res.status(503).type("html").send(readHolding());
+      }
+      return res.status(503).json({ message: "The store is being updated. Back shortly." });
+    });
+  }
+  const LAUNCH_FILE = dataFile("launch-list.json");
+  const launchHits = /* @__PURE__ */ new Map();
+  const readLaunch = () => {
+    try {
+      return JSON.parse(fs4.readFileSync(LAUNCH_FILE, "utf-8"));
+    } catch {
+      return [];
+    }
+  };
+  app.post("/api/launch-list", (req, res) => {
+    const ip = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
+    const recent = (launchHits.get(ip) || []).filter((t) => Date.now() - t < 36e5);
+    if (recent.length >= 8) return res.status(429).json({ message: "Too many tries. Please wait a bit." });
+    launchHits.set(ip, [...recent, Date.now()]);
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return res.status(400).json({ message: "That email doesn't look right." });
+    const list = readLaunch();
+    if (list.length >= 5e4) return res.status(503).json({ message: "Try again later." });
+    if (!list.some((x) => x.email === email)) {
+      const best = Number(req.body?.best);
+      list.push({ email, at: (/* @__PURE__ */ new Date()).toISOString(), ...Number.isFinite(best) && best > 0 ? { best: Math.min(Math.floor(best), 9999) } : {} });
+      fs4.writeFileSync(LAUNCH_FILE, JSON.stringify(list));
+      console.log(`[CHILS & CO.] Launch list: ${list.length} signed up`);
+    }
+    res.json({ ok: true });
+  });
+  app.get("/api/launch-list.csv", (req, res) => {
+    if (!hasPreview(req)) return res.status(404).end();
+    const rows = readLaunch().map((x) => `"${x.email.replace(/"/g, '""')}",${x.at},${x.best ?? ""}`);
+    res.setHeader("Content-Disposition", 'attachment; filename="launch-list.csv"');
+    res.type("text/csv").send(["email,signed_up,best_score", ...rows].join("\n"));
+  });
   try {
     adoptLegacyUploads(__dirname);
   } catch (e) {

@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>CHILS & CO. · New drop loading</title>
+<meta name="description" content="CHILS & CO. is getting a new look. Play Fold & Stack while we restitch the store." />
+<meta name="robots" content="noindex" />
+<meta name="theme-color" content="#f4f2ee" />
+<meta property="og:title" content="CHILS & CO. · How high can you fold?" />
+<meta property="og:description" content="We're restitching the store. Play Fold & Stack until we launch." />
+<meta property="og:image" content="https://chilsandco.com/folded/1134.webp" />
+<link rel="icon" href="/snowflake.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet" />
+<style>
+  :root { --ink:#141311; --paper:#f4f2ee; --bone:#e7e3dc; --stone:#716c64; --brass:#9c8152; --moss:#3e4a3a; --ease:cubic-bezier(.22,1,.36,1); }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Geist", ui-sans-serif, system-ui, sans-serif; color: var(--ink);
+    background: radial-gradient(120% 80% at 70% 20%, #faf9f6 0%, var(--paper) 50%, #ebe8e1 100%);
+    -webkit-font-smoothing: antialiased; overflow-x: hidden;
+  }
+  .wrap { min-height: 100svh; max-width: 1240px; margin: 0 auto; padding: 28px 24px 32px; display: flex; flex-direction: column; }
+  header { display: flex; align-items: center; justify-content: space-between; }
+  .brand { display: inline-flex; align-items: center; gap: 10px; font-family: "Space Grotesk", sans-serif; font-weight: 700; letter-spacing: .22em; font-size: 15px; }
+  .brand img { width: 18px; height: 20px; animation: spin 14s linear infinite; }
+  .tag { font-family: "Geist Mono", monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--stone); display: inline-flex; align-items: center; gap: 8px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--brass); animation: pulse 2s var(--ease) infinite; }
+
+  main > section { min-width: 0; }
+  .wrap { width: 100%; }
+  main { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 460px); gap: 56px; align-items: center; padding: 36px 0; }
+  h1 { font-weight: 600; font-size: clamp(42px, 6.6vw, 96px); line-height: .98; letter-spacing: -.045em; }
+  h1 .soft { color: var(--stone); }
+  .stitch { display: block; width: min(500px, 92%); height: 18px; margin: 22px 0 24px; overflow: visible; }
+  .stitch path { fill: none; stroke: var(--brass); stroke-width: 2; stroke-linecap: round; stroke-dasharray: 7 7; }
+  .stitch circle { fill: var(--ink); }
+  .lede { font-size: clamp(17px, 1.55vw, 20px); line-height: 1.55; color: #47433d; max-width: 520px; }
+
+  form { margin-top: 28px; display: flex; gap: 8px; max-width: 480px; background: #fff; padding: 6px; border-radius: 999px; box-shadow: 0 18px 40px -24px rgba(20,19,17,.35); }
+  input[type=email] { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; padding: 0 18px; font: inherit; font-size: 16px; color: var(--ink); }
+  input::placeholder { color: #a39e95; }
+  .btn { border: 0; cursor: pointer; font: inherit; font-weight: 500; font-size: 15px; height: 48px; padding: 0 22px; border-radius: 999px; background: var(--ink); color: var(--paper); display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; text-decoration: none; transition: transform .25s var(--ease), background-color .25s var(--ease); }
+  .btn:hover { background: #2a2825; transform: translateY(-1px); }
+  .btn:active { transform: scale(.97); }
+  .btn svg { transition: transform .35s var(--ease); }
+  .btn:hover svg { transform: translateX(4px); }
+  .btn.done { background: var(--moss); }
+  .btn.soft { background: var(--bone); color: var(--ink); }
+  .btn.soft:hover { background: #ddd8cf; }
+  .note { margin-top: 12px; font-size: 13px; color: var(--stone); min-height: 18px; padding-left: 20px; }
+  .links { margin-top: 24px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: inline-flex; align-items: center; height: 40px; padding: 0 16px; border-radius: 999px; background: var(--bone); color: var(--ink); text-decoration: none; font-size: 14px; transition: background-color .25s var(--ease), transform .25s var(--ease); }
+  .chip:hover { background: #ddd8cf; transform: translateY(-1px); }
+
+  /* the game */
+  .game { background: #fff; border-radius: 24px; padding: 16px; box-shadow: 0 30px 60px -36px rgba(20,19,17,.45); position: relative; }
+  .hud { display: flex; justify-content: space-between; align-items: flex-end; padding: 4px 6px 12px; }
+  .hud .tag { display: block; }
+  .score { font-weight: 600; font-size: 34px; letter-spacing: -.03em; line-height: 1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .best { text-align: right; }
+  .best .score { font-size: 20px; color: var(--stone); }
+  .stage { position: relative; border-radius: 16px; overflow: hidden; background: linear-gradient(180deg, #f8f7f4 0%, var(--paper) 60%, #e9e5de 100%); touch-action: manipulation; user-select: none; -webkit-user-select: none; cursor: pointer; outline: none; }
+  .stage:focus-visible { box-shadow: 0 0 0 2px var(--ink); }
+  canvas { display: block; width: 100%; height: 520px; }
+  .toast { position: absolute; left: 50%; top: 18%; transform: translate(-50%, 0); background: var(--ink); color: var(--paper); font-size: 13px; font-weight: 500; padding: 7px 14px; border-radius: 999px; opacity: 0; pointer-events: none; transition: opacity .2s, transform .5s var(--ease); white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translate(-50%, -10px); }
+  .overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 24px; background: rgba(244,242,238,.82); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition: opacity .35s var(--ease); }
+  .overlay.hide { opacity: 0; pointer-events: none; }
+  .overlay h2 { font-weight: 600; font-size: 30px; letter-spacing: -.03em; line-height: 1.05; }
+  .overlay p { color: #47433d; font-size: 15px; line-height: 1.5; max-width: 300px; }
+  .overlay .row { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; justify-content: center; }
+  .hint { text-align: center; font-size: 12px; color: var(--stone); padding-top: 10px; }
+
+  footer { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--stone); }
+  .wordmark { max-width: 100%; font-family: "Space Grotesk", sans-serif; font-weight: 500; font-size: clamp(54px, 13vw, 180px); line-height: .8; letter-spacing: -.02em; color: transparent; -webkit-text-stroke: 1.2px rgba(20,19,17,.5); white-space: nowrap; user-select: none; margin: 8px 0 18px; text-align: center; overflow: hidden; }
+
+  .rise { opacity: 0; transform: translateY(14px); animation: rise .9s var(--ease) forwards; }
+  .d1 { animation-delay: .08s } .d2 { animation-delay: .18s } .d3 { animation-delay: .3s } .d4 { animation-delay: .42s } .d5 { animation-delay: .54s }
+  @keyframes rise { to { opacity: 1; transform: none; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(156,129,82,.45); } 70% { box-shadow: 0 0 0 10px rgba(156,129,82,0); } 100% { box-shadow: 0 0 0 0 rgba(156,129,82,0); } }
+
+  @media (max-width: 900px) {
+    .wrap { padding: 18px 16px 24px; }
+    main { grid-template-columns: minmax(0, 1fr); gap: 28px; padding: 22px 0 12px; }
+    .game { order: 2; padding: 12px; border-radius: 20px; }
+    canvas { height: 440px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rise, .brand img, .dot { animation: none !important; opacity: 1; transform: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="rise">
+    <div class="brand"><img src="/snowflake.svg" alt="" width="18" height="20" />CHILS &amp; CO.</div>
+    <span class="tag"><span class="dot"></span>New drop loading</span>
+  </header>
+
+  <main>
+    <section>
+      <p class="tag rise d1" style="margin-bottom:18px">Premium tees · Designed in Hyderabad</p>
+      <h1 class="rise d2">We're restitching<br /><span class="soft">the store.</span></h1>
+      <svg class="stitch rise d3" viewBox="0 0 500 18" preserveAspectRatio="none" aria-hidden="true">
+        <path id="seam" d="M2 9 C 86 1, 164 17, 250 9 S 414 1, 498 9" />
+        <circle r="3.5"><animateMotion dur="5s" repeatCount="indefinite"><mpath href="#seam" /></animateMotion></circle>
+      </svg>
+      <p class="lede rise d3">A whole new CHILS &amp; CO. is on the way: new store, new drops, the same heavyweight tees. Fold a few while you wait, and leave your email to be first through the door.</p>
+
+      <form id="notify" class="rise d4" novalidate>
+        <label for="email" style="position:absolute;left:-9999px">Email</label>
+        <input id="email" type="email" name="email" placeholder="you@example.com" autocomplete="email" required />
+        <button class="btn" type="submit" id="go"><span id="go-label">Notify me</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </form>
+      <p class="note rise d4" id="note" aria-live="polite">One email when we launch. Nothing else.</p>
+
+      <div class="links rise d5">
+        <a class="chip" href="https://wa.me/917842070404?text=Hi%20CHILS%20%26%20CO.%2C%20I%20have%20a%20question." target="_blank" rel="noopener">WhatsApp us</a>
+        <a class="chip" href="https://www.instagram.com/chils_and_co/" target="_blank" rel="noopener">Instagram</a>
+        <a class="chip" href="mailto:hello.chilsandco@gmail.com">Email</a>
+      </div>
+    </section>
+
+    <section class="game rise d3" aria-label="Fold and Stack, a game">
+      <div class="hud">
+        <div><span class="tag">Fold &amp; Stack</span><div class="score" id="score">0</div></div>
+        <div class="best"><span class="tag">Your best</span><div class="score" id="best">0</div></div>
+      </div>
+      <div class="stage" id="stage" tabindex="0" role="button" aria-label="Drop the tee">
+        <canvas id="cv"></canvas>
+        <div class="toast" id="toast">Perfect fold</div>
+        <div class="overlay" id="ready">
+          <h2>How high can<br />you fold?</h2>
+          <p>Tap to drop each tee onto the pile. Anything hanging over the edge gets trimmed. Line them up perfectly to keep them wide.</p>
+          <div class="row"><button class="btn" id="start" type="button">Start folding</button></div>
+        </div>
+        <div class="overlay hide" id="over">
+          <span class="tag" id="over-tag">Pile toppled</span>
+          <h2 id="over-title">You folded 0 tees</h2>
+          <p id="over-text">Not bad. The shelf staff are impressed.</p>
+          <div class="row">
+            <button class="btn" id="again" type="button">Fold again</button>
+            <button class="btn soft" id="share" type="button">Share score</button>
+          </div>
+        </div>
+      </div>
+      <p class="hint">Tap, click or press space to drop</p>
+    </section>
+  </main>
+
+  <p class="wordmark rise d5" aria-hidden="true">CHILS &amp; CO.</p>
+  <footer class="rise d5">
+    <span>Already ordered? Your order is safe. We're still packing and shipping.</span>
+    <span>© 2026 CHILS &amp; CO.</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  // ---------- Fold & Stack ----------
+  var TEES = ['1134', '1003', '1110', '1115', '1105', '1256', '1128', '1261', '1267', '1276', '1281', '1296'];
+  var imgs = TEES.map(function (id) { var im = new Image(); im.src = '/folded/' + id + '.webp'; return im; });
+  var cv = document.getElementById('cv'), ctx = cv.getContext('2d'), stage = document.getElementById('stage');
+  var scoreEl = document.getElementById('score'), bestEl = document.getElementById('best'), toast = document.getElementById('toast');
+  var ready = document.getElementById('ready'), over = document.getElementById('over');
+  var W = 0, H = 0, DPR = 1, BH = 34;
+  var pile = [], mover = null, debris = [], cam = 0, camTarget = 0, state = 'ready', score = 0, perfectRun = 0, dir = 1, t0 = 0;
+  var best = 0; try { best = +localStorage.getItem('chils-fold-best') || 0; } catch (e) {}
+  bestEl.textContent = best;
+
+  function size() {
+    var r = cv.getBoundingClientRect(); DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = r.width; H = r.height; cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0); BH = Math.max(28, Math.round(H / 15));
+  }
+  function reset() {
+    size(); pile = []; debris = []; score = 0; perfectRun = 0; cam = camTarget = 0;
+    var w = Math.round(W * 0.6);
+    pile.push({ x: (W - w) / 2, w: w, img: imgs[0] });
+    scoreEl.textContent = '0'; spawn();
+  }
+  function topY(level) { return H - 24 - (level + 1) * BH; }
+  function spawn() {
+    var prev = pile[pile.length - 1];
+    dir = pile.length % 2 ? 1 : -1;
+    mover = { x: dir > 0 ? 0 : W - prev.w, w: prev.w, img: imgs[pile.length % imgs.length], speed: Math.min(2.4 + pile.length * 0.11, 7.2) * (W / 420) };
+  }
+  function drop() {
+    if (state !== 'play' || !mover) return;
+    var prev = pile[pile.length - 1], m = mover;
+    var left = Math.max(m.x, prev.x), right = Math.min(m.x + m.w, prev.x + prev.w), overlap = right - left;
+    if (navigator.vibrate) try { navigator.vibrate(8); } catch (e) {}
+    if (overlap <= 0) { debris.push({ x: m.x, w: m.w, y: topY(pile.length), img: m.img, vy: 0, vx: dir * 1.2, rot: 0, vr: dir * 0.04 }); mover = null; return end(); }
+    if (Math.abs(m.x - prev.x) <= Math.max(3, W * 0.008)) {
+      left = prev.x; overlap = prev.w; perfectRun++;
+      if (perfectRun >= 3 && overlap < W * 0.6) { overlap = Math.min(W * 0.6, overlap + W * 0.04); left = Math.max(0, prev.x - W * 0.02); }
+      show(perfectRun >= 3 ? 'Perfect fold ×' + perfectRun : 'Perfect fold');
+    } else {
+      perfectRun = 0;
+      var cutX = m.x < prev.x ? m.x : right, cutW = m.w - overlap;
+      debris.push({ x: cutX, w: cutW, y: topY(pile.length), img: m.img, vy: 0, vx: (m.x < prev.x ? -1 : 1) * 1.4, rot: 0, vr: (m.x < prev.x ? -1 : 1) * 0.05 });
+    }
+    pile.push({ x: left, w: overlap, img: m.img });
+    score++; scoreEl.textContent = score;
+    camTarget = Math.max(0, (pile.length - 7) * BH);
+    spawn();
+  }
+  function show(text) { toast.textContent = text; toast.classList.remove('show'); void toast.offsetWidth; toast.classList.add('show'); clearTimeout(show.t); show.t = setTimeout(function () { toast.classList.remove('show'); }, 900); }
+  function end() {
+    state = 'over';
+    var isBest = score > best; if (isBest) { best = score; try { localStorage.setItem('chils-fold-best', String(best)); } catch (e) {} bestEl.textContent = best; }
+    document.getElementById('over-tag').textContent = isBest && score > 0 ? 'New personal best' : 'Pile toppled';
+    document.getElementById('over-title').textContent = 'You folded ' + score + (score === 1 ? ' tee' : ' tees');
+    document.getElementById('over-text').textContent = score >= 30 ? 'Shelf legend. We might need you at the studio.' : score >= 15 ? 'Clean folds. The shelf staff are impressed.' : score >= 6 ? 'Nice pile. Line them up for perfect folds.' : 'Warm-up round. Tap when the tee sits right over the pile.';
+    setTimeout(function () { over.classList.remove('hide'); document.getElementById('again').focus({ preventScroll: true }); }, 450);
+  }
+  function start() { ready.classList.add('hide'); over.classList.add('hide'); reset(); state = 'play'; stage.focus({ preventScroll: true }); }
+
+  function drawTee(b, y, alpha, rot) {
+    if (b.w <= 0.5) return;
+    ctx.save(); ctx.globalAlpha = alpha == null ? 1 : alpha;
+    if (rot) { ctx.translate(b.x + b.w / 2, y + BH / 2); ctx.rotate(rot); ctx.translate(-(b.x + b.w / 2), -(y + BH / 2)); }
+    ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(b.x, y, b.w, BH - 2, 5); else ctx.rect(b.x, y, b.w, BH - 2); ctx.clip();
+    var im = b.img;
+    if (im.complete && im.naturalWidth) {
+      // a band of the folded tee: its fabric and colour, like the edge of a folded shirt
+      var sw = im.naturalWidth, sh = im.naturalHeight * 0.22, sy = im.naturalHeight * 0.58;
+      var scale = Math.max(W * 0.6 / sw, (BH - 2) / sh);
+      ctx.drawImage(im, 0, sy, sw, sh, (W - sw * scale) / 2, y, sw * scale, sh * scale);
+    } else { ctx.fillStyle = '#2a2825'; ctx.fillRect(b.x, y, b.w, BH - 2); }
+    var g = ctx.createLinearGradient(0, y, 0, y + BH); g.addColorStop(0, 'rgba(255,255,255,.18)'); g.addColorStop(.45, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(0,0,0,.22)');
+    ctx.fillStyle = g; ctx.fillRect(b.x, y, b.w, BH - 2);
+    ctx.restore();
+  }
+  function frame(t) {
+    var dt = Math.min(2.5, (t - (t0 || t)) / 16.67); t0 = t;
+    ctx.clearRect(0, 0, W, H);
+    cam += (camTarget - cam) * 0.12;
+    ctx.save(); ctx.translate(0, cam);
+    // floor shadow
+    var base = pile[0]; if (base) { var fy = topY(0) + BH + 6; var sg = ctx.createRadialGradient(W / 2, fy, 4, W / 2, fy, W * 0.42); sg.addColorStop(0, 'rgba(20,19,17,.2)'); sg.addColorStop(1, 'rgba(20,19,17,0)'); ctx.fillStyle = sg; ctx.fillRect(0, fy - 20, W, 40); }
+    for (var i = 0; i < pile.length; i++) drawTee(pile[i], topY(i));
+    if (state === 'play' && mover) {
+      mover.x += mover.speed * dir * dt;
+      if (mover.x + mover.w > W + 4 && dir > 0) dir = -1; else if (mover.x < -4 && dir < 0) dir = 1;
+      if (mover.x > W) dir = -1; if (mover.x + mover.w < 0) dir = 1;
+      drawTee(mover, topY(pile.length));
+    }
+    for (var d = debris.length - 1; d >= 0; d--) {
+      var p = debris[d]; p.vy += 0.5 * dt; p.y += p.vy * dt; p.x += p.vx * dt; p.rot += p.vr * dt;
+      drawTee(p, p.y, Math.max(0, 1 - (p.y - topY(pile.length)) / (H * 0.9)), p.rot);
+      if (p.y - cam > H + 80) debris.splice(d, 1);
+    }
+    ctx.restore();
+    requestAnimationFrame(frame);
+  }
+
+  stage.addEventListener('pointerdown', function (e) { if (state === 'play') { e.preventDefault(); drop(); } });
+  document.addEventListener('keydown', function (e) {
+    if ((e.code === 'Space' || e.code === 'Enter') && document.activeElement !== document.getElementById('email')) {
+      if (state === 'play') { e.preventDefault(); drop(); }
+      else if (state === 'ready' && document.activeElement === stage) { e.preventDefault(); start(); }
+    }
+  });
+  document.getElementById('start').addEventListener('click', function (e) { e.stopPropagation(); start(); });
+  document.getElementById('again').addEventListener('click', function (e) { e.stopPropagation(); start(); });
+  document.getElementById('share').addEventListener('click', function (e) {
+    e.stopPropagation();
+    var text = 'I folded ' + score + ' tees in Fold & Stack while CHILS & CO. restitches its store. Beat me:';
+    var url = location.origin;
+    if (navigator.share) navigator.share({ title: 'Fold & Stack', text: text, url: url }).catch(function () {});
+    else if (navigator.clipboard) navigator.clipboard.writeText(text + ' ' + url).then(function () { e.target.textContent = 'Copied'; setTimeout(function () { e.target.textContent = 'Share score'; }, 1600); });
+  });
+  window.addEventListener('resize', function () { if (state !== 'play') { size(); reset(); } });
+  reset(); requestAnimationFrame(frame);
+  if (/[?&]debug\b/.test(location.search)) window.__fold = { state: function () { return { state: state, mover: mover, top: pile[pile.length - 1], score: score }; }, drop: drop };
+
+  // ---------- Notify me ----------
+  var form = document.getElementById('notify'), input = document.getElementById('email'), note = document.getElementById('note'), btn = document.getElementById('go'), label = document.getElementById('go-label');
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var email = input.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { note.textContent = 'That email doesn’t look right. Try again.'; input.focus(); return; }
+    btn.disabled = true; label.textContent = 'Saving…';
+    fetch('/api/launch-list', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: email, best: best }) })
+      .then(function (r) { if (!r.ok) throw new Error(); btn.classList.add('done'); label.textContent = 'You’re on the list'; note.textContent = 'We’ll email you the moment the new store opens.'; input.value = ''; })
+      .catch(function () { btn.disabled = false; label.textContent = 'Notify me'; note.textContent = 'Couldn’t save that just now. Please try again.'; });
+  });
+})();
+</script>
+</body>
+</html>

@@ -325,6 +325,94 @@ async function startServer() {
   app.set('trust proxy', true);
   app.use(express.json({ limit: '10mb' }));
 
+  // ── Holding page ────────────────────────────────────────────────────────────
+  // SITE_MODE=holding shows public/coming-soon.html (with its tee-folding game) to every visitor.
+  // Whoever opens /preview?key=<PREVIEW_KEY> gets a cookie and sees the real store, on the real
+  // domain, so checkout, PhonePe and emails can be tested before launch. Remove SITE_MODE to launch.
+  // Payment callbacks, store webhooks and returns from PhonePe stay open so nothing in flight breaks.
+  const HOLDING = (process.env.SITE_MODE || "").trim().toLowerCase() === "holding";
+  const PREVIEW_KEY = (process.env.PREVIEW_KEY || "").trim();
+  const PREVIEW_COOKIE = "chils_preview";
+  const previewToken = PREVIEW_KEY ? crypto.createHmac("sha256", PREVIEW_KEY).update("chils-preview-v1").digest("hex") : "";
+  const safeEq = (a: string, b: string) =>
+    crypto.timingSafeEqual(crypto.createHash("sha256").update(a).digest(), crypto.createHash("sha256").update(b).digest());
+  const cookieOf = (req: express.Request, name: string) => {
+    const hit = (req.headers.cookie || "").split(";").map(c => c.trim()).find(c => c.startsWith(`${name}=`));
+    return hit ? decodeURIComponent(hit.slice(name.length + 1)) : "";
+  };
+  const hasPreview = (req: express.Request) => !!previewToken && safeEq(cookieOf(req, PREVIEW_COOKIE), previewToken);
+  const cookieFlags = (req: express.Request) => `Path=/; HttpOnly; SameSite=Lax${(req.headers["x-forwarded-proto"] || req.protocol) === "https" ? "; Secure" : ""}`;
+
+  app.get("/preview", (req, res, next) => {
+    const key = typeof req.query.key === "string" ? req.query.key : "";
+    if (!previewToken || !key || !safeEq(key, PREVIEW_KEY)) return next();
+    res.setHeader("Set-Cookie", `${PREVIEW_COOKIE}=${previewToken}; Max-Age=2592000; ${cookieFlags(req)}`);
+    res.setHeader("Cache-Control", "no-store");
+    res.redirect(302, "/");
+  });
+  app.get("/preview/off", (req, res) => {
+    res.setHeader("Set-Cookie", `${PREVIEW_COOKIE}=; Max-Age=0; ${cookieFlags(req)}`);
+    res.setHeader("Cache-Control", "no-store");
+    res.redirect(302, "/");
+  });
+
+  const HOLDING_OPEN = [
+    /^\/api\/ping$/, /^\/api\/launch-list$/, /^\/api\/settings$/,
+    /^\/api\/checkout\/phonepe\/callback$/, /^\/api\/webhooks\//, /^\/api\/orders\/status\//,
+    /^\/order-success\//, /^\/assets\//, /^\/folded\//, /^\/snowflake\.svg$/, /^\/coming-soon\.html$/,
+    /^\/robots\.txt$/, /^\/google[\w]+\.html$/, /^\/apple-touch-icon\.png$/, /^\/favicon/,
+  ];
+  let holdingHtml: string | null = null;
+  const readHolding = () => {
+    if (holdingHtml) return holdingHtml;
+    for (const p of [path.resolve(__dirname, "dist", "coming-soon.html"), path.resolve(__dirname, "public", "coming-soon.html")]) {
+      try { return (holdingHtml = fs.readFileSync(p, "utf-8")); } catch { /* try the next */ }
+    }
+    return "<!doctype html><title>CHILS & CO.</title><p style='font:16px sans-serif;padding:40px'>We're restitching the store. Back shortly.</p>";
+  };
+  if (HOLDING) {
+    console.log(`[CHILS & CO.] HOLDING MODE: visitors see the coming-soon page${PREVIEW_KEY ? "; preview link is on" : "; NO PREVIEW_KEY set, nobody can open the store"}`);
+    app.use((req, res, next) => {
+      if (hasPreview(req) || HOLDING_OPEN.some(r => r.test(req.path))) return next();
+      // 503 + Retry-After tells search engines this is temporary, so rankings are kept
+      res.setHeader("Retry-After", "3600");
+      res.setHeader("Cache-Control", "no-store");
+      if ((req.method === "GET" || req.method === "HEAD") && !req.path.startsWith("/api/")) {
+        return res.status(503).type("html").send(readHolding());
+      }
+      return res.status(503).json({ message: "The store is being updated. Back shortly." });
+    });
+  }
+
+  // "Notify me" sign-ups from the holding page, kept outside the app folder like other customer data.
+  const LAUNCH_FILE = dataFile("launch-list.json");
+  const launchHits = new Map<string, number[]>();
+  const readLaunch = (): { email: string; at: string; best?: number }[] => { try { return JSON.parse(fs.readFileSync(LAUNCH_FILE, "utf-8")); } catch { return []; } };
+  app.post("/api/launch-list", (req, res) => {
+    const ip = String(req.headers["x-forwarded-for"] || req.socket.remoteAddress || "").split(",")[0].trim();
+    const recent = (launchHits.get(ip) || []).filter(t => Date.now() - t < 3600_000);
+    if (recent.length >= 8) return res.status(429).json({ message: "Too many tries. Please wait a bit." });
+    launchHits.set(ip, [...recent, Date.now()]);
+    const email = String(req.body?.email || "").trim().toLowerCase();
+    if (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return res.status(400).json({ message: "That email doesn't look right." });
+    const list = readLaunch();
+    if (list.length >= 50000) return res.status(503).json({ message: "Try again later." });
+    if (!list.some(x => x.email === email)) {
+      const best = Number(req.body?.best);
+      list.push({ email, at: new Date().toISOString(), ...(Number.isFinite(best) && best > 0 ? { best: Math.min(Math.floor(best), 9999) } : {}) });
+      fs.writeFileSync(LAUNCH_FILE, JSON.stringify(list));
+      console.log(`[CHILS & CO.] Launch list: ${list.length} signed up`);
+    }
+    res.json({ ok: true });
+  });
+  // The team downloads the list from the preview session: /api/launch-list.csv
+  app.get("/api/launch-list.csv", (req, res) => {
+    if (!hasPreview(req)) return res.status(404).end();
+    const rows = readLaunch().map(x => `"${x.email.replace(/"/g, '""')}",${x.at},${x.best ?? ""}`);
+    res.setHeader("Content-Disposition", 'attachment; filename="launch-list.csv"');
+    res.type("text/csv").send(["email,signed_up,best_score", ...rows].join("\n"));
+  });
+
   // Customer uploads (review photos, custom designs) live outside the app folder so deploys keep them.
   try { adoptLegacyUploads(__dirname); } catch (e: any) { console.error("[CHILS DATA] Could not adopt old uploads:", e.message); }
   app.use("/uploads", (req, res, next) => {
