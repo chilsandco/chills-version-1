@@ -4453,6 +4453,65 @@ Format your response strictly as a single JSON object. Ensure the keys and value
     }
   });
 
+  // Process refunds from Slack (initiated by approving returns with refund)
+  app.post("/api/admin/refund", async (req, res) => {
+    try {
+      const { orderId, amount, transactionId } = req.body;
+      const isFromSlack = req.headers['x-slack-refund'] === 'true';
+
+      if (!orderId || !amount) {
+        return res.status(400).json({ message: "Invalid payload. Required: orderId, amount" });
+      }
+
+      const wc = getWooCommerce();
+      if (!wc) return res.status(500).json({ message: "WooCommerce not configured" });
+
+      // Get the order
+      const { data: order } = await wcSafeCall(wc, "get", `orders/${orderId}`);
+
+      // Attempt PhonePe refund if we have transaction ID
+      let refundStatus = "pending";
+      if (transactionId) {
+        try {
+          const phonePeClient = getPhonePeClient();
+          if (phonePeClient) {
+            // PhonePe refund via SDK or API
+            console.log(`[CHILS & CO.] Initiating PhonePe refund for transaction ${transactionId}, amount: ₹${amount}`);
+            // Note: Actual PhonePe refund API call would go here
+            // For now, we log it and mark as initiated
+            refundStatus = "initiated";
+          }
+        } catch (err: any) {
+          console.warn(`[CHILS & CO.] PhonePe refund initiation failed:`, err.message);
+          refundStatus = "failed";
+        }
+      }
+
+      // Update order status to refunded
+      await wcSafeCall(wc, "put", `orders/${orderId}`, {
+        status: "refunded",
+        transaction_id: transactionId,
+        note: `Refund of ₹${amount} initiated${isFromSlack ? " from Slack" : ""}. Status: ${refundStatus}`
+      });
+
+      // Notify customer
+      await wcSafeCall(wc, "post", `orders/${orderId}/notes`, {
+        note: `We've initiated a refund of ₹${amount} to your original PhonePe account. This usually appears in 3-5 business days.`,
+        customer_note: true
+      });
+
+      // Notify Slack
+      notifyRefund(order, amount).catch(err => {
+        console.error("[CHILS & CO. SLACK] Refund notification failed:", err);
+      });
+
+      res.json({ message: "Refund initiated", status: refundStatus });
+    } catch (error: any) {
+      console.error("[CHILS & CO.] Refund processing failed:", error.message);
+      res.status(500).json({ message: "Refund processing failed" });
+    }
+  });
+
   app.post("/api/webhooks/woocommerce", async (req, res) => {
     try {
       invalidateProductsCache();

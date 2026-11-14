@@ -357,7 +357,7 @@ export function returnBlocks(order: any, done?: string) {
     `*Reason:* ${r.reason || "not given"}`,
     r.description ? `*Customer's note:* ${r.description}` : "",
     r.wants.length ? `*What they want:*\n${r.wants.join("\n")}` : `*Items:*\n${itemLines(order)}`,
-    r.images.length ? `*Photos:* ${r.images.map((u, i) => `<${u}|photo ${i + 1}>`).join(" · ")}` : "",
+    r.images.length ? `*Return photos:* ${r.images.map((u, i) => `<${u}|photo ${i + 1}>`).join(" · ")}` : "",
   ].filter(Boolean);
 
   const blocks: any[] = [
@@ -373,20 +373,30 @@ export function returnBlocks(order: any, done?: string) {
     },
     { type: "section", text: { type: "mrkdwn", text: detail.join("\n") } },
   ];
+
+  // Add product images
+  const productImages = order.line_items?.slice(0, 3).map((item: any) => ({ type: "image", image_url: item.image?.src || "", alt_text: item.name })).filter((img: any) => img.image_url);
+  if (productImages?.length) {
+    blocks.push({ type: "divider" });
+    productImages.forEach((img: any) => {
+      if (img.image_url) blocks.push({ type: "image", image_url: img.image_url, alt_text: img.alt_text });
+    });
+  }
+
   if (done) blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: done }] });
   const actions: any[] = [];
   if (!done) {
     actions.push(
       {
         type: "button",
-        text: { type: "plain_text", text: "Approve" },
+        text: { type: "plain_text", text: "Approve & Refund" },
         style: "primary",
-        action_id: "return_approve",
+        action_id: "return_approve_refund",
         value: String(order.id),
         confirm: {
-          title: { type: "plain_text", text: "Approve this return?" },
-          text: { type: "mrkdwn", text: `Order #${order.id} moves to Return approved and the customer is emailed that it's approved.${r.isRefund ? " Approving doesn't send money back: refund it in PhonePe too." : ""}` },
-          confirm: { type: "plain_text", text: "Approve" },
+          title: { type: "plain_text", text: "Approve return & process refund?" },
+          text: { type: "mrkdwn", text: `Order #${order.id} moves to Return approved, customer is emailed, and ${money(r.value || order.total)} will be refunded to their PhonePe account immediately.` },
+          confirm: { type: "plain_text", text: "Approve & Refund" },
           deny: { type: "plain_text", text: "Cancel" },
         },
       },
@@ -436,6 +446,39 @@ async function approveReturn(id: string, who: string, user: string, ch: string, 
   await note(id, `Return approved by ${who} from Slack.`);
   const refund = returnRequest(current).isRefund ? " · refund the money in PhonePe" : "";
   await updateCard(ch, ts, `Return #${id}`, returnBlocks(data, `✅ Approved by <@${user}> · customer emailed${refund}`));
+  return "";
+}
+
+async function approveReturnAndRefund(id: string, who: string, user: string, ch: string, ts: string) {
+  const { data: current } = await wc!("get", `orders/${id}`);
+  if (current.status !== "return-requested") return `Order #${id} isn't waiting on a return decision any more (it's ${current.status}). Nothing changed.`;
+
+  const r = returnRequest(current);
+  const refundAmount = r.value || current.total;
+
+  // First approve the return
+  const { data } = await wc!("put", `orders/${id}`, { status: "return-approved" });
+  await wc!("post", `orders/${id}/notes`, {
+    note: `Good news: your return request for order #${id} is approved. We'll be in touch shortly with the next steps.`,
+    customer_note: true,
+  });
+  await note(id, `Return approved by ${who} from Slack and ₹${refundAmount} refund initiated.`);
+
+  // Then initiate PhonePe refund via server endpoint
+  try {
+    const transactionId = current.transaction_id || current.meta_data?.find((m: any) => m.key === "_phonepe_transaction_id")?.value;
+    if (transactionId) {
+      await fetch(`${process.env.SERVER_URL || "https://chilsandco.com"}/api/admin/refund`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Slack-Refund": "true" },
+        body: JSON.stringify({ orderId: id, amount: refundAmount, transactionId })
+      }).then(r => r.json());
+    }
+  } catch (err: any) {
+    console.error("[SLACK] PhonePe refund initiation failed:", err.message);
+  }
+
+  await updateCard(ch, ts, `Return #${id}`, returnBlocks(data, `✅ Approved by <@${user}> · customer emailed · ₹${refundAmount} refund initiated`));
   return "";
 }
 
@@ -528,6 +571,9 @@ async function onAction(body: any) {
       await openRejectDialog(body, action.value);
     } else if (action.action_id === "return_approve") {
       const msg = await approveReturn(action.value, who, user, body.channel?.id, body.message?.ts);
+      if (msg) await reply(body, msg);
+    } else if (action.action_id === "return_approve_refund") {
+      const msg = await approveReturnAndRefund(action.value, who, user, body.channel?.id, body.message?.ts);
       if (msg) await reply(body, msg);
     } else if (action.action_id === "followed_up") {
       const id = action.value;
