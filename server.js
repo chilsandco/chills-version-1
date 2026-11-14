@@ -70,7 +70,9 @@ var SUMMARY_HOUR = 9;
 var web = null;
 var wc = null;
 var channel = "";
-var rooms = { unpaid: "", returns: "", summary: "" };
+var rooms = { unpaid: "", returns: "", summary: "", refunds: "" };
+var phonepe = null;
+var refundLocks = /* @__PURE__ */ new Set();
 var allowed = [];
 var adminBase = "https://api.chilsandco.com";
 var money = (n) => `\u20B9${Number(n || 0).toLocaleString("en-IN")}`;
@@ -98,12 +100,12 @@ var ago = (t) => {
   if (h < 48) return `${h} hour${h === 1 ? "" : "s"} ago`;
   return `${Math.round(h / 24)} days ago`;
 };
-var state = { abandoned: {}, returns: {} };
+var state = { abandoned: {}, returns: {}, refunds: {} };
 var stateFile = "";
 function loadState() {
   stateFile = (process.env.SLACK_STATE_FILE || "").trim() || path.join(process.cwd(), ".slack-state.json");
   try {
-    state = { abandoned: {}, returns: {}, ...JSON.parse(fs.readFileSync(stateFile, "utf8")) };
+    state = { abandoned: {}, returns: {}, refunds: {}, ...JSON.parse(fs.readFileSync(stateFile, "utf8")) };
   } catch {
   }
 }
@@ -159,12 +161,20 @@ ${order.payment_method_title || order.payment_method || "\u2014"}` }
     },
     { type: "section", text: { type: "mrkdwn", text: itemLines(order) } }
   ];
+  const productImages = order.line_items?.slice(0, 3).filter((item) => item.image?.src).map((item) => ({ type: "image", image_url: item.image.src, alt_text: item.name }));
+  if (productImages?.length) {
+    blocks.push({ type: "divider" });
+    productImages.forEach((img) => {
+      blocks.push(img);
+    });
+  }
   if (done) blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: done }] });
   blocks.push({
     type: "actions",
     block_id: `order_${order.id}`,
     elements: [
       { type: "button", text: { type: "plain_text", text: "Ready to ship" }, action_id: "ready_to_ship", value: String(order.id), style: "primary" },
+      { type: "button", text: { type: "plain_text", text: "Create Shipment" }, action_id: "create_shipment", value: String(order.id), style: "primary" },
       {
         type: "button",
         text: { type: "plain_text", text: "Delivered in person" },
@@ -184,7 +194,7 @@ ${order.payment_method_title || order.payment_method || "\u2014"}` }
         options: STATUSES.map((s) => ({ text: { type: "plain_text", text: s.label }, value: `${order.id}:${s.value}` })),
         confirm: {
           title: { type: "plain_text", text: "Change the order status?" },
-          text: { type: "mrkdwn", text: "This updates WooCommerce and the customer's order page. Cancelled orders return their stock. Refunded does not send money back, so refund it in PhonePe as well." },
+          text: { type: "mrkdwn", text: "This updates WooCommerce and the customer's order page. Cancelled orders return their stock. Refunded does not send money back: type `refund 1234` to send it through PhonePe." },
           confirm: { type: "plain_text", text: "Change it" },
           deny: { type: "plain_text", text: "Keep it" }
         }
@@ -330,7 +340,7 @@ function returnBlocks(order, done) {
     r.wants.length ? `*What they want:*
 ${r.wants.join("\n")}` : `*Items:*
 ${itemLines(order)}`,
-    r.images.length ? `*Photos:* ${r.images.map((u, i) => `<${u}|photo ${i + 1}>`).join(" \xB7 ")}` : ""
+    r.images.length ? `*Return photos:* ${r.images.map((u, i) => `<${u}|photo ${i + 1}>`).join(" \xB7 ")}` : ""
   ].filter(Boolean);
   const blocks = [
     { type: "header", text: { type: "plain_text", text: `Return request \xB7 Order #${order.id}` } },
@@ -349,6 +359,13 @@ ${order.status}` }
     },
     { type: "section", text: { type: "mrkdwn", text: detail.join("\n") } }
   ];
+  const productImages = order.line_items?.slice(0, 3).map((item) => ({ type: "image", image_url: item.image?.src || "", alt_text: item.name })).filter((img) => img.image_url);
+  if (productImages?.length) {
+    blocks.push({ type: "divider" });
+    productImages.forEach((img) => {
+      if (img.image_url) blocks.push({ type: "image", image_url: img.image_url, alt_text: img.alt_text });
+    });
+  }
   if (done) blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: done }] });
   const actions = [];
   if (!done) {
@@ -361,7 +378,7 @@ ${order.status}` }
         value: String(order.id),
         confirm: {
           title: { type: "plain_text", text: "Approve this return?" },
-          text: { type: "mrkdwn", text: `Order #${order.id} moves to Return approved and the customer is emailed that it's approved.${r.isRefund ? " Approving doesn't send money back: refund it in PhonePe too." : ""}` },
+          text: { type: "mrkdwn", text: `Order #${order.id} moves to Return approved and the customer is emailed.${r.isRefund ? " No money moves yet: a separate refund card appears for you to send the PhonePe refund." : ""}` },
           confirm: { type: "plain_text", text: "Approve" },
           deny: { type: "plain_text", text: "Cancel" }
         }
@@ -405,7 +422,9 @@ async function approveReturn(id, who, user, ch, ts) {
     customer_note: true
   });
   await note(id, `Return approved by ${who} from Slack.`);
-  const refund = returnRequest(current).isRefund ? " \xB7 refund the money in PhonePe" : "";
+  const wantsRefund = returnRequest(current).isRefund;
+  const refundCard = wantsRefund ? await postRefundCard(data) : "";
+  const refund = wantsRefund ? refundCard ? " \xB7 refund card posted below, send the money from there" : " \xB7 refund the money in PhonePe" : "";
   await updateCard(ch, ts, `Return #${id}`, returnBlocks(data, `\u2705 Approved by <@${user}> \xB7 customer emailed${refund}`));
   return "";
 }
@@ -475,6 +494,216 @@ var refreshMessage = (body, order, done) => updateCard(body.channel?.id, body.me
 async function reply(body, text) {
   await web.chat.postMessage({ channel: body.channel?.id || channel, thread_ts: body.message?.ts, text });
 }
+var phonePeOrderId = (order) => String(metaOf(order, "_phonepe_transaction_id") || "");
+var rupees = (n) => Math.round(n * 100) / 100;
+var refundsOf = (order) => {
+  try {
+    const raw = metaOf(order, "_chils_phonepe_refunds");
+    const v = typeof raw === "string" ? JSON.parse(raw) : raw;
+    return Array.isArray(v) ? v : [];
+  } catch {
+    return [];
+  }
+};
+var refundedSoFar = (order) => refundsOf(order).filter((r) => r.state !== "FAILED").reduce((n, r) => n + Number(r.amount || 0), 0);
+var canRefund = (user) => {
+  const list = (process.env.SLACK_REFUND_USERS || "").split(",").map((s) => s.trim()).filter(Boolean);
+  return list.length ? list.includes(user) : can(user);
+};
+async function paymentInfo(order) {
+  const merchantOrderId = phonePeOrderId(order);
+  if (!phonepe || !merchantOrderId) return null;
+  try {
+    const s = await phonepe.orderStatus(merchantOrderId);
+    const pay = (s.paymentDetails || [])[0] || {};
+    return { merchantOrderId, state: String(s.state || ""), paid: Number(s.amount || 0) / 100, mode: String(pay.paymentMode || ""), txn: String(pay.transactionId || "") };
+  } catch (err) {
+    return { merchantOrderId, error: err?.message || "PhonePe did not answer" };
+  }
+}
+function refundBlocks(order, info, done) {
+  const r = returnRequest(order);
+  const name = `${order.billing?.first_name || ""} ${order.billing?.last_name || ""}`.trim();
+  const paid = info && !info.error ? info.paid : 0;
+  const left = rupees(Math.max(0, paid - refundedSoFar(order)));
+  const suggested = rupees(Math.min(Number(r.value || order.total || 0), left));
+  const ready = !!info && !info.error && info.state === "COMPLETED" && left >= 1;
+  const fields = [
+    { type: "mrkdwn", text: `*Customer*
+${name || "\u2014"}` },
+    { type: "mrkdwn", text: `*Order total*
+${money(order.total)}` }
+  ];
+  if (info) {
+    fields.push(
+      { type: "mrkdwn", text: `*PhonePe payment*
+${info.error ? "couldn't check" : `${info.state || "unknown"} \xB7 ${money(info.paid)}${info.mode ? ` \xB7 ${info.mode.replace(/_/g, " ").toLowerCase()}` : ""}`}` },
+      { type: "mrkdwn", text: `*Already refunded*
+${money(refundedSoFar(order))}` },
+      { type: "mrkdwn", text: `*PhonePe order ID*
+\`${info.merchantOrderId}\`` },
+      { type: "mrkdwn", text: `*Left to refund*
+${money(left)}` }
+    );
+  }
+  const blocks = [
+    { type: "header", text: { type: "plain_text", text: `Refund \xB7 Order #${order.id}` } },
+    { type: "section", fields }
+  ];
+  const detail = [r.wants.length ? `*Return:*
+${r.wants.join("\n")}` : `*Items:*
+${itemLines(order)}`, r.reason ? `*Reason:* ${r.reason}` : ""].filter(Boolean);
+  blocks.push({ type: "section", text: { type: "mrkdwn", text: detail.join("\n") } });
+  if (done) blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: done }] });
+  const actions = [];
+  if (!done) {
+    if (ready) {
+      actions.push(
+        {
+          type: "button",
+          text: { type: "plain_text", text: `Refund ${money(suggested)} via PhonePe` },
+          style: "primary",
+          action_id: "refund_pay",
+          value: `${order.id}:${suggested}`,
+          confirm: {
+            title: { type: "plain_text", text: "Send this refund?" },
+            text: { type: "mrkdwn", text: `*${money(suggested)}* goes back to ${name || "the customer"} through PhonePe for order #${order.id}. This moves real money and can't be undone.` },
+            confirm: { type: "plain_text", text: "Send refund" },
+            deny: { type: "plain_text", text: "Cancel" }
+          }
+        },
+        { type: "button", text: { type: "plain_text", text: "Refund another amount" }, action_id: "refund_custom", value: `${order.id}:${suggested}` }
+      );
+    } else {
+      const why = !info ? "This order wasn't paid through PhonePe, so refund it where it was paid." : info.error ? `Couldn't reach PhonePe (${info.error}). Type \`refund ${order.id}\` to try again.` : info.state !== "COMPLETED" ? `PhonePe shows this payment as ${info.state || "unknown"}, so there is nothing to refund.` : "Everything paid has already been refunded.";
+      blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: why }] });
+    }
+  }
+  actions.push({ type: "button", text: { type: "plain_text", text: "Open in WooCommerce" }, action_id: "open_admin", url: adminLink(order.id) });
+  blocks.push({ type: "actions", elements: actions });
+  return blocks;
+}
+async function postRefundCard(order) {
+  try {
+    const info = await paymentInfo(order);
+    const res = await web.chat.postMessage({ channel: rooms.refunds, text: `Refund for order #${order.id}`, blocks: refundBlocks(order, info) });
+    console.log(`[SLACK] Posted refund card #${order.id}`);
+    return res.ts || "";
+  } catch (err) {
+    console.error("[SLACK] Refund card failed:", err?.data?.error || err.message);
+    return "";
+  }
+}
+async function startRefund(id, amount, who, user, ch, ts) {
+  if (!canRefund(user)) return `<@${user}> you're not on the list of people who can send refunds.`;
+  if (!phonepe) return "PhonePe isn't connected to the bot, so I can't send refunds.";
+  if (refundLocks.has(id)) return `A refund for order #${id} is already being sent. Give it a moment.`;
+  refundLocks.add(id);
+  try {
+    const { data: order } = await wc("get", `orders/${id}`);
+    const info = await paymentInfo(order);
+    if (!info) return `Order #${id} wasn't paid through PhonePe, so refund it where it was paid. Nothing was sent.`;
+    if (info.error) return `Couldn't reach PhonePe: ${info.error}. Nothing was sent.`;
+    if (info.state !== "COMPLETED") return `PhonePe shows this payment as ${info.state || "unknown"}, not completed. Nothing was sent.`;
+    amount = rupees(amount);
+    const left = rupees(info.paid - refundedSoFar(order));
+    if (!Number.isFinite(amount) || amount < 1) return "A refund must be at least \u20B91. Nothing was sent.";
+    if (amount > left) return `Order #${id} has only ${money(left)} left to refund (${money(info.paid)} paid). Nothing was sent.`;
+    const refundId = `RF${id}_${Date.now()}`;
+    state.refunds[refundId] = { orderId: id, amount, ch, ts, at: Date.now(), state: "SUBMITTING" };
+    saveState();
+    let res;
+    try {
+      res = await phonepe.refund(info.merchantOrderId, refundId, Math.round(amount * 100));
+    } catch (err) {
+      res = await phonepe.refundStatus(refundId).catch(() => null);
+      if (!res) {
+        delete state.refunds[refundId];
+        saveState();
+        console.error("[SLACK] PhonePe refund failed:", err?.message || err);
+        return `PhonePe didn't accept the refund (${err?.message || "no reason given"}). Nothing was sent.`;
+      }
+    }
+    const st = String(res.state || "PENDING");
+    state.refunds[refundId].state = st;
+    saveState();
+    console.log(`[SLACK] ${who} sent PhonePe refund ${refundId}: ${money(amount)}, state ${st}`);
+    const rows = [...refundsOf(order), { id: refundId, amount, state: st, at: Date.now() }];
+    let latest = order;
+    try {
+      latest = (await wc("put", `orders/${id}`, { meta_data: [{ key: "_chils_phonepe_refunds", value: JSON.stringify(rows) }] })).data;
+      await note(id, `PhonePe refund of ${money(amount)} sent by ${who} from Slack. Refund ref ${refundId}, state ${st}.`);
+    } catch (err) {
+      console.error("[SLACK] Refund sent but the order couldn't be updated:", err?.message || err);
+    }
+    await updateCard(ch, ts, `Refund #${id}`, refundBlocks(latest, info, `\u23F3 ${money(amount)} refund sent by <@${user}> \xB7 PhonePe says ${st} \xB7 ref \`${refundId}\` \xB7 I'll update here when it finishes`));
+    if (st === "COMPLETED" || st === "FAILED") await applyRefundState(refundId, st, true);
+    return "";
+  } finally {
+    refundLocks.delete(id);
+  }
+}
+async function applyRefundState(refundId, st, force = false) {
+  const job = state.refunds[refundId];
+  if (!job || !force && job.state === st) return;
+  job.state = st;
+  saveState();
+  const id = job.orderId;
+  const { data: order } = await wc("get", `orders/${id}`);
+  const rows = refundsOf(order).map((r) => r.id === refundId ? { ...r, state: st } : r);
+  if (!rows.some((r) => r.id === refundId)) rows.push({ id: refundId, amount: job.amount, state: st, at: job.at });
+  await wc("put", `orders/${id}`, { meta_data: [{ key: "_chils_phonepe_refunds", value: JSON.stringify(rows) }] });
+  if (st !== "COMPLETED" && st !== "FAILED") return;
+  let latest = order;
+  if (st === "COMPLETED") {
+    await wc("post", `orders/${id}/refunds`, { amount: String(job.amount), reason: "Return refunded through PhonePe (from Slack)", api_refund: false });
+    await note(id, `PhonePe confirmed the refund of ${money(job.amount)} (ref ${refundId}).`);
+    latest = (await wc("get", `orders/${id}`)).data;
+    await web.chat.postMessage({ channel: job.ch, thread_ts: job.ts, text: `\u2705 Refund of ${money(job.amount)} is complete for order #${id}. PhonePe returns it to the customer's original payment method, usually within 3\u20135 working days.` });
+  } else {
+    await note(id, `PhonePe could not complete the refund of ${money(job.amount)} (ref ${refundId}). No money moved.`);
+    await web.chat.postMessage({ channel: job.ch, thread_ts: job.ts, text: `\u26A0\uFE0F PhonePe couldn't complete the ${money(job.amount)} refund for order #${id}. No money moved. Type \`refund ${id}\` to post a fresh refund card and try again.` });
+  }
+  const info = await paymentInfo(latest);
+  await updateCard(job.ch, job.ts, `Refund #${id}`, refundBlocks(latest, info, st === "COMPLETED" ? `\u2705 ${money(job.amount)} refunded through PhonePe \xB7 ref \`${refundId}\`` : `\u26A0\uFE0F ${money(job.amount)} refund failed at PhonePe \xB7 ref \`${refundId}\``));
+  delete state.refunds[refundId];
+  saveState();
+}
+async function checkRefunds() {
+  if (!phonepe) return;
+  for (const [refundId, job] of Object.entries(state.refunds)) {
+    if (refundLocks.has(job.orderId)) continue;
+    const res = await phonepe.refundStatus(refundId).catch(() => null);
+    if (res?.state) await applyRefundState(refundId, String(res.state));
+    else if (job.state === "SUBMITTING" && Date.now() - job.at > 10 * 6e4) {
+      delete state.refunds[refundId];
+      saveState();
+    }
+  }
+}
+async function openRefundDialog(body, value) {
+  const [id, suggested] = String(value).split(":");
+  return web.views.open({
+    trigger_id: body.trigger_id,
+    view: {
+      type: "modal",
+      callback_id: "refund_custom_submit",
+      private_metadata: JSON.stringify({ id, ch: body.channel?.id, ts: body.message?.ts }),
+      title: { type: "plain_text", text: "Refund amount" },
+      submit: { type: "plain_text", text: "Send refund" },
+      close: { type: "plain_text", text: "Cancel" },
+      blocks: [
+        { type: "section", text: { type: "mrkdwn", text: `How much should go back to the customer for order #${id}? This is sent through PhonePe straight away.` } },
+        {
+          type: "input",
+          block_id: "amount",
+          label: { type: "plain_text", text: "Amount in rupees" },
+          element: { type: "plain_text_input", action_id: "value", initial_value: suggested && Number(suggested) > 0 ? suggested : void 0 }
+        }
+      ]
+    }
+  });
+}
 async function onAction(body) {
   const action = body.actions?.[0];
   if (!action || ["open_admin", "open_whatsapp"].includes(action.action_id)) return;
@@ -488,6 +717,13 @@ async function onAction(body) {
     } else if (action.action_id === "return_approve") {
       const msg = await approveReturn(action.value, who, user, body.channel?.id, body.message?.ts);
       if (msg) await reply(body, msg);
+    } else if (action.action_id === "refund_pay") {
+      const [id, amount] = String(action.value).split(":");
+      const msg = await startRefund(id, Number(amount), who, user, body.channel?.id, body.message?.ts);
+      if (msg) await reply(body, msg);
+    } else if (action.action_id === "refund_custom") {
+      if (!canRefund(user)) return reply(body, `<@${user}> you're not on the list of people who can send refunds.`);
+      await openRefundDialog(body, action.value);
     } else if (action.action_id === "followed_up") {
       const id = action.value;
       const { data } = await wc("get", `orders/${id}`);
@@ -495,9 +731,36 @@ async function onAction(body) {
       await updateCard(body.channel?.id, body.message?.ts, `Not paid #${id}`, abandonedBlocks(data, `\u{1F4AC} Followed up by <@${user}>`));
     } else if (action.action_id === "ready_to_ship") {
       const id = action.value;
-      await note(id, `Packed and ready to ship (by ${who}, from Slack).`);
-      const { data } = await wc("put", `orders/${id}`, { meta_data: [{ key: "_chils_packed_by", value: String(who) }] });
-      await refreshMessage(body, data, `\u{1F4E6} Packed by <@${user}> \xB7 ${isPickup(data) ? "ready for pickup" : "ready for Shiprocket"}`);
+      try {
+        await note(id, `Packed and ready to ship (by ${who}, from Slack).`);
+        const { data } = await wc("put", `orders/${id}`, { meta_data: [{ key: "_chils_packed_by", value: String(who) }] });
+        await refreshMessage(body, data, `\u{1F4E6} Packed by <@${user}> \xB7 ${isPickup(data) ? "ready for pickup" : "ready for Shiprocket"}`);
+        await reply(body, `\u2705 Order #${id} marked as ready to ship`);
+      } catch (err) {
+        await reply(body, `\u274C Error: ${err.message}`);
+      }
+    } else if (action.action_id === "create_shipment") {
+      const id = action.value;
+      try {
+        const res = await fetch(`${process.env.SERVER_URL || "https://chilsandco.com"}/api/admin/create-shipment`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: id })
+        }).then((r) => r.json());
+        if (res.awb) {
+          const { data } = await wc("get", `orders/${id}`);
+          await note(id, `Shipment created: AWB ${res.awb}, Courier: ${res.courier} (by ${who}, from Slack). Label: ${res.labelDownloadUrl}`);
+          await reply(body, `\u2705 Shipment created for order #${id}
+*AWB:* ${res.awb}
+*Courier:* ${res.courier}
+<${res.labelDownloadUrl}|\u{1F4C4} Download Label>`);
+          await refreshMessage(body, data, `\u{1F69A} Shipment created, AWB: ${res.awb} \xB7 initiated by <@${user}>`);
+        } else {
+          await reply(body, `\u274C Shipment creation failed: ${res.message}`);
+        }
+      } catch (err) {
+        await reply(body, `\u274C Error creating shipment: ${err.message}`);
+      }
     } else if (action.action_id === "in_person") {
       const id = action.value;
       const data = await setStatus(id, "completed", who, [{ key: "_chils_delivered_in_person", value: "yes" }]);
@@ -517,6 +780,20 @@ async function onAction(body) {
   }
 }
 async function onViewSubmit(body) {
+  if (body.view?.callback_id === "refund_custom_submit") {
+    const user2 = body.user?.id;
+    const who2 = body.user?.username || body.user?.name || user2;
+    const { id: id2, ch: ch2, ts: ts2 } = JSON.parse(body.view.private_metadata || "{}");
+    const amount = Number(String(body.view.state?.values?.amount?.value?.value || "").replace(/[₹,\s]/g, ""));
+    try {
+      const msg = await startRefund(id2, amount, who2, user2, ch2, ts2);
+      if (msg) await web.chat.postMessage({ channel: ch2 || rooms.refunds, thread_ts: ts2, text: msg });
+    } catch (err) {
+      console.error("[SLACK] Refund failed:", err?.response?.data || err.message);
+      await web.chat.postMessage({ channel: ch2 || rooms.refunds, thread_ts: ts2, text: `Couldn't send the refund for order #${id2}: ${err?.response?.data?.message || err.message}` });
+    }
+    return;
+  }
   if (body.view?.callback_id !== "return_reject_submit") return;
   const user = body.user?.id;
   const who = body.user?.username || body.user?.name || user;
@@ -539,6 +816,7 @@ var HELP = [
   "\u2022 `today`: today's orders and sales",
   "\u2022 `summary`: the morning summary, right now",
   "\u2022 `returns`: return requests waiting for a decision",
+  "\u2022 `refund 1234`: post the PhonePe refund card for an order",
   "",
   "_On my own I post new orders here, unpaid checkouts in #unpaid-checkouts, return requests in #returns and a summary in #daily-summary every morning at 9. These commands work in any of those channels._"
 ].join("\n");
@@ -572,6 +850,13 @@ async function onMessage(event) {
       for (const o of waiting.slice(0, 10)) await say(`Return request for order #${o.id}`, returnBlocks(o));
       return;
     }
+    const refund = text.match(/^refund\s*#?(\d+)$/);
+    if (refund) {
+      const { data } = await wc("get", `orders/${refund[1]}`);
+      if (!phonePeOrderId(data)) return say(`Order #${data.id} wasn't paid through PhonePe, so there is no PhonePe refund to send.`);
+      const ts = await postRefundCard(data);
+      return say(ts ? `Refund card for order #${data.id} posted${rooms.refunds === event.channel ? " below" : ` in <#${rooms.refunds}>`}.` : `Couldn't post the refund card for #${data.id}. Check the logs.`);
+    }
     if (text === "help") return say(HELP);
   } catch (err) {
     console.error("[SLACK] Command failed:", err?.response?.data || err.message);
@@ -592,6 +877,7 @@ async function startSlackBot(opts) {
   rooms.unpaid = (process.env.SLACK_UNPAID_CHANNEL || "").trim() || channel;
   rooms.returns = (process.env.SLACK_RETURNS_CHANNEL || "").trim() || channel;
   rooms.summary = (process.env.SLACK_SUMMARY_CHANNEL || "").trim() || channel;
+  rooms.refunds = (process.env.SLACK_REFUNDS_CHANNEL || "").trim() || rooms.returns;
   if (!botToken || !appToken || !channel) {
     console.log("[SLACK] Order bot off (SLACK_BOT_TOKEN, SLACK_APP_TOKEN or SLACK_ORDERS_CHANNEL not set).");
     return;
@@ -599,6 +885,7 @@ async function startSlackBot(opts) {
   allowed = (process.env.SLACK_ALLOWED_USERS || "").split(",").map((s) => s.trim()).filter(Boolean);
   adminBase = opts.adminUrl.replace(/\/$/, "");
   wc = opts.wc;
+  phonepe = opts.phonepe || null;
   web = new WebClient(botToken);
   loadState();
   const socket = new SocketModeClient({ appToken });
@@ -625,6 +912,7 @@ async function startSlackBot(opts) {
   const watch = async () => {
     await safely("Unpaid checkout", checkAbandoned);
     await safely("Returns", checkReturns);
+    await safely("Refunds", checkRefunds);
     await safely("Morning summary", maybeSendSummary);
   };
   setTimeout(watch, 3e4);
@@ -648,6 +936,31 @@ async function notifyShipping(orderId, trackingStatus, newStatus) {
     await web.chat.postMessage({ channel, text: `${icon} Order #${orderId}: ${trackingStatus}${extra}  <${adminLink(orderId)}|Open>` });
   } catch (err) {
     console.error("[SLACK] Shipping message failed:", err?.data?.error || err.message);
+  }
+}
+async function notifyRefund(order, amount) {
+  if (!web || !channel || !order?.id) return;
+  const refundAmount = amount || order.total;
+  try {
+    await web.chat.postMessage({
+      channel,
+      text: `\u{1F4B0} Refund processed for order #${order.id} \xB7 ${money(refundAmount)}`,
+      blocks: [
+        {
+          type: "section",
+          text: { type: "mrkdwn", text: `\u{1F4B0} *Refund processed*
+Order #${order.id} \xB7 ${money(refundAmount)}
+Customer: ${order.billing?.first_name || ""} ${order.billing?.last_name || ""}` }
+        },
+        { type: "divider" },
+        {
+          type: "section",
+          text: { type: "mrkdwn", text: `<${adminLink(order.id)}|Open in WooCommerce>` }
+        }
+      ]
+    });
+  } catch (err) {
+    console.error("[SLACK] Refund message failed:", err?.data?.error || err.message);
   }
 }
 
@@ -876,7 +1189,7 @@ function adoptLegacyUploads(appDir) {
 }
 
 // server.ts
-import { StandardCheckoutClient, Env, StandardCheckoutPayRequest, CallbackType } from "pg-sdk-node";
+import { StandardCheckoutClient, Env, StandardCheckoutPayRequest, CallbackType, RefundRequest } from "pg-sdk-node";
 dotenv.config();
 var IS_PROD = process.env.NODE_ENV === "production";
 var JWT_SECRET = process.env.JWT_SECRET || "";
@@ -921,6 +1234,84 @@ function getWooCommerce() {
       })
     }
   });
+}
+var shiprocketToken = null;
+var shiprocketTokenExpiry = 0;
+async function getShiprocketToken() {
+  if (shiprocketToken && Date.now() < shiprocketTokenExpiry) return shiprocketToken;
+  const email = (process.env.SHIPROCKET_EMAIL || "").trim();
+  const password = (process.env.SHIPROCKET_PASSWORD || "").trim();
+  if (!email || !password) {
+    console.warn("[CHILS & CO.] Shiprocket credentials not configured");
+    return null;
+  }
+  try {
+    const res = await axios3.post("https://apiv2.shiprocket.in/v1/external/auth/login", { email, password });
+    shiprocketToken = res.data?.token;
+    shiprocketTokenExpiry = Date.now() + 24 * 3600 * 1e3;
+    return shiprocketToken;
+  } catch (err) {
+    console.error("[CHILS & CO.] Shiprocket auth failed:", err.response?.data?.message || err.message);
+    return null;
+  }
+}
+async function createShiprocketShipment(order) {
+  const token2 = await getShiprocketToken();
+  if (!token2) throw new Error("Shiprocket not configured");
+  const items = (order.line_items || []).map((item) => ({
+    name: item.name,
+    sku: item.sku || `SKU-${item.product_id}`,
+    units: item.quantity,
+    selling_price: item.total / item.quantity
+  }));
+  const payload = {
+    order_id: String(order.id),
+    order_date: order.date_created,
+    pickup_location_id: process.env.SHIPROCKET_PICKUP_LOCATION_ID || "1",
+    channel_order_id: `CHLS-${order.id}`,
+    customer_name: `${order.billing?.first_name || ""} ${order.billing?.last_name || ""}`.trim(),
+    customer_email: order.billing?.email,
+    customer_phone: order.billing?.phone,
+    delivery_address: order.shipping?.address_1 || order.billing?.address_1,
+    delivery_city: order.shipping?.city || order.billing?.city,
+    delivery_state: order.shipping?.state || order.billing?.state,
+    delivery_country: "India",
+    delivery_pincode: order.shipping?.postcode || order.billing?.postcode,
+    billing_customer_name: order.billing?.first_name,
+    billing_email: order.billing?.email,
+    billing_phone: order.billing?.phone,
+    billing_address: order.billing?.address_1,
+    billing_city: order.billing?.city,
+    billing_state: order.billing?.state,
+    billing_country: "India",
+    billing_pincode: order.billing?.postcode,
+    order_items: items,
+    payment_method: "cod",
+    sub_total: order.subtotal || order.total,
+    length: 10,
+    breadth: 10,
+    height: 5,
+    weight: 0.5
+  };
+  const res = await axios3.post("https://apiv2.shiprocket.in/v1/external/orders/create/adhoc", payload, {
+    headers: { Authorization: `Bearer ${token2}` }
+  });
+  return res.data;
+}
+async function getShiprocketLabel(shipmentId) {
+  const token2 = await getShiprocketToken();
+  if (!token2) throw new Error("Shiprocket not configured");
+  try {
+    const res = await axios3.get(`https://apiv2.shiprocket.in/v1/external/shipments/pdf/adhoc`, {
+      params: { shipment_id: shipmentId },
+      headers: { Authorization: `Bearer ${token2}` },
+      responseType: "arraybuffer"
+    });
+    return res.data;
+  } catch (err) {
+    console.error("[CHILS & CO.] Failed to fetch Shiprocket label:", err.message);
+    throw err;
+  }
 }
 function toSignalId(orderId) {
   const cleanId = String(orderId).replace(/\D/g, "");
@@ -2674,6 +3065,9 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
                 });
                 triggerOrderConfirmationEmails(updateRes.data).catch((err) => {
                   console.error("[CHILS & CO. EMAIL] SDK callback order confirmation email failed:", err);
+                });
+                notifyNewOrder(updateRes.data).catch((err) => {
+                  console.error("[CHILS & CO. SLACK] Payment notification failed:", err);
                 });
               }
             } else {
@@ -4730,6 +5124,53 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       res.status(500).json({ message: "Broadcast failed" });
     }
   });
+  app.post("/api/admin/create-shipment", async (req, res) => {
+    try {
+      const { orderId } = req.body;
+      if (!orderId) return res.status(400).json({ message: "Order ID required" });
+      const wc2 = getWooCommerce();
+      if (!wc2) return res.status(500).json({ message: "WooCommerce not configured" });
+      const { data: order } = await wcSafeCall(wc2, "get", `orders/${orderId}`);
+      if (order.meta_data?.find((m) => m.key === "_shiprocket_awb")) {
+        return res.json({ message: "Shipment already created", awb: order.meta_data.find((m) => m.key === "_shiprocket_awb").value });
+      }
+      const shipmentResult = await createShiprocketShipment(order);
+      if (!shipmentResult.success) {
+        throw new Error(shipmentResult.message || "Failed to create shipment");
+      }
+      const shipmentId = shipmentResult.data?.shipment_id;
+      const awb = shipmentResult.data?.awb_code;
+      const courier = shipmentResult.data?.courier_company_id;
+      let labelUrl = null;
+      try {
+        const labelBuffer = await getShiprocketLabel(shipmentId);
+        console.log(`[CHILS & CO.] Shiprocket label fetched for shipment ${shipmentId}`);
+      } catch (err) {
+        console.warn(`[CHILS & CO.] Could not fetch label immediately:`, err);
+      }
+      await wcSafeCall(wc2, "put", `orders/${orderId}`, {
+        meta_data: [
+          { key: "_shiprocket_shipment_id", value: String(shipmentId) },
+          { key: "_shiprocket_awb", value: String(awb) },
+          { key: "_shiprocket_courier", value: String(courier) },
+          { key: "_shiprocket_status", value: "shipped" }
+        ]
+      });
+      notifyShipping(orderId, `Shipment created with AWB ${awb}`).catch((err) => {
+        console.error("[CHILS & CO. SLACK] Shipping notification failed:", err);
+      });
+      res.json({
+        message: "Shipment created successfully",
+        shipmentId,
+        awb,
+        courier,
+        labelDownloadUrl: `https://apiv2.shiprocket.in/v1/external/shipments/pdf/adhoc?shipment_id=${shipmentId}`
+      });
+    } catch (error) {
+      console.error("[CHILS & CO.] Shipment creation failed:", error.message);
+      res.status(500).json({ message: error.message || "Shipment creation failed" });
+    }
+  });
   app.post("/api/webhooks/woocommerce", async (req, res) => {
     try {
       invalidateProductsCache();
@@ -4740,6 +5181,11 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       if (topic === "order.updated" || topic === "order.refunded") {
         const status = payload?.status;
         console.log(`[CHILS & CO. WEBHOOK] Order ${orderId} status updated to: ${status}`);
+        if (topic === "order.refunded" && status === "refunded") {
+          notifyRefund(payload).catch((err) => {
+            console.error("[CHILS & CO. SLACK] Refund notification failed:", err);
+          });
+        }
       }
       res.status(200).send("OK");
     } catch (error) {
@@ -5165,7 +5611,26 @@ ${xmlItems}
     const numericPort = typeof PORT === "string" ? parseInt(PORT, 10) : Number(PORT);
     startSlackBot({
       wc: (method, ...args) => wcSafeCall(getWooCommerce(), method, ...args),
-      adminUrl: (process.env.WOOCOMMERCE_URL || "https://api.chilsandco.com").trim()
+      adminUrl: (process.env.WOOCOMMERCE_URL || "https://api.chilsandco.com").trim(),
+      phonepe: {
+        orderStatus: async (merchantOrderId) => {
+          const client = getPhonePeClient();
+          if (!client) throw new Error("PhonePe credentials are not set");
+          return client.getOrderStatus(merchantOrderId);
+        },
+        refund: async (merchantOrderId, merchantRefundId, amountPaise) => {
+          const client = getPhonePeClient();
+          if (!client) throw new Error("PhonePe credentials are not set");
+          return client.refund(
+            RefundRequest.builder().merchantRefundId(merchantRefundId).originalMerchantOrderId(merchantOrderId).amount(amountPaise).build()
+          );
+        },
+        refundStatus: async (merchantRefundId) => {
+          const client = getPhonePeClient();
+          if (!client) throw new Error("PhonePe credentials are not set");
+          return client.getRefundStatus(merchantRefundId);
+        }
+      }
     });
     app.listen(numericPort, "0.0.0.0", () => {
       console.log(`[CHILS & CO.] Server started successfully`);
