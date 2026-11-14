@@ -73,6 +73,97 @@ function getWooCommerce() {
   });
 }
 
+// Shiprocket API helper for shipping management
+let shiprocketToken: string | null = null;
+let shiprocketTokenExpiry: number = 0;
+
+async function getShiprocketToken() {
+  if (shiprocketToken && Date.now() < shiprocketTokenExpiry) return shiprocketToken;
+
+  const email = (process.env.SHIPROCKET_EMAIL || "").trim();
+  const password = (process.env.SHIPROCKET_PASSWORD || "").trim();
+
+  if (!email || !password) {
+    console.warn("[CHILS & CO.] Shiprocket credentials not configured");
+    return null;
+  }
+
+  try {
+    const res = await axios.post("https://apiv2.shiprocket.in/v1/external/auth/login", { email, password });
+    shiprocketToken = res.data?.token;
+    shiprocketTokenExpiry = Date.now() + (24 * 3600 * 1000); // 24 hours
+    return shiprocketToken;
+  } catch (err: any) {
+    console.error("[CHILS & CO.] Shiprocket auth failed:", err.response?.data?.message || err.message);
+    return null;
+  }
+}
+
+async function createShiprocketShipment(order: any) {
+  const token = await getShiprocketToken();
+  if (!token) throw new Error("Shiprocket not configured");
+
+  const items = (order.line_items || []).map((item: any) => ({
+    name: item.name,
+    sku: item.sku || `SKU-${item.product_id}`,
+    units: item.quantity,
+    selling_price: item.total / item.quantity
+  }));
+
+  const payload = {
+    order_id: String(order.id),
+    order_date: order.date_created,
+    pickup_location_id: process.env.SHIPROCKET_PICKUP_LOCATION_ID || "1",
+    channel_order_id: `CHLS-${order.id}`,
+    customer_name: `${order.billing?.first_name || ""} ${order.billing?.last_name || ""}`.trim(),
+    customer_email: order.billing?.email,
+    customer_phone: order.billing?.phone,
+    delivery_address: order.shipping?.address_1 || order.billing?.address_1,
+    delivery_city: order.shipping?.city || order.billing?.city,
+    delivery_state: order.shipping?.state || order.billing?.state,
+    delivery_country: "India",
+    delivery_pincode: order.shipping?.postcode || order.billing?.postcode,
+    billing_customer_name: order.billing?.first_name,
+    billing_email: order.billing?.email,
+    billing_phone: order.billing?.phone,
+    billing_address: order.billing?.address_1,
+    billing_city: order.billing?.city,
+    billing_state: order.billing?.state,
+    billing_country: "India",
+    billing_pincode: order.billing?.postcode,
+    order_items: items,
+    payment_method: "cod",
+    sub_total: order.subtotal || order.total,
+    length: 10,
+    breadth: 10,
+    height: 5,
+    weight: 0.5
+  };
+
+  const res = await axios.post("https://apiv2.shiprocket.in/v1/external/orders/create/adhoc", payload, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  return res.data;
+}
+
+async function getShiprocketLabel(shipmentId: string) {
+  const token = await getShiprocketToken();
+  if (!token) throw new Error("Shiprocket not configured");
+
+  try {
+    const res = await axios.get(`https://apiv2.shiprocket.in/v1/external/shipments/pdf/adhoc`, {
+      params: { shipment_id: shipmentId },
+      headers: { Authorization: `Bearer ${token}` },
+      responseType: "arraybuffer"
+    });
+    return res.data;
+  } catch (err: any) {
+    console.error("[CHILS & CO.] Failed to fetch Shiprocket label:", err.message);
+    throw err;
+  }
+}
+
 // Helper to create a unique signal ID from order ID
 function toSignalId(orderId: string | number) {
   const cleanId = String(orderId).replace(/\D/g, '');
@@ -4509,6 +4600,73 @@ Format your response strictly as a single JSON object. Ensure the keys and value
     } catch (error: any) {
       console.error("[CHILS & CO.] Refund processing failed:", error.message);
       res.status(500).json({ message: "Refund processing failed" });
+    }
+  });
+
+  // Create Shiprocket shipment and get label
+  app.post("/api/admin/create-shipment", async (req, res) => {
+    try {
+      const { orderId } = req.body;
+      if (!orderId) return res.status(400).json({ message: "Order ID required" });
+
+      const wc = getWooCommerce();
+      if (!wc) return res.status(500).json({ message: "WooCommerce not configured" });
+
+      // Get order details
+      const { data: order } = await wcSafeCall(wc, "get", `orders/${orderId}`);
+
+      // Check if shipment already exists
+      if (order.meta_data?.find((m: any) => m.key === "_shiprocket_awb")) {
+        return res.json({ message: "Shipment already created", awb: order.meta_data.find((m: any) => m.key === "_shiprocket_awb").value });
+      }
+
+      // Create shipment in Shiprocket
+      const shipmentResult = await createShiprocketShipment(order);
+
+      if (!shipmentResult.success) {
+        throw new Error(shipmentResult.message || "Failed to create shipment");
+      }
+
+      const shipmentId = shipmentResult.data?.shipment_id;
+      const awb = shipmentResult.data?.awb_code;
+      const courier = shipmentResult.data?.courier_company_id;
+
+      // Get shipping label (PDF)
+      let labelUrl = null;
+      try {
+        const labelBuffer = await getShiprocketLabel(shipmentId);
+        // For now, we'll log that we got the label
+        console.log(`[CHILS & CO.] Shiprocket label fetched for shipment ${shipmentId}`);
+        // In production, you might upload this to a file service or return as base64
+      } catch (err) {
+        console.warn(`[CHILS & CO.] Could not fetch label immediately:`, err);
+      }
+
+      // Update order with shipment details
+      await wcSafeCall(wc, "put", `orders/${orderId}`, {
+        meta_data: [
+          { key: "_shiprocket_shipment_id", value: String(shipmentId) },
+          { key: "_shiprocket_awb", value: String(awb) },
+          { key: "_shiprocket_courier", value: String(courier) },
+          { key: "_shiprocket_status", value: "shipped" }
+        ]
+      });
+
+      // Notify Slack
+      notifyShipping(orderId, `Shipment created with AWB ${awb}`).catch(err => {
+        console.error("[CHILS & CO. SLACK] Shipping notification failed:", err);
+      });
+
+      res.json({
+        message: "Shipment created successfully",
+        shipmentId,
+        awb,
+        courier,
+        labelDownloadUrl: `https://apiv2.shiprocket.in/v1/external/shipments/pdf/adhoc?shipment_id=${shipmentId}`
+      });
+    } catch (error: any) {
+      console.error("[CHILS & CO.] Shipment creation failed:", error.message);
+      res.status(500).json({ message: error.message || "Shipment creation failed" });
     }
   });
 

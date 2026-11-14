@@ -174,6 +174,7 @@ function orderBlocks(order: any, done?: string) {
     block_id: `order_${order.id}`,
     elements: [
       { type: "button", text: { type: "plain_text", text: "Ready to ship" }, action_id: "ready_to_ship", value: String(order.id), style: "primary" },
+      { type: "button", text: { type: "plain_text", text: "Create Shipment" }, action_id: "create_shipment", value: String(order.id), style: "primary" },
       {
         type: "button",
         text: { type: "plain_text", text: "Delivered in person" },
@@ -595,6 +596,26 @@ async function onAction(body: any) {
       await note(id, `Packed and ready to ship (by ${who}, from Slack).`);
       const { data } = await wc!("put", `orders/${id}`, { meta_data: [{ key: "_chils_packed_by", value: String(who) }] });
       await refreshMessage(body, data, `📦 Packed by <@${user}> · ${isPickup(data) ? "ready for pickup" : "ready for Shiprocket"}`);
+    } else if (action.action_id === "create_shipment") {
+      const id = action.value;
+      try {
+        const res = await fetch(`${process.env.SERVER_URL || "https://chilsandco.com"}/api/admin/create-shipment`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ orderId: id })
+        }).then(r => r.json());
+
+        if (res.awb) {
+          const { data } = await wc!("get", `orders/${id}`);
+          await note(id, `Shipment created: AWB ${res.awb}, Courier: ${res.courier} (by ${who}, from Slack). Label: ${res.labelDownloadUrl}`);
+          await reply(body, `✅ Shipment created for order #${id}\n*AWB:* ${res.awb}\n*Courier:* ${res.courier}\n<${res.labelDownloadUrl}|📄 Download Label>`);
+          await refreshMessage(body, data, `🚚 Shipment created, AWB: ${res.awb} · initiated by <@${user}>`);
+        } else {
+          await reply(body, `❌ Shipment creation failed: ${res.message}`);
+        }
+      } catch (err: any) {
+        await reply(body, `❌ Error creating shipment: ${err.message}`);
+      }
     } else if (action.action_id === "in_person") {
       const id = action.value;
       const data = await setStatus(id, "completed", who, [{ key: "_chils_delivered_in_person", value: "yes" }]);
