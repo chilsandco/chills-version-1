@@ -2120,6 +2120,9 @@ async function startServer() {
                 triggerOrderConfirmationEmails(updateRes.data).catch(err => {
                   console.error("[CHILS & CO. EMAIL] SDK callback order confirmation email failed:", err);
                 });
+                notifyNewOrder(updateRes.data).catch(err => {
+                  console.error("[CHILS & CO. SLACK] Payment notification failed:", err);
+                });
               }
             } else {
               const state = payload.state;
