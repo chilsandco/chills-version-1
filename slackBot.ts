@@ -593,9 +593,14 @@ async function onAction(body: any) {
       await updateCard(body.channel?.id, body.message?.ts, `Not paid #${id}`, abandonedBlocks(data, `💬 Followed up by <@${user}>`));
     } else if (action.action_id === "ready_to_ship") {
       const id = action.value;
-      await note(id, `Packed and ready to ship (by ${who}, from Slack).`);
-      const { data } = await wc!("put", `orders/${id}`, { meta_data: [{ key: "_chils_packed_by", value: String(who) }] });
-      await refreshMessage(body, data, `📦 Packed by <@${user}> · ${isPickup(data) ? "ready for pickup" : "ready for Shiprocket"}`);
+      try {
+        await note(id, `Packed and ready to ship (by ${who}, from Slack).`);
+        const { data } = await wc!("put", `orders/${id}`, { meta_data: [{ key: "_chils_packed_by", value: String(who) }] });
+        await refreshMessage(body, data, `📦 Packed by <@${user}> · ${isPickup(data) ? "ready for pickup" : "ready for Shiprocket"}`);
+        await reply(body, `✅ Order #${id} marked as ready to ship`);
+      } catch (err: any) {
+        await reply(body, `❌ Error: ${err.message}`);
+      }
     } else if (action.action_id === "create_shipment") {
       const id = action.value;
       try {
