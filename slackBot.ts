@@ -701,3 +701,28 @@ export async function notifyShipping(orderId: number | string, trackingStatus: s
     console.error("[SLACK] Shipping message failed:", err?.data?.error || err.message);
   }
 }
+
+/** Refund notification when customer receives money back. */
+export async function notifyRefund(order: any, amount?: number) {
+  if (!web || !channel || !order?.id) return;
+  const refundAmount = amount || order.total;
+  try {
+    await web.chat.postMessage({
+      channel,
+      text: `💰 Refund processed for order #${order.id} · ${money(refundAmount)}`,
+      blocks: [
+        {
+          type: "section",
+          text: { type: "mrkdwn", text: `💰 *Refund processed*\nOrder #${order.id} · ${money(refundAmount)}\nCustomer: ${order.billing?.first_name || ''} ${order.billing?.last_name || ''}` }
+        },
+        { type: "divider" },
+        {
+          type: "section",
+          text: { type: "mrkdwn", text: `<${adminLink(order.id)}|Open in WooCommerce>` }
+        }
+      ]
+    });
+  } catch (err: any) {
+    console.error("[SLACK] Refund message failed:", err?.data?.error || err.message);
+  }
+}

@@ -11,7 +11,7 @@ import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { couponProblem, findVariation, mapWooVariation, trustedPrice } from "./orderVariations";
-import { notifyNewOrder, notifyShipping, startSlackBot } from "./slackBot";
+import { notifyNewOrder, notifyShipping, notifyRefund, startSlackBot } from "./slackBot";
 import { browserContext, orderMetaFrom, sendAddToCart, sendPurchase } from "./metaCapi";
 import { mediaHandler, uploadsPathOf } from "./mediaCache";
 import { UPLOADS_DIR, saveUpload, dataFile, adoptLegacyUploads } from "./storage";
@@ -4465,6 +4465,13 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       if (topic === 'order.updated' || topic === 'order.refunded') {
         const status = payload?.status;
         console.log(`[CHILS & CO. WEBHOOK] Order ${orderId} status updated to: ${status}`);
+
+        // Notify Slack when refunds are processed
+        if (topic === 'order.refunded' && status === 'refunded') {
+          notifyRefund(payload).catch(err => {
+            console.error("[CHILS & CO. SLACK] Refund notification failed:", err);
+          });
+        }
 
         // Refund and completed emails come from WooCommerce itself (one email system).
       }
