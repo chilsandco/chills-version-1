@@ -158,6 +158,16 @@ function orderBlocks(order: any, done?: string) {
     },
     { type: "section", text: { type: "mrkdwn", text: itemLines(order) } },
   ];
+
+  // Add product images (up to 3)
+  const productImages = order.line_items?.slice(0, 3).filter((item: any) => item.image?.src).map((item: any) => ({ type: "image", image_url: item.image.src, alt_text: item.name }));
+  if (productImages?.length) {
+    blocks.push({ type: "divider" });
+    productImages.forEach((img: any) => {
+      blocks.push(img);
+    });
+  }
+
   if (done) blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: done }] });
   blocks.push({
     type: "actions",
