@@ -39,6 +39,8 @@ const Footer: React.FC = () => {
               <li><a className={col} href="/oversized-t-shirts-for-men">Oversized tees</a></li>
               <li><a className={col} href="/polo-t-shirts-for-men">Polos</a></li>
               <li><a className={col} href="/t-shirt-combos">Combos</a></li>
+              <li><a className={col} href="/christmas-gifts-for-men">Gifts</a></li>
+              <li><a className={col} href="/corporate-gifting">Corporate gifting</a></li>
               <li><a className={col} href="/journal">Journal</a></li>
             </ul>
           </div>

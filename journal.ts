@@ -478,6 +478,208 @@ export const ARTICLES: Article[] = [
       { q: "Does fabric softener damage a print?", a: "It can coat the print and dull it over time, so it is best avoided on printed tees." },
     ],
   },
+  {
+    slug: "secret-santa-gift-ideas-for-coworkers-india",
+    title: "Secret Santa gift ideas for coworkers in India (under ₹500)",
+    description: "Secret Santa gift ideas for coworkers that are useful, safe and under ₹500: what to buy, what to avoid, and how to choose when you barely know them.",
+    published: "2026-11-26",
+    updated: "2026-11-26",
+    answer:
+      "The best Secret Santa gifts for coworkers are useful, friendly and not too personal: a good notebook, a desk plant, a quality mug, snacks, or a comfortable cotton t-shirt. Stay within the budget, avoid anything intimate or size-sensitive unless you know the person, and order about a week before the exchange so delivery in India does not cut it close.",
+    keywords: ["secret santa ideas", "secret santa gift ideas", "secret santa gifts for coworkers", "secret santa gifts under 500"],
+    sections: [
+      {
+        h2: "What makes a good Secret Santa gift",
+        ul: [
+          "Useful: something they will actually use at work or at home.",
+          "Friendly: a light joke is fine, but never something that could embarrass them.",
+          "Within the budget: do not overspend, since it makes others uncomfortable.",
+          "Not too personal: skip perfume, jewellery and clothing in a very specific size unless you know them well.",
+        ],
+      },
+      {
+        h2: "Ideas that usually work for coworkers",
+        ul: [
+          "A good notebook and pen for people who take meeting notes.",
+          "A desk plant or a small succulent.",
+          "A quality mug or an insulated bottle.",
+          "A snack box of sweets, nuts or tea.",
+          "A comfortable cotton t-shirt, especially a loose, oversized cut that suits most body types.",
+        ],
+      },
+      {
+        h2: "Gifting a t-shirt to someone you barely know",
+        ul: [
+          "Choose an oversized fit. It is more forgiving than a fitted cut.",
+          "Go with a common size for the person, and check the size guide on the product page.",
+          "Pick a design that fits the team, such as a friendly design from the worlds of code or engineering for a tech team.",
+        ],
+      },
+      {
+        h2: "Timing in India",
+        p: ["Order about a week before the exchange. Courier times of 2 to 7 business days are normal, and the festive season can slow them down."],
+      },
+      {
+        h2: "Under ₹500 from CHILS & CO.",
+        p: [`${BRAND} has several tees at ₹499 or less, in cotton and cotton-blend fabrics, delivered across India from ₹80.`],
+        products: "any",
+      },
+    ],
+    faq: [
+      { q: "What is a good Secret Santa gift for a coworker?", a: "Something useful, friendly and not too personal, such as a notebook, a desk plant, a mug, snacks or a comfortable tee." },
+      { q: "How much should I spend on Secret Santa?", a: "Stay within the budget your group agreed on, and do not go over it, since overspending makes others uncomfortable." },
+      { q: "What should I avoid in Secret Santa?", a: "Avoid anything too personal, anything that could embarrass the person, and clothing in a size you cannot be sure of." },
+      { q: "How early should I order a Secret Santa gift?", a: "About a week before the exchange. Delivery in India usually takes 2 to 7 business days." },
+    ],
+  },
+  {
+    slug: "corporate-gift-ideas-for-employees-india",
+    title: "Corporate gift ideas for employees in India: a year-end guide",
+    description: "Corporate gift ideas for employees and clients in India: what works for tech teams, how to pick a budget, how to order in bulk, and timing for year-end and New Year gifting.",
+    published: "2026-11-26",
+    updated: "2026-11-26",
+    answer:
+      "Good corporate gifts for employees are useful, easy to size or choose, and feel considered, not generic. For tech and engineering teams, a heavyweight cotton t-shirt, a polo, a quality notebook, or a desk accessory all work. Fix a budget per person, order early, confirm sizes, and plan for delivery of 2 to 7 business days across India.",
+    keywords: ["corporate gifts for employees", "corporate gift ideas", "corporate gifting ideas", "corporate gifting for new year"],
+    sections: [
+      {
+        h2: "What makes a corporate gift work",
+        ul: [
+          "It is useful, so it is used and remembered.",
+          "It suits everyone: a gift that is size-friendly and neutral in taste.",
+          "It feels considered, not like a bulk giveaway.",
+          "It arrives on time and in good condition.",
+        ],
+      },
+      {
+        h2: "Ideas that suit tech and engineering teams",
+        ul: [
+          "A heavyweight cotton t-shirt or polo that people will wear.",
+          "A quality notebook and pen.",
+          "A desk accessory such as a cable organiser or a desk mat.",
+          "A reusable bottle or insulated mug.",
+        ],
+      },
+      {
+        h2: "Setting a budget",
+        p: ["Decide a fixed amount per person first. Add delivery, and keep a small buffer for sizes and replacements. A premium tee or polo sits in a comfortable range for many year-end budgets."],
+      },
+      {
+        h2: "Ordering for a team",
+        ul: [
+          "Collect sizes early, and ask people to confirm them.",
+          "Choose a cut that is forgiving. An oversized fit suits more body types.",
+          "Ask the supplier about quantities, lead time and whether they can accommodate a larger order before you commit.",
+          "Plan for delivery of 2 to 7 business days, and order earlier for a fixed date.",
+        ],
+      },
+      {
+        h2: "Gifting with CHILS & CO.",
+        p: [
+          `${BRAND} makes heavyweight oversized tees in 100% cotton at 240 GSM and TwinTex polos, designed in Hyderabad. For a team order, message us on WhatsApp at +91 78420 70404 or email hello.chilsandco@gmail.com with the number of pieces, sizes and the date you need them, and we will reply with what we can do.`,
+        ],
+        products: "any",
+      },
+    ],
+    faq: [
+      { q: "What are good corporate gifts for employees?", a: "Something useful and easy to choose for everyone, such as a quality t-shirt or polo, a notebook, a reusable bottle or a desk accessory." },
+      { q: "What are good corporate gifts for a tech team?", a: "Wearable and practical gifts such as a heavyweight cotton tee or polo suit tech teams well, along with notebooks and desk accessories." },
+      { q: "How early should I order corporate gifts for year-end?", a: "As early as you can, ideally a few weeks before the date. Delivery in India takes 2 to 7 business days, and large orders depend on stock." },
+      { q: "How do I handle sizes for a team order?", a: "Collect and confirm sizes early. A loose, oversized cut is more forgiving across different body types." },
+    ],
+  },
+  {
+    slug: "christmas-gift-ideas-for-men-engineers-developers",
+    title: "Christmas gift ideas for men: engineers, developers and techies",
+    description: "Christmas gift ideas for men who work in tech: wearable, practical and thoughtful gifts for engineers and developers, with budgets and delivery timing for India.",
+    published: "2026-11-26",
+    updated: "2026-11-26",
+    answer:
+      "The best Christmas gifts for men who work in tech are practical and personal at the same time: a heavyweight cotton t-shirt with a design from his field, a quality notebook, a desk accessory, or a good bottle or mug. Pick something he will use daily, get the size from a tee he already owns, and order early since delivery in India takes 2 to 7 business days.",
+    keywords: ["christmas gift ideas for men", "christmas presents for men", "christmas gifts for engineers", "gifts for developers"],
+    sections: [
+      {
+        h2: "Gifts he will actually use",
+        ul: [
+          "A heavyweight cotton t-shirt with a design from his field.",
+          "A quality notebook and pen for meetings and ideas.",
+          "A desk accessory that tidies his workspace.",
+          "A reusable bottle or insulated mug.",
+        ],
+      },
+      {
+        h2: "Why a t-shirt works",
+        p: ["A tee is practical, he will wear it weekly, and a design from his work, such as chips, code or engineering, shows you paid attention. Choose heavyweight cotton, since it feels like a real gift and lasts."],
+      },
+      {
+        h2: "Getting the size right",
+        ul: [
+          "Check a tee he already owns and likes.",
+          "Measure it flat across the chest and compare with the size guide.",
+          "If he likes loose, relaxed clothes, an oversized cut in his usual size is forgiving.",
+        ],
+      },
+      {
+        h2: "Timing",
+        p: ["Delivery in India takes 2 to 7 business days, and the festive season can be slower. Order early. At CHILS & CO., returns and exchanges are accepted within 7 days of delivery for an unworn, unwashed tee with its tags on."],
+      },
+      {
+        h2: "Christmas gifts from CHILS & CO.",
+        p: [`${BRAND} is designed by techies in Hyderabad. Tees start at ₹349, polos are ₹599, and three-tee stacks save 10% on the set.`],
+        products: "any",
+      },
+    ],
+    faq: [
+      { q: "What is a good Christmas gift for an engineer?", a: "Something practical with a personal touch, such as a heavyweight cotton tee with a design from his field, a notebook or a desk accessory." },
+      { q: "What is a good Christmas gift for a developer?", a: "A comfortable t-shirt with a developer design, a quality notebook, or a good desk setup accessory." },
+      { q: "How do I choose a size when gifting a t-shirt?", a: "Measure a tee he already owns flat across the chest and compare with the size guide. An oversized cut is more forgiving." },
+      { q: "How much should I spend on a Christmas gift for a man?", a: "Set a budget first. A premium tee or polo is a comfortable choice in the few-hundred-rupee range." },
+    ],
+  },
+  {
+    slug: "how-to-choose-a-tshirt-size-when-gifting",
+    title: "How to choose a t-shirt size when you are buying a gift",
+    description: "How to pick the right t-shirt size for someone else: measure a tee they own, use the size guide, choose a forgiving fit, and know your exchange options.",
+    published: "2026-11-26",
+    updated: "2026-11-26",
+    answer:
+      "To pick a t-shirt size for a gift, measure a tee the person already owns and likes: lay it flat and measure across the chest, then compare with the brand's size guide. If you cannot, choose their usual size in an oversized or relaxed cut, which is more forgiving than a fitted one, and check the exchange policy before you buy.",
+    keywords: ["how to choose t-shirt size gift", "t-shirt size for gift", "gift t-shirt size guide"],
+    sections: [
+      {
+        h2: "The most reliable method: measure a tee they own",
+        ul: [
+          "Pick a tee they wear often and that fits them well.",
+          "Lay it flat and smooth it out.",
+          "Measure straight across the chest, from armpit to armpit, and note the number.",
+          "Measure from the top of the shoulder to the hem for the length.",
+          "Compare both numbers with the size guide on the product page.",
+        ],
+      },
+      {
+        h2: "If you cannot measure",
+        ul: [
+          "Ask a friend or family member who knows their size.",
+          "Pick their usual size in an oversized cut, since it is more forgiving.",
+          "Avoid fitted cuts when you are guessing.",
+        ],
+      },
+      {
+        h2: "Why an oversized cut is safer for gifts",
+        p: ["An oversized tee is cut larger on purpose, so a small difference in size is less noticeable. It suits more body types and hangs well in a heavier fabric."],
+      },
+      {
+        h2: "Check the exchange policy",
+        p: [`Before you buy, check that the brand accepts exchanges. At ${BRAND}, returns, exchanges and store credit are accepted within 7 days of delivery, as long as the tee is unworn and unwashed with its tags on.`],
+        products: "oversized",
+      },
+    ],
+    faq: [
+      { q: "How do I choose a t-shirt size for someone else?", a: "Measure a tee they already own flat across the chest and compare it with the size guide. If you cannot, pick their usual size in an oversized cut." },
+      { q: "What is the safest t-shirt fit to gift?", a: "An oversized or relaxed cut. It is more forgiving than a fitted one if you are not sure of the exact size." },
+      { q: "Can the recipient exchange a gifted t-shirt?", a: "At CHILS & CO., returns and exchanges are accepted within 7 days of delivery for an unworn, unwashed tee with its tags on." },
+    ],
+  },
 ];
 
 // ------------------------------------------------------------------ rendering

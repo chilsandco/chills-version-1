@@ -47,6 +47,7 @@ type Landing = {
   sections: (ps: P[]) => { h2: string; p?: string[]; ul?: string[] }[];
   faq: (ps: P[]) => { q: string; a: string }[];
   related: { href: string; label: string }[];
+  limit?: number;
 };
 
 const SHARED_FAQ = [
@@ -190,6 +191,144 @@ export const LANDINGS: Landing[] = [
     ],
     related: [{ href: "/oversized-t-shirts-for-men", label: "Oversized t-shirts for men" }, { href: "/t-shirt-combos", label: "Three-tee stacks" }],
   },
+  {
+    path: "/corporate-gifting",
+    title: "Corporate Gifts for Employees | Premium T-Shirts | CHILS & CO.",
+    h1: "Corporate gifting: premium t-shirts for teams and clients",
+    description: "Corporate gifts for employees and clients: heavyweight cotton tees and polos designed by techies in Hyderabad. Delivered across India. Message us for team orders.",
+    limit: 18,
+    pick: p => (isOversized(p) || isPolo(p)) && p.type !== "grouped",
+    intro: ps => {
+      const r = range(ps);
+      return [
+        `A good corporate gift is something people actually wear. ${BRAND} makes heavyweight oversized tees in 100% cotton at 240 GSM and TwinTex polos, designed by techies in Hyderabad${r ? `, ${inr(r.lo)} to ${inr(r.hi)} each` : ""}. They suit engineering and tech teams, year-end gifting and client thank-yous.`,
+        "Orders are delivered across India and arrive in reusable Second Life packaging.",
+      ];
+    },
+    sections: () => [
+      {
+        h2: "Ways to gift with CHILS & CO.",
+        ul: [
+          "Ready-made tees and polos: choose a design for the team and order by size.",
+          "Three-tee stacks: three tees chosen to go together, with 10% off the set, for a larger gift.",
+          "Custom Studio: design your own tee with your artwork on the front, back or sleeve.",
+        ],
+      },
+      {
+        h2: "Planning a team or company order?",
+        p: [
+          `Message us on WhatsApp at +91 78420 70404 or email hello.chilsandco@gmail.com with the number of pieces, the sizes, the design you like and the date you need them by. We will reply with what we can do. Please ask before you plan around a date, since large orders depend on stock and size.`,
+        ],
+      },
+      {
+        h2: "Why a tee works as a corporate gift",
+        ul: [
+          "People wear it, so the gift is remembered after the event.",
+          "A heavyweight cotton tee feels like a real gift, not a giveaway.",
+          "Sizes S to XL on the oversized range; the loose cut is forgiving across body types.",
+        ],
+      },
+      {
+        h2: "Delivery",
+        p: ["Delivery across India starts at ₹80. Orders are packed within 24 to 48 hours and delivered in 2 to 7 business days, tracked by SMS and email. Order early for a fixed date, since busy periods can slow couriers."],
+      },
+    ],
+    faq: () => [
+      { q: "Can I order t-shirts for my whole team?", a: "Yes, ask us first. Message us on WhatsApp at +91 78420 70404 or email hello.chilsandco@gmail.com with the number of pieces, sizes and the date you need them. We reply with what we can do." },
+      { q: "Can I add my company logo?", a: "The Custom Studio lets you design a tee with your own artwork. For a logo on many pieces, message us before you order so we can confirm what is possible." },
+      { q: "What are good corporate gifts for employees?", a: "Something people use. A heavyweight cotton tee or a polo is wearable, memorable and works for tech and engineering teams." },
+      ...SHARED_FAQ,
+    ],
+    related: [
+      { href: "/journal/corporate-gift-ideas-for-employees-india", label: "Corporate gift ideas for employees in India" },
+      { href: "/secret-santa-gifts", label: "Secret Santa gifts under ₹500" },
+      { href: "/t-shirt-combos", label: "Three-tee stacks, save 10%" },
+    ],
+  },
+  {
+    path: "/christmas-gifts-for-men",
+    title: "Christmas & New Year Gifts for Men | Tees from ₹349 | CHILS & CO.",
+    h1: "Christmas and New Year gifts for men",
+    description: "Christmas and New Year gift ideas for men: heavyweight oversized tees, polos and three-tee stacks, from ₹349. Designed in Hyderabad, delivered across India.",
+    limit: 24,
+    pick: p => p.type !== "grouped",
+    intro: ps => {
+      const r = range(ps);
+      return [
+        `A tee is an easy gift for men that they will use all year. ${BRAND} has ${ps.length} designs${r ? `, from ${inr(r.lo)} to ${inr(r.hi)}` : ""}, from heavyweight oversized tees to TwinTex polos, with designs from the worlds of code, chips and engineering.`,
+        "Delivery across India starts at ₹80, in reusable Second Life packaging. Order early so it arrives before the day.",
+      ];
+    },
+    sections: ps => [
+      {
+        h2: "Gifts by budget",
+        ul: [
+          `Under ₹500: ${ps.filter(p => Number(p.price) <= 500).length} designs.`,
+          `Under ₹600: ${ps.filter(p => Number(p.price) <= 600).length} designs, including our TwinTex polos.`,
+          "A set of three: a three-tee stack saves 10% on the set.",
+        ],
+      },
+      {
+        h2: "How to choose for him",
+        ul: [
+          "Loose, relaxed style: pick an oversized drop shoulder tee in 100% cotton at 240 GSM.",
+          "Neater, smarter look: pick a polo or a regular fit tee.",
+          "Not sure of the size: check a tee he already owns, measure it flat across the chest, and compare with the size guide on the product page.",
+          "An engineer or developer: choose a design from his field.",
+        ],
+      },
+      {
+        h2: "Timing",
+        p: ["Orders are packed within 24 to 48 hours and delivered in 2 to 7 business days. If the size is wrong, returns and exchanges are accepted within 7 days of delivery, as long as the tee is unworn and unwashed with its tags on."],
+      },
+    ],
+    faq: () => [
+      { q: "What is a good Christmas gift for men?", a: "A practical gift he will use. A heavyweight cotton tee or a polo suits most men, and a design from his work or interests makes it personal." },
+      { q: "Will it arrive before Christmas?", a: "Orders are packed within 24 to 48 hours and delivered in 2 to 7 business days across India. Order early, since the festive season can slow couriers." },
+      { q: "What if the size is wrong?", a: "Returns and exchanges are accepted within 7 days of delivery. The tee must be unworn and unwashed with its tags on." },
+      { q: "Do you have a gift under ₹500?", a: "Yes. Several designs are priced at ₹499 or less. The list above shows the current ones." },
+    ],
+    related: [
+      { href: "/secret-santa-gifts", label: "Secret Santa gifts under ₹500" },
+      { href: "/corporate-gifting", label: "Corporate gifting" },
+      { href: "/journal/christmas-gift-ideas-for-men-engineers-developers", label: "Christmas gift ideas for engineers and developers" },
+    ],
+  },
+  {
+    path: "/secret-santa-gifts",
+    title: "Secret Santa Gifts Under ₹500 | T-Shirts for Men | CHILS & CO.",
+    h1: "Secret Santa gifts under ₹500",
+    description: "Secret Santa gift ideas under ₹500: heavyweight cotton tees and regular fit tees, designed by techies in Hyderabad. Delivered across India.",
+    limit: 24,
+    pick: p => Number(p.price) <= 500 && p.type !== "grouped",
+    intro: ps => [
+      `Secret Santa works best with a gift that is useful and not too personal. A tee fits: it suits most people, and a design from the worlds of code and engineering is a safe, friendly joke for a team. ${ps.length} of our designs are ₹500 or less.`,
+      "Delivery across India starts at ₹80, in reusable Second Life packaging.",
+    ],
+    sections: () => [
+      {
+        h2: "Picking one for a coworker",
+        ul: [
+          "Choose a design that is friendly, not too personal.",
+          "Pick a common size for the person, or an oversized cut, which is more forgiving.",
+          "If you do not know the size, an oversized tee in their usual size works for most people.",
+        ],
+      },
+      {
+        h2: "Timing for the draw",
+        p: ["Orders are packed within 24 to 48 hours and delivered in 2 to 7 business days. Order a week before the exchange. Returns and exchanges are accepted within 7 days of delivery, for an unworn, unwashed tee with its tags on."],
+      },
+    ],
+    faq: () => [
+      { q: "What is a good Secret Santa gift under ₹500?", a: "A tee is a safe, useful choice. Several of our designs are ₹499 or less, and a design from the world of code or engineering works well for tech teams." },
+      { q: "How do I choose a size for a Secret Santa gift?", a: "Pick a common size, or choose an oversized cut, which is more forgiving. Check the size guide on the product page for measurements." },
+      { q: "How long does delivery take?", a: "Orders are packed within 24 to 48 hours and delivered across India in 2 to 7 business days. Order about a week ahead of the exchange." },
+    ],
+    related: [
+      { href: "/journal/secret-santa-gift-ideas-for-coworkers-india", label: "Secret Santa gift ideas for coworkers" },
+      { href: "/christmas-gifts-for-men", label: "Christmas and New Year gifts for men" },
+    ],
+  },
 ];
 
 function cardGrid(ps: P[], limit = 40) {
@@ -208,7 +347,7 @@ export function landingHtml(l: Landing, all: P[]) {
 <h1>${esc(l.h1)}</h1>
 ${l.intro(ps).map(t => `<p>${esc(t)}</p>`).join("")}
 <h2>Shop the range</h2>
-${ps.some(p => p.images?.[0]) ? cardGrid(ps) : ps.length ? `<ul>${ps.map(p => `<li><a href="/product/${esc(p.id)}">${esc(p.name)}</a> · ${inr(p.price)}</li>`).join("")}</ul>` : `<p><a href="/collection">See the full collection</a></p>`}
+${ps.some(p => p.images?.[0]) ? cardGrid(ps, l.limit) : ps.length ? `<ul>${ps.map(p => `<li><a href="/product/${esc(p.id)}">${esc(p.name)}</a> · ${inr(p.price)}</li>`).join("")}</ul>` : `<p><a href="/collection">See the full collection</a></p>`}
 <p><a class="pill" href="/collection">Shop the full collection</a></p>
 ${l
   .sections(ps)
@@ -278,6 +417,9 @@ export function homeBody(all: P[]) {
     { href: "/polo-t-shirts-for-men", label: "Polo shirts for men" },
     { href: "/regular-fit-t-shirts-for-men", label: "Regular fit t-shirts for men" },
     { href: "/t-shirt-combos", label: "Three-tee stacks: save 10%" },
+    { href: "/christmas-gifts-for-men", label: "Christmas and New Year gifts for men" },
+    { href: "/secret-santa-gifts", label: "Secret Santa gifts under ₹500" },
+    { href: "/corporate-gifting", label: "Corporate gifting for teams" },
     { href: "/collection", label: "The full collection" },
   ])}
 <h2>Popular oversized tees</h2>${productLinks(over.slice(0, 12))}

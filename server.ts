@@ -5006,7 +5006,7 @@ ${xmlItems}
       const PUBLIC_PAGE_META: Record<string, { title: string; description: string }> = {
         "/": {
           title: "Oversized T-Shirts for Men | 240 GSM Cotton | CHILS & CO.",
-          description: "Heavyweight 100% cotton oversized tees, TwinTex polos and minimal tees, designed by techies in Hyderabad. From ₹349. Delivered across India, 7-day returns."
+          description: "Heavyweight oversized tees, TwinTex polos and minimal tees by techies in Hyderabad. From ₹349. Gifts for Christmas, New Year and teams. Delivered across India."
         },
         "/collection": {
           title: "Shop T-Shirts & Polos for Men Online | CHILS & CO.",
