@@ -307,7 +307,7 @@ const DesignStudio: React.FC = () => {
           </div>
 
           {/* ─── RIGHT: Live Preview ─── */}
-          <div className="lg:col-span-7 flex items-start justify-center sticky top-24">
+          <div className="lg:col-span-7 flex items-start justify-center sticky top-[calc(6rem+var(--promo-h,0px))]">
             <motion.div ref={previewRef}
               initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3, duration: 0.8 }}

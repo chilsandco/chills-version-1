@@ -5,6 +5,7 @@ import { CartProvider } from './CartContext';
 import { AuthProvider } from './AuthContext';
 import { WishlistProvider } from './WishlistContext';
 import Navbar from './components/Navbar';
+import PromoBar from './components/PromoBar';
 import { Deferred } from './components/Deferred';
 import PageLoader from './components/PageLoader';
 import Footer from './components/Footer';
@@ -55,7 +56,7 @@ function Shell({ children }: { children: React.ReactNode }) {
   const dark = DARK_PREFIXES.some(p => pathname.startsWith(p));
   React.useEffect(() => { metaPageView(); }, [pathname]);
   return (
-    <div className={`${dark ? 'bg-black text-white selection:bg-white selection:text-black' : 'theme-light'} min-h-screen flex flex-col overflow-x-clip w-full max-w-full`}>
+    <div className={`${dark ? 'bg-black text-white selection:bg-white selection:text-black' : 'theme-light'} min-h-screen flex flex-col overflow-x-clip w-full max-w-full`} style={{ paddingTop: 'var(--promo-h, 0px)' }}>
       {children}
     </div>
   );
@@ -69,6 +70,7 @@ export default function App() {
           <Router>
             <SmoothScroll>
             <Shell>
+              <PromoBar />
               <Navbar />
               <main className="flex-grow">
                 <React.Suspense fallback={<PageLoader />}>

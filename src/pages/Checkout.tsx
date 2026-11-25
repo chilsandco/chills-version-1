@@ -695,7 +695,7 @@ const Checkout: React.FC = () => {
 
         {/* ORDER */}
         <aside className="lg:col-span-5">
-          <div className="lg:sticky lg:top-24 lg:bg-paper lg:p-8 max-lg:bg-[#fff] max-lg:rounded-2xl max-lg:p-4">
+          <div className="lg:sticky lg:top-[calc(6rem+var(--promo-h,0px))] lg:bg-paper lg:p-8 max-lg:bg-[#fff] max-lg:rounded-2xl max-lg:p-4">
             {!narrow && (
               <>
                 <h2 className="text-xl font-semibold mb-1">Your order</h2>

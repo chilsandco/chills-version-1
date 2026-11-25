@@ -134,7 +134,7 @@ const Combos: React.FC = () => {
         <p className="text-neutral-500 md:text-lg">Three tees, banded together. Save 10%.</p>
       </header>
 
-      <div className="sticky top-16 md:top-[72px] z-30 bg-[#fff] md:bg-[#fff]/90 md:backdrop-blur border-y border-neutral-200">
+      <div className="sticky top-[calc(4rem+var(--promo-h,0px))] md:top-[calc(72px+var(--promo-h,0px))] z-30 bg-[#fff] md:bg-[#fff]/90 md:backdrop-blur border-y border-neutral-200">
         <nav aria-label="Trilogy ranges" className="max-w-[1500px] mx-auto px-5 md:px-12 flex gap-6 md:gap-9 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {tab('All', closets.length, null)}
           {rows.map(r => tab(r.label, r.closets.length, r.index))}

@@ -58,6 +58,7 @@ const Navbar: React.FC = () => {
   return (
     <>
       <header
+        style={{ top: 'var(--promo-h, 0px)' }}
         className={`fixed top-0 inset-x-0 z-50 backdrop-blur-md transition-shadow ${dark ? 'bg-black/95 text-white' : 'bg-[#fff]/95 text-ink'} max-md:!bg-[#fff] max-md:!backdrop-blur-none max-md:!text-ink max-md:border-b max-md:border-black/10 ${
           scrolled ? 'md:shadow-[0_1px_0_rgba(128,128,128,0.25)]' : ''
         }`}
@@ -119,7 +120,7 @@ const Navbar: React.FC = () => {
         {menuOpen && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 pt-16 z-40 bg-[#fff] text-ink md:hidden overflow-y-auto"
+            className="fixed inset-0 pt-[calc(4rem+var(--promo-h,0px))] z-40 bg-[#fff] text-ink md:hidden overflow-y-auto"
           >
             <div className="px-6 py-8 flex flex-col">
               {links.map(l => (

@@ -148,7 +148,7 @@ const Collection: React.FC = () => {
       )}
 
       {/* STICKY TOOLBAR */}
-      <div className="sticky top-16 md:top-[72px] z-30 bg-[#fff]/95 backdrop-blur border-b border-black/10">
+      <div className="sticky top-[calc(4rem+var(--promo-h,0px))] md:top-[calc(72px+var(--promo-h,0px))] z-30 bg-[#fff]/95 backdrop-blur border-b border-black/10">
         <div className="max-w-[1680px] mx-auto px-5 md:px-10 flex items-center justify-between gap-4 md:gap-8">
           <div className="flex items-center gap-5 md:gap-7 overflow-x-auto py-3.5 min-w-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {[{ slug: null as string | null, name: 'All' }, ...GROUPS].map(g => {
