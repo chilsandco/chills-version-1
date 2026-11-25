@@ -148,6 +148,71 @@ function itemLines(order: any) {
   );
 }
 
+// ---------- addresses and pictures ----------
+const IMG_EXT = /\.(jpe?g|png|webp|gif|avif)(\?|$)/i;
+
+/** Where the order goes: name, full address and phone, as the customer typed them. */
+function addressText(order: any) {
+  const a = order.shipping?.address_1 ? order.shipping : order.billing || {};
+  const name = `${a.first_name || ""} ${a.last_name || ""}`.trim() || `${order.billing?.first_name || ""} ${order.billing?.last_name || ""}`.trim();
+  const place = [a.city, a.state].filter(Boolean).join(", ");
+  const lines = [name, a.company, a.address_1, a.address_2, [place, a.postcode].filter(Boolean).join(" - "), a.country && a.country !== "IN" ? a.country : ""].filter(Boolean);
+  const phone = a.phone || order.billing?.phone;
+  if (phone) lines.push(`📞 ${phone}`);
+  return lines.join("\n") || "No address on the order";
+}
+
+const productImages = new Map<number, string>();
+
+/** Fills in each line item's picture (WooCommerce often leaves it out of orders). Never throws. */
+async function hydrateImages(data: any) {
+  try {
+    const orders: any[] = (Array.isArray(data) ? data : [data]).filter((o: any) => o && Array.isArray(o.line_items));
+    const missing = new Set<number>();
+    for (const o of orders) for (const i of o.line_items) if (!i.image?.src && i.product_id && !productImages.has(i.product_id)) missing.add(i.product_id);
+    if (missing.size && wc) {
+      const ids = [...missing].slice(0, 100);
+      try {
+        const { data: prods } = await wc("get", "products", { include: ids.join(","), per_page: 100 });
+        for (const p of prods || []) if (p.images?.[0]?.src) productImages.set(p.id, p.images[0].src);
+      } catch (err: any) {
+        console.warn("[SLACK] Could not look up product pictures:", err?.message);
+      }
+      for (const id of ids) if (!productImages.has(id)) productImages.set(id, "");
+    }
+    for (const o of orders) for (const i of o.line_items) if (!i.image?.src && productImages.get(i.product_id)) i.image = { ...(i.image || {}), src: productImages.get(i.product_id) };
+  } catch {
+    /* pictures are a bonus */
+  }
+}
+
+/** One row per product: its picture beside the name, size and quantity. */
+function itemBlocks(order: any) {
+  return (order.line_items || []).slice(0, 8).map((i: any) => {
+    const size = (i.meta_data || []).find((m: any) => /size/i.test(m.display_key || m.key))?.display_value;
+    const block: any = {
+      type: "section",
+      text: { type: "mrkdwn", text: `*${i.name}*${size ? `\nSize: ${size}` : ""}\nQty: ${i.quantity} · ${money(i.total)}` },
+    };
+    if (i.image?.src) block.accessory = { type: "image", image_url: i.image.src, alt_text: i.name };
+    return block;
+  });
+}
+
+/** If Slack cannot fetch a picture it rejects the whole message, so we retry without pictures. */
+function stripImages(blocks: any[]) {
+  return blocks.filter(b => b.type !== "image").map(b => (b.accessory?.type === "image" ? { ...b, accessory: undefined } : b));
+}
+async function withPictureFallback<T>(send: (blocks: any[]) => Promise<T>, blocks: any[]): Promise<T> {
+  try {
+    return await send(blocks);
+  } catch (err: any) {
+    if (!/invalid_blocks|image/i.test(`${err?.data?.error || ""} ${err?.message || ""}`)) throw err;
+    console.warn("[SLACK] Slack could not load a picture; sending the card without pictures.");
+    return send(stripImages(blocks));
+  }
+}
+
 // =====================================================================
 // Order cards
 // =====================================================================
@@ -168,17 +233,11 @@ function orderBlocks(order: any, done?: string) {
         { type: "mrkdwn", text: `*Payment*\n${order.payment_method_title || order.payment_method || "—"}` },
       ],
     },
-    { type: "section", text: { type: "mrkdwn", text: itemLines(order) } },
+    ...itemBlocks(order),
+    { type: "section", text: { type: "mrkdwn", text: `*${pickup ? "Store pickup" : "Ship to"}*\n${pickup ? "Collect in store\n" : ""}${addressText(order)}` } },
   ];
 
-  // Add product images (up to 3)
-  const productImages = order.line_items?.slice(0, 3).filter((item: any) => item.image?.src).map((item: any) => ({ type: "image", image_url: item.image.src, alt_text: item.name }));
-  if (productImages?.length) {
-    blocks.push({ type: "divider" });
-    productImages.forEach((img: any) => {
-      blocks.push(img);
-    });
-  }
+  if (order.customer_note) blocks.push({ type: "section", text: { type: "mrkdwn", text: `*Customer note:* ${order.customer_note}` } });
 
   if (done) blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: done }] });
   blocks.push({
@@ -338,15 +397,19 @@ async function maybeSendSummary() {
 
 /** The customer's latest return request, from the returns plugin's data on the order. */
 function returnRequest(order: any) {
+  const ours = metaOf(order, "_chils_return_request");
   const raw = metaOf(order, "wps_rma_return_product");
   let entries: any[] = [];
   try {
     entries = Object.values(typeof raw === "string" ? JSON.parse(raw) : raw || {});
+    // What the website saved when the customer submitted the form beats the plugin's own record.
+    const saved = typeof ours === "string" ? JSON.parse(ours) : ours;
+    if (saved?.subject) entries = [{ ...(entries[entries.length - 1] || {}), subject: saved.subject }];
   } catch {
     /* unreadable: show what we can */
   }
   const req: any = entries[entries.length - 1] || {};
-  const subject = String(req.subject || "");
+  const subject = String(req.subject || req.reason || req.message || "");
   const pick = (label: string) => subject.match(new RegExp(`${label}:\\s*(.*)`))?.[1]?.trim() || "";
   const products: any[] = req.products || [];
   const names = new Map<string, string>((order.line_items || []).map((i: any) => [String(i.product_id), i.name]));
@@ -362,8 +425,10 @@ function returnRequest(order: any) {
       return `• ${names.get(id) || `Product ${id}`} × ${qty}: ${act}`;
     });
   const value = products.reduce((n, p) => n + Number(p.price || 0) * Number(p.qty || 1), 0);
-  const images = pick("Images").split(",").map(s => s.trim()).filter(s => /^https?:/.test(s));
+  const found = JSON.stringify(entries).match(/https?:[^"'\s,\\]+?\.(?:jpe?g|png|webp|gif|avif)(?:\?[^"'\s,\\]*)?/gi) || [];
+  const images = [...new Set([...pick("Images").split(",").map(s => s.trim()).filter(s => /^https?:/.test(s)), ...found])];
   return {
+    raw: subject.split("\n").filter(l => l.trim() && !/^(Images|Return\/Exchange Actions|- Product ID)/.test(l.trim())).slice(0, 4).join("\n"),
     reason: pick("Reason"),
     description: pick("Description"),
     wants,
@@ -377,10 +442,10 @@ export function returnBlocks(order: any, done?: string) {
   const r = returnRequest(order);
   const name = `${order.billing?.first_name || ""} ${order.billing?.last_name || ""}`.trim();
   const detail = [
-    `*Reason:* ${r.reason || "not given"}`,
+    `*Reason:* ${r.reason || r.raw || "not given"}`,
     r.description ? `*Customer's note:* ${r.description}` : "",
     r.wants.length ? `*What they want:*\n${r.wants.join("\n")}` : `*Items:*\n${itemLines(order)}`,
-    r.images.length ? `*Return photos:* ${r.images.map((u, i) => `<${u}|photo ${i + 1}>`).join(" · ")}` : "",
+    r.images.length ? `*Return photos (${r.images.length}):* ${r.images.map((u, i) => `<${u}|photo ${i + 1}>`).join(" · ")}` : "*Return photos:* none uploaded",
   ].filter(Boolean);
 
   const blocks: any[] = [
@@ -397,13 +462,10 @@ export function returnBlocks(order: any, done?: string) {
     { type: "section", text: { type: "mrkdwn", text: detail.join("\n") } },
   ];
 
-  // Add product images
-  const productImages = order.line_items?.slice(0, 3).map((item: any) => ({ type: "image", image_url: item.image?.src || "", alt_text: item.name })).filter((img: any) => img.image_url);
-  if (productImages?.length) {
-    blocks.push({ type: "divider" });
-    productImages.forEach((img: any) => {
-      if (img.image_url) blocks.push({ type: "image", image_url: img.image_url, alt_text: img.alt_text });
-    });
+  blocks.push(...itemBlocks(order));
+  blocks.push({ type: "section", text: { type: "mrkdwn", text: `*Address*\n${addressText(order)}` } });
+  for (const [i, u] of r.images.slice(0, 6).entries()) {
+    blocks.push({ type: "image", image_url: u, alt_text: `Return photo ${i + 1}`, title: { type: "plain_text", text: `Return photo ${i + 1} of ${r.images.length}` } });
   }
 
   if (done) blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: done }] });
@@ -452,7 +514,8 @@ async function checkReturns() {
   for (const o of waiting) {
     if (state.returns[o.id]) continue;
     state.returns[o.id] = Date.now();
-    await web!.chat.postMessage({ channel: rooms.returns, text: `Return request for order #${o.id}`, blocks: returnBlocks(o) });
+    await hydrateImages(o);
+    await withPictureFallback(b => web!.chat.postMessage({ channel: rooms.returns, text: `Return request for order #${o.id}`, blocks: b }), returnBlocks(o));
     console.log(`[SLACK] Posted return request #${o.id}`);
   }
   saveState();
@@ -467,8 +530,12 @@ async function approveReturn(id: string, who: string, user: string, ch: string, 
     customer_note: true,
   });
   await note(id, `Return approved by ${who} from Slack.`);
-  const wantsRefund = returnRequest(current).isRefund;
+  // Only skip the refund card when every item is an exchange or swap. Anything else may need money sent back.
+  const r = returnRequest(current);
+  const exchangeOnly = r.wants.length > 0 && r.wants.every(w => /exchange|swap to/i.test(w));
+  const wantsRefund = !exchangeOnly;
   const refundCard = wantsRefund ? await postRefundCard(data) : "";
+  console.log(`[SLACK] Return #${id} approved: ${wantsRefund ? (refundCard ? "refund card posted" : "refund card could not be posted") : "exchange only, no refund card"}`);
   const refund = wantsRefund ? (refundCard ? " · refund card posted below, send the money from there" : " · refund the money in PhonePe") : "";
   await updateCard(ch, ts, `Return #${id}`, returnBlocks(data, `✅ Approved by <@${user}> · customer emailed${refund}`));
   return "";
@@ -536,7 +603,7 @@ async function setStatus(orderId: string, status: string, who: string, extraMeta
 async function updateCard(ch: string, ts: string, text: string, blocks: any[]) {
   if (!ch || !ts) return;
   try {
-    await web!.chat.update({ channel: ch, ts, text, blocks });
+    await withPictureFallback(b => web!.chat.update({ channel: ch, ts, text, blocks: b }), blocks);
   } catch (err: any) {
     console.warn("[SLACK] Could not update the message:", err?.data?.error || err.message);
   }
@@ -663,7 +730,7 @@ async function postRefundCard(order: any): Promise<string> {
 
 /** Sends the refund to PhonePe. Returns a message to show when nothing was sent. */
 async function startRefund(id: string, amount: number, who: string, user: string, ch: string, ts: string): Promise<string> {
-  if (!canRefund(user)) return `<@${user}> you're not on the list of people who can send refunds.`;
+  if (!canRefund(user)) return `<@${user}> you're not on the list of people who can send refunds. Your Slack ID is \`${user}\`: add it to SLACK_REFUND_USERS.`;
   if (!phonepe) return "PhonePe isn't connected to the bot, so I can't send refunds.";
   if (refundLocks.has(id)) return `A refund for order #${id} is already being sent. Give it a moment.`;
   refundLocks.add(id);
@@ -804,7 +871,7 @@ async function onAction(body: any) {
       const msg = await startRefund(id, Number(amount), who, user, body.channel?.id, body.message?.ts);
       if (msg) await reply(body, msg);
     } else if (action.action_id === "refund_custom") {
-      if (!canRefund(user)) return reply(body, `<@${user}> you're not on the list of people who can send refunds.`);
+      if (!canRefund(user)) return reply(body, `<@${user}> you're not on the list of people who can send refunds. Your Slack ID is \`${user}\`: add it to SLACK_REFUND_USERS.`);
       await openRefundDialog(body, action.value);
     } else if (action.action_id === "followed_up") {
       const id = action.value;
@@ -832,9 +899,12 @@ async function onAction(body: any) {
 
         if (res.awb) {
           const { data } = await wc!("get", `orders/${id}`);
-          await note(id, `Shipment created: AWB ${res.awb}, Courier: ${res.courier} (by ${who}, from Slack). Label: ${res.labelDownloadUrl}`);
-          await reply(body, `✅ Shipment created for order #${id}\n*AWB:* ${res.awb}\n*Courier:* ${res.courier}\n<${res.labelDownloadUrl}|📄 Download Label>`);
+          await note(id, `Shipment created: AWB ${res.awb}, Courier: ${res.courier} (by ${who}, from Slack).${res.labelDownloadUrl ? ` Label: ${res.labelDownloadUrl}` : ""}`);
+          await reply(body, `✅ Shipment created for order #${id}\n*AWB:* ${res.awb}\n*Courier:* ${res.courier}${res.labelDownloadUrl ? `\n<${res.labelDownloadUrl}|📄 Download Label>` : ""}`);
           await refreshMessage(body, data, `🚚 Shipment created, AWB: ${res.awb} · initiated by <@${user}>`);
+        } else if (res.shipmentId) {
+          await note(id, `Order sent to Shiprocket (shipment ${res.shipmentId}) by ${who} from Slack. No courier assigned yet: ${res.courierError || "unknown reason"}.`);
+          await reply(body, `⚠️ Order #${id} is in Shiprocket, but no courier was assigned yet.\n*Why:* ${res.courierError || "unknown"}\nFix that (often the Shiprocket wallet balance) and press Create Shipment again, or finish it in <${res.dashboardUrl}|Shiprocket>.`);
         } else {
           await reply(body, `❌ Shipment creation failed: ${res.message}`);
         }
@@ -935,6 +1005,15 @@ async function onMessage(event: any) {
       for (const o of waiting.slice(0, 10)) await say(`Return request for order #${o.id}`, returnBlocks(o));
       return;
     }
+    const dbg = text.match(/^debug\s*#?(\d+)$/);
+    if (dbg) {
+      const { data } = await wc!("get", `orders/${dbg[1]}`);
+      const lines = (data.meta_data || [])
+        .filter((m: any) => /rma|return|refund|exchange|reason|image|photo/i.test(m.key))
+        .map((m: any) => `• \`${m.key}\`: ${(typeof m.value === "string" ? m.value : JSON.stringify(m.value)).replace(/data:image[^"\s]{40,}/g, "[base64 image]").slice(0, 600)}`);
+      const notes = await wc!("get", `orders/${dbg[1]}/notes`).then((r: any) => (r.data || []).map((n: any) => `• ${String(n.note).slice(0, 200)}`).slice(0, 8)).catch(() => []);
+      return say(`Debug #${dbg[1]}`, [{ type: "section", text: { type: "mrkdwn", text: `*Return data on #${dbg[1]}*\n${lines.join("\n") || "none found"}\n\n*Notes*\n${notes.join("\n") || "none"}`.slice(0, 2900) } }]);
+    }
     const refund = text.match(/^refund\s*#?(\d+)$/);
     if (refund) {
       const { data } = await wc!("get", `orders/${refund[1]}`);
@@ -973,7 +1052,12 @@ export async function startSlackBot(opts: { wc: WcCall; adminUrl: string; phonep
   }
   allowed = (process.env.SLACK_ALLOWED_USERS || "").split(",").map(s => s.trim()).filter(Boolean);
   adminBase = opts.adminUrl.replace(/\/$/, "");
-  wc = opts.wc;
+  const rawWc = opts.wc;
+  wc = async (method: string, ...args: any[]) => {
+    const res = await (rawWc as any)(method, ...args);
+    if (method === "get" && typeof args[0] === "string" && /^orders(\/\d+)?$/.test(args[0])) await hydrateImages(res?.data);
+    return res;
+  };
   phonepe = opts.phonepe || null;
   web = new WebClient(botToken);
   loadState();
@@ -1009,7 +1093,8 @@ export async function startSlackBot(opts: { wc: WcCall; adminUrl: string; phonep
 export async function notifyNewOrder(order: any) {
   if (!web || !channel || !order?.id) return;
   try {
-    await web.chat.postMessage({ channel, text: `New order #${order.id} · ${money(order.total)}`, blocks: orderBlocks(order) });
+    await hydrateImages(order);
+    await withPictureFallback(b => web!.chat.postMessage({ channel, text: `New order #${order.id} · ${money(order.total)}`, blocks: b }), orderBlocks(order));
   } catch (err: any) {
     console.error("[SLACK] New-order message failed:", err?.data?.error || err.message);
   }

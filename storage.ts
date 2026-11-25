@@ -11,7 +11,7 @@ export const UPLOADS_DIR = path.join(DATA_DIR, "uploads");
 const SAFE_EXT = /^[a-z0-9]{1,5}$/;
 
 /** Save an uploaded file and return the address it is served from (/uploads/<kind>/<name>). */
-export function saveUpload(kind: "reviews" | "custom_designs", filename: string, data: Buffer): string {
+export function saveUpload(kind: "reviews" | "custom_designs" | "returns", filename: string, data: Buffer): string {
   const ext = path.extname(filename).slice(1).toLowerCase();
   const base = path.basename(filename, path.extname(filename)).replace(/[^\w.-]/g, "");
   if (!base || !SAFE_EXT.test(ext)) throw new Error(`Refusing file name ${filename}`);

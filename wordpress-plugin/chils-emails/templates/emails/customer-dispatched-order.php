@@ -59,191 +59,92 @@ do_action( 'woocommerce_email_header', $email_heading, $email );
 $first_name = $order->get_billing_first_name();
 ?>
 
-<!-- ═══════════════════════════════════════════════════════
-     CHILS & CO. — DISPATCHED ORDER EMAIL
-════════════════════════════════════════════════════════════ -->
-<div style="background:#000000;padding:40px 20px;">
-  <div style="max-width:600px;margin:0 auto;background:#000000;border:1px solid #111111;">
+<!-- CHILS & CO. DISPATCHED ORDER EMAIL: paper, ink and brass, like the site -->
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#141311;">
 
-    <!-- ── LOGO ─────────────────────────────────────────── -->
-    <div style="padding:50px 20px 20px;text-align:center;">
-      <img
-        src="https://res.cloudinary.com/ddatd5ruz/image/upload/v1777905877/fevicon_fryjqz.png"
-        alt="Chils & Co."
-        width="120"
-        style="display:block;margin:0 auto;"
-      >
-    </div>
-
-    <!-- ── HEADLINE COPY ─────────────────────────────────── -->
-    <div style="padding:10px 40px 10px;text-align:center;">
-
-      <div style="color:#C5A048;font-size:12px;font-weight:bold;letter-spacing:4px;text-transform:uppercase;margin-bottom:15px;">
-        Order Dispatched
-      </div>
-
-      <div style="font-size:32px;font-weight:700;color:#ffffff;margin-bottom:24px;">
-        It's on its way.
-      </div>
-
-      <div style="color:#b3b3b3;font-size:16px;line-height:1.9;max-width:420px;margin:0 auto 35px;">
-        <?php if ( $first_name ) : ?>
-          Hey <?php echo esc_html( $first_name ); ?>,
-        <?php else : ?>
-          Hey,
-        <?php endif; ?>
-        <br><br>
-        Your order has been dispatched and is heading your way.
-        Wear it well — you earned it.
-        <br><br>
-        Here's a summary of what's coming.
-      </div>
-
-      <!-- ── ORDER IDENTITY BOX ────────────────────────── -->
-      <div style="background:#080808;border:1px solid #1a1a1a;padding:28px;margin:0 auto 12px;max-width:360px;">
-
-        <div style="color:#C5A048;font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:18px;">
-          Order Identity
-        </div>
-
-        <!-- Order number -->
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;border-bottom:1px solid #1a1a1a;padding-bottom:14px;">
-          <tr>
-            <td style="color:#7a7a7a;font-size:11px;letter-spacing:2px;text-transform:uppercase;">Order No.</td>
-            <td align="right" style="font-size:15px;font-weight:700;color:#ffffff;">
-              #<?php echo esc_html( $order->get_order_number() ); ?>
-            </td>
-          </tr>
-        </table>
-
-        <!-- Date -->
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;border-bottom:1px solid #1a1a1a;padding-bottom:14px;">
-          <tr>
-            <td style="color:#7a7a7a;font-size:11px;letter-spacing:2px;text-transform:uppercase;">Date</td>
-            <td align="right" style="font-size:13px;color:#b3b3b3;">
-              <?php echo esc_html( wc_format_datetime( $order->get_date_created() ) ); ?>
-            </td>
-          </tr>
-        </table>
-
-        <!-- Status -->
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;border-bottom:1px solid #1a1a1a;padding-bottom:14px;">
-          <tr>
-            <td style="color:#7a7a7a;font-size:11px;letter-spacing:2px;text-transform:uppercase;">Status</td>
-            <td align="right" style="font-size:11px;font-weight:800;color:#C5A048;letter-spacing:2px;text-transform:uppercase;">
-              Dispatched
-            </td>
-          </tr>
-        </table>
-
-        <!-- Payment method -->
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px;border-bottom:1px solid #1a1a1a;padding-bottom:14px;">
-          <tr>
-            <td style="color:#7a7a7a;font-size:11px;letter-spacing:2px;text-transform:uppercase;">Payment</td>
-            <td align="right" style="font-size:13px;color:#b3b3b3;">
-              <?php echo esc_html( $order->get_payment_method_title() ); ?>
-            </td>
-          </tr>
-        </table>
-
-        <!-- Order total -->
-        <table width="100%" cellpadding="0" cellspacing="0" border="0">
-          <tr>
-            <td style="color:#7a7a7a;font-size:11px;letter-spacing:2px;text-transform:uppercase;">Total</td>
-            <td align="right" style="font-size:20px;font-weight:700;color:#C5A048;">
-              <?php echo wp_kses_post( $order->get_formatted_order_total() ); ?>
-            </td>
-          </tr>
-        </table>
-
-      </div><!-- /Order Identity box -->
-
-      <!-- ── ITEMS ORDERED BOX ──────────────────────────── -->
-      <div style="background:#080808;border:1px solid #1a1a1a;border-top:none;padding:28px;margin:0 auto 12px;max-width:360px;">
-
-        <div style="color:#C5A048;font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:18px;">
-          In-Transit Items
-        </div>
-
-        <?php
-        $items = $order->get_items();
-        $count = count( $items );
-        $i     = 0;
-        foreach ( $items as $item ) :
-            $i++;
-            $is_last  = ( $i === $count );
-            $subtotal = $order->get_formatted_line_subtotal( $item );
-        ?>
-          <table width="100%" cellpadding="0" cellspacing="0" border="0"
-                 style="<?php echo $is_last ? '' : 'margin-bottom:14px;border-bottom:1px solid #1a1a1a;padding-bottom:14px;'; ?>">
-            <tr>
-              <td style="vertical-align:top;padding-right:12px;">
-                <div style="color:#ffffff;font-size:13px;font-weight:600;line-height:1.4;">
-                  <?php echo esc_html( $item->get_name() ); ?>
-                </div>
-                <div style="color:#7a7a7a;font-size:11px;letter-spacing:1px;margin-top:4px;">
-                  Qty: <?php echo esc_html( $item->get_quantity() ); ?>
-                </div>
-              </td>
-              <td align="right" style="vertical-align:top;white-space:nowrap;color:#b3b3b3;font-size:13px;font-weight:600;">
-                <?php echo wp_kses_post( $subtotal ); ?>
-              </td>
-            </tr>
-          </table>
-        <?php endforeach; ?>
-
-      </div><!-- /Items box -->
-
-      <!-- ── SHIPPING ADDRESS BOX ───────────────────────── -->
-      <?php if ( $order->get_shipping_address_1() ) : ?>
-      <div style="background:#080808;border:1px solid #1a1a1a;border-top:none;padding:28px;margin:0 auto 35px;max-width:360px;text-align:left;">
-
-        <div style="color:#C5A048;font-size:10px;letter-spacing:3px;text-transform:uppercase;margin-bottom:14px;">
-          Shipping To
-        </div>
-
-        <div style="color:#b3b3b3;font-size:13px;line-height:1.8;">
-          <?php echo wp_kses_post( $order->get_formatted_shipping_address() ); ?>
-        </div>
-
-      </div>
-      <?php else : ?>
-        <div style="margin-bottom:35px;"></div>
-      <?php endif; ?>
-
-      <!-- ── CTA BUTTON ─────────────────────────────────── -->
-      <a href="<?php echo esc_url( $order->get_view_order_url() ); ?>"
-         style="display:inline-block;background:#C5A048;color:#000000;text-decoration:none;padding:18px 42px;font-size:12px;font-weight:800;letter-spacing:3px;text-transform:uppercase;">
-        TRACK / VIEW ORDER →
-      </a>
-
-      <!-- ── PERSONAL SIGN-OFF ──────────────────────────── -->
-      <div style="margin-top:40px;color:#7a7a7a;font-size:13px;line-height:1.8;">
-        If anything doesn't look right, just reply to this email.<br>
-        A real person from Chils & Co. will get back to you.
-      </div>
-
-      <!-- ── BRAND TAGLINE ──────────────────────────────── -->
-      <div style="margin-top:45px;color:#C5A048;font-size:12px;letter-spacing:4px;text-transform:uppercase;line-height:1.8;">
-        NOT MADE FOR SEASONS.<br>
-        MADE FOR REASONS.
-      </div>
-
-    </div><!-- /content -->
-
-    <!-- ── FOOTER ─────────────────────────────────────── -->
-    <div style="border-top:1px solid #111111;background:#050505;padding:40px 20px;text-align:center;">
-      <div style="color:#555555;font-size:11px;letter-spacing:2px;text-transform:uppercase;">
-        Order Dispatched.
-      </div>
-      <div style="color:#333333;font-size:10px;margin-top:12px;">
-        © CHILS & CO.
-      </div>
-    </div>
-
+  <div style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#9c8152;margin:0 0 14px;">
+    Order dispatched
   </div>
+
+  <p style="margin:0 0 8px;font-size:15px;line-height:1.65;color:#141311;">
+    <?php echo $first_name ? 'Hey ' . esc_html( $first_name ) . ',' : 'Hey,'; ?>
+  </p>
+  <p style="margin:0 0 28px;font-size:15px;line-height:1.65;color:#141311;">
+    Your order has left us and is heading your way. Here is what is on its way to you.
+  </p>
+
+  <!-- Order summary -->
+  <div style="background:#f4f2ee;border-radius:16px;padding:8px 22px;margin:0 0 16px;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation">
+        <tr>
+          <td style="padding:11px 0;border-bottom:1px solid rgba(20,19,17,0.09);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#716c64;">Order</td>
+          <td align="right" style="padding:11px 0;border-bottom:1px solid rgba(20,19,17,0.09);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;color:#141311;">#<?php echo esc_html( $order->get_order_number() ); ?></td>
+        </tr>
+        <tr>
+          <td style="padding:11px 0;border-bottom:1px solid rgba(20,19,17,0.09);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#716c64;">Date</td>
+          <td align="right" style="padding:11px 0;border-bottom:1px solid rgba(20,19,17,0.09);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;color:#141311;"><?php echo esc_html( wc_format_datetime( $order->get_date_created() ) ); ?></td>
+        </tr>
+        <tr>
+          <td style="padding:11px 0;border-bottom:1px solid rgba(20,19,17,0.09);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#716c64;">Status</td>
+          <td align="right" style="padding:11px 0;border-bottom:1px solid rgba(20,19,17,0.09);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;color:#141311;"><span style="color:#3e4a3a;font-weight:600;">Dispatched</span></td>
+        </tr>
+        <tr>
+          <td style="padding:11px 0;border-bottom:1px solid rgba(20,19,17,0.09);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#716c64;">Payment</td>
+          <td align="right" style="padding:11px 0;border-bottom:1px solid rgba(20,19,17,0.09);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;color:#141311;"><?php echo esc_html( $order->get_payment_method_title() ); ?></td>
+        </tr>
+        <tr>
+          <td style="padding:11px 0;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#716c64;">Total</td>
+          <td align="right" style="padding:11px 0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;color:#141311;"><strong style="font-size:17px;"><?php echo wp_kses_post( $order->get_formatted_order_total() ); ?></strong></td>
+        </tr>
+    </table>
+  </div>
+
+  <!-- Items -->
+  <div style="background:#f4f2ee;border-radius:16px;padding:20px 22px;margin:0 0 16px;">
+    <div style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#9c8152;margin:0 0 14px;">On its way</div>
+    <?php
+    $items = $order->get_items();
+    $count = count( $items );
+    $i     = 0;
+    foreach ( $items as $item ) :
+        $i++;
+        $is_last = ( $i === $count );
+    ?>
+      <table width="100%" cellpadding="0" cellspacing="0" border="0" role="presentation" style="<?php echo $is_last ? '' : 'margin-bottom:12px;border-bottom:1px solid rgba(20,19,17,0.09);padding-bottom:12px;'; ?>">
+        <tr>
+          <td style="vertical-align:top;padding-right:12px;">
+            <div style="font-size:14px;font-weight:600;line-height:1.4;color:#141311;"><?php echo esc_html( $item->get_name() ); ?></div>
+            <div style="font-size:12px;color:#716c64;margin-top:3px;">Qty <?php echo esc_html( $item->get_quantity() ); ?></div>
+          </td>
+          <td align="right" style="vertical-align:top;white-space:nowrap;font-size:14px;color:#141311;"><?php echo wp_kses_post( $order->get_formatted_line_subtotal( $item ) ); ?></td>
+        </tr>
+      </table>
+    <?php endforeach; ?>
+  </div>
+
+  <?php if ( $order->get_shipping_address_1() ) : ?>
+  <div style="background:#f4f2ee;border-radius:16px;padding:20px 22px;margin:0 0 28px;">
+    <div style="font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#9c8152;margin:0 0 10px;">Shipping to</div>
+    <div style="font-size:14px;line-height:1.65;color:#141311;"><?php echo wp_kses_post( $order->get_formatted_shipping_address() ); ?></div>
+  </div>
+  <?php else : ?>
+    <div style="height:12px;"></div>
+  <?php endif; ?>
+
+  <!-- Pill button -->
+  <p style="margin:0 0 30px;">
+    <a href="<?php echo esc_url( $order->get_view_order_url() ); ?>"
+       style="display:inline-block;background:#141311;color:#f4f2ee;text-decoration:none;padding:14px 30px;border-radius:999px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;">Track your order</a>
+  </p>
+
+  <p style="margin:0 0 26px;font-size:13px;line-height:1.7;color:#716c64;">If anything doesn't look right, just reply to this email.<br>A real person from CHILS &amp; CO. will get back to you.</p>
+
+  <div style="border-top:1px solid rgba(20,19,17,0.09);padding-top:20px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;line-height:1.8;color:#9c8152;">
+    Not made for seasons.<br>Made for reasons.
+  </div>
+
 </div>
-<!-- END CHILS & CO DISPATCHED ORDER EMAIL -->
+<!-- END CHILS & CO. DISPATCHED ORDER EMAIL -->
 
 <?php
 do_action( 'woocommerce_structured_data_order', $order, $sent_to_admin, $email );
