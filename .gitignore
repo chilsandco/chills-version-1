@@ -12,3 +12,6 @@ secrets/
 
 # Slack bot memory
 .slack-state.json
+
+# Hostinger API token for scripted deploys: never commit
+.hostinger-api-token
