@@ -962,6 +962,8 @@ var topColors = (ps, n = 6) => {
   return [...c.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map((e) => e[0]);
 };
 var plainText = (html) => String(html || "").replace(/<[^>]*>/g, " ").replace(/&amp;/g, "&").replace(/&#0?39;/g, "'").replace(/&quot;/g, '"').replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/[ \t]+/g, " ").trim();
+var PROMO_ENDS = /* @__PURE__ */ new Date("2027-01-06T00:00:00+05:30");
+var promoLine = (now = /* @__PURE__ */ new Date()) => now < PROMO_ENDS ? "Gifting offer: use code GIFT10 at checkout for 10% off orders of \u20B9999 or more, until 5 January. It cannot be combined with three-tee sets." : "";
 var SHARED_FAQ = [
   { q: "How long does delivery take?", a: "Orders are packed within 24 to 48 hours and delivered across India in 2 to 7 business days, with SMS and email tracking. Delivery starts at \u20B980, and store pickup is free." },
   { q: "What is the return policy?", a: "You can return a tee within 7 days of delivery for a refund, an exchange or store credit. The tee must be unworn and unwashed with its tags on. Refunds reach your PhonePe or original payment method in 3 to 7 business days." }
@@ -1113,7 +1115,8 @@ var LANDINGS = [
       const r = range(ps);
       return [
         `A good corporate gift is something people actually wear. ${BRAND} makes heavyweight oversized tees in 100% cotton at 240 GSM and TwinTex polos, designed by techies in Hyderabad${r ? `, ${inr(r.lo)} to ${inr(r.hi)} each` : ""}. They suit engineering and tech teams, year-end gifting and client thank-yous.`,
-        "Orders are delivered across India and arrive in reusable Second Life packaging."
+        "Orders are delivered across India and arrive in reusable Second Life packaging.",
+        ...promoLine() ? [promoLine()] : []
       ];
     },
     sections: () => [
@@ -1167,7 +1170,8 @@ var LANDINGS = [
       const r = range(ps);
       return [
         `A tee is an easy gift for men that they will use all year. ${BRAND} has ${ps.length} designs${r ? `, from ${inr(r.lo)} to ${inr(r.hi)}` : ""}, from heavyweight oversized tees to TwinTex polos, with designs from the worlds of code, chips and engineering.`,
-        "Delivery across India starts at \u20B980, in reusable Second Life packaging. Order early so it arrives before the day."
+        "Delivery across India starts at \u20B980, in reusable Second Life packaging. Order early so it arrives before the day.",
+        ...promoLine() ? [promoLine()] : []
       ];
     },
     sections: (ps) => [
@@ -1308,6 +1312,7 @@ function homeBody(all) {
   const r = range(ps);
   return `${BOX}<h1>Oversized t-shirts and polos for men, designed by techies in Hyderabad</h1>
 <p>${esc(BRAND)} makes heavyweight oversized drop shoulder graphic tees in 100% cotton at 240 GSM, TwinTex polo shirts and minimal regular fit tees, designed by techies in Hyderabad${r ? `, priced from ${inr(r.lo)}` : ""}. We deliver across India, with 7-day returns.</p>
+${promoLine() ? `<p><strong>${esc(promoLine())}</strong></p>` : ""}
 <h2>Shop by type</h2>${links([
     { href: "/oversized-t-shirts-for-men", label: `Oversized t-shirts for men (${over.length} designs)` },
     { href: "/polo-t-shirts-for-men", label: "Polo shirts for men" },

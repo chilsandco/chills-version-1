@@ -35,6 +35,14 @@ const plainText = (html: string) =>
     .replace(/[ \t]+/g, " ")
     .trim();
 
+
+// A seasonal code that exists in WooCommerce (GIFT10: 10% off orders of Rs 999 or more, one code per order,
+// not combinable with three-tee sets). The line below is shown only until the code expires, so no page
+// ever advertises a dead offer. Keep the date in step with the coupon's expiry in WooCommerce.
+const PROMO_ENDS = new Date("2027-01-06T00:00:00+05:30");
+const promoLine = (now = new Date()) =>
+  now < PROMO_ENDS ? "Gifting offer: use code GIFT10 at checkout for 10% off orders of ₹999 or more, until 5 January. It cannot be combined with three-tee sets." : "";
+
 // ------------------------------------------------------------------ keyword landing pages
 
 type Landing = {
@@ -203,6 +211,7 @@ export const LANDINGS: Landing[] = [
       return [
         `A good corporate gift is something people actually wear. ${BRAND} makes heavyweight oversized tees in 100% cotton at 240 GSM and TwinTex polos, designed by techies in Hyderabad${r ? `, ${inr(r.lo)} to ${inr(r.hi)} each` : ""}. They suit engineering and tech teams, year-end gifting and client thank-yous.`,
         "Orders are delivered across India and arrive in reusable Second Life packaging.",
+        ...(promoLine() ? [promoLine()] : []),
       ];
     },
     sections: () => [
@@ -257,6 +266,7 @@ export const LANDINGS: Landing[] = [
       return [
         `A tee is an easy gift for men that they will use all year. ${BRAND} has ${ps.length} designs${r ? `, from ${inr(r.lo)} to ${inr(r.hi)}` : ""}, from heavyweight oversized tees to TwinTex polos, with designs from the worlds of code, chips and engineering.`,
         "Delivery across India starts at ₹80, in reusable Second Life packaging. Order early so it arrives before the day.",
+        ...(promoLine() ? [promoLine()] : []),
       ];
     },
     sections: ps => [
@@ -412,6 +422,7 @@ export function homeBody(all: P[]) {
   const r = range(ps);
   return `${BOX}<h1>Oversized t-shirts and polos for men, designed by techies in Hyderabad</h1>
 <p>${esc(BRAND)} makes heavyweight oversized drop shoulder graphic tees in 100% cotton at 240 GSM, TwinTex polo shirts and minimal regular fit tees, designed by techies in Hyderabad${r ? `, priced from ${inr(r.lo)}` : ""}. We deliver across India, with 7-day returns.</p>
+${promoLine() ? `<p><strong>${esc(promoLine())}</strong></p>` : ""}
 <h2>Shop by type</h2>${links([
     { href: "/oversized-t-shirts-for-men", label: `Oversized t-shirts for men (${over.length} designs)` },
     { href: "/polo-t-shirts-for-men", label: "Polo shirts for men" },
