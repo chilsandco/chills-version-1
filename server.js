@@ -48,6 +48,1023 @@ function couponProblem(c, subtotal, hasSet, now = /* @__PURE__ */ new Date()) {
   return null;
 }
 
+// journal.ts
+var SITE = "https://chilsandco.com";
+var BRAND = "CHILS & CO.";
+var ARTICLES = [
+  {
+    slug: "oversized-vs-boxy-vs-drop-shoulder-tshirt",
+    title: "Oversized, boxy or drop shoulder: what's the difference?",
+    description: "Oversized, boxy fit and drop shoulder t-shirts get mixed up all the time. Here is what each one means, how it fits, and which suits you.",
+    published: "2026-11-25",
+    updated: "2026-11-25",
+    answer: "A drop shoulder t-shirt has the shoulder seam sitting below your natural shoulder, on the top of the arm. An oversized t-shirt is simply cut larger than your body all round. A boxy fit is cut straight, with the same width at the chest and the hem, and usually a shorter length. Many modern tees combine all three.",
+    keywords: ["oversized drop shoulder t-shirt", "boxy fit t-shirt", "men's oversized t-shirt", "oversized t-shirt"],
+    sections: [
+      {
+        h2: "Drop shoulder: where the seam sits",
+        p: [
+          "On a regular tee the shoulder seam sits at the edge of your shoulder bone. On a drop shoulder tee the seam sits lower, down on the upper arm. That lowered seam is what gives the relaxed, slightly slouched look, and it makes the sleeve start further down your arm.",
+          "It is a construction detail, not a size. You can have a drop shoulder tee that is cut close, or a very large one."
+        ]
+      },
+      {
+        h2: "Oversized: a larger cut all round",
+        p: [
+          "Oversized means the tee is cut bigger than your body in the chest, the body length and often the sleeve. It is the word most people search for, and it is usually a drop shoulder tee that is also roomy.",
+          "Fabric matters more on an oversized tee than on a fitted one. A thin fabric in a big cut hangs limp and clings in the wrong places. A heavier cotton holds the shape and falls cleanly."
+        ]
+      },
+      {
+        h2: "Boxy fit: straight sides, shorter body",
+        p: [
+          "A boxy tee is cut straight from the chest down. It does not taper at the waist, so the chest and the hem are about the same width, and the length usually stops higher than a standard tee.",
+          "Boxy and oversized overlap, but they are not the same. A tee can be boxy without being large, and large without being boxy."
+        ]
+      },
+      {
+        h2: "Which one should you pick?",
+        ul: [
+          "If you want a relaxed, easy look and rarely tuck anything in: drop shoulder or oversized.",
+          "If you like a clean, structured shape that sits well with trousers and layers: boxy.",
+          "If you are between sizes, read the size guide on the product page. Fit varies by brand, so go by the measurements, not only the letter.",
+          "If you have never worn this cut, start with your usual size and check how it hangs before going bigger."
+        ]
+      },
+      {
+        h2: "Our drop shoulder and oversized tees",
+        p: [
+          `${BRAND} makes its oversized tees as drop shoulder cuts in 100% cotton at 240 GSM, a heavyweight fabric that keeps the shape. Here is the current range.`
+        ],
+        products: "oversized"
+      }
+    ],
+    faq: [
+      {
+        q: "Is a drop shoulder tee the same as an oversized tee?",
+        a: "No. Drop shoulder describes where the shoulder seam sits, lower than your natural shoulder. Oversized describes a larger overall cut. Many tees are both, which is why the terms get mixed up."
+      },
+      {
+        q: "What is a boxy fit t-shirt?",
+        a: "A boxy tee has straight sides, so the chest and the hem are about the same width, and it is usually cut shorter than a standard tee."
+      },
+      {
+        q: "Should I size up or stay in my usual size for an oversized tee?",
+        a: "Stay in your usual size first. An oversized tee is already cut larger, and going up a size can make the shoulders and sleeves too big. Check the size guide on the product page for the measurements."
+      },
+      {
+        q: "What fabric works best for an oversized t-shirt?",
+        a: "A heavier cotton, around 220 to 240 GSM, holds the shape better than a thin one. Thin fabric in a large cut tends to hang limp."
+      }
+    ]
+  },
+  {
+    slug: "how-to-choose-an-oversized-graphic-tshirt-india",
+    title: "How to choose an oversized graphic t-shirt in India: a buying guide",
+    description: "GSM, cotton, pre-shrunk fabric, print method and stitching: the checks that decide whether an oversized graphic tee lasts or falls apart.",
+    published: "2026-11-25",
+    updated: "2026-11-25",
+    answer: "For an oversized graphic t-shirt that lasts, look for 100% cotton at about 240 GSM, a pre-shrunk fabric, reinforced stitching at the neck and shoulders, and a fade-resistant print such as DTF. Check that the seller states these on the product page. If they are missing, assume the fabric is thin.",
+    keywords: ["oversized graphic t-shirt", "graphic t-shirt", "men's oversized t-shirt", "heavyweight cotton t-shirt"],
+    sections: [
+      {
+        h2: "1. GSM: the weight of the fabric",
+        p: [
+          "GSM means grams per square metre. It tells you how heavy the fabric is. Around 160 to 180 GSM is light and suits regular fits. Around 220 to 240 GSM is heavyweight, and it is what an oversized cut needs to hang well.",
+          "If a listing does not state the GSM, ask. Sellers who use good fabric usually say so."
+        ]
+      },
+      {
+        h2: "2. Fabric: cotton or blend",
+        p: [
+          "100% cotton is soft, breathable and handles the Indian climate well. Polycotton blends are lighter and resist wrinkles, and some regular-fit tees use them. For an oversized tee worn daily, cotton is the usual choice."
+        ]
+      },
+      {
+        h2: "3. Pre-shrunk and washed finishes",
+        p: [
+          "Cotton shrinks the first time it is washed unless it has been treated. A pre-shrunk fabric keeps its size, so the fit you ordered is the fit you keep. Finishes such as bio-wash or a sun-faded wash also make the fabric softer from the first wear."
+        ]
+      },
+      {
+        h2: "4. The print: will it fade?",
+        p: [
+          "Two methods are common. Screen printing is durable and suits large runs. DTF (direct to film) prints high-definition artwork with fine detail and, done well, resists fading in the wash.",
+          "Whatever the method, turn the tee inside out when you wash it, and avoid a hot dryer. That adds years to any print."
+        ]
+      },
+      {
+        h2: "5. Stitching at the neck and shoulders",
+        p: [
+          "The neck and shoulders take the most strain. A ribbed neck that springs back, and reinforced stitching at the shoulder seams, are what stop a tee from stretching out and sagging after a few months."
+        ]
+      },
+      {
+        h2: "6. What to check before you pay",
+        ul: [
+          "Is the GSM, fabric and fit stated on the page?",
+          "Is there a size guide with measurements?",
+          "What is the return window, and who pays?",
+          "Is the delivery cost clear before checkout?"
+        ]
+      },
+      {
+        h2: "Heavyweight oversized graphic tees from CHILS & CO.",
+        p: [
+          "Our oversized graphic tees are 100% cotton at 240 GSM, with reinforced neck and shoulder stitching and high-definition, fade-resistant DTF artwork. Prices start at \u20B9419. Here is the current range."
+        ],
+        products: "oversized"
+      }
+    ],
+    faq: [
+      {
+        q: "What GSM is best for an oversized t-shirt?",
+        a: "About 220 to 240 GSM. The extra weight helps an oversized cut hang cleanly instead of clinging or drooping."
+      },
+      {
+        q: "Is 240 GSM too heavy for Indian summers?",
+        a: "Heavyweight cotton is thicker, but 100% cotton still breathes. Many people wear it year-round in India. If you want something lighter, a 180 GSM regular fit is the cooler choice."
+      },
+      {
+        q: "Does a graphic print crack or fade in the wash?",
+        a: "A good DTF print resists fading. To make any print last, wash the tee inside out in cold or warm water and avoid a hot dryer."
+      },
+      {
+        q: "What does pre-shrunk mean?",
+        a: "The fabric has been treated so it does not shrink noticeably in the first wash, so the size you ordered stays the size you wear."
+      }
+    ]
+  },
+  {
+    slug: "how-to-choose-a-streetwear-brand-in-india",
+    title: "Indian streetwear: 7 things to check before you buy from any brand",
+    description: "Looking for Indian streetwear brands? Here are seven checks on fabric, fit, returns and delivery that tell you which ones are worth your money.",
+    published: "2026-11-25",
+    updated: "2026-11-25",
+    answer: "Before buying from any Indian streetwear brand, check that it states fabric weight and material, shows measurements, has a clear return window, shows delivery cost before checkout, uses real product photos, ships across India with tracking, and answers messages. A brand that is open on these is usually open about quality too.",
+    keywords: ["streetwear brands in india", "indian streetwear brands", "best streetwear brands in india"],
+    sections: [
+      {
+        h2: "1. Does it state the fabric and weight?",
+        p: ["Streetwear lives on the fabric. Look for the material (100% cotton or a blend) and the GSM. If neither is listed, you cannot judge the quality before you pay."]
+      },
+      {
+        h2: "2. Is there a real size guide?",
+        p: ["Oversized and boxy cuts vary a lot between brands. A size guide with measurements in centimetres or inches matters more than the letter on the tag."]
+      },
+      {
+        h2: "3. Is the return policy plain?",
+        p: ["Look for a stated window, what is accepted, and how the refund is paid. A clear policy before purchase means fewer surprises after."]
+      },
+      {
+        h2: "4. Is the delivery cost shown before checkout?",
+        p: ["You should see the exact delivery charge and the expected time before you pay, not after you have entered your address."]
+      },
+      {
+        h2: "5. Are the photos of the real product?",
+        p: ["Real photos, on a real body, in more than one angle. Heavily edited images can hide how the fabric hangs."]
+      },
+      {
+        h2: "6. Does it deliver across India, with tracking?",
+        p: ["A tracked shipment by SMS or email tells you the brand is organised, and lets you plan around delivery."]
+      },
+      {
+        h2: "7. Does anyone answer?",
+        p: ["Send a question before you buy. How a brand answers a pre-sale message shows how it will treat you after the sale."]
+      },
+      {
+        h2: "How CHILS & CO. measures up",
+        ul: [
+          "Fabric: our oversized tees are 100% cotton at 240 GSM, stated on every product page.",
+          "Delivery: across India from \u20B980, packed within 24 to 48 hours and delivered in 2 to 7 business days, tracked by SMS and email. Store pickup is free.",
+          "Returns: within 7 days of delivery for a refund, exchange or store credit. Refunds reach your PhonePe or original payment method in 3 to 7 business days.",
+          "Packaging: reusable Second Life packaging and plastic-free shipping.",
+          "Where: designed by techies in Hyderabad."
+        ],
+        products: "any"
+      }
+    ],
+    faq: [
+      {
+        q: "How do I know if a streetwear brand uses good fabric?",
+        a: "Check that it states the material and the GSM. For an oversized tee, 100% cotton at around 240 GSM is a heavyweight standard."
+      },
+      {
+        q: "Are Indian streetwear brands worth buying from?",
+        a: "Many are. Judge each one by what it states openly: fabric weight, size measurements, return window and delivery cost, rather than by its marketing."
+      },
+      {
+        q: "What should the return policy of a streetwear brand include?",
+        a: "A stated return window, what can be returned, how pickup works and how the refund is paid. CHILS & CO. accepts returns within 7 days of delivery."
+      }
+    ]
+  },
+  {
+    slug: "gifts-for-software-engineers-india",
+    title: "Gifts for software engineers that are not a coffee mug",
+    description: "Ideas for a software engineer, developer or techie friend that they will actually wear. Heavyweight tees, delivered across India from \u20B980.",
+    published: "2026-11-25",
+    updated: "2026-11-25",
+    answer: "The best gift for a software engineer is something they use every day and that does not shout. A heavyweight cotton tee with a quiet, clever design beats another mug or lanyard. Pick their size from a tee they already own, choose a design that matches their work, and order early, since delivery in India takes 2 to 7 business days.",
+    keywords: ["gift for software engineer", "gifts for developers", "tech t-shirt gift India"],
+    sections: [
+      {
+        h2: "Why a tee works as a gift",
+        p: [
+          "Engineers tend to own enough gadgets and desk toys. A tee is practical, it gets worn weekly, and the right design makes a small joke only a fellow engineer understands."
+        ]
+      },
+      {
+        h2: "How to choose one",
+        ul: [
+          "Match the work. A VLSI or semiconductor design for a chip engineer, a developer design for someone who writes code.",
+          "Pick the fit from what they wear. If they live in loose tees, choose an oversized drop shoulder. If they prefer a neater look, choose a regular fit.",
+          "Get the size from a tee they already own. Measure it flat across the chest and compare with the size guide.",
+          "Prefer fabric over novelty. 100% cotton at 240 GSM feels better and lasts longer than a thin printed tee."
+        ]
+      },
+      {
+        h2: "Timing and delivery",
+        p: [
+          `${BRAND} delivers across India from \u20B980. Orders are packed within 24 to 48 hours and delivered in 2 to 7 business days, with SMS and email tracking. If the size is wrong, returns are accepted within 7 days of delivery.`
+        ]
+      },
+      {
+        h2: "Tees for the techie in your life",
+        p: ["Designed by techies in Hyderabad. Here is the current range."],
+        products: "any"
+      }
+    ],
+    faq: [
+      {
+        q: "What is a good gift for a software engineer in India?",
+        a: "A heavyweight cotton tee with a design from their field is a practical choice. It is worn often and does not add desk clutter."
+      },
+      {
+        q: "How long does delivery take for a gift order?",
+        a: "Orders are packed within 24 to 48 hours and delivered across India in 2 to 7 business days. Order a week ahead for a dated occasion."
+      },
+      {
+        q: "What if the size is wrong?",
+        a: "Returns are accepted within 7 days of delivery, for a refund, an exchange or store credit. The tee must be unworn and unwashed, with its tags on."
+      }
+    ]
+  },
+  {
+    slug: "240-gsm-vs-180-gsm-tshirt-which-to-buy",
+    title: "240 GSM vs 180 GSM t-shirts: which should you buy?",
+    description: "What GSM means on a t-shirt, how 180 and 240 GSM differ in feel, drape and durability, and which suits oversized, regular and summer wear.",
+    published: "2026-11-26",
+    updated: "2026-11-26",
+    answer: "GSM is grams per square metre, a measure of fabric weight. A 180 GSM tee is lighter, cooler and drapes softly, which suits regular fits and hot weather. A 240 GSM tee is heavyweight: it holds its shape, feels substantial and suits oversized cuts. Neither is better. Pick by fit and climate.",
+    keywords: ["240 gsm t-shirt", "heavyweight cotton t-shirt", "180 gsm t-shirt", "gsm meaning t-shirt"],
+    sections: [
+      {
+        h2: "What GSM means",
+        p: ["GSM stands for grams per square metre. It is the weight of one square metre of the fabric, so a higher number means thicker, heavier cloth. It is the quickest way to compare two tees without touching them."]
+      },
+      {
+        h2: "180 GSM: light and easy",
+        ul: [
+          "Feels light and breathable, and dries quickly.",
+          "Drapes softly and follows the body, which suits a regular fit.",
+          "A good choice for hot, humid weather and for layering under a shirt.",
+          "Can look thin in a very large cut."
+        ]
+      },
+      {
+        h2: "240 GSM: heavyweight",
+        ul: [
+          "Feels thick and substantial, with a firmer hand.",
+          "Holds its shape, so an oversized or drop shoulder cut hangs cleanly instead of clinging.",
+          "Tends to keep its form wash after wash, especially in 100% cotton.",
+          "Warmer than a light tee, though 100% cotton still breathes."
+        ]
+      },
+      {
+        h2: "Which should you pick?",
+        ul: [
+          "Oversized or drop shoulder: 240 GSM, for structure.",
+          "Regular fit, or a very hot day: 180 GSM, for comfort.",
+          "A polo: a heavier knit looks neater and keeps the collar standing.",
+          "If a listing does not state the GSM, ask. Sellers who use good fabric usually say so."
+        ]
+      },
+      {
+        h2: "How we use both",
+        p: [`${BRAND} uses 100% cotton at 240 GSM for every oversized tee. Our regular fit and minimal tees range from 180 to 240 GSM depending on the design, and each product page states the exact fabric and weight.`],
+        products: "oversized"
+      }
+    ],
+    faq: [
+      { q: "What does GSM mean on a t-shirt?", a: "Grams per square metre. It is the weight of the fabric, so a higher GSM means thicker, heavier cloth." },
+      { q: "Is 240 GSM too hot for Indian weather?", a: "It is warmer than a light tee, but 100% cotton breathes well, and many people wear it year-round. For the hottest months a 180 GSM tee is cooler." },
+      { q: "Is a higher GSM always better?", a: "No. It is better for structure and an oversized cut. A lower GSM is better for a light, cool, regular fit." },
+      { q: "What GSM is a heavyweight t-shirt?", a: "Usually 220 GSM and above. Our oversized tees are 240 GSM." }
+    ]
+  },
+  {
+    slug: "how-to-style-an-oversized-tshirt-men",
+    title: "How to style an oversized t-shirt: 6 ideas for men",
+    description: "Six simple ways to wear an oversized t-shirt: trousers, jeans, shorts, layers, shoes and what to avoid, so the loose cut looks intentional.",
+    published: "2026-11-26",
+    updated: "2026-11-26",
+    answer: "To style an oversized t-shirt, balance the loose top with a cleaner bottom: straight or tapered trousers, or well-fitted jeans. Keep the shoulder seam near your upper arm, let the hem sit around mid-hip, choose a heavier fabric so it drapes cleanly, and add one layer or a simple pair of shoes to finish the look.",
+    keywords: ["how to style oversized t-shirt", "oversized t-shirt outfit men", "men's oversized t-shirt"],
+    sections: [
+      { h2: "1. Pair it with straight or tapered trousers", p: ["A loose top works best against a cleaner leg. Straight or tapered trousers in a dark or neutral colour keep the outfit sharp rather than shapeless."] },
+      { h2: "2. Well-fitted jeans", p: ["Regular or straight jeans that fit at the waist and thigh balance the volume on top. If both the top and the jeans are very loose, the shape can get lost."] },
+      { h2: "3. Shorts for summer", p: ["An oversized tee with shorts that end at or just above the knee is an easy hot-weather outfit. Keep the shorts a little shorter than the tee."] },
+      { h2: "4. Layer it", p: ["An open overshirt or a light jacket over an oversized tee adds structure. Heavier cotton holds up under a layer without bunching."] },
+      { h2: "5. Finish with simple shoes", p: ["Clean sneakers or minimal shoes keep attention on the shape. Chunky shoes also work if the trousers are tapered."] },
+      {
+        h2: "6. Get the fit right first",
+        ul: [
+          "The shoulder seam should sit on your upper arm, not at the base of your neck.",
+          "The hem should land around mid-hip, not below the seat.",
+          "Choose a heavier fabric, around 240 GSM, so the tee falls cleanly.",
+          "If it feels too big, go by the measurements in the size guide, not only the letter."
+        ]
+      },
+      {
+        h2: "Oversized tees to start with",
+        p: [`${BRAND} oversized tees are 100% cotton at 240 GSM, in drop shoulder cuts, sizes S to XL.`],
+        products: "oversized"
+      }
+    ],
+    faq: [
+      { q: "How should an oversized t-shirt fit?", a: "The shoulder seam sits on the upper arm, the hem lands around mid-hip, and the body is loose without swallowing you. A heavier fabric helps it drape cleanly." },
+      { q: "What should I wear with an oversized t-shirt?", a: "A cleaner bottom: straight or tapered trousers, well-fitted jeans, or shorts. Simple shoes finish the look." },
+      { q: "Can short men wear oversized t-shirts?", a: "Yes. Keep the hem at mid-hip rather than lower, choose tapered bottoms, and avoid fabric so large that it swallows your frame." }
+    ]
+  },
+  {
+    slug: "how-to-choose-a-polo-tshirt-for-men",
+    title: "How to choose a polo t-shirt for men: fabric, fit and collar",
+    description: "A buyer's guide to polo t-shirts for men: what fabric to look for, how a polo should fit, why the collar matters, and how to care for it.",
+    published: "2026-11-26",
+    updated: "2026-11-26",
+    answer: "A good polo t-shirt has a structured collar that stands on its own, a knit heavy enough to hold its shape (around 220 to 240 GSM), and a fit that skims the body without clinging. Check that the fabric and weight are stated, that the collar is stitched firmly, and that the hem and sleeves sit neatly.",
+    keywords: ["polo t-shirt for men", "polo t shirt", "best polo t-shirt"],
+    sections: [
+      {
+        h2: "1. The collar",
+        p: ["The collar decides whether a polo looks smart or sloppy. A structured collar stands up and keeps its shape after washing. A floppy one curls within weeks. Look for a firm, well-stitched collar with a clean finish."]
+      },
+      {
+        h2: "2. The fabric and its weight",
+        ul: [
+          "Heavier knits, around 220 to 240 GSM, drape cleanly and resist clinging.",
+          "Cotton is soft and breathable. A blend adds shape and wrinkle resistance.",
+          "Some polos pair cotton on the inside with polyester on the outside, for softness against the skin and a longer-lasting finish."
+        ]
+      },
+      {
+        h2: "3. The fit",
+        p: ["A polo should skim the body. The shoulder seam sits on the edge of your shoulder, the sleeves end mid-bicep, and the hem falls around the belt line. A relaxed fit gives more room and suits warm weather."]
+      },
+      {
+        h2: "4. Branding and print",
+        p: ["Small, clean branding looks better on a polo than a large graphic. Check that the embroidery or print is crisp and will not crack in the wash."]
+      },
+      {
+        h2: "5. Care",
+        ul: ["Wash cold or warm, inside out.", "Dry in shade where you can, to protect the collar and the colour.", "Fold rather than hang for long periods, so the shoulders do not stretch."]
+      },
+      {
+        h2: "Our TwinTex polos",
+        p: [`${BRAND} TwinTex polos have a structured collar and a relaxed fit, in a 240 GSM heavyweight knit with cotton on the inside and polyester on the outside.`],
+        products: "polo"
+      }
+    ],
+    faq: [
+      { q: "What is a good GSM for a polo t-shirt?", a: "Around 220 to 240 GSM gives a structured look that drapes well. Lighter knits are cooler but can cling." },
+      { q: "How should a polo fit?", a: "It should skim the body: shoulder seams on the edge of your shoulders, sleeves ending mid-bicep and the hem near the belt line. A relaxed fit allows more room." },
+      { q: "What is TwinTex?", a: "Our polo fabric, a 240 GSM heavyweight knit with cotton on the inside and polyester on the outside." }
+    ]
+  },
+  {
+    slug: "how-to-wash-a-graphic-tshirt-so-the-print-lasts",
+    title: "How to wash a graphic t-shirt so the print lasts",
+    description: "Simple washing and drying rules that keep a printed t-shirt from cracking or fading: inside out, cold water, mild detergent and shade drying.",
+    published: "2026-11-26",
+    updated: "2026-11-26",
+    answer: "To keep a graphic t-shirt's print from fading or cracking, turn it inside out, wash in cold or warm water on a gentle cycle with mild detergent, avoid bleach and fabric softener, and dry it in the shade instead of a hot dryer. Do not iron directly on the print.",
+    keywords: ["how to wash graphic t-shirt", "how to stop print fading", "t-shirt care"],
+    sections: [
+      {
+        h2: "1. Turn it inside out",
+        p: ["This protects the print from rubbing against other clothes and the drum. It is the single biggest thing you can do."]
+      },
+      {
+        h2: "2. Use cold or warm water",
+        p: ["Hot water relaxes the print and the fibres and speeds fading. Cold or warm water on a gentle cycle is enough for everyday wear."]
+      },
+      {
+        h2: "3. Use mild detergent",
+        ul: ["Skip bleach, which strips colour and weakens the print.", "Skip fabric softener, which can coat the print and dull it.", "Do not leave the tee soaking for hours."]
+      },
+      {
+        h2: "4. Dry it in the shade",
+        p: ["Direct sun fades colour, and a hot tumble dryer can crack a print. Dry in the shade, or on a low heat setting if you must use a dryer."]
+      },
+      {
+        h2: "5. Ironing",
+        p: ["If you iron, turn the tee inside out and use a low to medium setting. Never iron directly on the print."]
+      },
+      {
+        h2: "6. Wash it less often",
+        p: ["A tee does not need washing after every wear. Air it out between wears and wash when it needs it. Fewer washes mean a longer-lasting print and fabric."]
+      },
+      {
+        h2: "Prints built to last",
+        p: [`${BRAND} tees use high-definition, fade-resistant DTF artwork on heavyweight cotton, with care instructions on each product page.`],
+        products: "any"
+      }
+    ],
+    faq: [
+      { q: "Should I wash a printed t-shirt inside out?", a: "Yes. Washing it inside out protects the print from friction and is the most effective way to stop it fading or cracking." },
+      { q: "Can I put a graphic t-shirt in the dryer?", a: "It is better not to. Heat can crack a print and shrink cotton. Dry it in the shade, or use a low heat setting." },
+      { q: "Does fabric softener damage a print?", a: "It can coat the print and dull it over time, so it is best avoided on printed tees." }
+    ]
+  }
+];
+var esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+var inr = (n) => `\u20B9${Number(n || 0).toLocaleString("en-IN")}`;
+var longDate = (iso) => (/* @__PURE__ */ new Date(`${iso}T00:00:00Z`)).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+var CSS = `
+:root{--ink:#141311;--paper:#f4f2ee;--bone:#e7e3dc;--stone:#716c64;--brass:#9c8152}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+body{margin:0;background:#fff;color:var(--ink);font:17px/1.7 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif}
+a{color:inherit}
+header,footer{padding:18px 20px;display:flex;gap:18px;align-items:center;justify-content:space-between;max-width:1040px;margin:0 auto}
+.brand{font:600 15px/1 "Space Grotesk",-apple-system,sans-serif;letter-spacing:.18em;text-decoration:none}
+nav a{margin-left:18px;font-size:14px;color:var(--stone);text-decoration:none}
+nav a:hover{color:var(--ink)}
+main{max-width:720px;margin:0 auto;padding:28px 20px 56px}
+.eyebrow{font:11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--brass);margin:0 0 14px}
+h1{font-size:clamp(30px,6vw,44px);line-height:1.12;letter-spacing:-.02em;margin:0 0 14px}
+h2{font-size:24px;line-height:1.25;margin:40px 0 10px;letter-spacing:-.01em}
+.meta{color:var(--stone);font-size:14px;margin:0 0 26px}
+.answer{background:var(--paper);border-radius:16px;padding:20px 22px;margin:0 0 8px;font-size:18px}
+.answer b{display:block;font:11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--brass);margin-bottom:10px}
+ul{padding-left:22px}li{margin:6px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin:18px 0}
+.card{text-decoration:none;display:block}
+.card img{width:100%;aspect-ratio:4/5;object-fit:cover;background:var(--bone);border-radius:14px;display:block}
+.card span{display:block;font-size:14px;margin-top:8px;line-height:1.3}
+.card em{font-style:normal;color:var(--stone);font-size:13px}
+.faq details{border-top:1px solid var(--bone);padding:14px 0}.faq details:last-child{border-bottom:1px solid var(--bone)}
+.faq summary{cursor:pointer;font-weight:600}.faq p{margin:10px 0 0;color:#2a2823}
+.pill{display:inline-block;background:var(--ink);color:var(--paper);text-decoration:none;padding:14px 30px;border-radius:999px;font-weight:600;font-size:15px;margin-top:8px}
+.list a.row{display:block;text-decoration:none;padding:22px 0;border-top:1px solid var(--bone)}
+.list a.row:last-child{border-bottom:1px solid var(--bone)}
+.list h2{margin:0 0 6px;font-size:22px}.list p{margin:0;color:var(--stone)}
+footer{color:var(--stone);font-size:13px;border-top:1px solid var(--bone);flex-wrap:wrap}
+`;
+function page(opts) {
+  const url = `${SITE}${opts.path}`;
+  return `<!doctype html>
+<html lang="en-IN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${esc(opts.title)}</title>
+<meta name="description" content="${esc(opts.description)}">
+<link rel="canonical" href="${url}">
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+<meta property="og:site_name" content="${esc(BRAND)}">
+<meta property="og:type" content="${opts.type || "website"}">
+<meta property="og:title" content="${esc(opts.title)}">
+<meta property="og:description" content="${esc(opts.description)}">
+<meta property="og:url" content="${url}">
+<meta name="twitter:card" content="summary">
+${opts.published ? `<meta property="article:published_time" content="${opts.published}">` : ""}
+${opts.updated ? `<meta property="article:modified_time" content="${opts.updated}">` : ""}
+<link rel="icon" href="/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600&display=swap">
+<style>${CSS}</style>
+${opts.jsonLd.map((j) => `<script type="application/ld+json">${JSON.stringify(j).replace(/</g, "\\u003c")}</script>`).join("\n")}
+</head>
+<body>
+<header><a class="brand" href="/">CHILS &amp; CO.</a><nav><a href="/collection">Shop</a><a href="/journal">Journal</a><a href="/our-promise">Our promise</a><a href="/support">Support</a></nav></header>
+${opts.body}
+<footer><span>\xA9 ${(/* @__PURE__ */ new Date()).getFullYear()} ${esc(BRAND)}. Designed by techies in Hyderabad.</span><span><a href="/shipping-delivery">Shipping</a> \xB7 <a href="/returns-refunds">Returns</a></span></footer>
+</body>
+</html>`;
+}
+var orgLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: BRAND,
+  url: SITE,
+  logo: `${SITE}/apple-touch-icon.png`,
+  address: { "@type": "PostalAddress", addressLocality: "Hyderabad", addressRegion: "Telangana", addressCountry: "IN" }
+};
+function imgUrl(src, small = false) {
+  if (!src) return "";
+  const m = src.match(/wp-content\/uploads\/(.+?)(?:$|[?#])/);
+  if (/^\/api\/media\?url=/.test(src) || /^https?:\/\/[^/]*chilsandco\.com\/wp-content\//.test(src)) {
+    let raw = src;
+    try {
+      if (src.startsWith("/api/media")) raw = decodeURIComponent(src.split("url=")[1] || "");
+    } catch {
+    }
+    const mm = raw.match(/wp-content\/uploads\/(.+?)(?:$|[?#])/);
+    if (mm) return `${SITE}/media/${small ? "s/" : ""}${mm[1]}`;
+  }
+  if (m && /^https?:/.test(src)) return `${SITE}/media/${small ? "s/" : ""}${m[1]}`;
+  return src.startsWith("/") ? `${SITE}${src}` : src;
+}
+function productGrid(products, kind) {
+  const visible2 = products.filter((p) => String(p.id) !== "1672" && p.status !== "outofstock");
+  const pool = kind === "oversized" ? visible2.filter((p) => /oversized|drop shoulder/i.test(`${p.category} ${(p.categories || []).join(" ")}`)) : kind === "polo" ? visible2.filter((p) => /polo/i.test(String(p.name)) && p.type !== "grouped") : kind === "regular" ? visible2.filter((p) => /regular/i.test(String(p.category))) : visible2;
+  const picks = pool.filter((p) => p.images?.[0]).slice(0, 6);
+  if (!picks.length) return `<p><a href="/collection">See the full collection</a></p>`;
+  return `<div class="grid">${picks.map((p) => `<a class="card" href="/product/${esc(p.id)}"><img loading="lazy" width="300" height="375" src="${esc(imgUrl(p.images[0], true))}" alt="${esc(p.name)}"><span>${esc(p.name)}<br><em>${inr(p.price)}</em></span></a>`).join("")}</div><p><a class="pill" href="/collection">Shop the collection</a></p>`;
+}
+function articleHtml(a, products) {
+  const body = `<main>
+<article>
+<p class="eyebrow">Journal</p>
+<h1>${esc(a.title)}</h1>
+<p class="meta">By ${esc(BRAND)} \xB7 Updated ${longDate(a.updated)}</p>
+<div class="answer"><b>The short answer</b>${esc(a.answer)}</div>
+${a.sections.map(
+    (s) => `<section><h2>${esc(s.h2)}</h2>${(s.p || []).map((t) => `<p>${esc(t)}</p>`).join("")}${s.ul ? `<ul>${s.ul.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}${s.products ? productGrid(products, s.products) : ""}</section>`
+  ).join("\n")}
+<section class="faq"><h2>Frequently asked questions</h2>
+${a.faq.map((f) => `<details open><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join("\n")}
+</section>
+</article>
+<p style="margin-top:36px"><a href="/journal">\u2190 All articles</a></p>
+</main>`;
+  const url = `${SITE}/journal/${a.slug}`;
+  return page({
+    title: `${a.title} | ${BRAND}`,
+    description: a.description,
+    path: `/journal/${a.slug}`,
+    body,
+    type: "article",
+    published: a.published,
+    updated: a.updated,
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "Article",
+        headline: a.title,
+        description: a.description,
+        datePublished: a.published,
+        dateModified: a.updated,
+        inLanguage: "en-IN",
+        keywords: a.keywords.join(", "),
+        mainEntityOfPage: url,
+        author: { "@type": "Organization", name: BRAND, url: SITE },
+        publisher: { "@type": "Organization", name: BRAND, url: SITE, logo: { "@type": "ImageObject", url: `${SITE}/apple-touch-icon.png` } }
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: a.faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } }))
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: SITE },
+          { "@type": "ListItem", position: 2, name: "Journal", item: `${SITE}/journal` },
+          { "@type": "ListItem", position: 3, name: a.title, item: url }
+        ]
+      },
+      orgLd
+    ]
+  });
+}
+function indexHtml() {
+  const body = `<main>
+<p class="eyebrow">Journal</p>
+<h1>Fit, fabric and what to wear</h1>
+<p class="meta">Plain answers from the team at ${esc(BRAND)}, Hyderabad.</p>
+<div class="list">
+${ARTICLES.map((a) => `<a class="row" href="/journal/${a.slug}"><h2>${esc(a.title)}</h2><p>${esc(a.description)}</p></a>`).join("\n")}
+</div>
+</main>`;
+  return page({
+    title: `Journal | ${BRAND}`,
+    description: "Guides on oversized fits, heavyweight cotton, streetwear and gifts for techies, from CHILS & CO. in Hyderabad.",
+    path: "/journal",
+    body,
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        name: "Journal",
+        url: `${SITE}/journal`,
+        hasPart: ARTICLES.map((a) => ({ "@type": "Article", headline: a.title, url: `${SITE}/journal/${a.slug}` }))
+      },
+      orgLd
+    ]
+  });
+}
+var EXTRA_LLM_LINKS = [];
+function llmsText(products) {
+  const visible2 = products.filter((p) => String(p.id) !== "1672");
+  const prices = visible2.map((p) => Number(p.price)).filter((n) => n > 0);
+  const range2 = prices.length ? `${inr(Math.min(...prices))} to ${inr(Math.max(...prices))}` : "";
+  return `# ${BRAND}
+
+> ${BRAND} is an Indian clothing brand from Hyderabad, designed by techies. It sells heavyweight oversized drop shoulder tees (100% cotton, 240 GSM), TwinTex polos and regular fit tees, with delivery across India.
+
+## Key facts
+- Based in Hyderabad, Telangana, India. Website: ${SITE}
+- Oversized and drop shoulder tees: 100% cotton, 240 GSM, reinforced neck and shoulder stitching, fade-resistant DTF print.
+- Polo t-shirts: TwinTex fabric (cotton inside, polyester outside), 240 GSM heavyweight knit, structured collar, relaxed fit.
+- Regular fit and minimal tees: 100% cotton, cotton blend or polycotton, between 180 and 240 GSM depending on the design.
+- Stacks: three tees chosen to go together, banded as a numbered Trilogy; save 10%.
+${range2 ? `- Current prices: ${range2}.
+` : ""}- Delivery across India from \u20B980. Packed within 24 to 48 hours, delivered in 2 to 7 business days, tracked by SMS and email. Store pickup is free.
+- Returns within 7 days of delivery for a refund, exchange or store credit. Refunds reach the PhonePe or original payment method in 3 to 7 business days.
+- Packaging: reusable Second Life packaging, plastic-free shipping.
+
+## Guides
+${ARTICLES.map((a) => `- [${a.title}](${SITE}/journal/${a.slug}): ${a.description}`).join("\n")}
+
+## Shop by type
+${EXTRA_LLM_LINKS.map((l) => `- [${l.label}](${SITE}${l.href})`).join("\n")}
+
+## Shop and policies
+- [Collection](${SITE}/collection)
+- [Our promise](${SITE}/our-promise)
+- [Shipping and delivery](${SITE}/shipping-delivery)
+- [Returns and refunds](${SITE}/returns-refunds)
+- [Support](${SITE}/support)
+`;
+}
+function registerJournal(app, getProducts) {
+  const products = () => getProducts() || [];
+  const html = (res, body) => {
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
+    res.send(body);
+  };
+  app.get("/journal", (_req, res) => html(res, indexHtml()));
+  app.get("/journal/:slug", (req, res) => {
+    const a = ARTICLES.find((x) => x.slug === req.params.slug);
+    if (!a) return res.redirect(302, "/journal");
+    html(res, articleHtml(a, products()));
+  });
+  app.get("/llms.txt", (_req, res) => {
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.send(llmsText(products()));
+  });
+}
+
+// seo.ts
+var visible = (ps) => ps.filter((p) => String(p.id) !== "1672" && p.status !== "outofstock");
+var isOversized = (p) => /drop shoulder|oversized/i.test(String(p.category));
+var isPolo = (p) => /polo/i.test(String(p.name)) && p.type !== "grouped";
+var isCombo = (p) => String(p.category) === "Combos";
+var isRegular = (p) => !isOversized(p) && !isCombo(p);
+var range = (ps) => {
+  const n = ps.map((p) => Number(p.price)).filter((x) => x > 0);
+  return n.length ? { lo: Math.min(...n), hi: Math.max(...n) } : null;
+};
+var topColors = (ps, n = 6) => {
+  const c = /* @__PURE__ */ new Map();
+  for (const p of ps) for (const col of p.availableColors || []) c.set(col, (c.get(col) || 0) + 1);
+  return [...c.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map((e) => e[0]);
+};
+var plainText = (html) => String(html || "").replace(/<[^>]*>/g, " ").replace(/&amp;/g, "&").replace(/&#0?39;/g, "'").replace(/&quot;/g, '"').replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/[ \t]+/g, " ").trim();
+var SHARED_FAQ = [
+  { q: "How long does delivery take?", a: "Orders are packed within 24 to 48 hours and delivered across India in 2 to 7 business days, with SMS and email tracking. Delivery starts at \u20B980, and store pickup is free." },
+  { q: "What is the return policy?", a: "You can return a tee within 7 days of delivery for a refund, an exchange or store credit. The tee must be unworn and unwashed with its tags on. Refunds reach your PhonePe or original payment method in 3 to 7 business days." }
+];
+var LANDINGS = [
+  {
+    path: "/oversized-t-shirts-for-men",
+    title: "Oversized T-Shirts for Men | 240 GSM Cotton | CHILS & CO.",
+    h1: "Oversized t-shirts for men",
+    description: "Heavyweight oversized drop shoulder t-shirts in 100% cotton at 240 GSM, designed by techies in Hyderabad. Delivered across India with 7-day returns.",
+    pick: isOversized,
+    intro: (ps) => {
+      const r = range(ps);
+      return [
+        `Our oversized t-shirts are cut as drop shoulder tees in 100% cotton at 240 GSM, a heavyweight fabric that holds its shape instead of hanging limp. There are ${ps.length} designs${r ? `, priced from ${inr(r.lo)} to ${inr(r.hi)}` : ""}.`,
+        "Each tee has reinforced stitching at the neck and shoulders and high-definition, fade-resistant DTF artwork. They are designed by techies in Hyderabad and delivered across India."
+      ];
+    },
+    sections: (ps) => [
+      {
+        h2: "What makes them oversized",
+        ul: [
+          "Drop shoulder cut: the shoulder seam sits low on the upper arm, for a relaxed shape.",
+          "100% cotton at 240 GSM: heavyweight, soft and breathable.",
+          "Reinforced neck and shoulder stitching so the tee keeps its shape.",
+          "High-definition DTF artwork that resists fading when washed inside out."
+        ]
+      },
+      {
+        h2: "Colours",
+        p: [`Colours across the range include ${topColors(ps).join(", ")}. Black is available on ${ps.filter((p) => (p.availableColors || []).some((c) => /black/i.test(c))).length} of the ${ps.length} designs.`]
+      },
+      {
+        h2: "Picking your size",
+        p: ["Oversized tees are cut larger already, so start with your usual size and check the size guide on the product page for the measurements. Every design comes in sizes S to XL."]
+      }
+    ],
+    faq: () => [
+      { q: "What fabric are your oversized t-shirts made of?", a: "100% cotton at 240 GSM, a heavyweight weight that keeps the shape of a loose cut." },
+      { q: "Should I size up for an oversized t-shirt?", a: "Usually no. The cut is already larger, so start with your usual size and check the size guide for measurements." },
+      { q: "Are the prints durable?", a: "They use high-definition DTF artwork that is fade resistant. For the longest life, wash the tee inside out and avoid a hot dryer." },
+      ...SHARED_FAQ
+    ],
+    related: [
+      { href: "/journal/oversized-vs-boxy-vs-drop-shoulder-tshirt", label: "Oversized, boxy or drop shoulder: what's the difference?" },
+      { href: "/journal/how-to-choose-an-oversized-graphic-tshirt-india", label: "How to choose an oversized graphic t-shirt" },
+      { href: "/polo-t-shirts-for-men", label: "Polo t-shirts for men" }
+    ]
+  },
+  {
+    path: "/polo-t-shirts-for-men",
+    title: "Polo T-Shirts for Men | TwinTex 240 GSM | CHILS & CO.",
+    h1: "Polo t-shirts for men",
+    description: "Structured-collar polo t-shirts in heavyweight 240 GSM TwinTex fabric, designed by techies in Hyderabad. Delivered across India with 7-day returns.",
+    pick: isPolo,
+    intro: (ps) => {
+      const r = range(ps);
+      return [
+        `Our TwinTex polos have a structured collar and a relaxed fit, knitted from a heavyweight 240 GSM fabric with cotton on the inside and polyester on the outside. There are ${ps.length} designs${r ? `, ${r.lo === r.hi ? `at ${inr(r.lo)}` : `from ${inr(r.lo)} to ${inr(r.hi)}`}` : ""}.`,
+        "They are made for everyday wear: soft and breathable against the skin, with premium DTF branding."
+      ];
+    },
+    sections: (ps) => [
+      {
+        h2: "Why TwinTex",
+        ul: [
+          "Cotton inside, polyester outside: soft against the skin, and it keeps its look.",
+          "240 GSM heavyweight knit with a structured polo collar.",
+          "Relaxed fit for everyday wear."
+        ]
+      },
+      { h2: "Colours", p: [`Available colours include ${topColors(ps).join(", ") || "black, navy and green"}.`] }
+    ],
+    faq: () => [
+      { q: "What is TwinTex fabric?", a: "TwinTex is our polo fabric: a 240 GSM heavyweight knit with cotton on the inside and polyester on the outside." },
+      { q: "Do the polos have a relaxed or slim fit?", a: "A relaxed fit with a structured collar. Check the size guide on the product page for measurements." },
+      ...SHARED_FAQ
+    ],
+    related: [
+      { href: "/t-shirt-combos", label: "Three-tee stacks, save 10%" },
+      { href: "/oversized-t-shirts-for-men", label: "Oversized t-shirts for men" }
+    ]
+  },
+  {
+    path: "/t-shirt-combos",
+    title: "T-Shirt Combos: Pick 3 and Save 10% | CHILS & CO.",
+    h1: "T-shirt combos: three tees, save 10%",
+    description: "Three tees chosen to go together and banded as a numbered Trilogy. Pick your size and save 10%. Delivered across India with 7-day returns.",
+    pick: isCombo,
+    intro: (ps) => [
+      `Our stacks are three tees chosen to go together, banded as a numbered Trilogy. Pick your size and save 10%. There are ${ps.length} stacks to choose from, including core tees and polo stacks.`,
+      "You can also build your own set of three on the Pick Your Three page."
+    ],
+    sections: () => [
+      {
+        h2: "How a stack works",
+        ul: [
+          "Each stack is three tees chosen to go together, banded as a numbered Trilogy.",
+          "Choose your size once and save 10% on the set.",
+          "Or pick any three tees yourself on the Pick Your Three page."
+        ]
+      }
+    ],
+    faq: () => [
+      { q: "How much do I save on a combo?", a: "A Trilogy of three tees saves 10%." },
+      { q: "Can I choose my own three tees?", a: "Yes. Use the Pick Your Three page to build your own set." },
+      ...SHARED_FAQ
+    ],
+    related: [
+      { href: "/pick-your-three", label: "Build your own three" },
+      { href: "/oversized-t-shirts-for-men", label: "Oversized t-shirts for men" }
+    ]
+  },
+  {
+    path: "/regular-fit-t-shirts-for-men",
+    title: "Regular Fit T-Shirts for Men | Cotton & Blends | CHILS & CO.",
+    h1: "Regular fit t-shirts for men",
+    description: "Regular fit and minimal t-shirts in cotton and cotton-blend fabrics, from 180 to 240 GSM, designed by techies in Hyderabad. Delivered across India.",
+    pick: isRegular,
+    intro: (ps) => {
+      const r = range(ps);
+      return [
+        `A cleaner, closer cut than our oversized range. Our regular fit and minimal tees come in 100% cotton, cotton blends and polycotton, between 180 and 240 GSM depending on the design. There are ${ps.length} designs${r ? `, from ${inr(r.lo)} to ${inr(r.hi)}` : ""}.`,
+        "Each product page states the exact fabric and weight, so you can choose the feel you want."
+      ];
+    },
+    sections: (ps) => [
+      {
+        h2: "Regular fit or oversized?",
+        p: ["Regular fit follows your body without clinging, and suits layering and a neat look. If you want the relaxed, loose silhouette, see our oversized t-shirts instead."]
+      },
+      { h2: "Colours", p: [`Available colours include ${topColors(ps, 8).join(", ")}.`] }
+    ],
+    faq: () => [
+      { q: "What fabrics do regular fit tees come in?", a: "A mix of 100% cotton, cotton blend (60% cotton, 40% polyester) and polycotton, between 180 and 240 GSM. Each product page lists the exact fabric." },
+      { q: "What is the difference between regular fit and oversized?", a: "Regular fit follows the body without clinging. Oversized is cut larger, with a lower shoulder seam, for a relaxed look." },
+      ...SHARED_FAQ
+    ],
+    related: [{ href: "/oversized-t-shirts-for-men", label: "Oversized t-shirts for men" }, { href: "/t-shirt-combos", label: "Three-tee stacks" }]
+  }
+];
+function cardGrid(ps, limit = 40) {
+  return `<div class="grid">${ps.filter((p) => p.images?.[0]).slice(0, limit).map((p) => `<a class="card" href="/product/${esc(p.id)}"><img loading="lazy" width="300" height="375" src="${esc(imgUrl(p.images[0], true))}" alt="${esc(p.name)}"><span>${esc(p.name)}<br><em>${inr(p.price)}</em></span></a>`).join("")}</div>`;
+}
+function landingHtml(l, all) {
+  const ps = visible(all).filter(l.pick);
+  const faq = l.faq(ps);
+  const body = `<main>
+<p class="eyebrow">${esc(BRAND)}</p>
+<h1>${esc(l.h1)}</h1>
+${l.intro(ps).map((t) => `<p>${esc(t)}</p>`).join("")}
+<h2>Shop the range</h2>
+${ps.some((p) => p.images?.[0]) ? cardGrid(ps) : ps.length ? `<ul>${ps.map((p) => `<li><a href="/product/${esc(p.id)}">${esc(p.name)}</a> \xB7 ${inr(p.price)}</li>`).join("")}</ul>` : `<p><a href="/collection">See the full collection</a></p>`}
+<p><a class="pill" href="/collection">Shop the full collection</a></p>
+${l.sections(ps).map((s) => `<section><h2>${esc(s.h2)}</h2>${(s.p || []).map((t) => `<p>${esc(t)}</p>`).join("")}${s.ul ? `<ul>${s.ul.map((t) => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}</section>`).join("\n")}
+<section class="faq"><h2>Frequently asked questions</h2>
+${faq.map((f) => `<details open><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join("\n")}
+</section>
+<section><h2>Keep reading</h2><ul>${l.related.map((r) => `<li><a href="${r.href}">${esc(r.label)}</a></li>`).join("")}</ul></section>
+</main>`;
+  return page({
+    title: l.title,
+    description: l.description,
+    path: l.path,
+    body,
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        name: l.h1,
+        url: `${SITE}${l.path}`,
+        description: l.description,
+        mainEntity: {
+          "@type": "ItemList",
+          numberOfItems: ps.length,
+          itemListElement: ps.slice(0, 50).map((p, i) => ({ "@type": "ListItem", position: i + 1, url: `${SITE}/product/${p.id}`, name: p.name }))
+        }
+      },
+      { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faq.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: SITE },
+          { "@type": "ListItem", position: 2, name: l.h1, item: `${SITE}${l.path}` }
+        ]
+      },
+      orgLd
+    ]
+  });
+}
+var BOX = `<div style="max-width:760px;margin:0 auto;padding:88px 20px 48px;font:16px/1.65 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#141311">`;
+var links = (items) => `<ul>${items.map((i) => `<li><a href="${i.href}">${esc(i.label)}</a></li>`).join("")}</ul>`;
+var productLinks = (ps) => `<ul>${ps.map((p) => `<li><a href="/product/${esc(p.id)}">${esc(p.name)}</a> \xB7 ${inr(p.price)}</li>`).join("")}</ul>`;
+var POLICY = `<h2>Delivery and returns</h2><ul>
+<li>Delivery across India from \u20B980, packed within 24 to 48 hours and delivered in 2 to 7 business days, tracked by SMS and email. Store pickup is free.</li>
+<li>Returns within 7 days of delivery for a refund, exchange or store credit. Refunds reach your PhonePe or original payment method in 3 to 7 business days.</li>
+<li>Reusable Second Life packaging and plastic-free shipping.</li></ul>`;
+var GUIDES = links([
+  ...LANDINGS.map((l) => ({ href: l.path, label: l.h1 })),
+  { href: "/journal", label: "Journal: fit, fabric and style guides" }
+]);
+function homeBody(all) {
+  const ps = visible(all);
+  const over = ps.filter(isOversized);
+  const r = range(ps);
+  return `${BOX}<h1>Oversized t-shirts and polos for men, designed by techies in Hyderabad</h1>
+<p>${esc(BRAND)} makes heavyweight oversized drop shoulder tees in 100% cotton at 240 GSM, TwinTex polos and minimal regular fit tees, designed by techies in Hyderabad${r ? `, priced from ${inr(r.lo)}` : ""}. We deliver across India, with 7-day returns.</p>
+<h2>Shop by type</h2>${links([
+    { href: "/oversized-t-shirts-for-men", label: `Oversized t-shirts for men (${over.length} designs)` },
+    { href: "/polo-t-shirts-for-men", label: "Polo t-shirts for men" },
+    { href: "/regular-fit-t-shirts-for-men", label: "Regular fit t-shirts for men" },
+    { href: "/t-shirt-combos", label: "Three-tee stacks: save 10%" },
+    { href: "/collection", label: "The full collection" }
+  ])}
+<h2>Popular oversized tees</h2>${productLinks(over.slice(0, 12))}
+<h2>Why people choose us</h2><ul>
+<li>Heavyweight 100% cotton at 240 GSM on every oversized tee.</li>
+<li>Reinforced neck and shoulder stitching, and fade-resistant DTF artwork.</li>
+<li>Designs from the worlds of code, chips and engineering.</li></ul>
+${POLICY}
+<h2>Guides</h2>${GUIDES}</div>`;
+}
+function collectionBody(all) {
+  const ps = visible(all);
+  const group = (title, items) => items.length ? `<h2>${esc(title)} (${items.length})</h2>${productLinks(items)}` : "";
+  return `${BOX}<h1>Shop t-shirts and polos for men</h1>
+<p>Every ${esc(BRAND)} design in one place: ${ps.length} products across oversized drop shoulder tees, TwinTex polos, minimal and regular fit tees, and three-tee stacks. Delivered across India from \u20B980, with 7-day returns.</p>
+${group("Oversized drop shoulder t-shirts", ps.filter(isOversized))}
+${group("Polo t-shirts", ps.filter(isPolo))}
+${group("Regular fit and minimal t-shirts", ps.filter((p) => isRegular(p) && !isPolo(p)))}
+${group("Three-tee stacks", ps.filter(isCombo))}
+${POLICY}
+<h2>Guides</h2>${GUIDES}</div>`;
+}
+function descriptionParts(p) {
+  const lines = String(p.description || "").split(/\n/).map((l) => l.trim()).filter(Boolean);
+  const bullets = lines.filter((l) => /^[-•]/.test(l)).map((l) => l.replace(/^[-•]\s*/, ""));
+  const prose = lines.filter((l) => !/^[-•]/.test(l));
+  const story = plainText(String(p.shortDescription || p.concept || "")).replace(/^Story Behind The Design\s*/i, "");
+  return { bullets, prose: prose.join(" "), story };
+}
+function productTypeLabel(p) {
+  if (isPolo(p)) return "Polo T-Shirt for Men";
+  if (isCombo(p)) return "T-Shirt Combo";
+  if (isOversized(p)) return "Oversized T-Shirt for Men";
+  return "T-Shirt for Men";
+}
+function productBody(p) {
+  const d = descriptionParts(p);
+  const sizes = (p.availableSizes || []).join(", ");
+  const cols = (p.availableColors || []).join(", ");
+  return `${BOX}<p><a href="/collection">All products</a></p>
+<h1>${esc(p.name)} ${esc(productTypeLabel(p))}</h1>
+<p><strong>${inr(p.price)}</strong>${p.category ? ` \xB7 ${esc(p.category)}` : ""}${p.fit ? ` \xB7 ${esc(p.fit)}` : ""}</p>
+${p.images?.[0] ? `<p><img src="${esc(imgUrl(p.images[0]))}" alt="${esc(p.name)}" width="480" style="max-width:100%;height:auto"></p>` : ""}
+${d.bullets.length ? `<h2>Details</h2><ul>${d.bullets.map((b) => `<li>${esc(b)}</li>`).join("")}</ul>` : ""}
+${sizes || cols ? `<h2>Sizes and colours</h2><p>${sizes ? `Sizes: ${esc(sizes)}. ` : ""}${cols ? `Colours: ${esc(cols)}.` : ""}</p>` : ""}
+${d.story ? `<h2>The story</h2><p>${esc(d.story).slice(0, 900)}</p>` : ""}
+${p.care ? `<h2>Care</h2><p>${esc(p.care)}</p>` : ""}
+${POLICY}
+<h2>More like this</h2>${links([
+    isOversized(p) ? { href: "/oversized-t-shirts-for-men", label: "Oversized t-shirts for men" } : isPolo(p) ? { href: "/polo-t-shirts-for-men", label: "Polo t-shirts for men" } : { href: "/regular-fit-t-shirts-for-men", label: "Regular fit t-shirts for men" },
+    { href: "/collection", label: "The full collection" }
+  ])}</div>`;
+}
+function policyBody(path5) {
+  if (path5 === "/shipping-delivery")
+    return `${BOX}<h1>Shipping and delivery</h1><p>We deliver across India. Delivery costs from \u20B980, and you see the exact amount at checkout before you pay.</p><ul>
+<li>Packing: orders are packed and handed to the courier within 24 to 48 hours.</li>
+<li>Delivery time: 2 to 7 business days, tracked by SMS and email. Business days do not include Sundays or public holidays.</li>
+<li>Store pickup: free.</li>
+<li>Estimates can slip because of weather, courier delays or very busy periods, and we keep you posted.</li></ul>
+<p><a href="/returns-refunds">Returns and refunds</a> \xB7 <a href="/collection">Shop</a></p></div>`;
+  if (path5 === "/returns-refunds")
+    return `${BOX}<h1>Returns and refunds</h1><p>Return a tee within 7 days of delivery for a refund, an exchange or store credit.</p><ul>
+<li>What we cannot take back: tees that have been worn or washed, with tags or trims removed, damage after delivery, and requests made more than 7 days after delivery.</li>
+<li>How to ask: tell us the reason, add a short description and up to three photos. Photos are needed for damaged items, wrong items and quality concerns.</li>
+<li>What happens next: our team reviews every request. If it is approved we email you the pickup details; pickup depends on the courier serving your area.</li>
+<li>Refunds go to your PhonePe or original payment method in 3 to 7 business days after the tee is back and checked.</li></ul>
+<p><a href="/shipping-delivery">Shipping and delivery</a> \xB7 <a href="/collection">Shop</a></p></div>`;
+  if (path5 === "/our-promise")
+    return `${BOX}<h1>Our promise</h1><p>${esc(BRAND)} stands behind how its tees are made and packed.</p><ul>
+<li>Fabric: our oversized tees are heavyweight 100% cotton at 240 GSM.</li>
+<li>Construction: reinforced stitching at the neck and shoulders, and high-definition, fade-resistant DTF artwork.</li>
+<li>Packaging: reusable Second Life packaging and plastic-free shipping.</li></ul>
+<p><a href="/collection">Shop the collection</a></p></div>`;
+  return "";
+}
+function productSchema(p, canonical) {
+  const imgs = (p.images || []).slice(0, 4).map((i) => imgUrl(i));
+  return {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    name: p.name,
+    image: imgs,
+    description: plainText(descriptionParts(p).bullets.join(". ") || p.shortDescription || p.name).slice(0, 500),
+    sku: `CHLS-${p.id}`,
+    brand: { "@type": "Brand", name: BRAND },
+    category: p.category,
+    ...p.availableColors?.length ? { color: p.availableColors.join(", ") } : {},
+    offers: {
+      "@type": "Offer",
+      url: canonical,
+      priceCurrency: "INR",
+      price: String(p.price),
+      availability: "https://schema.org/InStock",
+      itemCondition: "https://schema.org/NewCondition",
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: "IN",
+        returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+        merchantReturnDays: 7,
+        merchantReturnLink: `${SITE}/returns-refunds`
+      }
+    }
+  };
+}
+function registerLandings(app, getProducts) {
+  for (const l of LANDINGS) {
+    app.get(l.path, (_req, res) => {
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
+      res.send(landingHtml(l, getProducts() || []));
+    });
+  }
+}
+
 // slackBot.ts
 import fs from "fs";
 import path from "path";
@@ -120,13 +1137,13 @@ function saveState() {
 }
 async function ordersBetween(from, to, extra = {}) {
   const out = [];
-  for (let page = 1; page <= 10; page++) {
+  for (let page2 = 1; page2 <= 10; page2++) {
     const { data } = await wc("get", "orders", {
       after: new Date(from).toISOString(),
       ...to ? { before: new Date(to).toISOString() } : {},
       dates_are_gmt: true,
       per_page: 100,
-      page,
+      page: page2,
       ...extra
     });
     out.push(...data);
@@ -139,6 +1156,60 @@ function itemLines(order) {
     const size = (i.meta_data || []).find((m) => /size/i.test(m.display_key || m.key))?.display_value;
     return `\u2022 ${i.name}${size ? ` (${size})` : ""} \xD7 ${i.quantity}`;
   }).join("\n") || "\u2022 (no items listed)";
+}
+function addressText(order) {
+  const a = order.shipping?.address_1 ? order.shipping : order.billing || {};
+  const name = `${a.first_name || ""} ${a.last_name || ""}`.trim() || `${order.billing?.first_name || ""} ${order.billing?.last_name || ""}`.trim();
+  const place = [a.city, a.state].filter(Boolean).join(", ");
+  const lines = [name, a.company, a.address_1, a.address_2, [place, a.postcode].filter(Boolean).join(" - "), a.country && a.country !== "IN" ? a.country : ""].filter(Boolean);
+  const phone = a.phone || order.billing?.phone;
+  if (phone) lines.push(`\u{1F4DE} ${phone}`);
+  return lines.join("\n") || "No address on the order";
+}
+var productImages = /* @__PURE__ */ new Map();
+async function hydrateImages(data) {
+  try {
+    const orders = (Array.isArray(data) ? data : [data]).filter((o) => o && Array.isArray(o.line_items));
+    const missing = /* @__PURE__ */ new Set();
+    for (const o of orders) for (const i of o.line_items) if (!i.image?.src && i.product_id && !productImages.has(i.product_id)) missing.add(i.product_id);
+    if (missing.size && wc) {
+      const ids = [...missing].slice(0, 100);
+      try {
+        const { data: prods } = await wc("get", "products", { include: ids.join(","), per_page: 100 });
+        for (const p of prods || []) if (p.images?.[0]?.src) productImages.set(p.id, p.images[0].src);
+      } catch (err) {
+        console.warn("[SLACK] Could not look up product pictures:", err?.message);
+      }
+      for (const id of ids) if (!productImages.has(id)) productImages.set(id, "");
+    }
+    for (const o of orders) for (const i of o.line_items) if (!i.image?.src && productImages.get(i.product_id)) i.image = { ...i.image || {}, src: productImages.get(i.product_id) };
+  } catch {
+  }
+}
+function itemBlocks(order) {
+  return (order.line_items || []).slice(0, 8).map((i) => {
+    const size = (i.meta_data || []).find((m) => /size/i.test(m.display_key || m.key))?.display_value;
+    const block = {
+      type: "section",
+      text: { type: "mrkdwn", text: `*${i.name}*${size ? `
+Size: ${size}` : ""}
+Qty: ${i.quantity} \xB7 ${money(i.total)}` }
+    };
+    if (i.image?.src) block.accessory = { type: "image", image_url: i.image.src, alt_text: i.name };
+    return block;
+  });
+}
+function stripImages(blocks) {
+  return blocks.filter((b) => b.type !== "image").map((b) => b.accessory?.type === "image" ? { ...b, accessory: void 0 } : b);
+}
+async function withPictureFallback(send2, blocks) {
+  try {
+    return await send2(blocks);
+  } catch (err) {
+    if (!/invalid_blocks|image/i.test(`${err?.data?.error || ""} ${err?.message || ""}`)) throw err;
+    console.warn("[SLACK] Slack could not load a picture; sending the card without pictures.");
+    return send2(stripImages(blocks));
+  }
 }
 function orderBlocks(order, done) {
   const pickup = isPickup(order);
@@ -159,15 +1230,11 @@ ${order.status}` },
 ${order.payment_method_title || order.payment_method || "\u2014"}` }
       ]
     },
-    { type: "section", text: { type: "mrkdwn", text: itemLines(order) } }
+    ...itemBlocks(order),
+    { type: "section", text: { type: "mrkdwn", text: `*${pickup ? "Store pickup" : "Ship to"}*
+${pickup ? "Collect in store\n" : ""}${addressText(order)}` } }
   ];
-  const productImages = order.line_items?.slice(0, 3).filter((item) => item.image?.src).map((item) => ({ type: "image", image_url: item.image.src, alt_text: item.name }));
-  if (productImages?.length) {
-    blocks.push({ type: "divider" });
-    productImages.forEach((img) => {
-      blocks.push(img);
-    });
-  }
+  if (order.customer_note) blocks.push({ type: "section", text: { type: "mrkdwn", text: `*Customer note:* ${order.customer_note}` } });
   if (done) blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: done }] });
   blocks.push({
     type: "actions",
@@ -301,14 +1368,17 @@ async function maybeSendSummary() {
   console.log("[SLACK] Posted the morning summary");
 }
 function returnRequest(order) {
+  const ours = metaOf(order, "_chils_return_request");
   const raw = metaOf(order, "wps_rma_return_product");
   let entries = [];
   try {
     entries = Object.values(typeof raw === "string" ? JSON.parse(raw) : raw || {});
+    const saved = typeof ours === "string" ? JSON.parse(ours) : ours;
+    if (saved?.subject) entries = [{ ...entries[entries.length - 1] || {}, subject: saved.subject }];
   } catch {
   }
   const req = entries[entries.length - 1] || {};
-  const subject = String(req.subject || "");
+  const subject = String(req.subject || req.reason || req.message || "");
   const pick = (label) => subject.match(new RegExp(`${label}:\\s*(.*)`))?.[1]?.trim() || "";
   const products = req.products || [];
   const names = new Map((order.line_items || []).map((i) => [String(i.product_id), i.name]));
@@ -321,8 +1391,10 @@ function returnRequest(order) {
     return `\u2022 ${names.get(id) || `Product ${id}`} \xD7 ${qty}: ${act}`;
   });
   const value = products.reduce((n, p) => n + Number(p.price || 0) * Number(p.qty || 1), 0);
-  const images = pick("Images").split(",").map((s) => s.trim()).filter((s) => /^https?:/.test(s));
+  const found = JSON.stringify(entries).match(/https?:[^"'\s,\\]+?\.(?:jpe?g|png|webp|gif|avif)(?:\?[^"'\s,\\]*)?/gi) || [];
+  const images = [.../* @__PURE__ */ new Set([...pick("Images").split(",").map((s) => s.trim()).filter((s) => /^https?:/.test(s)), ...found])];
   return {
+    raw: subject.split("\n").filter((l) => l.trim() && !/^(Images|Return\/Exchange Actions|- Product ID)/.test(l.trim())).slice(0, 4).join("\n"),
     reason: pick("Reason"),
     description: pick("Description"),
     wants,
@@ -335,12 +1407,12 @@ function returnBlocks(order, done) {
   const r = returnRequest(order);
   const name = `${order.billing?.first_name || ""} ${order.billing?.last_name || ""}`.trim();
   const detail = [
-    `*Reason:* ${r.reason || "not given"}`,
+    `*Reason:* ${r.reason || r.raw || "not given"}`,
     r.description ? `*Customer's note:* ${r.description}` : "",
     r.wants.length ? `*What they want:*
 ${r.wants.join("\n")}` : `*Items:*
 ${itemLines(order)}`,
-    r.images.length ? `*Return photos:* ${r.images.map((u, i) => `<${u}|photo ${i + 1}>`).join(" \xB7 ")}` : ""
+    r.images.length ? `*Return photos (${r.images.length}):* ${r.images.map((u, i) => `<${u}|photo ${i + 1}>`).join(" \xB7 ")}` : "*Return photos:* none uploaded"
   ].filter(Boolean);
   const blocks = [
     { type: "header", text: { type: "plain_text", text: `Return request \xB7 Order #${order.id}` } },
@@ -359,12 +1431,11 @@ ${order.status}` }
     },
     { type: "section", text: { type: "mrkdwn", text: detail.join("\n") } }
   ];
-  const productImages = order.line_items?.slice(0, 3).map((item) => ({ type: "image", image_url: item.image?.src || "", alt_text: item.name })).filter((img) => img.image_url);
-  if (productImages?.length) {
-    blocks.push({ type: "divider" });
-    productImages.forEach((img) => {
-      if (img.image_url) blocks.push({ type: "image", image_url: img.image_url, alt_text: img.alt_text });
-    });
+  blocks.push(...itemBlocks(order));
+  blocks.push({ type: "section", text: { type: "mrkdwn", text: `*Address*
+${addressText(order)}` } });
+  for (const [i, u] of r.images.slice(0, 6).entries()) {
+    blocks.push({ type: "image", image_url: u, alt_text: `Return photo ${i + 1}`, title: { type: "plain_text", text: `Return photo ${i + 1} of ${r.images.length}` } });
   }
   if (done) blocks.push({ type: "context", elements: [{ type: "mrkdwn", text: done }] });
   const actions = [];
@@ -408,7 +1479,8 @@ async function checkReturns() {
   for (const o of waiting) {
     if (state.returns[o.id]) continue;
     state.returns[o.id] = Date.now();
-    await web.chat.postMessage({ channel: rooms.returns, text: `Return request for order #${o.id}`, blocks: returnBlocks(o) });
+    await hydrateImages(o);
+    await withPictureFallback((b) => web.chat.postMessage({ channel: rooms.returns, text: `Return request for order #${o.id}`, blocks: b }), returnBlocks(o));
     console.log(`[SLACK] Posted return request #${o.id}`);
   }
   saveState();
@@ -422,8 +1494,11 @@ async function approveReturn(id, who, user, ch, ts) {
     customer_note: true
   });
   await note(id, `Return approved by ${who} from Slack.`);
-  const wantsRefund = returnRequest(current).isRefund;
+  const r = returnRequest(current);
+  const exchangeOnly = r.wants.length > 0 && r.wants.every((w) => /exchange|swap to/i.test(w));
+  const wantsRefund = !exchangeOnly;
   const refundCard = wantsRefund ? await postRefundCard(data) : "";
+  console.log(`[SLACK] Return #${id} approved: ${wantsRefund ? refundCard ? "refund card posted" : "refund card could not be posted" : "exchange only, no refund card"}`);
   const refund = wantsRefund ? refundCard ? " \xB7 refund card posted below, send the money from there" : " \xB7 refund the money in PhonePe" : "";
   await updateCard(ch, ts, `Return #${id}`, returnBlocks(data, `\u2705 Approved by <@${user}> \xB7 customer emailed${refund}`));
   return "";
@@ -485,7 +1560,7 @@ async function setStatus(orderId, status, who, extraMeta = []) {
 async function updateCard(ch, ts, text, blocks) {
   if (!ch || !ts) return;
   try {
-    await web.chat.update({ channel: ch, ts, text, blocks });
+    await withPictureFallback((b) => web.chat.update({ channel: ch, ts, text, blocks: b }), blocks);
   } catch (err) {
     console.warn("[SLACK] Could not update the message:", err?.data?.error || err.message);
   }
@@ -595,7 +1670,7 @@ async function postRefundCard(order) {
   }
 }
 async function startRefund(id, amount, who, user, ch, ts) {
-  if (!canRefund(user)) return `<@${user}> you're not on the list of people who can send refunds.`;
+  if (!canRefund(user)) return `<@${user}> you're not on the list of people who can send refunds. Your Slack ID is \`${user}\`: add it to SLACK_REFUND_USERS.`;
   if (!phonepe) return "PhonePe isn't connected to the bot, so I can't send refunds.";
   if (refundLocks.has(id)) return `A refund for order #${id} is already being sent. Give it a moment.`;
   refundLocks.add(id);
@@ -722,7 +1797,7 @@ async function onAction(body) {
       const msg = await startRefund(id, Number(amount), who, user, body.channel?.id, body.message?.ts);
       if (msg) await reply(body, msg);
     } else if (action.action_id === "refund_custom") {
-      if (!canRefund(user)) return reply(body, `<@${user}> you're not on the list of people who can send refunds.`);
+      if (!canRefund(user)) return reply(body, `<@${user}> you're not on the list of people who can send refunds. Your Slack ID is \`${user}\`: add it to SLACK_REFUND_USERS.`);
       await openRefundDialog(body, action.value);
     } else if (action.action_id === "followed_up") {
       const id = action.value;
@@ -749,12 +1824,17 @@ async function onAction(body) {
         }).then((r) => r.json());
         if (res.awb) {
           const { data } = await wc("get", `orders/${id}`);
-          await note(id, `Shipment created: AWB ${res.awb}, Courier: ${res.courier} (by ${who}, from Slack). Label: ${res.labelDownloadUrl}`);
+          await note(id, `Shipment created: AWB ${res.awb}, Courier: ${res.courier} (by ${who}, from Slack).${res.labelDownloadUrl ? ` Label: ${res.labelDownloadUrl}` : ""}`);
           await reply(body, `\u2705 Shipment created for order #${id}
 *AWB:* ${res.awb}
-*Courier:* ${res.courier}
-<${res.labelDownloadUrl}|\u{1F4C4} Download Label>`);
+*Courier:* ${res.courier}${res.labelDownloadUrl ? `
+<${res.labelDownloadUrl}|\u{1F4C4} Download Label>` : ""}`);
           await refreshMessage(body, data, `\u{1F69A} Shipment created, AWB: ${res.awb} \xB7 initiated by <@${user}>`);
+        } else if (res.shipmentId) {
+          await note(id, `Order sent to Shiprocket (shipment ${res.shipmentId}) by ${who} from Slack. No courier assigned yet: ${res.courierError || "unknown reason"}.`);
+          await reply(body, `\u26A0\uFE0F Order #${id} is in Shiprocket, but no courier was assigned yet.
+*Why:* ${res.courierError || "unknown"}
+Fix that (often the Shiprocket wallet balance) and press Create Shipment again, or finish it in <${res.dashboardUrl}|Shiprocket>.`);
         } else {
           await reply(body, `\u274C Shipment creation failed: ${res.message}`);
         }
@@ -850,6 +1930,17 @@ async function onMessage(event) {
       for (const o of waiting.slice(0, 10)) await say(`Return request for order #${o.id}`, returnBlocks(o));
       return;
     }
+    const dbg = text.match(/^debug\s*#?(\d+)$/);
+    if (dbg) {
+      const { data } = await wc("get", `orders/${dbg[1]}`);
+      const lines = (data.meta_data || []).filter((m) => /rma|return|refund|exchange|reason|image|photo/i.test(m.key)).map((m) => `\u2022 \`${m.key}\`: ${(typeof m.value === "string" ? m.value : JSON.stringify(m.value)).replace(/data:image[^"\s]{40,}/g, "[base64 image]").slice(0, 600)}`);
+      const notes = await wc("get", `orders/${dbg[1]}/notes`).then((r) => (r.data || []).map((n) => `\u2022 ${String(n.note).slice(0, 200)}`).slice(0, 8)).catch(() => []);
+      return say(`Debug #${dbg[1]}`, [{ type: "section", text: { type: "mrkdwn", text: `*Return data on #${dbg[1]}*
+${lines.join("\n") || "none found"}
+
+*Notes*
+${notes.join("\n") || "none"}`.slice(0, 2900) } }]);
+    }
     const refund = text.match(/^refund\s*#?(\d+)$/);
     if (refund) {
       const { data } = await wc("get", `orders/${refund[1]}`);
@@ -884,7 +1975,12 @@ async function startSlackBot(opts) {
   }
   allowed = (process.env.SLACK_ALLOWED_USERS || "").split(",").map((s) => s.trim()).filter(Boolean);
   adminBase = opts.adminUrl.replace(/\/$/, "");
-  wc = opts.wc;
+  const rawWc = opts.wc;
+  wc = async (method, ...args) => {
+    const res = await rawWc(method, ...args);
+    if (method === "get" && typeof args[0] === "string" && /^orders(\/\d+)?$/.test(args[0])) await hydrateImages(res?.data);
+    return res;
+  };
   phonepe = opts.phonepe || null;
   web = new WebClient(botToken);
   loadState();
@@ -921,7 +2017,8 @@ async function startSlackBot(opts) {
 async function notifyNewOrder(order) {
   if (!web || !channel || !order?.id) return;
   try {
-    await web.chat.postMessage({ channel, text: `New order #${order.id} \xB7 ${money(order.total)}`, blocks: orderBlocks(order) });
+    await hydrateImages(order);
+    await withPictureFallback((b) => web.chat.postMessage({ channel, text: `New order #${order.id} \xB7 ${money(order.total)}`, blocks: b }), orderBlocks(order));
   } catch (err) {
     console.error("[SLACK] New-order message failed:", err?.data?.error || err.message);
   }
@@ -1255,6 +2352,75 @@ async function getShiprocketToken() {
     return null;
   }
 }
+var INDIA_STATES = {
+  AN: "Andaman and Nicobar Islands",
+  AP: "Andhra Pradesh",
+  AR: "Arunachal Pradesh",
+  AS: "Assam",
+  BR: "Bihar",
+  CH: "Chandigarh",
+  CT: "Chhattisgarh",
+  DN: "Dadra and Nagar Haveli",
+  DD: "Daman and Diu",
+  DL: "Delhi",
+  GA: "Goa",
+  GJ: "Gujarat",
+  HR: "Haryana",
+  HP: "Himachal Pradesh",
+  JK: "Jammu and Kashmir",
+  JH: "Jharkhand",
+  KA: "Karnataka",
+  KL: "Kerala",
+  LA: "Ladakh",
+  LD: "Lakshadweep",
+  MP: "Madhya Pradesh",
+  MH: "Maharashtra",
+  MN: "Manipur",
+  ML: "Meghalaya",
+  MZ: "Mizoram",
+  NL: "Nagaland",
+  OR: "Odisha",
+  OD: "Odisha",
+  PY: "Puducherry",
+  PB: "Punjab",
+  RJ: "Rajasthan",
+  SK: "Sikkim",
+  TN: "Tamil Nadu",
+  TS: "Telangana",
+  TG: "Telangana",
+  TR: "Tripura",
+  UP: "Uttar Pradesh",
+  UT: "Uttarakhand",
+  UK: "Uttarakhand",
+  WB: "West Bengal"
+};
+function shiprocketProblem(err) {
+  const d = err?.response?.data;
+  if (!d) return err?.message || "Shiprocket did not answer";
+  const detail = d.errors ? Object.entries(d.errors).map(([k, v]) => `${k}: ${[].concat(v).join(", ")}`).join("; ") : "";
+  return [d.message, detail].filter(Boolean).join(" \xB7 ") || JSON.stringify(d).slice(0, 300);
+}
+var shiprocketPickupCache = null;
+async function getShiprocketPickupName(token2) {
+  const wanted = (process.env.SHIPROCKET_PICKUP_LOCATION || "").trim();
+  if (shiprocketPickupCache && Date.now() - shiprocketPickupCache.at < 36e5 && (!wanted || shiprocketPickupCache.name.toLowerCase() === wanted.toLowerCase())) return shiprocketPickupCache.name;
+  let list = [];
+  try {
+    const res = await axios3.get("https://apiv2.shiprocket.in/v1/external/settings/company/pickup", { headers: { Authorization: `Bearer ${token2}` } });
+    list = res.data?.data?.shipping_address || [];
+  } catch (err) {
+    console.warn("[CHILS & CO.] Could not read Shiprocket pickup locations:", shiprocketProblem(err));
+    return wanted || "Primary";
+  }
+  const names = list.map((l) => String(l.pickup_location || "")).filter(Boolean);
+  const match = wanted && names.find((n) => n.toLowerCase() === wanted.toLowerCase());
+  const primary = list.find((l) => Number(l.is_primary_location) === 1)?.pickup_location;
+  const chosen = match || primary || names[0];
+  if (!chosen) throw new Error("Shiprocket has no pickup location on file. Add one in Shiprocket under Settings, then Pickup Addresses.");
+  if (wanted && !match) console.warn(`[CHILS & CO.] SHIPROCKET_PICKUP_LOCATION "${wanted}" is not in Shiprocket (${names.join(", ")}). Using "${chosen}".`);
+  shiprocketPickupCache = { name: String(chosen), at: Date.now() };
+  return String(chosen);
+}
 async function createShiprocketShipment(order) {
   const token2 = await getShiprocketToken();
   if (!token2) throw new Error("Shiprocket not configured");
@@ -1262,55 +2428,86 @@ async function createShiprocketShipment(order) {
     name: item.name,
     sku: item.sku || `SKU-${item.product_id}`,
     units: item.quantity,
-    selling_price: item.total / item.quantity
+    selling_price: Number(item.total) / Math.max(1, Number(item.quantity))
   }));
+  const subTotal = items.reduce((n, i) => n + i.selling_price * i.units, 0);
+  const bill = order.billing || {};
+  const ship = order.shipping?.address_1 ? order.shipping : bill;
+  const stateName = (a) => INDIA_STATES[String(a?.state || "").toUpperCase()] || a?.state || "";
+  const phone = String(bill.phone || ship.phone || "").replace(/\D/g, "").slice(-10);
+  const when = /* @__PURE__ */ new Date(`${order.date_created_gmt || order.date_created}${order.date_created_gmt ? "Z" : ""}`);
+  const orderDate = when.toLocaleString("sv-SE", { timeZone: "Asia/Kolkata" }).slice(0, 16);
   const payload = {
     order_id: String(order.id),
-    order_date: order.date_created,
-    pickup_location_id: process.env.SHIPROCKET_PICKUP_LOCATION_ID || "1",
-    channel_order_id: `CHLS-${order.id}`,
-    customer_name: `${order.billing?.first_name || ""} ${order.billing?.last_name || ""}`.trim(),
-    customer_email: order.billing?.email,
-    customer_phone: order.billing?.phone,
-    delivery_address: order.shipping?.address_1 || order.billing?.address_1,
-    delivery_city: order.shipping?.city || order.billing?.city,
-    delivery_state: order.shipping?.state || order.billing?.state,
-    delivery_country: "India",
-    delivery_pincode: order.shipping?.postcode || order.billing?.postcode,
-    billing_customer_name: order.billing?.first_name,
-    billing_email: order.billing?.email,
-    billing_phone: order.billing?.phone,
-    billing_address: order.billing?.address_1,
-    billing_city: order.billing?.city,
-    billing_state: order.billing?.state,
+    order_date: orderDate,
+    pickup_location: await getShiprocketPickupName(token2),
+    channel_id: "",
+    billing_customer_name: bill.first_name || ship.first_name || "Customer",
+    billing_last_name: bill.last_name || "",
+    billing_address: bill.address_1 || ship.address_1,
+    billing_address_2: bill.address_2 || "",
+    billing_city: bill.city || ship.city,
+    billing_pincode: bill.postcode || ship.postcode,
+    billing_state: stateName(bill) || stateName(ship),
     billing_country: "India",
-    billing_pincode: order.billing?.postcode,
+    billing_email: bill.email,
+    billing_phone: phone,
+    shipping_is_billing: false,
+    shipping_customer_name: ship.first_name || bill.first_name || "Customer",
+    shipping_last_name: ship.last_name || bill.last_name || "",
+    shipping_address: ship.address_1,
+    shipping_address_2: ship.address_2 || "",
+    shipping_city: ship.city,
+    shipping_pincode: ship.postcode,
+    shipping_country: "India",
+    shipping_state: stateName(ship),
+    shipping_email: bill.email,
+    shipping_phone: phone,
     order_items: items,
-    payment_method: "cod",
-    sub_total: order.subtotal || order.total,
+    // PhonePe orders are already paid: the courier must not collect cash for them
+    payment_method: order.payment_method === "cod" ? "COD" : "Prepaid",
+    shipping_charges: Number(order.shipping_total || 0),
+    sub_total: Math.round(subTotal * 100) / 100,
     length: 10,
     breadth: 10,
     height: 5,
     weight: 0.5
   };
-  const res = await axios3.post("https://apiv2.shiprocket.in/v1/external/orders/create/adhoc", payload, {
-    headers: { Authorization: `Bearer ${token2}` }
-  });
-  return res.data;
-}
-async function getShiprocketLabel(shipmentId) {
-  const token2 = await getShiprocketToken();
-  if (!token2) throw new Error("Shiprocket not configured");
   try {
-    const res = await axios3.get(`https://apiv2.shiprocket.in/v1/external/shipments/pdf/adhoc`, {
-      params: { shipment_id: shipmentId },
-      headers: { Authorization: `Bearer ${token2}` },
-      responseType: "arraybuffer"
+    const res = await axios3.post("https://apiv2.shiprocket.in/v1/external/orders/create/adhoc", payload, {
+      headers: { Authorization: `Bearer ${token2}` }
     });
     return res.data;
   } catch (err) {
-    console.error("[CHILS & CO.] Failed to fetch Shiprocket label:", err.message);
-    throw err;
+    throw new Error(`Shiprocket rejected the order: ${shiprocketProblem(err)}`);
+  }
+}
+async function assignShiprocketCourier(shipmentId) {
+  const token2 = await getShiprocketToken();
+  if (!token2) throw new Error("Shiprocket not configured");
+  try {
+    const res = await axios3.post("https://apiv2.shiprocket.in/v1/external/courier/assign/awb", { shipment_id: Number(shipmentId) }, {
+      headers: { Authorization: `Bearer ${token2}` }
+    });
+    const d = res.data || {};
+    if (d.awb_assign_status !== 1 && !d.response?.data?.awb_code) throw new Error(d.message || d.response?.data?.awb_assign_error || "Shiprocket did not assign a courier");
+    const info = d.response?.data || {};
+    return { awb: String(info.awb_code || ""), courier: String(info.courier_name || info.courier_company_id || "") };
+  } catch (err) {
+    throw new Error(shiprocketProblem(err));
+  }
+}
+async function getShiprocketLabelUrl(shipmentId) {
+  const token2 = await getShiprocketToken();
+  if (!token2) return "";
+  try {
+    const res = await axios3.post("https://apiv2.shiprocket.in/v1/external/courier/generate/label", { shipment_id: [Number(shipmentId)] }, {
+      headers: { Authorization: `Bearer ${token2}` }
+    });
+    return String(res.data?.label_url || "");
+  } catch (err) {
+    console.warn("[CHILS & CO.] Could not get the Shiprocket label:", shiprocketProblem(err));
+    return "";
   }
 }
 function toSignalId(orderId) {
@@ -1688,8 +2885,8 @@ async function startServer() {
       if (!wc2) return mockProducts;
       const swatchesData = await fetchSwatches();
       let all = [];
-      for (let page = 1; ; page++) {
-        const response = await wcSafeCall(wc2, "get", "products", { per_page: 100, page, status: "publish" });
+      for (let page2 = 1; ; page2++) {
+        const response = await wcSafeCall(wc2, "get", "products", { per_page: 100, page: page2, status: "publish" });
         const rows = Array.isArray(response.data) ? response.data : [];
         all = all.concat(rows);
         if (rows.length < 100) break;
@@ -2343,13 +3540,13 @@ async function startServer() {
     let resolvedMediaUrls = {};
     if (productData.type === "variable") {
       let allVariations = [];
-      let page = 1;
+      let page2 = 1;
       let hasMore = true;
       while (hasMore) {
-        console.log(`[CHILS & CO. DEBUG] Fetching variations page ${page} for product ${id}...`);
+        console.log(`[CHILS & CO. DEBUG] Fetching variations page ${page2} for product ${id}...`);
         const variationsResponse = await wcSafeCall(wc2, "get", `products/${id}/variations`, {
           per_page: 100,
-          page
+          page: page2
         });
         const pageData = variationsResponse.data;
         if (Array.isArray(pageData) && pageData.length > 0) {
@@ -2357,7 +3554,7 @@ async function startServer() {
           if (pageData.length < 100) {
             hasMore = false;
           } else {
-            page++;
+            page2++;
           }
         } else {
           hasMore = false;
@@ -2682,8 +3879,8 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
           if (!lookups.has(id)) {
             lookups.set(id, (async () => {
               const all = [];
-              for (let page = 1; ; page++) {
-                const { data } = await wcSafeCall(wc2, "get", `products/${id}/variations`, { per_page: 100, page });
+              for (let page2 = 1; ; page2++) {
+                const { data } = await wcSafeCall(wc2, "get", `products/${id}/variations`, { per_page: 100, page: page2 });
                 if (!Array.isArray(data) || data.length === 0) break;
                 all.push(...data.map(mapWooVariation));
                 if (data.length < 100) break;
@@ -4408,9 +5605,25 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         return `- Product ID: ${p.productId} | Qty: ${p.quantity} | Action: ${actDesc}`;
       }).join("\n");
     }
+    const siteBase = (process.env.PUBLIC_SITE_URL || "https://chilsandco.com").replace(/\/$/, "");
+    const photoUrls = [];
+    for (const [idx, img] of (Array.isArray(images) ? images : []).entries()) {
+      try {
+        if (typeof img === "string" && /^https?:/.test(img)) {
+          photoUrls.push(img);
+          continue;
+        }
+        const m = typeof img === "string" ? img.match(/^data:image\/(jpeg|jpg|png|webp|gif);base64,(.+)$/s) : null;
+        if (!m) continue;
+        const name = `ret-${orderId}-${Date.now()}-${idx}-${crypto3.randomBytes(6).toString("hex")}.${m[1] === "jpeg" ? "jpg" : m[1]}`;
+        photoUrls.push(siteBase + saveUpload("returns", name, Buffer.from(m[2], "base64")));
+      } catch (err) {
+        console.error("[CHILS & CO.] Could not save a return photo:", err.message);
+      }
+    }
     const fullReason = `Reason: ${reason}
 Description: ${description}
-Images: ${images ? images.join(", ") : "None"}
+Images: ${photoUrls.length ? photoUrls.join(", ") : "None"}
 
 Return/Exchange Actions Chosen:
 ${actionsSummary}`;
@@ -4446,6 +5659,8 @@ ${actionsSummary}`;
         const orderRes = await wcSafeCall(wc2, "get", `orders/${orderId}`);
         const currentMeta = orderRes.data.meta_data || [];
         let updatedMeta = currentMeta.filter((m) => !["_rma_swap_info", "_rma_refund_delta_amount", "rma_swap_info", "rma_refund_delta_amount"].includes(m.key));
+        updatedMeta = updatedMeta.filter((m) => m.key !== "_chils_return_request");
+        updatedMeta.push({ key: "_chils_return_request", value: JSON.stringify({ subject: fullReason, at: (/* @__PURE__ */ new Date()).toISOString() }) });
         if (swapInfoList && swapInfoList.length > 0) {
           updatedMeta.push({
             key: "rma_swap_info",
@@ -4482,7 +5697,9 @@ Delta refund pending: \u20B9${refundDeltaTotal} to be refunded to source account
           }
         } else {
           noteText = `Standard return initiated.
-Reason: ${reason}`;
+Reason: ${reason}${description ? `
+Customer's note: ${description}` : ""}${photoUrls.length ? `
+Photos: ${photoUrls.join(" ")}` : ""}`;
         }
         const updatePayload = {
           meta_data: updatedMeta
@@ -5131,40 +6348,52 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       const wc2 = getWooCommerce();
       if (!wc2) return res.status(500).json({ message: "WooCommerce not configured" });
       const { data: order } = await wcSafeCall(wc2, "get", `orders/${orderId}`);
-      if (order.meta_data?.find((m) => m.key === "_shiprocket_awb")) {
-        return res.json({ message: "Shipment already created", awb: order.meta_data.find((m) => m.key === "_shiprocket_awb").value });
+      const metaOf2 = (k) => order.meta_data?.find((m) => m.key === k)?.value;
+      let shipmentId = metaOf2("_shiprocket_shipment_id");
+      let awb = metaOf2("_shiprocket_awb");
+      let courier = metaOf2("_shiprocket_courier");
+      if (awb && awb !== "undefined") {
+        return res.json({ message: "Shipment already created", shipmentId, awb, courier, labelDownloadUrl: await getShiprocketLabelUrl(shipmentId) });
       }
-      const shipmentResult = await createShiprocketShipment(order);
-      if (!shipmentResult.success) {
-        throw new Error(shipmentResult.message || "Failed to create shipment");
+      if (!shipmentId) {
+        const created = await createShiprocketShipment(order);
+        shipmentId = created?.shipment_id ?? created?.data?.shipment_id;
+        if (!shipmentId) throw new Error(created?.message || "Shiprocket did not return a shipment");
+        await wcSafeCall(wc2, "put", `orders/${orderId}`, {
+          meta_data: [
+            { key: "_shiprocket_shipment_id", value: String(shipmentId) },
+            { key: "_shiprocket_order_id", value: String(created?.order_id ?? "") }
+          ]
+        });
       }
-      const shipmentId = shipmentResult.data?.shipment_id;
-      const awb = shipmentResult.data?.awb_code;
-      const courier = shipmentResult.data?.courier_company_id;
-      let labelUrl = null;
+      let courierError = "";
       try {
-        const labelBuffer = await getShiprocketLabel(shipmentId);
-        console.log(`[CHILS & CO.] Shiprocket label fetched for shipment ${shipmentId}`);
+        const assigned = await assignShiprocketCourier(shipmentId);
+        awb = assigned.awb;
+        courier = assigned.courier;
+        await wcSafeCall(wc2, "put", `orders/${orderId}`, {
+          meta_data: [
+            { key: "_shiprocket_awb", value: awb },
+            { key: "_shiprocket_courier", value: courier },
+            { key: "_shiprocket_status", value: "shipped" }
+          ]
+        });
+        notifyShipping(orderId, `Shipment created with AWB ${awb}`).catch((err) => {
+          console.error("[CHILS & CO. SLACK] Shipping notification failed:", err);
+        });
       } catch (err) {
-        console.warn(`[CHILS & CO.] Could not fetch label immediately:`, err);
+        courierError = err.message;
+        console.warn(`[CHILS & CO.] Order ${orderId} is in Shiprocket (shipment ${shipmentId}) but no courier was assigned: ${courierError}`);
       }
-      await wcSafeCall(wc2, "put", `orders/${orderId}`, {
-        meta_data: [
-          { key: "_shiprocket_shipment_id", value: String(shipmentId) },
-          { key: "_shiprocket_awb", value: String(awb) },
-          { key: "_shiprocket_courier", value: String(courier) },
-          { key: "_shiprocket_status", value: "shipped" }
-        ]
-      });
-      notifyShipping(orderId, `Shipment created with AWB ${awb}`).catch((err) => {
-        console.error("[CHILS & CO. SLACK] Shipping notification failed:", err);
-      });
+      const labelDownloadUrl = awb ? await getShiprocketLabelUrl(shipmentId) : "";
       res.json({
-        message: "Shipment created successfully",
+        message: awb ? "Shipment created successfully" : "Order created in Shiprocket, courier not assigned yet",
         shipmentId,
-        awb,
-        courier,
-        labelDownloadUrl: `https://apiv2.shiprocket.in/v1/external/shipments/pdf/adhoc?shipment_id=${shipmentId}`
+        awb: awb || "",
+        courier: courier || "",
+        courierError,
+        labelDownloadUrl,
+        dashboardUrl: `https://app.shiprocket.in/seller/orders/details/${shipmentId}`
       });
     } catch (error) {
       console.error("[CHILS & CO.] Shipment creation failed:", error.message);
@@ -5310,6 +6539,9 @@ Format your response strictly as a single JSON object. Ensure the keys and value
     }
     next();
   });
+  registerJournal(app, () => globalProductsCache);
+  EXTRA_LLM_LINKS.push(...LANDINGS.map((l) => ({ href: l.path, label: l.h1 })));
+  registerLandings(app, () => globalProductsCache);
   app.get("/sitemap.xml", async (req, res) => {
     res.header("Content-Type", "application/xml");
     res.header("Cache-Control", "public, max-age=3600");
@@ -5327,7 +6559,10 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       { loc: "https://chilsandco.com/shipping-delivery", priority: "0.5", changefreq: "monthly" },
       { loc: "https://chilsandco.com/returns-refunds", priority: "0.5", changefreq: "monthly" },
       { loc: "https://chilsandco.com/privacy-policy", priority: "0.5", changefreq: "monthly" },
-      { loc: "https://chilsandco.com/terms-conditions", priority: "0.5", changefreq: "monthly" }
+      { loc: "https://chilsandco.com/terms-conditions", priority: "0.5", changefreq: "monthly" },
+      { loc: "https://chilsandco.com/journal", priority: "0.8", changefreq: "weekly" },
+      ...ARTICLES.map((a) => ({ loc: `https://chilsandco.com/journal/${a.slug}`, priority: "0.8", changefreq: "monthly", lastmod: a.updated })),
+      ...LANDINGS.map((l) => ({ loc: `https://chilsandco.com${l.path}`, priority: "0.9", changefreq: "weekly" }))
     ];
     let productUrls = [];
     try {
@@ -5397,12 +6632,12 @@ ${xmlItems}
       const DEFAULT_OG_IMAGE = "https://res.cloudinary.com/ddatd5ruz/image/upload/w_1200,h_630,c_fill,f_jpg,q_80/v1782039896/ChatGPT_Image_Jun_21_2026_04_34_04_PM_avhfel.png";
       const PUBLIC_PAGE_META = {
         "/": {
-          title: "CHILS & CO. | Premium Tees and Polos for People Who Build",
-          description: "Premium tees and polos designed by techies in Hyderabad. Quiet colour, good fabric, delivered across India from \u20B980."
+          title: "Oversized T-Shirts for Men | 240 GSM Cotton | CHILS & CO.",
+          description: "Heavyweight 100% cotton oversized tees, TwinTex polos and minimal tees, designed by techies in Hyderabad. From \u20B9349. Delivered across India, 7-day returns."
         },
         "/collection": {
-          title: "Shop all tees and polos | CHILS & CO.",
-          description: "Polos, minimal tees, blacks, oversized and regular-fit tees by CHILS & CO. Delivered across India with 7-day returns."
+          title: "Shop T-Shirts & Polos for Men Online | CHILS & CO.",
+          description: "Oversized drop shoulder tees, TwinTex polos, minimal and regular fit tees and three-tee stacks. Delivered across India from \u20B980, 7-day returns."
         },
         "/pick-your-three": {
           title: "Trilogies: three tees, save 10% | CHILS & CO.",
@@ -5486,7 +6721,7 @@ ${xmlItems}
               if (product) {
                 const productName = (product.name || "Product").replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">");
                 const productDesc = (product.short_description || product.description || "").replace(/<[^>]*>/g, "").replace(/&amp;/g, "&").replace(/&#039;/g, "'").replace(/&quot;/g, '"').replace(/&nbsp;/g, " ").substring(0, 200).trim() || "Premium tee by CHILS & CO. Delivered across India with 7-day returns.";
-                const productImage = Array.isArray(product.images) && product.images.length > 0 ? product.images[0].src : DEFAULT_OG_IMAGE;
+                const productImage = Array.isArray(product.images) && product.images.length > 0 ? imgUrl(product.images[0].src) : DEFAULT_OG_IMAGE;
                 const productPrice = product.price || "0";
                 const ogTitle = escAttr(`${productName} | CHILS & CO.`);
                 const ogDesc = escAttr(productDesc);
@@ -5502,27 +6737,19 @@ ${xmlItems}
                 html = html.replace(/(<meta\s+name="twitter:title"\s+content=")([^"]*)("\s*\/>)/i, `$1${ogTitle}$3`);
                 html = html.replace(/(<meta\s+name="twitter:description"\s+content=")([^"]*)("\s*\/>)/i, `$1${ogDesc}$3`);
                 html = html.replace(/(<meta\s+name="twitter:image"\s+content=")([^"]*)("\s*\/>)/i, `$1${ogImage}$3`);
-                const productSchema = {
-                  "@context": "https://schema.org/",
-                  "@type": "Product",
-                  "name": productName,
-                  "image": [productImage],
-                  "description": productDesc,
-                  "sku": `CHLS-${productId}`,
-                  "brand": { "@type": "Brand", "name": "CHILS & CO." },
-                  "offers": {
-                    "@type": "Offer",
-                    "url": canonicalUrl,
-                    "priceCurrency": "INR",
-                    "price": productPrice,
-                    "availability": product.stock_status === "outofstock" ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
-                    "itemCondition": "https://schema.org/NewCondition"
-                  }
-                };
-                const schemaScript = `
-    <script type="application/ld+json">${JSON.stringify(productSchema)}</script>`;
-                html = html.replace("</head>", `${schemaScript}
+                const mapped = (globalProductsCache || []).find((x) => String(x.id) === String(productId));
+                const schema = mapped ? productSchema(mapped, canonicalUrl) : { "@context": "https://schema.org/", "@type": "Product", name: productName, image: [productImage], description: productDesc, sku: `CHLS-${productId}`, brand: { "@type": "Brand", name: "CHILS & CO." }, offers: { "@type": "Offer", url: canonicalUrl, priceCurrency: "INR", price: productPrice, availability: product.stock_status === "outofstock" ? "https://schema.org/OutOfStock" : "https://schema.org/InStock", itemCondition: "https://schema.org/NewCondition" } };
+                {
+                  const kwTitle = escAttr(mapped ? `${productName} | ${productTypeLabel(mapped)} | CHILS & CO.` : `${productName} | CHILS & CO.`);
+                  html = html.replace(/(<title>)([^<]*)(<\/title>)/i, `$1${kwTitle}$3`);
+                  html = html.replace(/(<meta\s+property="og:title"\s+content=")([^"]*)("\s*\/>)/i, `$1${kwTitle}$3`);
+                  html = html.replace(/(<meta\s+name="twitter:title"\s+content=")([^"]*)("\s*\/>)/i, `$1${kwTitle}$3`);
+                  const schemaScript = `
+    <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, "\\u003c")}</script>`;
+                  html = html.replace("</head>", `${schemaScript}
   </head>`);
+                  if (mapped) html = html.replace('<div id="root"></div>', `<div id="root">${productBody(mapped)}</div>`);
+                }
                 res.set("Content-Type", "text/html");
                 return res.send(html);
               }
@@ -5540,6 +6767,15 @@ ${xmlItems}
         html = html.replace(/(<meta\s+property="og:title"\s+content=")([^"]*)("\s*\/>)/i, `$1${pageTitle}$3`);
         html = html.replace(/(<meta\s+property="og:description"\s+content=")([^"]*)("\s*\/>)/i, `$1${pageDesc}$3`);
         html = html.replace(/(<meta\s+property="og:url"\s+content=")([^"]*)("\s*\/>)/i, `$1${escAttr(canonicalUrl)}$3`);
+        let seoBody = "";
+        try {
+          if (cleanPath === "/" && globalProductsCache) seoBody = homeBody(globalProductsCache);
+          else if (cleanPath === "/collection" && globalProductsCache) seoBody = collectionBody(globalProductsCache);
+          else seoBody = policyBody(cleanPath);
+        } catch (e) {
+          console.error("[CHILS SEO] Could not build page content:", e?.message);
+        }
+        if (seoBody) html = html.replace('<div id="root"></div>', `<div id="root">${seoBody}</div>`);
         res.set("Content-Type", "text/html");
         return res.send(html);
       });
@@ -5636,7 +6872,30 @@ ${xmlItems}
       console.log(`[CHILS & CO.] Server started successfully`);
       console.log(`[CHILS & CO.] Listening on port: ${numericPort}`);
       console.log(`[CHILS & CO.] Mode: ${IS_PROD ? "Production" : "Development"}`);
-      if (getWooCommerce()) refreshProducts().catch((e) => console.error("[CHILS & CO.] Products warm-up failed:", e?.message));
+      if (getWooCommerce()) {
+        const warmProductPages = async () => {
+          try {
+            const list = await refreshProducts();
+            const ids = list.map((p) => String(p.id)).filter((id) => /^\d+$/.test(id));
+            let next = 0;
+            const worker = async () => {
+              while (next < ids.length) {
+                const id = ids[next++];
+                try {
+                  await productJson(id);
+                } catch {
+                }
+              }
+            };
+            await Promise.all([worker(), worker(), worker()]);
+            console.log(`[CHILS & CO.] Product pages warmed: ${ids.length}`);
+          } catch (e) {
+            console.error("[CHILS & CO.] Products warm-up failed:", e?.message);
+          }
+        };
+        warmProductPages();
+        setInterval(warmProductPages, 5 * 60 * 1e3).unref();
+      }
     });
   } catch (error) {
     console.error("[CHILS & CO.] Critical Failure during server startup:", error);

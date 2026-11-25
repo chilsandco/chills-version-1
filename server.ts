@@ -11,6 +11,8 @@ import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import { couponProblem, findVariation, mapWooVariation, trustedPrice } from "./orderVariations";
+import { registerJournal, ARTICLES, EXTRA_LLM_LINKS, imgUrl } from "./journal";
+import { registerLandings, LANDINGS, homeBody, collectionBody, productBody, policyBody, productSchema, productTypeLabel } from "./seo";
 import { notifyNewOrder, notifyShipping, notifyRefund, startSlackBot } from "./slackBot";
 import { browserContext, orderMetaFrom, sendAddToCart, sendPurchase } from "./metaCapi";
 import { mediaHandler, uploadsPathOf } from "./mediaCache";
@@ -99,6 +101,47 @@ async function getShiprocketToken() {
   }
 }
 
+const INDIA_STATES: Record<string, string> = {
+  AN: "Andaman and Nicobar Islands", AP: "Andhra Pradesh", AR: "Arunachal Pradesh", AS: "Assam", BR: "Bihar", CH: "Chandigarh",
+  CT: "Chhattisgarh", DN: "Dadra and Nagar Haveli", DD: "Daman and Diu", DL: "Delhi", GA: "Goa", GJ: "Gujarat", HR: "Haryana",
+  HP: "Himachal Pradesh", JK: "Jammu and Kashmir", JH: "Jharkhand", KA: "Karnataka", KL: "Kerala", LA: "Ladakh", LD: "Lakshadweep",
+  MP: "Madhya Pradesh", MH: "Maharashtra", MN: "Manipur", ML: "Meghalaya", MZ: "Mizoram", NL: "Nagaland", OR: "Odisha", OD: "Odisha",
+  PY: "Puducherry", PB: "Punjab", RJ: "Rajasthan", SK: "Sikkim", TN: "Tamil Nadu", TS: "Telangana", TG: "Telangana", TR: "Tripura",
+  UP: "Uttar Pradesh", UT: "Uttarakhand", UK: "Uttarakhand", WB: "West Bengal",
+};
+
+/** Shiprocket's own words for what went wrong, instead of axios's bare "status code 422". */
+function shiprocketProblem(err: any): string {
+  const d = err?.response?.data;
+  if (!d) return err?.message || "Shiprocket did not answer";
+  const detail = d.errors ? Object.entries(d.errors).map(([k, v]) => `${k}: ${[].concat(v as any).join(", ")}`).join("; ") : "";
+  return [d.message, detail].filter(Boolean).join(" · ") || JSON.stringify(d).slice(0, 300);
+}
+
+let shiprocketPickupCache: { name: string; at: number } | null = null;
+
+/** The pickup location name Shiprocket has on file: the configured one if it exists, else the primary one. */
+async function getShiprocketPickupName(token: string): Promise<string> {
+  const wanted = (process.env.SHIPROCKET_PICKUP_LOCATION || "").trim();
+  if (shiprocketPickupCache && Date.now() - shiprocketPickupCache.at < 3600e3 && (!wanted || shiprocketPickupCache.name.toLowerCase() === wanted.toLowerCase())) return shiprocketPickupCache.name;
+  let list: any[] = [];
+  try {
+    const res = await axios.get("https://apiv2.shiprocket.in/v1/external/settings/company/pickup", { headers: { Authorization: `Bearer ${token}` } });
+    list = res.data?.data?.shipping_address || [];
+  } catch (err: any) {
+    console.warn("[CHILS & CO.] Could not read Shiprocket pickup locations:", shiprocketProblem(err));
+    return wanted || "Primary";
+  }
+  const names: string[] = list.map((l: any) => String(l.pickup_location || "")).filter(Boolean);
+  const match = wanted && names.find(n => n.toLowerCase() === wanted.toLowerCase());
+  const primary = list.find((l: any) => Number(l.is_primary_location) === 1)?.pickup_location;
+  const chosen = match || primary || names[0];
+  if (!chosen) throw new Error("Shiprocket has no pickup location on file. Add one in Shiprocket under Settings, then Pickup Addresses.");
+  if (wanted && !match) console.warn(`[CHILS & CO.] SHIPROCKET_PICKUP_LOCATION "${wanted}" is not in Shiprocket (${names.join(", ")}). Using "${chosen}".`);
+  shiprocketPickupCache = { name: String(chosen), at: Date.now() };
+  return String(chosen);
+}
+
 async function createShiprocketShipment(order: any) {
   const token = await getShiprocketToken();
   if (!token) throw new Error("Shiprocket not configured");
@@ -107,60 +150,92 @@ async function createShiprocketShipment(order: any) {
     name: item.name,
     sku: item.sku || `SKU-${item.product_id}`,
     units: item.quantity,
-    selling_price: item.total / item.quantity
+    selling_price: Number(item.total) / Math.max(1, Number(item.quantity))
   }));
+  const subTotal = items.reduce((n: number, i: any) => n + i.selling_price * i.units, 0);
+
+  const bill = order.billing || {};
+  const ship = order.shipping?.address_1 ? order.shipping : bill;
+  const stateName = (a: any) => INDIA_STATES[String(a?.state || "").toUpperCase()] || a?.state || "";
+  const phone = String(bill.phone || ship.phone || "").replace(/\D/g, "").slice(-10);
+  const when = new Date(`${order.date_created_gmt || order.date_created}${order.date_created_gmt ? "Z" : ""}`);
+  const orderDate = when.toLocaleString("sv-SE", { timeZone: "Asia/Kolkata" }).slice(0, 16);
 
   const payload = {
     order_id: String(order.id),
-    order_date: order.date_created,
-    pickup_location_id: process.env.SHIPROCKET_PICKUP_LOCATION_ID || "1",
-    channel_order_id: `CHLS-${order.id}`,
-    customer_name: `${order.billing?.first_name || ""} ${order.billing?.last_name || ""}`.trim(),
-    customer_email: order.billing?.email,
-    customer_phone: order.billing?.phone,
-    delivery_address: order.shipping?.address_1 || order.billing?.address_1,
-    delivery_city: order.shipping?.city || order.billing?.city,
-    delivery_state: order.shipping?.state || order.billing?.state,
-    delivery_country: "India",
-    delivery_pincode: order.shipping?.postcode || order.billing?.postcode,
-    billing_customer_name: order.billing?.first_name,
-    billing_email: order.billing?.email,
-    billing_phone: order.billing?.phone,
-    billing_address: order.billing?.address_1,
-    billing_city: order.billing?.city,
-    billing_state: order.billing?.state,
+    order_date: orderDate,
+    pickup_location: await getShiprocketPickupName(token),
+    channel_id: "",
+    billing_customer_name: bill.first_name || ship.first_name || "Customer",
+    billing_last_name: bill.last_name || "",
+    billing_address: bill.address_1 || ship.address_1,
+    billing_address_2: bill.address_2 || "",
+    billing_city: bill.city || ship.city,
+    billing_pincode: bill.postcode || ship.postcode,
+    billing_state: stateName(bill) || stateName(ship),
     billing_country: "India",
-    billing_pincode: order.billing?.postcode,
+    billing_email: bill.email,
+    billing_phone: phone,
+    shipping_is_billing: false,
+    shipping_customer_name: ship.first_name || bill.first_name || "Customer",
+    shipping_last_name: ship.last_name || bill.last_name || "",
+    shipping_address: ship.address_1,
+    shipping_address_2: ship.address_2 || "",
+    shipping_city: ship.city,
+    shipping_pincode: ship.postcode,
+    shipping_country: "India",
+    shipping_state: stateName(ship),
+    shipping_email: bill.email,
+    shipping_phone: phone,
     order_items: items,
-    payment_method: "cod",
-    sub_total: order.subtotal || order.total,
+    // PhonePe orders are already paid: the courier must not collect cash for them
+    payment_method: order.payment_method === "cod" ? "COD" : "Prepaid",
+    shipping_charges: Number(order.shipping_total || 0),
+    sub_total: Math.round(subTotal * 100) / 100,
     length: 10,
     breadth: 10,
     height: 5,
     weight: 0.5
   };
 
-  const res = await axios.post("https://apiv2.shiprocket.in/v1/external/orders/create/adhoc", payload, {
-    headers: { Authorization: `Bearer ${token}` }
-  });
-
-  return res.data;
-}
-
-async function getShiprocketLabel(shipmentId: string) {
-  const token = await getShiprocketToken();
-  if (!token) throw new Error("Shiprocket not configured");
-
   try {
-    const res = await axios.get(`https://apiv2.shiprocket.in/v1/external/shipments/pdf/adhoc`, {
-      params: { shipment_id: shipmentId },
-      headers: { Authorization: `Bearer ${token}` },
-      responseType: "arraybuffer"
+    const res = await axios.post("https://apiv2.shiprocket.in/v1/external/orders/create/adhoc", payload, {
+      headers: { Authorization: `Bearer ${token}` }
     });
     return res.data;
   } catch (err: any) {
-    console.error("[CHILS & CO.] Failed to fetch Shiprocket label:", err.message);
-    throw err;
+    throw new Error(`Shiprocket rejected the order: ${shiprocketProblem(err)}`);
+  }
+}
+
+/** Picks Shiprocket's recommended courier for the shipment. This is the step that uses wallet money. */
+async function assignShiprocketCourier(shipmentId: string | number) {
+  const token = await getShiprocketToken();
+  if (!token) throw new Error("Shiprocket not configured");
+  try {
+    const res = await axios.post("https://apiv2.shiprocket.in/v1/external/courier/assign/awb", { shipment_id: Number(shipmentId) }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const d = res.data || {};
+    if (d.awb_assign_status !== 1 && !d.response?.data?.awb_code) throw new Error(d.message || d.response?.data?.awb_assign_error || "Shiprocket did not assign a courier");
+    const info = d.response?.data || {};
+    return { awb: String(info.awb_code || ""), courier: String(info.courier_name || info.courier_company_id || "") };
+  } catch (err: any) {
+    throw new Error(shiprocketProblem(err));
+  }
+}
+
+async function getShiprocketLabelUrl(shipmentId: string | number): Promise<string> {
+  const token = await getShiprocketToken();
+  if (!token) return "";
+  try {
+    const res = await axios.post("https://apiv2.shiprocket.in/v1/external/courier/generate/label", { shipment_id: [Number(shipmentId)] }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    return String(res.data?.label_url || "");
+  } catch (err: any) {
+    console.warn("[CHILS & CO.] Could not get the Shiprocket label:", shiprocketProblem(err));
+    return "";
   }
 }
 
@@ -3818,7 +3893,22 @@ async function startServer() {
       }).join('\n');
     }
 
-    const fullReason = `Reason: ${reason}\nDescription: ${description}\nImages: ${images ? images.join(', ') : 'None'}\n\nReturn/Exchange Actions Chosen:\n${actionsSummary}`;
+    // Photos arrive as base64 from the browser. Save them as real files so the team (and Slack) can open them.
+    const siteBase = (process.env.PUBLIC_SITE_URL || "https://chilsandco.com").replace(/\/$/, "");
+    const photoUrls: string[] = [];
+    for (const [idx, img] of (Array.isArray(images) ? images : []).entries()) {
+      try {
+        if (typeof img === "string" && /^https?:/.test(img)) { photoUrls.push(img); continue; }
+        const m = typeof img === "string" ? img.match(/^data:image\/(jpeg|jpg|png|webp|gif);base64,(.+)$/s) : null;
+        if (!m) continue;
+        const name = `ret-${orderId}-${Date.now()}-${idx}-${crypto.randomBytes(6).toString("hex")}.${m[1] === "jpeg" ? "jpg" : m[1]}`;
+        photoUrls.push(siteBase + saveUpload("returns", name, Buffer.from(m[2], "base64")));
+      } catch (err: any) {
+        console.error("[CHILS & CO.] Could not save a return photo:", err.message);
+      }
+    }
+
+    const fullReason = `Reason: ${reason}\nDescription: ${description}\nImages: ${photoUrls.length ? photoUrls.join(', ') : 'None'}\n\nReturn/Exchange Actions Chosen:\n${actionsSummary}`;
     
     const rmaPayload: any = {
       order_id: orderId.toString(),
@@ -3858,6 +3948,10 @@ async function startServer() {
         const currentMeta = orderRes.data.meta_data || [];
         let updatedMeta = currentMeta.filter((m: any) => !["_rma_swap_info", "_rma_refund_delta_amount", "rma_swap_info", "rma_refund_delta_amount"].includes(m.key));
         
+        // Keep what the customer actually wrote (reason, description, photo links) on the order, so Slack can show it.
+        updatedMeta = updatedMeta.filter((m: any) => m.key !== "_chils_return_request");
+        updatedMeta.push({ key: "_chils_return_request", value: JSON.stringify({ subject: fullReason, at: new Date().toISOString() }) });
+
         if (swapInfoList && swapInfoList.length > 0) {
           updatedMeta.push({
             key: "rma_swap_info",
@@ -3893,7 +3987,7 @@ async function startServer() {
             }
           }
         } else {
-          noteText = `Standard return initiated.\nReason: ${reason}`;
+          noteText = `Standard return initiated.\nReason: ${reason}${description ? `\nCustomer's note: ${description}` : ""}${photoUrls.length ? `\nPhotos: ${photoUrls.join(" ")}` : ""}`;
         }
 
         const updatePayload: any = {
@@ -4553,57 +4647,59 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       const wc = getWooCommerce();
       if (!wc) return res.status(500).json({ message: "WooCommerce not configured" });
 
-      // Get order details
       const { data: order } = await wcSafeCall(wc, "get", `orders/${orderId}`);
+      const metaOf = (k: string) => order.meta_data?.find((m: any) => m.key === k)?.value;
 
-      // Check if shipment already exists
-      if (order.meta_data?.find((m: any) => m.key === "_shiprocket_awb")) {
-        return res.json({ message: "Shipment already created", awb: order.meta_data.find((m: any) => m.key === "_shiprocket_awb").value });
+      let shipmentId = metaOf("_shiprocket_shipment_id");
+      let awb = metaOf("_shiprocket_awb");
+      let courier = metaOf("_shiprocket_courier");
+      if (awb && awb !== "undefined") {
+        return res.json({ message: "Shipment already created", shipmentId, awb, courier, labelDownloadUrl: await getShiprocketLabelUrl(shipmentId) });
       }
 
-      // Create shipment in Shiprocket
-      const shipmentResult = await createShiprocketShipment(order);
-
-      if (!shipmentResult.success) {
-        throw new Error(shipmentResult.message || "Failed to create shipment");
+      // Step 1: put the order in Shiprocket (skipped when an earlier press already did it)
+      if (!shipmentId) {
+        const created = await createShiprocketShipment(order);
+        shipmentId = created?.shipment_id ?? created?.data?.shipment_id;
+        if (!shipmentId) throw new Error(created?.message || "Shiprocket did not return a shipment");
+        await wcSafeCall(wc, "put", `orders/${orderId}`, {
+          meta_data: [
+            { key: "_shiprocket_shipment_id", value: String(shipmentId) },
+            { key: "_shiprocket_order_id", value: String(created?.order_id ?? "") },
+          ]
+        });
       }
 
-      const shipmentId = shipmentResult.data?.shipment_id;
-      const awb = shipmentResult.data?.awb_code;
-      const courier = shipmentResult.data?.courier_company_id;
-
-      // Get shipping label (PDF)
-      let labelUrl = null;
+      // Step 2: choose a courier and get the tracking number
+      let courierError = "";
       try {
-        const labelBuffer = await getShiprocketLabel(shipmentId);
-        // For now, we'll log that we got the label
-        console.log(`[CHILS & CO.] Shiprocket label fetched for shipment ${shipmentId}`);
-        // In production, you might upload this to a file service or return as base64
-      } catch (err) {
-        console.warn(`[CHILS & CO.] Could not fetch label immediately:`, err);
+        const assigned = await assignShiprocketCourier(shipmentId);
+        awb = assigned.awb;
+        courier = assigned.courier;
+        await wcSafeCall(wc, "put", `orders/${orderId}`, {
+          meta_data: [
+            { key: "_shiprocket_awb", value: awb },
+            { key: "_shiprocket_courier", value: courier },
+            { key: "_shiprocket_status", value: "shipped" },
+          ]
+        });
+        notifyShipping(orderId, `Shipment created with AWB ${awb}`).catch(err => {
+          console.error("[CHILS & CO. SLACK] Shipping notification failed:", err);
+        });
+      } catch (err: any) {
+        courierError = err.message;
+        console.warn(`[CHILS & CO.] Order ${orderId} is in Shiprocket (shipment ${shipmentId}) but no courier was assigned: ${courierError}`);
       }
 
-      // Update order with shipment details
-      await wcSafeCall(wc, "put", `orders/${orderId}`, {
-        meta_data: [
-          { key: "_shiprocket_shipment_id", value: String(shipmentId) },
-          { key: "_shiprocket_awb", value: String(awb) },
-          { key: "_shiprocket_courier", value: String(courier) },
-          { key: "_shiprocket_status", value: "shipped" }
-        ]
-      });
-
-      // Notify Slack
-      notifyShipping(orderId, `Shipment created with AWB ${awb}`).catch(err => {
-        console.error("[CHILS & CO. SLACK] Shipping notification failed:", err);
-      });
-
+      const labelDownloadUrl = awb ? await getShiprocketLabelUrl(shipmentId) : "";
       res.json({
-        message: "Shipment created successfully",
+        message: awb ? "Shipment created successfully" : "Order created in Shiprocket, courier not assigned yet",
         shipmentId,
-        awb,
-        courier,
-        labelDownloadUrl: `https://apiv2.shiprocket.in/v1/external/shipments/pdf/adhoc?shipment_id=${shipmentId}`
+        awb: awb || "",
+        courier: courier || "",
+        courierError,
+        labelDownloadUrl,
+        dashboardUrl: `https://app.shiprocket.in/seller/orders/details/${shipmentId}`,
       });
     } catch (error: any) {
       console.error("[CHILS & CO.] Shipment creation failed:", error.message);
@@ -4791,6 +4887,11 @@ Format your response strictly as a single JSON object. Ensure the keys and value
     next();
   });
 
+  // Articles and llms.txt are real HTML/text so search engines and AI assistants can read them.
+  registerJournal(app, () => globalProductsCache);
+  EXTRA_LLM_LINKS.push(...LANDINGS.map(l => ({ href: l.path, label: l.h1 })));
+  registerLandings(app, () => globalProductsCache);
+
   app.get("/sitemap.xml", async (req, res) => {
     res.header("Content-Type", "application/xml");
     res.header("Cache-Control", "public, max-age=3600"); // Cache for 1 hour
@@ -4811,7 +4912,10 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       { loc: "https://chilsandco.com/shipping-delivery", priority: "0.5", changefreq: "monthly" },
       { loc: "https://chilsandco.com/returns-refunds", priority: "0.5", changefreq: "monthly" },
       { loc: "https://chilsandco.com/privacy-policy", priority: "0.5", changefreq: "monthly" },
-      { loc: "https://chilsandco.com/terms-conditions", priority: "0.5", changefreq: "monthly" }
+      { loc: "https://chilsandco.com/terms-conditions", priority: "0.5", changefreq: "monthly" },
+      { loc: "https://chilsandco.com/journal", priority: "0.8", changefreq: "weekly" },
+      ...ARTICLES.map(a => ({ loc: `https://chilsandco.com/journal/${a.slug}`, priority: "0.8", changefreq: "monthly", lastmod: a.updated })),
+      ...LANDINGS.map(l => ({ loc: `https://chilsandco.com${l.path}`, priority: "0.9", changefreq: "weekly" }))
     ];
 
     let productUrls: { loc: string, priority: string, changefreq: string, lastmod?: string }[] = [];
@@ -4901,12 +5005,12 @@ ${xmlItems}
       // Meta map for static indexable pages
       const PUBLIC_PAGE_META: Record<string, { title: string; description: string }> = {
         "/": {
-          title: "CHILS & CO. | Premium Tees and Polos for People Who Build",
-          description: "Premium tees and polos designed by techies in Hyderabad. Quiet colour, good fabric, delivered across India from ₹80."
+          title: "Oversized T-Shirts for Men | 240 GSM Cotton | CHILS & CO.",
+          description: "Heavyweight 100% cotton oversized tees, TwinTex polos and minimal tees, designed by techies in Hyderabad. From ₹349. Delivered across India, 7-day returns."
         },
         "/collection": {
-          title: "Shop all tees and polos | CHILS & CO.",
-          description: "Polos, minimal tees, blacks, oversized and regular-fit tees by CHILS & CO. Delivered across India with 7-day returns."
+          title: "Shop T-Shirts & Polos for Men Online | CHILS & CO.",
+          description: "Oversized drop shoulder tees, TwinTex polos, minimal and regular fit tees and three-tee stacks. Delivered across India from ₹80, 7-day returns."
         },
         "/pick-your-three": {
           title: "Trilogies: three tees, save 10% | CHILS & CO.",
@@ -5006,7 +5110,7 @@ ${xmlItems}
                   .substring(0, 200)
                   .trim() || "Premium tee by CHILS & CO. Delivered across India with 7-day returns.";
                 
-                const productImage = Array.isArray(product.images) && product.images.length > 0 ? product.images[0].src : DEFAULT_OG_IMAGE;
+                const productImage = Array.isArray(product.images) && product.images.length > 0 ? imgUrl(product.images[0].src) : DEFAULT_OG_IMAGE;
                 const productPrice = product.price || "0";
                 const ogTitle = escAttr(`${productName} | CHILS & CO.`);
                 const ogDesc = escAttr(productDesc);
@@ -5027,27 +5131,20 @@ ${xmlItems}
                 html = html.replace(/(<meta\s+name="twitter:description"\s+content=")([^"]*)("\s*\/>)/i, `$1${ogDesc}$3`);
                 html = html.replace(/(<meta\s+name="twitter:image"\s+content=")([^"]*)("\s*\/>)/i, `$1${ogImage}$3`);
 
-                // Product JSON-LD Schema
-                const productSchema = {
-                  "@context": "https://schema.org/",
-                  "@type": "Product",
-                  "name": productName,
-                  "image": [productImage],
-                  "description": productDesc,
-                  "sku": `CHLS-${productId}`,
-                  "brand": { "@type": "Brand", "name": "CHILS & CO." },
-                  "offers": {
-                    "@type": "Offer",
-                    "url": canonicalUrl,
-                    "priceCurrency": "INR",
-                    "price": productPrice,
-                    "availability": product.stock_status === "outofstock" ? "https://schema.org/OutOfStock" : "https://schema.org/InStock",
-                    "itemCondition": "https://schema.org/NewCondition"
-                  }
-                };
-
-                const schemaScript = `\n    <script type="application/ld+json">${JSON.stringify(productSchema)}</script>`;
-                html = html.replace("</head>", `${schemaScript}\n  </head>`);
+                // Product JSON-LD Schema (images on our own domain, return policy included)
+                const mapped = (globalProductsCache || []).find((x: any) => String(x.id) === String(productId));
+                const schema = mapped
+                  ? productSchema(mapped, canonicalUrl)
+                  : { "@context": "https://schema.org/", "@type": "Product", name: productName, image: [productImage], description: productDesc, sku: `CHLS-${productId}`, brand: { "@type": "Brand", name: "CHILS & CO." }, offers: { "@type": "Offer", url: canonicalUrl, priceCurrency: "INR", price: productPrice, availability: product.stock_status === "outofstock" ? "https://schema.org/OutOfStock" : "https://schema.org/InStock", itemCondition: "https://schema.org/NewCondition" } };
+                {
+                  const kwTitle = escAttr(mapped ? `${productName} | ${productTypeLabel(mapped)} | CHILS & CO.` : `${productName} | CHILS & CO.`);
+                  html = html.replace(/(<title>)([^<]*)(<\/title>)/i, `$1${kwTitle}$3`);
+                  html = html.replace(/(<meta\s+property="og:title"\s+content=")([^"]*)("\s*\/>)/i, `$1${kwTitle}$3`);
+                  html = html.replace(/(<meta\s+name="twitter:title"\s+content=")([^"]*)("\s*\/>)/i, `$1${kwTitle}$3`);
+                  const schemaScript = `\n    <script type="application/ld+json">${JSON.stringify(schema).replace(/</g, "\\u003c")}</script>`;
+                  html = html.replace("</head>", `${schemaScript}\n  </head>`);
+                  if (mapped) html = html.replace('<div id="root"></div>', `<div id="root">${productBody(mapped)}</div>`);
+                }
 
                 res.set("Content-Type", "text/html");
                 return res.send(html);
@@ -5069,6 +5166,17 @@ ${xmlItems}
         html = html.replace(/(<meta\s+property="og:title"\s+content=")([^"]*)("\s*\/>)/i, `$1${pageTitle}$3`);
         html = html.replace(/(<meta\s+property="og:description"\s+content=")([^"]*)("\s*\/>)/i, `$1${pageDesc}$3`);
         html = html.replace(/(<meta\s+property="og:url"\s+content=")([^"]*)("\s*\/>)/i, `$1${escAttr(canonicalUrl)}$3`);
+
+        // Real content for crawlers that do not run JavaScript; the shop replaces it when it starts.
+        let seoBody = "";
+        try {
+          if (cleanPath === "/" && globalProductsCache) seoBody = homeBody(globalProductsCache);
+          else if (cleanPath === "/collection" && globalProductsCache) seoBody = collectionBody(globalProductsCache);
+          else seoBody = policyBody(cleanPath);
+        } catch (e: any) {
+          console.error("[CHILS SEO] Could not build page content:", e?.message);
+        }
+        if (seoBody) html = html.replace('<div id="root"></div>', `<div id="root">${seoBody}</div>`);
 
         res.set("Content-Type", "text/html");
         return res.send(html);
@@ -5188,7 +5296,28 @@ ${xmlItems}
       console.log(`[CHILS & CO.] Listening on port: ${numericPort}`);
       console.log(`[CHILS & CO.] Mode: ${IS_PROD ? 'Production' : 'Development'}`);
       // have the product list ready before the first visitor asks
-      if (getWooCommerce()) refreshProducts().catch(e => console.error("[CHILS & CO.] Products warm-up failed:", e?.message));
+      if (getWooCommerce()) {
+        // Have every product page ready too, so nobody waits on the store for their first look.
+        const warmProductPages = async () => {
+          try {
+            const list = await refreshProducts();
+            const ids = list.map((p: any) => String(p.id)).filter((id: string) => /^\d+$/.test(id));
+            let next = 0;
+            const worker = async () => {
+              while (next < ids.length) {
+                const id = ids[next++];
+                try { await productJson(id); } catch { /* the next visitor will retry */ }
+              }
+            };
+            await Promise.all([worker(), worker(), worker()]);
+            console.log(`[CHILS & CO.] Product pages warmed: ${ids.length}`);
+          } catch (e: any) {
+            console.error("[CHILS & CO.] Products warm-up failed:", e?.message);
+          }
+        };
+        warmProductPages();
+        setInterval(warmProductPages, 5 * 60 * 1000).unref();
+      }
     });
   } catch (error) {
     console.error("[CHILS & CO.] Critical Failure during server startup:", error);

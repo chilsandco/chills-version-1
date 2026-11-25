@@ -1,0 +1,405 @@
+// Search and AI-assistant visibility for the shop pages.
+//
+// The shop is drawn in the browser, so a crawler that does not run JavaScript sees an empty page.
+// This file gives crawlers real content:
+//   1. Keyword pages (/oversized-t-shirts-for-men, /polo-t-shirts-for-men, ...), complete HTML that
+//      lists the matching products straight from the live catalogue.
+//   2. Readable content for the home, collection, product and policy pages. It is placed inside the
+//      page's root element; the shop replaces it the moment it starts, so visitors see no change.
+//
+// Every fact here is checked against the store: prices and colours come from the catalogue, the
+// fabric facts from product descriptions (all 25 oversized tees are 100% cotton at 240 GSM), and
+// shipping and returns from the site's own policy pages. Do not add a claim you cannot point to.
+import { SITE, BRAND, esc, inr, imgUrl, page, orgLd, ARTICLES } from "./journal";
+
+type P = any;
+const visible = (ps: P[]) => ps.filter(p => String(p.id) !== "1672" && p.status !== "outofstock");
+const isOversized = (p: P) => /drop shoulder|oversized/i.test(String(p.category));
+const isPolo = (p: P) => /polo/i.test(String(p.name)) && p.type !== "grouped";
+const isCombo = (p: P) => String(p.category) === "Combos";
+const isRegular = (p: P) => !isOversized(p) && !isCombo(p);
+
+const range = (ps: P[]) => {
+  const n = ps.map(p => Number(p.price)).filter(x => x > 0);
+  return n.length ? { lo: Math.min(...n), hi: Math.max(...n) } : null;
+};
+const topColors = (ps: P[], n = 6) => {
+  const c = new Map<string, number>();
+  for (const p of ps) for (const col of p.availableColors || []) c.set(col, (c.get(col) || 0) + 1);
+  return [...c.entries()].sort((a, b) => b[1] - a[1]).slice(0, n).map(e => e[0]);
+};
+const plainText = (html: string) =>
+  String(html || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&amp;/g, "&").replace(/&#0?39;/g, "'").replace(/&quot;/g, '"').replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/[ \t]+/g, " ")
+    .trim();
+
+// ------------------------------------------------------------------ keyword landing pages
+
+type Landing = {
+  path: string;
+  title: string;
+  h1: string;
+  description: string;
+  pick: (p: P) => boolean;
+  intro: (ps: P[]) => string[];
+  sections: (ps: P[]) => { h2: string; p?: string[]; ul?: string[] }[];
+  faq: (ps: P[]) => { q: string; a: string }[];
+  related: { href: string; label: string }[];
+};
+
+const SHARED_FAQ = [
+  { q: "How long does delivery take?", a: "Orders are packed within 24 to 48 hours and delivered across India in 2 to 7 business days, with SMS and email tracking. Delivery starts at ₹80, and store pickup is free." },
+  { q: "What is the return policy?", a: "You can return a tee within 7 days of delivery for a refund, an exchange or store credit. The tee must be unworn and unwashed with its tags on. Refunds reach your PhonePe or original payment method in 3 to 7 business days." },
+];
+
+export const LANDINGS: Landing[] = [
+  {
+    path: "/oversized-t-shirts-for-men",
+    title: "Oversized T-Shirts for Men | 240 GSM Cotton | CHILS & CO.",
+    h1: "Oversized t-shirts for men",
+    description: "Heavyweight oversized drop shoulder t-shirts in 100% cotton at 240 GSM, designed by techies in Hyderabad. Delivered across India with 7-day returns.",
+    pick: isOversized,
+    intro: ps => {
+      const r = range(ps);
+      return [
+        `Our oversized t-shirts are cut as drop shoulder tees in 100% cotton at 240 GSM, a heavyweight fabric that holds its shape instead of hanging limp. There are ${ps.length} designs${r ? `, priced from ${inr(r.lo)} to ${inr(r.hi)}` : ""}.`,
+        "Each tee has reinforced stitching at the neck and shoulders and high-definition, fade-resistant DTF artwork. They are designed by techies in Hyderabad and delivered across India.",
+      ];
+    },
+    sections: ps => [
+      {
+        h2: "What makes them oversized",
+        ul: [
+          "Drop shoulder cut: the shoulder seam sits low on the upper arm, for a relaxed shape.",
+          "100% cotton at 240 GSM: heavyweight, soft and breathable.",
+          "Reinforced neck and shoulder stitching so the tee keeps its shape.",
+          "High-definition DTF artwork that resists fading when washed inside out.",
+        ],
+      },
+      {
+        h2: "Colours",
+        p: [`Colours across the range include ${topColors(ps).join(", ")}. Black is available on ${ps.filter(p => (p.availableColors || []).some((c: string) => /black/i.test(c))).length} of the ${ps.length} designs.`],
+      },
+      {
+        h2: "Picking your size",
+        p: ["Oversized tees are cut larger already, so start with your usual size and check the size guide on the product page for the measurements. Every design comes in sizes S to XL."],
+      },
+    ],
+    faq: () => [
+      { q: "What fabric are your oversized t-shirts made of?", a: "100% cotton at 240 GSM, a heavyweight weight that keeps the shape of a loose cut." },
+      { q: "Should I size up for an oversized t-shirt?", a: "Usually no. The cut is already larger, so start with your usual size and check the size guide for measurements." },
+      { q: "Are the prints durable?", a: "They use high-definition DTF artwork that is fade resistant. For the longest life, wash the tee inside out and avoid a hot dryer." },
+      ...SHARED_FAQ,
+    ],
+    related: [
+      { href: "/journal/oversized-vs-boxy-vs-drop-shoulder-tshirt", label: "Oversized, boxy or drop shoulder: what's the difference?" },
+      { href: "/journal/how-to-choose-an-oversized-graphic-tshirt-india", label: "How to choose an oversized graphic t-shirt" },
+      { href: "/polo-t-shirts-for-men", label: "Polo t-shirts for men" },
+    ],
+  },
+  {
+    path: "/polo-t-shirts-for-men",
+    title: "Polo T-Shirts for Men | TwinTex 240 GSM | CHILS & CO.",
+    h1: "Polo t-shirts for men",
+    description: "Structured-collar polo t-shirts in heavyweight 240 GSM TwinTex fabric, designed by techies in Hyderabad. Delivered across India with 7-day returns.",
+    pick: isPolo,
+    intro: ps => {
+      const r = range(ps);
+      return [
+        `Our TwinTex polos have a structured collar and a relaxed fit, knitted from a heavyweight 240 GSM fabric with cotton on the inside and polyester on the outside. There are ${ps.length} designs${r ? `, ${r.lo === r.hi ? `at ${inr(r.lo)}` : `from ${inr(r.lo)} to ${inr(r.hi)}`}` : ""}.`,
+        "They are made for everyday wear: soft and breathable against the skin, with premium DTF branding.",
+      ];
+    },
+    sections: ps => [
+      {
+        h2: "Why TwinTex",
+        ul: [
+          "Cotton inside, polyester outside: soft against the skin, and it keeps its look.",
+          "240 GSM heavyweight knit with a structured polo collar.",
+          "Relaxed fit for everyday wear.",
+        ],
+      },
+      { h2: "Colours", p: [`Available colours include ${topColors(ps).join(", ") || "black, navy and green"}.`] },
+    ],
+    faq: () => [
+      { q: "What is TwinTex fabric?", a: "TwinTex is our polo fabric: a 240 GSM heavyweight knit with cotton on the inside and polyester on the outside." },
+      { q: "Do the polos have a relaxed or slim fit?", a: "A relaxed fit with a structured collar. Check the size guide on the product page for measurements." },
+      ...SHARED_FAQ,
+    ],
+    related: [
+      { href: "/t-shirt-combos", label: "Three-tee stacks, save 10%" },
+      { href: "/oversized-t-shirts-for-men", label: "Oversized t-shirts for men" },
+    ],
+  },
+  {
+    path: "/t-shirt-combos",
+    title: "T-Shirt Combos: Pick 3 and Save 10% | CHILS & CO.",
+    h1: "T-shirt combos: three tees, save 10%",
+    description: "Three tees chosen to go together and banded as a numbered Trilogy. Pick your size and save 10%. Delivered across India with 7-day returns.",
+    pick: isCombo,
+    intro: ps => [
+      `Our stacks are three tees chosen to go together, banded as a numbered Trilogy. Pick your size and save 10%. There are ${ps.length} stacks to choose from, including core tees and polo stacks.`,
+      "You can also build your own set of three on the Pick Your Three page.",
+    ],
+    sections: () => [
+      {
+        h2: "How a stack works",
+        ul: [
+          "Each stack is three tees chosen to go together, banded as a numbered Trilogy.",
+          "Choose your size once and save 10% on the set.",
+          "Or pick any three tees yourself on the Pick Your Three page.",
+        ],
+      },
+    ],
+    faq: () => [
+      { q: "How much do I save on a combo?", a: "A Trilogy of three tees saves 10%." },
+      { q: "Can I choose my own three tees?", a: "Yes. Use the Pick Your Three page to build your own set." },
+      ...SHARED_FAQ,
+    ],
+    related: [
+      { href: "/pick-your-three", label: "Build your own three" },
+      { href: "/oversized-t-shirts-for-men", label: "Oversized t-shirts for men" },
+    ],
+  },
+  {
+    path: "/regular-fit-t-shirts-for-men",
+    title: "Regular Fit T-Shirts for Men | Cotton & Blends | CHILS & CO.",
+    h1: "Regular fit t-shirts for men",
+    description: "Regular fit and minimal t-shirts in cotton and cotton-blend fabrics, from 180 to 240 GSM, designed by techies in Hyderabad. Delivered across India.",
+    pick: isRegular,
+    intro: ps => {
+      const r = range(ps);
+      return [
+        `A cleaner, closer cut than our oversized range. Our regular fit and minimal tees come in 100% cotton, cotton blends and polycotton, between 180 and 240 GSM depending on the design. There are ${ps.length} designs${r ? `, from ${inr(r.lo)} to ${inr(r.hi)}` : ""}.`,
+        "Each product page states the exact fabric and weight, so you can choose the feel you want.",
+      ];
+    },
+    sections: ps => [
+      {
+        h2: "Regular fit or oversized?",
+        p: ["Regular fit follows your body without clinging, and suits layering and a neat look. If you want the relaxed, loose silhouette, see our oversized t-shirts instead."],
+      },
+      { h2: "Colours", p: [`Available colours include ${topColors(ps, 8).join(", ")}.`] },
+    ],
+    faq: () => [
+      { q: "What fabrics do regular fit tees come in?", a: "A mix of 100% cotton, cotton blend (60% cotton, 40% polyester) and polycotton, between 180 and 240 GSM. Each product page lists the exact fabric." },
+      { q: "What is the difference between regular fit and oversized?", a: "Regular fit follows the body without clinging. Oversized is cut larger, with a lower shoulder seam, for a relaxed look." },
+      ...SHARED_FAQ,
+    ],
+    related: [{ href: "/oversized-t-shirts-for-men", label: "Oversized t-shirts for men" }, { href: "/t-shirt-combos", label: "Three-tee stacks" }],
+  },
+];
+
+function cardGrid(ps: P[], limit = 40) {
+  return `<div class="grid">${ps
+    .filter(p => p.images?.[0])
+    .slice(0, limit)
+    .map(p => `<a class="card" href="/product/${esc(p.id)}"><img loading="lazy" width="300" height="375" src="${esc(imgUrl(p.images[0], true))}" alt="${esc(p.name)}"><span>${esc(p.name)}<br><em>${inr(p.price)}</em></span></a>`)
+    .join("")}</div>`;
+}
+
+export function landingHtml(l: Landing, all: P[]) {
+  const ps = visible(all).filter(l.pick);
+  const faq = l.faq(ps);
+  const body = `<main>
+<p class="eyebrow">${esc(BRAND)}</p>
+<h1>${esc(l.h1)}</h1>
+${l.intro(ps).map(t => `<p>${esc(t)}</p>`).join("")}
+<h2>Shop the range</h2>
+${ps.some(p => p.images?.[0]) ? cardGrid(ps) : ps.length ? `<ul>${ps.map(p => `<li><a href="/product/${esc(p.id)}">${esc(p.name)}</a> · ${inr(p.price)}</li>`).join("")}</ul>` : `<p><a href="/collection">See the full collection</a></p>`}
+<p><a class="pill" href="/collection">Shop the full collection</a></p>
+${l
+  .sections(ps)
+  .map(s => `<section><h2>${esc(s.h2)}</h2>${(s.p || []).map(t => `<p>${esc(t)}</p>`).join("")}${s.ul ? `<ul>${s.ul.map(t => `<li>${esc(t)}</li>`).join("")}</ul>` : ""}</section>`)
+  .join("\n")}
+<section class="faq"><h2>Frequently asked questions</h2>
+${faq.map(f => `<details open><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join("\n")}
+</section>
+<section><h2>Keep reading</h2><ul>${l.related.map(r => `<li><a href="${r.href}">${esc(r.label)}</a></li>`).join("")}</ul></section>
+</main>`;
+  return page({
+    title: l.title,
+    description: l.description,
+    path: l.path,
+    body,
+    jsonLd: [
+      {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        name: l.h1,
+        url: `${SITE}${l.path}`,
+        description: l.description,
+        mainEntity: {
+          "@type": "ItemList",
+          numberOfItems: ps.length,
+          itemListElement: ps.slice(0, 50).map((p, i) => ({ "@type": "ListItem", position: i + 1, url: `${SITE}/product/${p.id}`, name: p.name })),
+        },
+      },
+      { "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faq.map(f => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })) },
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        itemListElement: [
+          { "@type": "ListItem", position: 1, name: "Home", item: SITE },
+          { "@type": "ListItem", position: 2, name: l.h1, item: `${SITE}${l.path}` },
+        ],
+      },
+      orgLd,
+    ],
+  });
+}
+
+// ------------------------------------------------------------------ content inside the shop's pages
+
+const BOX = `<div style="max-width:760px;margin:0 auto;padding:88px 20px 48px;font:16px/1.65 -apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#141311">`;
+const links = (items: { href: string; label: string }[]) => `<ul>${items.map(i => `<li><a href="${i.href}">${esc(i.label)}</a></li>`).join("")}</ul>`;
+const productLinks = (ps: P[]) => `<ul>${ps.map(p => `<li><a href="/product/${esc(p.id)}">${esc(p.name)}</a> · ${inr(p.price)}</li>`).join("")}</ul>`;
+
+const POLICY = `<h2>Delivery and returns</h2><ul>
+<li>Delivery across India from ₹80, packed within 24 to 48 hours and delivered in 2 to 7 business days, tracked by SMS and email. Store pickup is free.</li>
+<li>Returns within 7 days of delivery for a refund, exchange or store credit. Refunds reach your PhonePe or original payment method in 3 to 7 business days.</li>
+<li>Reusable Second Life packaging and plastic-free shipping.</li></ul>`;
+
+const GUIDES = links([
+  ...LANDINGS.map(l => ({ href: l.path, label: l.h1 })),
+  { href: "/journal", label: "Journal: fit, fabric and style guides" },
+]);
+
+export function homeBody(all: P[]) {
+  const ps = visible(all);
+  const over = ps.filter(isOversized);
+  const r = range(ps);
+  return `${BOX}<h1>Oversized t-shirts and polos for men, designed by techies in Hyderabad</h1>
+<p>${esc(BRAND)} makes heavyweight oversized drop shoulder tees in 100% cotton at 240 GSM, TwinTex polos and minimal regular fit tees, designed by techies in Hyderabad${r ? `, priced from ${inr(r.lo)}` : ""}. We deliver across India, with 7-day returns.</p>
+<h2>Shop by type</h2>${links([
+    { href: "/oversized-t-shirts-for-men", label: `Oversized t-shirts for men (${over.length} designs)` },
+    { href: "/polo-t-shirts-for-men", label: "Polo t-shirts for men" },
+    { href: "/regular-fit-t-shirts-for-men", label: "Regular fit t-shirts for men" },
+    { href: "/t-shirt-combos", label: "Three-tee stacks: save 10%" },
+    { href: "/collection", label: "The full collection" },
+  ])}
+<h2>Popular oversized tees</h2>${productLinks(over.slice(0, 12))}
+<h2>Why people choose us</h2><ul>
+<li>Heavyweight 100% cotton at 240 GSM on every oversized tee.</li>
+<li>Reinforced neck and shoulder stitching, and fade-resistant DTF artwork.</li>
+<li>Designs from the worlds of code, chips and engineering.</li></ul>
+${POLICY}
+<h2>Guides</h2>${GUIDES}</div>`;
+}
+
+export function collectionBody(all: P[]) {
+  const ps = visible(all);
+  const group = (title: string, items: P[]) => (items.length ? `<h2>${esc(title)} (${items.length})</h2>${productLinks(items)}` : "");
+  return `${BOX}<h1>Shop t-shirts and polos for men</h1>
+<p>Every ${esc(BRAND)} design in one place: ${ps.length} products across oversized drop shoulder tees, TwinTex polos, minimal and regular fit tees, and three-tee stacks. Delivered across India from ₹80, with 7-day returns.</p>
+${group("Oversized drop shoulder t-shirts", ps.filter(isOversized))}
+${group("Polo t-shirts", ps.filter(isPolo))}
+${group("Regular fit and minimal t-shirts", ps.filter(p => isRegular(p) && !isPolo(p)))}
+${group("Three-tee stacks", ps.filter(isCombo))}
+${POLICY}
+<h2>Guides</h2>${GUIDES}</div>`;
+}
+
+/** The product's own words, as clean lines: its bullet points first, then the story. */
+function descriptionParts(p: P) {
+  const lines = String(p.description || "").split(/\n/).map(l => l.trim()).filter(Boolean);
+  const bullets = lines.filter(l => /^[-•]/.test(l)).map(l => l.replace(/^[-•]\s*/, ""));
+  const prose = lines.filter(l => !/^[-•]/.test(l));
+  const story = plainText(String(p.shortDescription || p.concept || "")).replace(/^Story Behind The Design\s*/i, "");
+  return { bullets, prose: prose.join(" "), story };
+}
+
+export function productTypeLabel(p: P) {
+  if (isPolo(p)) return "Polo T-Shirt for Men";
+  if (isCombo(p)) return "T-Shirt Combo";
+  if (isOversized(p)) return "Oversized T-Shirt for Men";
+  return "T-Shirt for Men";
+}
+
+export function productBody(p: P) {
+  const d = descriptionParts(p);
+  const sizes = (p.availableSizes || []).join(", ");
+  const cols = (p.availableColors || []).join(", ");
+  return `${BOX}<p><a href="/collection">All products</a></p>
+<h1>${esc(p.name)} ${esc(productTypeLabel(p))}</h1>
+<p><strong>${inr(p.price)}</strong>${p.category ? ` · ${esc(p.category)}` : ""}${p.fit ? ` · ${esc(p.fit)}` : ""}</p>
+${p.images?.[0] ? `<p><img src="${esc(imgUrl(p.images[0]))}" alt="${esc(p.name)}" width="480" style="max-width:100%;height:auto"></p>` : ""}
+${d.bullets.length ? `<h2>Details</h2><ul>${d.bullets.map(b => `<li>${esc(b)}</li>`).join("")}</ul>` : ""}
+${sizes || cols ? `<h2>Sizes and colours</h2><p>${sizes ? `Sizes: ${esc(sizes)}. ` : ""}${cols ? `Colours: ${esc(cols)}.` : ""}</p>` : ""}
+${d.story ? `<h2>The story</h2><p>${esc(d.story).slice(0, 900)}</p>` : ""}
+${p.care ? `<h2>Care</h2><p>${esc(p.care)}</p>` : ""}
+${POLICY}
+<h2>More like this</h2>${links([
+    isOversized(p) ? { href: "/oversized-t-shirts-for-men", label: "Oversized t-shirts for men" } : isPolo(p) ? { href: "/polo-t-shirts-for-men", label: "Polo t-shirts for men" } : { href: "/regular-fit-t-shirts-for-men", label: "Regular fit t-shirts for men" },
+    { href: "/collection", label: "The full collection" },
+  ])}</div>`;
+}
+
+export function policyBody(path: string) {
+  if (path === "/shipping-delivery")
+    return `${BOX}<h1>Shipping and delivery</h1><p>We deliver across India. Delivery costs from ₹80, and you see the exact amount at checkout before you pay.</p><ul>
+<li>Packing: orders are packed and handed to the courier within 24 to 48 hours.</li>
+<li>Delivery time: 2 to 7 business days, tracked by SMS and email. Business days do not include Sundays or public holidays.</li>
+<li>Store pickup: free.</li>
+<li>Estimates can slip because of weather, courier delays or very busy periods, and we keep you posted.</li></ul>
+<p><a href="/returns-refunds">Returns and refunds</a> · <a href="/collection">Shop</a></p></div>`;
+  if (path === "/returns-refunds")
+    return `${BOX}<h1>Returns and refunds</h1><p>Return a tee within 7 days of delivery for a refund, an exchange or store credit.</p><ul>
+<li>What we cannot take back: tees that have been worn or washed, with tags or trims removed, damage after delivery, and requests made more than 7 days after delivery.</li>
+<li>How to ask: tell us the reason, add a short description and up to three photos. Photos are needed for damaged items, wrong items and quality concerns.</li>
+<li>What happens next: our team reviews every request. If it is approved we email you the pickup details; pickup depends on the courier serving your area.</li>
+<li>Refunds go to your PhonePe or original payment method in 3 to 7 business days after the tee is back and checked.</li></ul>
+<p><a href="/shipping-delivery">Shipping and delivery</a> · <a href="/collection">Shop</a></p></div>`;
+  if (path === "/our-promise")
+    return `${BOX}<h1>Our promise</h1><p>${esc(BRAND)} stands behind how its tees are made and packed.</p><ul>
+<li>Fabric: our oversized tees are heavyweight 100% cotton at 240 GSM.</li>
+<li>Construction: reinforced stitching at the neck and shoulders, and high-definition, fade-resistant DTF artwork.</li>
+<li>Packaging: reusable Second Life packaging and plastic-free shipping.</li></ul>
+<p><a href="/collection">Shop the collection</a></p></div>`;
+  return "";
+}
+
+/** Product JSON-LD that Google can use for shopping results, with our own image addresses. */
+export function productSchema(p: P, canonical: string) {
+  const imgs = (p.images || []).slice(0, 4).map((i: string) => imgUrl(i));
+  return {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    name: p.name,
+    image: imgs,
+    description: plainText(descriptionParts(p).bullets.join(". ") || p.shortDescription || p.name).slice(0, 500),
+    sku: `CHLS-${p.id}`,
+    brand: { "@type": "Brand", name: BRAND },
+    category: p.category,
+    ...(p.availableColors?.length ? { color: p.availableColors.join(", ") } : {}),
+    offers: {
+      "@type": "Offer",
+      url: canonical,
+      priceCurrency: "INR",
+      price: String(p.price),
+      availability: "https://schema.org/InStock",
+      itemCondition: "https://schema.org/NewCondition",
+      hasMerchantReturnPolicy: {
+        "@type": "MerchantReturnPolicy",
+        applicableCountry: "IN",
+        returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
+        merchantReturnDays: 7,
+        merchantReturnLink: `${SITE}/returns-refunds`,
+      },
+    },
+  };
+}
+
+export function registerLandings(app: any, getProducts: () => P[] | null) {
+  for (const l of LANDINGS) {
+    app.get(l.path, (_req: any, res: any) => {
+      res.setHeader("Content-Type", "text/html; charset=utf-8");
+      res.setHeader("Cache-Control", "public, max-age=300, stale-while-revalidate=3600");
+      res.send(landingHtml(l, getProducts() || []));
+    });
+  }
+}
+
+export { ARTICLES };
