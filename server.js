@@ -743,6 +743,9 @@ ${opts.updated ? `<meta property="article:modified_time" content="${opts.updated
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600&display=swap">
 <style>${CSS}</style>
+<!-- Google Analytics, the same tags as the shop, so visits to these pages are counted -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-892PN2453V"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-892PN2453V');gtag('config','G-MXKC1697WS');</script>
 ${opts.jsonLd.map((j) => `<script type="application/ld+json">${JSON.stringify(j).replace(/</g, "\\u003c")}</script>`).join("\n")}
 </head>
 <body>
