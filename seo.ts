@@ -65,7 +65,7 @@ export const LANDINGS: Landing[] = [
       const r = range(ps);
       return [
         `Our oversized t-shirts are cut as drop shoulder tees in 100% cotton at 240 GSM, a heavyweight fabric that holds its shape instead of hanging limp. There are ${ps.length} designs${r ? `, priced from ${inr(r.lo)} to ${inr(r.hi)}` : ""}.`,
-        "Each tee has reinforced stitching at the neck and shoulders and high-definition, fade-resistant DTF artwork. They are designed by techies in Hyderabad and delivered across India.",
+        "We build them with reinforced stitching at the neck and shoulders and fade-resistant DTF artwork, as set out on our Our promise page. The designs are graphic tees from the worlds of code, chips and engineering, designed by techies in Hyderabad and delivered across India.",
       ];
     },
     sections: ps => [
@@ -74,8 +74,8 @@ export const LANDINGS: Landing[] = [
         ul: [
           "Drop shoulder cut: the shoulder seam sits low on the upper arm, for a relaxed shape.",
           "100% cotton at 240 GSM: heavyweight, soft and breathable.",
-          "Reinforced neck and shoulder stitching so the tee keeps its shape.",
-          "High-definition DTF artwork that resists fading when washed inside out.",
+          "Built with reinforced neck and shoulder stitching so the tee keeps its shape.",
+          "DTF artwork designed to resist fading, best washed inside out.",
         ],
       },
       {
@@ -90,7 +90,7 @@ export const LANDINGS: Landing[] = [
     faq: () => [
       { q: "What fabric are your oversized t-shirts made of?", a: "100% cotton at 240 GSM, a heavyweight weight that keeps the shape of a loose cut." },
       { q: "Should I size up for an oversized t-shirt?", a: "Usually no. The cut is already larger, so start with your usual size and check the size guide for measurements." },
-      { q: "Are the prints durable?", a: "They use high-definition DTF artwork that is fade resistant. For the longest life, wash the tee inside out and avoid a hot dryer." },
+      { q: "Are the prints durable?", a: "Our prints use DTF artwork designed to resist fading. For the longest life, wash the tee inside out and avoid a hot dryer." },
       ...SHARED_FAQ,
     ],
     related: [
@@ -101,14 +101,14 @@ export const LANDINGS: Landing[] = [
   },
   {
     path: "/polo-t-shirts-for-men",
-    title: "Polo T-Shirts for Men | TwinTex 240 GSM | CHILS & CO.",
-    h1: "Polo t-shirts for men",
-    description: "Structured-collar polo t-shirts in heavyweight 240 GSM TwinTex fabric, designed by techies in Hyderabad. Delivered across India with 7-day returns.",
+    title: "Polo Shirts for Men | Heavyweight 240 GSM | CHILS & CO.",
+    h1: "Polo shirts and polo t-shirts for men",
+    description: "Polo shirts for men with a structured collar, in heavyweight 240 GSM TwinTex fabric. Designed by techies in Hyderabad. Delivered across India, 7-day returns.",
     pick: isPolo,
     intro: ps => {
       const r = range(ps);
       return [
-        `Our TwinTex polos have a structured collar and a relaxed fit, knitted from a heavyweight 240 GSM fabric with cotton on the inside and polyester on the outside. There are ${ps.length} designs${r ? `, ${r.lo === r.hi ? `at ${inr(r.lo)}` : `from ${inr(r.lo)} to ${inr(r.hi)}`}` : ""}.`,
+        `Our TwinTex polo shirts have a structured collar and a relaxed fit, knitted from a heavyweight 240 GSM fabric with cotton on the inside and polyester on the outside. There are ${ps.length} designs${r ? `, ${r.lo === r.hi ? `at ${inr(r.lo)}` : `from ${inr(r.lo)} to ${inr(r.hi)}`}` : ""}.`,
         "They are made for everyday wear: soft and breathable against the skin, with premium DTF branding.",
       ];
     },
@@ -173,7 +173,7 @@ export const LANDINGS: Landing[] = [
       const r = range(ps);
       return [
         `A cleaner, closer cut than our oversized range. Our regular fit and minimal tees come in 100% cotton, cotton blends and polycotton, between 180 and 240 GSM depending on the design. There are ${ps.length} designs${r ? `, from ${inr(r.lo)} to ${inr(r.hi)}` : ""}.`,
-        "Each product page states the exact fabric and weight, so you can choose the feel you want.",
+        "Product pages list the fabric and weight, so you can choose the feel you want.",
       ];
     },
     sections: ps => [
@@ -272,10 +272,10 @@ export function homeBody(all: P[]) {
   const over = ps.filter(isOversized);
   const r = range(ps);
   return `${BOX}<h1>Oversized t-shirts and polos for men, designed by techies in Hyderabad</h1>
-<p>${esc(BRAND)} makes heavyweight oversized drop shoulder tees in 100% cotton at 240 GSM, TwinTex polos and minimal regular fit tees, designed by techies in Hyderabad${r ? `, priced from ${inr(r.lo)}` : ""}. We deliver across India, with 7-day returns.</p>
+<p>${esc(BRAND)} makes heavyweight oversized drop shoulder graphic tees in 100% cotton at 240 GSM, TwinTex polo shirts and minimal regular fit tees, designed by techies in Hyderabad${r ? `, priced from ${inr(r.lo)}` : ""}. We deliver across India, with 7-day returns.</p>
 <h2>Shop by type</h2>${links([
     { href: "/oversized-t-shirts-for-men", label: `Oversized t-shirts for men (${over.length} designs)` },
-    { href: "/polo-t-shirts-for-men", label: "Polo t-shirts for men" },
+    { href: "/polo-t-shirts-for-men", label: "Polo shirts for men" },
     { href: "/regular-fit-t-shirts-for-men", label: "Regular fit t-shirts for men" },
     { href: "/t-shirt-combos", label: "Three-tee stacks: save 10%" },
     { href: "/collection", label: "The full collection" },
@@ -283,7 +283,7 @@ export function homeBody(all: P[]) {
 <h2>Popular oversized tees</h2>${productLinks(over.slice(0, 12))}
 <h2>Why people choose us</h2><ul>
 <li>Heavyweight 100% cotton at 240 GSM on every oversized tee.</li>
-<li>Reinforced neck and shoulder stitching, and fade-resistant DTF artwork.</li>
+<li>Built with reinforced neck and shoulder stitching and fade-resistant DTF artwork.</li>
 <li>Designs from the worlds of code, chips and engineering.</li></ul>
 ${POLICY}
 <h2>Guides</h2>${GUIDES}</div>`;

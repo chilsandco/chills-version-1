@@ -27,6 +27,7 @@ import fs from "fs";
 import path from "path";
 import { WebClient } from "@slack/web-api";
 import { SocketModeClient } from "@slack/socket-mode";
+import { dataFile } from "./storage";
 
 type WcCall = (method: string, ...args: any[]) => Promise<any>;
 
@@ -101,7 +102,8 @@ let state: State = { abandoned: {}, returns: {}, refunds: {} };
 let stateFile = "";
 
 function loadState() {
-  stateFile = (process.env.SLACK_STATE_FILE || "").trim() || path.join(process.cwd(), ".slack-state.json");
+  // Kept outside the app folder (~/chils-data) so a new deploy never makes the bot forget what it posted.
+  stateFile = (process.env.SLACK_STATE_FILE || "").trim() || dataFile(".slack-state.json");
   try {
     state = { abandoned: {}, returns: {}, refunds: {}, ...JSON.parse(fs.readFileSync(stateFile, "utf8")) };
   } catch {

@@ -1,6 +1,6 @@
 // server.ts
 import express from "express";
-import path4 from "path";
+import path3 from "path";
 import https from "https";
 import fs4 from "fs";
 import { fileURLToPath } from "url";
@@ -120,12 +120,12 @@ var ARTICLES = [
   },
   {
     slug: "how-to-choose-an-oversized-graphic-tshirt-india",
-    title: "How to choose an oversized graphic t-shirt in India: a buying guide",
-    description: "GSM, cotton, pre-shrunk fabric, print method and stitching: the checks that decide whether an oversized graphic tee lasts or falls apart.",
+    title: "How to choose oversized graphic tees for men in India: a buying guide",
+    description: "GSM, cotton, pre-shrunk fabric, print method and stitching: the checks that decide whether oversized graphic tees for men last or fall apart.",
     published: "2026-11-25",
     updated: "2026-11-25",
     answer: "For an oversized graphic t-shirt that lasts, look for 100% cotton at about 240 GSM, a pre-shrunk fabric, reinforced stitching at the neck and shoulders, and a fade-resistant print such as DTF. Check that the seller states these on the product page. If they are missing, assume the fabric is thin.",
-    keywords: ["oversized graphic t-shirt", "graphic t-shirt", "men's oversized t-shirt", "heavyweight cotton t-shirt"],
+    keywords: ["oversized graphic tees", "graphic tees for men", "oversized graphic t-shirt", "men's oversized t-shirt", "heavyweight cotton t-shirt"],
     sections: [
       {
         h2: "1. GSM: the weight of the fabric",
@@ -171,7 +171,7 @@ var ARTICLES = [
       {
         h2: "Heavyweight oversized graphic tees from CHILS & CO.",
         p: [
-          "Our oversized graphic tees are 100% cotton at 240 GSM, with reinforced neck and shoulder stitching and high-definition, fade-resistant DTF artwork. Prices start at \u20B9419. Here is the current range."
+          "Our oversized tees are 100% cotton at 240 GSM, and we build them with reinforced neck and shoulder stitching and fade-resistant DTF artwork, as set out on our Our promise page. Prices start at \u20B9419. Here is the current range."
         ],
         products: "oversized"
       }
@@ -352,7 +352,7 @@ var ARTICLES = [
       },
       {
         h2: "How we use both",
-        p: [`${BRAND} uses 100% cotton at 240 GSM for every oversized tee. Our regular fit and minimal tees range from 180 to 240 GSM depending on the design, and each product page states the exact fabric and weight.`],
+        p: [`${BRAND} uses 100% cotton at 240 GSM for every oversized tee. Our regular fit and minimal tees range from 180 to 240 GSM depending on the design. The product page lists the fabric and weight.`],
         products: "oversized"
       }
     ],
@@ -478,7 +478,7 @@ var ARTICLES = [
       },
       {
         h2: "Prints built to last",
-        p: [`${BRAND} tees use high-definition, fade-resistant DTF artwork on heavyweight cotton, with care instructions on each product page.`],
+        p: [`${BRAND} prints with DTF artwork designed to resist fading, on heavyweight cotton. Care instructions are on the product pages.`],
         products: "any"
       }
     ],
@@ -560,7 +560,34 @@ var orgLd = {
   name: BRAND,
   url: SITE,
   logo: `${SITE}/apple-touch-icon.png`,
-  address: { "@type": "PostalAddress", addressLocality: "Hyderabad", addressRegion: "Telangana", addressCountry: "IN" }
+  email: "hello.chilsandco@gmail.com",
+  telephone: "+91 78420 70404",
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "3rd Floor, Plot No. 38 & 39, Matrusri Nagar, Miyapur",
+    addressLocality: "Hyderabad",
+    addressRegion: "Telangana",
+    postalCode: "500049",
+    addressCountry: "IN"
+  },
+  areaServed: "IN",
+  sameAs: [
+    "https://www.instagram.com/chils_and_co/",
+    "https://www.facebook.com/chilsandco",
+    "https://www.youtube.com/@chils_and_co",
+    "https://www.pinterest.com/chilsandco",
+    "https://twitter.com/chilsandco",
+    "https://www.threads.net/@chilsandco"
+  ],
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer support",
+    telephone: "+91 78420 70404",
+    email: "hello.chilsandco@gmail.com",
+    areaServed: "IN",
+    availableLanguage: ["English", "Hindi", "Telugu"],
+    hoursAvailable: { "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], opens: "10:00", closes: "18:00" }
+  }
 };
 function imgUrl(src, small = false) {
   if (!src) return "";
@@ -678,7 +705,7 @@ function llmsText(products) {
 
 ## Key facts
 - Based in Hyderabad, Telangana, India. Website: ${SITE}
-- Oversized and drop shoulder tees: 100% cotton, 240 GSM, reinforced neck and shoulder stitching, fade-resistant DTF print.
+- Oversized and drop shoulder tees: 100% cotton at 240 GSM. Built with reinforced neck and shoulder stitching and fade-resistant DTF artwork (see the Our promise page).
 - Polo t-shirts: TwinTex fabric (cotton inside, polyester outside), 240 GSM heavyweight knit, structured collar, relaxed fit.
 - Regular fit and minimal tees: 100% cotton, cotton blend or polycotton, between 180 and 240 GSM depending on the design.
 - Stacks: three tees chosen to go together, banded as a numbered Trilogy; save 10%.
@@ -752,7 +779,7 @@ var LANDINGS = [
       const r = range(ps);
       return [
         `Our oversized t-shirts are cut as drop shoulder tees in 100% cotton at 240 GSM, a heavyweight fabric that holds its shape instead of hanging limp. There are ${ps.length} designs${r ? `, priced from ${inr(r.lo)} to ${inr(r.hi)}` : ""}.`,
-        "Each tee has reinforced stitching at the neck and shoulders and high-definition, fade-resistant DTF artwork. They are designed by techies in Hyderabad and delivered across India."
+        "We build them with reinforced stitching at the neck and shoulders and fade-resistant DTF artwork, as set out on our Our promise page. The designs are graphic tees from the worlds of code, chips and engineering, designed by techies in Hyderabad and delivered across India."
       ];
     },
     sections: (ps) => [
@@ -761,8 +788,8 @@ var LANDINGS = [
         ul: [
           "Drop shoulder cut: the shoulder seam sits low on the upper arm, for a relaxed shape.",
           "100% cotton at 240 GSM: heavyweight, soft and breathable.",
-          "Reinforced neck and shoulder stitching so the tee keeps its shape.",
-          "High-definition DTF artwork that resists fading when washed inside out."
+          "Built with reinforced neck and shoulder stitching so the tee keeps its shape.",
+          "DTF artwork designed to resist fading, best washed inside out."
         ]
       },
       {
@@ -777,7 +804,7 @@ var LANDINGS = [
     faq: () => [
       { q: "What fabric are your oversized t-shirts made of?", a: "100% cotton at 240 GSM, a heavyweight weight that keeps the shape of a loose cut." },
       { q: "Should I size up for an oversized t-shirt?", a: "Usually no. The cut is already larger, so start with your usual size and check the size guide for measurements." },
-      { q: "Are the prints durable?", a: "They use high-definition DTF artwork that is fade resistant. For the longest life, wash the tee inside out and avoid a hot dryer." },
+      { q: "Are the prints durable?", a: "Our prints use DTF artwork designed to resist fading. For the longest life, wash the tee inside out and avoid a hot dryer." },
       ...SHARED_FAQ
     ],
     related: [
@@ -788,14 +815,14 @@ var LANDINGS = [
   },
   {
     path: "/polo-t-shirts-for-men",
-    title: "Polo T-Shirts for Men | TwinTex 240 GSM | CHILS & CO.",
-    h1: "Polo t-shirts for men",
-    description: "Structured-collar polo t-shirts in heavyweight 240 GSM TwinTex fabric, designed by techies in Hyderabad. Delivered across India with 7-day returns.",
+    title: "Polo Shirts for Men | Heavyweight 240 GSM | CHILS & CO.",
+    h1: "Polo shirts and polo t-shirts for men",
+    description: "Polo shirts for men with a structured collar, in heavyweight 240 GSM TwinTex fabric. Designed by techies in Hyderabad. Delivered across India, 7-day returns.",
     pick: isPolo,
     intro: (ps) => {
       const r = range(ps);
       return [
-        `Our TwinTex polos have a structured collar and a relaxed fit, knitted from a heavyweight 240 GSM fabric with cotton on the inside and polyester on the outside. There are ${ps.length} designs${r ? `, ${r.lo === r.hi ? `at ${inr(r.lo)}` : `from ${inr(r.lo)} to ${inr(r.hi)}`}` : ""}.`,
+        `Our TwinTex polo shirts have a structured collar and a relaxed fit, knitted from a heavyweight 240 GSM fabric with cotton on the inside and polyester on the outside. There are ${ps.length} designs${r ? `, ${r.lo === r.hi ? `at ${inr(r.lo)}` : `from ${inr(r.lo)} to ${inr(r.hi)}`}` : ""}.`,
         "They are made for everyday wear: soft and breathable against the skin, with premium DTF branding."
       ];
     },
@@ -860,7 +887,7 @@ var LANDINGS = [
       const r = range(ps);
       return [
         `A cleaner, closer cut than our oversized range. Our regular fit and minimal tees come in 100% cotton, cotton blends and polycotton, between 180 and 240 GSM depending on the design. There are ${ps.length} designs${r ? `, from ${inr(r.lo)} to ${inr(r.hi)}` : ""}.`,
-        "Each product page states the exact fabric and weight, so you can choose the feel you want."
+        "Product pages list the fabric and weight, so you can choose the feel you want."
       ];
     },
     sections: (ps) => [
@@ -944,10 +971,10 @@ function homeBody(all) {
   const over = ps.filter(isOversized);
   const r = range(ps);
   return `${BOX}<h1>Oversized t-shirts and polos for men, designed by techies in Hyderabad</h1>
-<p>${esc(BRAND)} makes heavyweight oversized drop shoulder tees in 100% cotton at 240 GSM, TwinTex polos and minimal regular fit tees, designed by techies in Hyderabad${r ? `, priced from ${inr(r.lo)}` : ""}. We deliver across India, with 7-day returns.</p>
+<p>${esc(BRAND)} makes heavyweight oversized drop shoulder graphic tees in 100% cotton at 240 GSM, TwinTex polo shirts and minimal regular fit tees, designed by techies in Hyderabad${r ? `, priced from ${inr(r.lo)}` : ""}. We deliver across India, with 7-day returns.</p>
 <h2>Shop by type</h2>${links([
     { href: "/oversized-t-shirts-for-men", label: `Oversized t-shirts for men (${over.length} designs)` },
-    { href: "/polo-t-shirts-for-men", label: "Polo t-shirts for men" },
+    { href: "/polo-t-shirts-for-men", label: "Polo shirts for men" },
     { href: "/regular-fit-t-shirts-for-men", label: "Regular fit t-shirts for men" },
     { href: "/t-shirt-combos", label: "Three-tee stacks: save 10%" },
     { href: "/collection", label: "The full collection" }
@@ -955,7 +982,7 @@ function homeBody(all) {
 <h2>Popular oversized tees</h2>${productLinks(over.slice(0, 12))}
 <h2>Why people choose us</h2><ul>
 <li>Heavyweight 100% cotton at 240 GSM on every oversized tee.</li>
-<li>Reinforced neck and shoulder stitching, and fade-resistant DTF artwork.</li>
+<li>Built with reinforced neck and shoulder stitching and fade-resistant DTF artwork.</li>
 <li>Designs from the worlds of code, chips and engineering.</li></ul>
 ${POLICY}
 <h2>Guides</h2>${GUIDES}</div>`;
@@ -1003,22 +1030,22 @@ ${POLICY}
     { href: "/collection", label: "The full collection" }
   ])}</div>`;
 }
-function policyBody(path5) {
-  if (path5 === "/shipping-delivery")
+function policyBody(path4) {
+  if (path4 === "/shipping-delivery")
     return `${BOX}<h1>Shipping and delivery</h1><p>We deliver across India. Delivery costs from \u20B980, and you see the exact amount at checkout before you pay.</p><ul>
 <li>Packing: orders are packed and handed to the courier within 24 to 48 hours.</li>
 <li>Delivery time: 2 to 7 business days, tracked by SMS and email. Business days do not include Sundays or public holidays.</li>
 <li>Store pickup: free.</li>
 <li>Estimates can slip because of weather, courier delays or very busy periods, and we keep you posted.</li></ul>
 <p><a href="/returns-refunds">Returns and refunds</a> \xB7 <a href="/collection">Shop</a></p></div>`;
-  if (path5 === "/returns-refunds")
+  if (path4 === "/returns-refunds")
     return `${BOX}<h1>Returns and refunds</h1><p>Return a tee within 7 days of delivery for a refund, an exchange or store credit.</p><ul>
 <li>What we cannot take back: tees that have been worn or washed, with tags or trims removed, damage after delivery, and requests made more than 7 days after delivery.</li>
 <li>How to ask: tell us the reason, add a short description and up to three photos. Photos are needed for damaged items, wrong items and quality concerns.</li>
 <li>What happens next: our team reviews every request. If it is approved we email you the pickup details; pickup depends on the courier serving your area.</li>
 <li>Refunds go to your PhonePe or original payment method in 3 to 7 business days after the tee is back and checked.</li></ul>
 <p><a href="/shipping-delivery">Shipping and delivery</a> \xB7 <a href="/collection">Shop</a></p></div>`;
-  if (path5 === "/our-promise")
+  if (path4 === "/our-promise")
     return `${BOX}<h1>Our promise</h1><p>${esc(BRAND)} stands behind how its tees are made and packed.</p><ul>
 <li>Fabric: our oversized tees are heavyweight 100% cotton at 240 GSM.</li>
 <li>Construction: reinforced stitching at the neck and shoulders, and high-definition, fade-resistant DTF artwork.</li>
@@ -1066,10 +1093,52 @@ function registerLandings(app, getProducts) {
 }
 
 // slackBot.ts
-import fs from "fs";
-import path from "path";
+import fs2 from "fs";
 import { WebClient } from "@slack/web-api";
 import { SocketModeClient } from "@slack/socket-mode";
+
+// storage.ts
+import fs from "fs";
+import os from "os";
+import path from "path";
+var DATA_DIR = process.env.CHILS_DATA_DIR || path.join(os.homedir(), "chils-data");
+var UPLOADS_DIR = path.join(DATA_DIR, "uploads");
+var SAFE_EXT = /^[a-z0-9]{1,5}$/;
+function saveUpload(kind, filename, data) {
+  const ext = path.extname(filename).slice(1).toLowerCase();
+  const base = path.basename(filename, path.extname(filename)).replace(/[^\w.-]/g, "");
+  if (!base || !SAFE_EXT.test(ext)) throw new Error(`Refusing file name ${filename}`);
+  const dir = path.join(UPLOADS_DIR, kind);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, `${base}.${ext}`), data);
+  return `/uploads/${kind}/${base}.${ext}`;
+}
+function dataFile(name) {
+  const target = path.join(DATA_DIR, name);
+  const legacy = path.join(process.cwd(), name);
+  try {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+    if (!fs.existsSync(target) && fs.existsSync(legacy)) fs.copyFileSync(legacy, target);
+  } catch (e) {
+    console.error(`[CHILS DATA] Could not prepare ${name}:`, e.message);
+  }
+  return target;
+}
+function adoptLegacyUploads(appDir) {
+  for (const root of [path.join(appDir, "public", "uploads"), path.join(appDir, "dist", "uploads")]) {
+    for (const kind of ["reviews", "custom_designs"]) {
+      const from = path.join(root, kind);
+      if (!fs.existsSync(from)) continue;
+      const to = path.join(UPLOADS_DIR, kind);
+      fs.mkdirSync(to, { recursive: true });
+      for (const f of fs.readdirSync(from)) {
+        if (!fs.existsSync(path.join(to, f))) fs.copyFileSync(path.join(from, f), path.join(to, f));
+      }
+    }
+  }
+}
+
+// slackBot.ts
 var STATUSES = [
   { value: "processing", label: "Processing" },
   { value: "on-hold", label: "On hold" },
@@ -1120,9 +1189,9 @@ var ago = (t) => {
 var state = { abandoned: {}, returns: {}, refunds: {} };
 var stateFile = "";
 function loadState() {
-  stateFile = (process.env.SLACK_STATE_FILE || "").trim() || path.join(process.cwd(), ".slack-state.json");
+  stateFile = (process.env.SLACK_STATE_FILE || "").trim() || dataFile(".slack-state.json");
   try {
-    state = { abandoned: {}, returns: {}, refunds: {}, ...JSON.parse(fs.readFileSync(stateFile, "utf8")) };
+    state = { abandoned: {}, returns: {}, refunds: {}, ...JSON.parse(fs2.readFileSync(stateFile, "utf8")) };
   } catch {
   }
 }
@@ -1130,7 +1199,7 @@ function saveState() {
   const cutoff = Date.now() - 14 * 864e5;
   for (const [id, t] of Object.entries(state.abandoned)) if (t < cutoff) delete state.abandoned[id];
   try {
-    fs.writeFileSync(stateFile, JSON.stringify(state));
+    fs2.writeFileSync(stateFile, JSON.stringify(state));
   } catch (err) {
     console.warn("[SLACK] Could not save the bot's memory file:", err.message);
   }
@@ -2182,12 +2251,12 @@ function sendPurchase(order) {
 }
 
 // mediaCache.ts
-import fs2 from "fs";
-import os from "os";
+import fs3 from "fs";
+import os2 from "os";
 import path2 from "path";
 import crypto2 from "crypto";
 import axios2 from "axios";
-var DIR = process.env.MEDIA_CACHE_DIR || path2.join(os.homedir(), "chils-media-cache");
+var DIR = process.env.MEDIA_CACHE_DIR || path2.join(os2.homedir(), "chils-media-cache");
 var SAFE = /^[\w\-./ ()%,+@]+$/;
 var LONG = "public, max-age=2592000, stale-while-revalidate=86400";
 var sharpLoad = null;
@@ -2202,14 +2271,14 @@ async function build(rel, width, storeUrl) {
   const ext = sharp ? "webp" : path2.extname(rel).slice(1).toLowerCase() || "bin";
   const file = path2.join(DIR, String(sharp ? width : "orig"), `${hash}.${ext}`);
   const type = sharp ? "image/webp" : ext === "jpg" || ext === "jpeg" ? "image/jpeg" : `image/${ext}`;
-  if (fs2.existsSync(file)) return { file, type };
+  if (fs3.existsSync(file)) return { file, type };
   const src = `${storeUrl.replace(/\/$/, "")}/wp-content/uploads/${rel.split("/").map(encodeURIComponent).join("/")}`;
   const { data } = await axios2.get(src, { responseType: "arraybuffer", timeout: 15e3, headers: { "User-Agent": "chils-media" } });
   const out = sharp ? await sharp(Buffer.from(data)).rotate().resize({ width, withoutEnlargement: true }).webp({ quality: 80 }).toBuffer() : Buffer.from(data);
-  await fs2.promises.mkdir(path2.dirname(file), { recursive: true });
+  await fs3.promises.mkdir(path2.dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.tmp`;
-  await fs2.promises.writeFile(tmp, out);
-  await fs2.promises.rename(tmp, file);
+  await fs3.promises.writeFile(tmp, out);
+  await fs3.promises.rename(tmp, file);
   return { file, type };
 }
 function mediaHandler(storeUrl) {
@@ -2244,47 +2313,6 @@ function uploadsPathOf(url) {
   }
 }
 
-// storage.ts
-import fs3 from "fs";
-import os2 from "os";
-import path3 from "path";
-var DATA_DIR = process.env.CHILS_DATA_DIR || path3.join(os2.homedir(), "chils-data");
-var UPLOADS_DIR = path3.join(DATA_DIR, "uploads");
-var SAFE_EXT = /^[a-z0-9]{1,5}$/;
-function saveUpload(kind, filename, data) {
-  const ext = path3.extname(filename).slice(1).toLowerCase();
-  const base = path3.basename(filename, path3.extname(filename)).replace(/[^\w.-]/g, "");
-  if (!base || !SAFE_EXT.test(ext)) throw new Error(`Refusing file name ${filename}`);
-  const dir = path3.join(UPLOADS_DIR, kind);
-  fs3.mkdirSync(dir, { recursive: true });
-  fs3.writeFileSync(path3.join(dir, `${base}.${ext}`), data);
-  return `/uploads/${kind}/${base}.${ext}`;
-}
-function dataFile(name) {
-  const target = path3.join(DATA_DIR, name);
-  const legacy = path3.join(process.cwd(), name);
-  try {
-    fs3.mkdirSync(DATA_DIR, { recursive: true });
-    if (!fs3.existsSync(target) && fs3.existsSync(legacy)) fs3.copyFileSync(legacy, target);
-  } catch (e) {
-    console.error(`[CHILS DATA] Could not prepare ${name}:`, e.message);
-  }
-  return target;
-}
-function adoptLegacyUploads(appDir) {
-  for (const root of [path3.join(appDir, "public", "uploads"), path3.join(appDir, "dist", "uploads")]) {
-    for (const kind of ["reviews", "custom_designs"]) {
-      const from = path3.join(root, kind);
-      if (!fs3.existsSync(from)) continue;
-      const to = path3.join(UPLOADS_DIR, kind);
-      fs3.mkdirSync(to, { recursive: true });
-      for (const f of fs3.readdirSync(from)) {
-        if (!fs3.existsSync(path3.join(to, f))) fs3.copyFileSync(path3.join(from, f), path3.join(to, f));
-      }
-    }
-  }
-}
-
 // server.ts
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest, CallbackType, RefundRequest } from "pg-sdk-node";
 dotenv.config();
@@ -2292,7 +2320,7 @@ var IS_PROD = process.env.NODE_ENV === "production";
 var JWT_SECRET = process.env.JWT_SECRET || "";
 if (!JWT_SECRET) console.error("[CHILS & CO.] JWT_SECRET is not set: customer logins will fail until it is added to the environment.");
 var __filename = fileURLToPath(import.meta.url);
-var __dirname = path4.dirname(__filename);
+var __dirname = path3.dirname(__filename);
 function getWooCommerce() {
   const k = (process.env.WOOCOMMERCE_KEY || "").trim();
   const s = (process.env.WOOCOMMERCE_SECRET || "").trim();
@@ -2746,7 +2774,7 @@ async function startServer() {
   let holdingHtml = null;
   const readHolding = () => {
     if (holdingHtml) return holdingHtml;
-    for (const p of [path4.resolve(__dirname, "dist", "coming-soon.html"), path4.resolve(__dirname, "public", "coming-soon.html")]) {
+    for (const p of [path3.resolve(__dirname, "dist", "coming-soon.html"), path3.resolve(__dirname, "public", "coming-soon.html")]) {
       try {
         return holdingHtml = fs4.readFileSync(p, "utf-8");
       } catch {
@@ -3692,7 +3720,7 @@ async function startServer() {
         const imgMatch = reviewText.match(/__IMAGES__(\[.*?\])/);
         if (imgMatch) {
           try {
-            images = JSON.parse(imgMatch[1]).filter((u) => typeof u === "string" && (!u.startsWith("/uploads/") || fs4.existsSync(path4.join(UPLOADS_DIR, path4.normalize(u.slice("/uploads/".length)).replace(/^(\.\.[\/\\])+/, "")))));
+            images = JSON.parse(imgMatch[1]).filter((u) => typeof u === "string" && (!u.startsWith("/uploads/") || fs4.existsSync(path3.join(UPLOADS_DIR, path3.normalize(u.slice("/uploads/".length)).replace(/^(\.\.[\/\\])+/, "")))));
             reviewText = reviewText.replace(/__IMAGES__\[.*?\]/, "").trim();
           } catch (e) {
           }
@@ -6028,8 +6056,8 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       }
       const settings = JSON.parse(await fs4.promises.readFile("settings.json", "utf-8").catch(() => "{}"));
       const tempId = Date.now() + "_" + Math.floor(Math.random() * 1e3);
-      const xlsmTempPath = path4.join(process.cwd(), `temp_${tempId}.xlsm`);
-      const templatePath = path4.join(process.cwd(), "amazon_blank_template.xlsm");
+      const xlsmTempPath = path3.join(process.cwd(), `temp_${tempId}.xlsm`);
+      const templatePath = path3.join(process.cwd(), "amazon_blank_template.xlsm");
       if (!fs4.existsSync(templatePath)) {
         return res.status(500).json({ message: "Amazon blank template file is missing on the server." });
       }
@@ -6619,7 +6647,7 @@ ${xmlItems}
     app.use(vite.middlewares);
     console.log(`[CHILS & CO.] Development mode: Vite middleware active`);
   } else {
-    const distPath = path4.resolve(__dirname, "dist");
+    const distPath = path3.resolve(__dirname, "dist");
     if (fs4.existsSync(distPath)) {
       console.log(`[CHILS & CO.] Production mode: Serving static files from ${distPath}`);
       app.use(express.static(distPath, {
@@ -6690,7 +6718,7 @@ ${xmlItems}
       };
       const PRIVATE_ROUTE_PREFIXES = ["/checkout", "/onboarding", "/console", "/admin", "/auth", "/wishlist"];
       app.get("*", async (req, res) => {
-        const indexPath = path4.resolve(distPath, "index.html");
+        const indexPath = path3.resolve(distPath, "index.html");
         let cleanPath = req.path || "/";
         if (cleanPath.length > 1 && cleanPath.endsWith("/")) {
           cleanPath = cleanPath.slice(0, -1);

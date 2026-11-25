@@ -100,14 +100,14 @@ export const ARTICLES: Article[] = [
   },
   {
     slug: "how-to-choose-an-oversized-graphic-tshirt-india",
-    title: "How to choose an oversized graphic t-shirt in India: a buying guide",
+    title: "How to choose oversized graphic tees for men in India: a buying guide",
     description:
-      "GSM, cotton, pre-shrunk fabric, print method and stitching: the checks that decide whether an oversized graphic tee lasts or falls apart.",
+      "GSM, cotton, pre-shrunk fabric, print method and stitching: the checks that decide whether oversized graphic tees for men last or fall apart.",
     published: "2026-11-25",
     updated: "2026-11-25",
     answer:
       "For an oversized graphic t-shirt that lasts, look for 100% cotton at about 240 GSM, a pre-shrunk fabric, reinforced stitching at the neck and shoulders, and a fade-resistant print such as DTF. Check that the seller states these on the product page. If they are missing, assume the fabric is thin.",
-    keywords: ["oversized graphic t-shirt", "graphic t-shirt", "men's oversized t-shirt", "heavyweight cotton t-shirt"],
+    keywords: ["oversized graphic tees", "graphic tees for men", "oversized graphic t-shirt", "men's oversized t-shirt", "heavyweight cotton t-shirt"],
     sections: [
       {
         h2: "1. GSM: the weight of the fabric",
@@ -153,7 +153,7 @@ export const ARTICLES: Article[] = [
       {
         h2: "Heavyweight oversized graphic tees from CHILS & CO.",
         p: [
-          "Our oversized graphic tees are 100% cotton at 240 GSM, with reinforced neck and shoulder stitching and high-definition, fade-resistant DTF artwork. Prices start at ₹419. Here is the current range.",
+          "Our oversized tees are 100% cotton at 240 GSM, and we build them with reinforced neck and shoulder stitching and fade-resistant DTF artwork, as set out on our Our promise page. Prices start at ₹419. Here is the current range.",
         ],
         products: "oversized",
       },
@@ -339,7 +339,7 @@ export const ARTICLES: Article[] = [
       },
       {
         h2: "How we use both",
-        p: [`${BRAND} uses 100% cotton at 240 GSM for every oversized tee. Our regular fit and minimal tees range from 180 to 240 GSM depending on the design, and each product page states the exact fabric and weight.`],
+        p: [`${BRAND} uses 100% cotton at 240 GSM for every oversized tee. Our regular fit and minimal tees range from 180 to 240 GSM depending on the design. The product page lists the fabric and weight.`],
         products: "oversized",
       },
     ],
@@ -468,7 +468,7 @@ export const ARTICLES: Article[] = [
       },
       {
         h2: "Prints built to last",
-        p: [`${BRAND} tees use high-definition, fade-resistant DTF artwork on heavyweight cotton, with care instructions on each product page.`],
+        p: [`${BRAND} prints with DTF artwork designed to resist fading, on heavyweight cotton. Care instructions are on the product pages.`],
         products: "any",
       },
     ],
@@ -558,7 +558,34 @@ export const orgLd = {
   name: BRAND,
   url: SITE,
   logo: `${SITE}/apple-touch-icon.png`,
-  address: { "@type": "PostalAddress", addressLocality: "Hyderabad", addressRegion: "Telangana", addressCountry: "IN" },
+  email: "hello.chilsandco@gmail.com",
+  telephone: "+91 78420 70404",
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "3rd Floor, Plot No. 38 & 39, Matrusri Nagar, Miyapur",
+    addressLocality: "Hyderabad",
+    addressRegion: "Telangana",
+    postalCode: "500049",
+    addressCountry: "IN",
+  },
+  areaServed: "IN",
+  sameAs: [
+    "https://www.instagram.com/chils_and_co/",
+    "https://www.facebook.com/chilsandco",
+    "https://www.youtube.com/@chils_and_co",
+    "https://www.pinterest.com/chilsandco",
+    "https://twitter.com/chilsandco",
+    "https://www.threads.net/@chilsandco",
+  ],
+  contactPoint: {
+    "@type": "ContactPoint",
+    contactType: "customer support",
+    telephone: "+91 78420 70404",
+    email: "hello.chilsandco@gmail.com",
+    areaServed: "IN",
+    availableLanguage: ["English", "Hindi", "Telugu"],
+    hoursAvailable: { "@type": "OpeningHoursSpecification", dayOfWeek: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], opens: "10:00", closes: "18:00" },
+  },
 };
 
 /** A product photo as a direct, cacheable address on our own domain (not the redirecting proxy). */
@@ -690,7 +717,7 @@ function llmsText(products: any[]) {
 
 ## Key facts
 - Based in Hyderabad, Telangana, India. Website: ${SITE}
-- Oversized and drop shoulder tees: 100% cotton, 240 GSM, reinforced neck and shoulder stitching, fade-resistant DTF print.
+- Oversized and drop shoulder tees: 100% cotton at 240 GSM. Built with reinforced neck and shoulder stitching and fade-resistant DTF artwork (see the Our promise page).
 - Polo t-shirts: TwinTex fabric (cotton inside, polyester outside), 240 GSM heavyweight knit, structured collar, relaxed fit.
 - Regular fit and minimal tees: 100% cotton, cotton blend or polycotton, between 180 and 240 GSM depending on the design.
 - Stacks: three tees chosen to go together, banded as a numbered Trilogy; save 10%.
