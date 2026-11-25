@@ -73,3 +73,14 @@ Things that carry over by themselves because they live outside the app folder: c
 ## Secrets
 
 Never commit `.env*` or `secrets/` (both are git-ignored). Environment variables live only in Hostinger.
+
+## How a change reaches the live site (current state, 26 Nov 2026)
+
+GitHub (`chilsandco/chills-version-1`) is where the code is pushed. The new Hostinger app deploys from the GitLab
+project `chils-and-co-group/chills-version-1`, branch `main`. A change only goes live automatically if GitLab receives
+it. As of this note GitLab has no mirror set up, so confirm below that a GitHub push shows up on GitLab before
+relying on it.
+
+Sync test: commit `a4f7f5e` style marker lines like the one below are only used to prove a push reaches GitLab.
+
+- sync test marker: 2026-11-26
