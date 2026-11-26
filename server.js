@@ -3253,6 +3253,24 @@ async function startServer() {
   const productCache = /* @__PURE__ */ new Map();
   let productsBody = null;
   let productsRefresh = null;
+  const PRODUCTS_SNAPSHOT = dataFile("products-snapshot.json");
+  const setProducts = (mapped) => {
+    globalProductsCache = mapped;
+    productsBody = { all: JSON.stringify(mapped), visible: JSON.stringify(mapped.filter((p) => p.id.toString() !== "1672")) };
+  };
+  const loadProductsSnapshot = () => {
+    try {
+      const saved = JSON.parse(fs4.readFileSync(PRODUCTS_SNAPSHOT, "utf8"));
+      if (Array.isArray(saved) && saved.length) {
+        setProducts(saved);
+        lastProductsFetch = 0;
+        console.warn(`[CHILS & CO.] Serving the saved product list (${saved.length}) until the store answers.`);
+        return true;
+      }
+    } catch {
+    }
+    return false;
+  };
   const refreshProducts = () => {
     if (productsRefresh) return productsRefresh;
     productsRefresh = (async () => {
@@ -3267,9 +3285,12 @@ async function startServer() {
         if (rows.length < 100) break;
       }
       const mapped = all.map((p) => mapProduct(p, {}, swatchesData));
-      globalProductsCache = mapped;
+      if (!mapped.length && globalProductsCache?.length) throw new Error("The store returned no products");
+      setProducts(mapped);
       lastProductsFetch = Date.now();
-      productsBody = { all: JSON.stringify(mapped), visible: JSON.stringify(mapped.filter((p) => p.id.toString() !== "1672")) };
+      if (mapped.length) {
+        fs4.promises.writeFile(PRODUCTS_SNAPSHOT, productsBody.all).catch((e) => console.warn("[CHILS & CO.] Could not save the product snapshot:", e?.message));
+      }
       console.log(`[CHILS & CO.] Products refreshed: ${mapped.length}`);
       return mapped;
     })().finally(() => {
@@ -3894,8 +3915,14 @@ async function startServer() {
     try {
       if (!getWooCommerce()) return res.json(mockProducts);
       if (fresh || !productsBody) {
-        await refreshProducts();
-        res.setHeader("X-Cache", "MISS");
+        try {
+          await refreshProducts();
+          res.setHeader("X-Cache", "MISS");
+        } catch (err) {
+          if (!productsBody && !loadProductsSnapshot()) throw err;
+          console.warn("[CHILS & CO.] Store unavailable, serving the saved product list:", err?.message);
+          res.setHeader("X-Cache", "STALE");
+        }
       } else {
         res.setHeader("X-Cache", "HIT");
         if (Date.now() - lastProductsFetch > PRODUCTS_CACHE_TTL) invalidateProductsCache();
@@ -7248,6 +7275,7 @@ ${xmlItems}
       console.log(`[CHILS & CO.] Listening on port: ${numericPort}`);
       console.log(`[CHILS & CO.] Mode: ${IS_PROD ? "Production" : "Development"}`);
       if (getWooCommerce()) {
+        if (!productsBody) loadProductsSnapshot();
         const warmProductPages = async () => {
           try {
             const list = await refreshProducts();

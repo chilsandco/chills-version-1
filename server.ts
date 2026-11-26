@@ -672,6 +672,26 @@ async function startServer() {
   let productsBody: { all: string; visible: string } | null = null;
   let productsRefresh: Promise<any[]> | null = null;
 
+  // The last good product list, kept on disk (outside the app folder) so a brief store outage or a slow
+  // store right after a restart never shows customers an empty shop. It is replaced on every good refresh.
+  const PRODUCTS_SNAPSHOT = dataFile("products-snapshot.json");
+  const setProducts = (mapped: any[]) => {
+    globalProductsCache = mapped;
+    productsBody = { all: JSON.stringify(mapped), visible: JSON.stringify(mapped.filter((p: any) => p.id.toString() !== '1672')) };
+  };
+  const loadProductsSnapshot = (): boolean => {
+    try {
+      const saved = JSON.parse(fs.readFileSync(PRODUCTS_SNAPSHOT, "utf8"));
+      if (Array.isArray(saved) && saved.length) {
+        setProducts(saved);
+        lastProductsFetch = 0; // treat as stale, so the next visitor triggers a fresh fetch in the background
+        console.warn(`[CHILS & CO.] Serving the saved product list (${saved.length}) until the store answers.`);
+        return true;
+      }
+    } catch { /* no snapshot yet */ }
+    return false;
+  };
+
   /** Fetch every product from the store once, even if many visitors ask at the same moment. */
   const refreshProducts = (): Promise<any[]> => {
     if (productsRefresh) return productsRefresh;
@@ -687,9 +707,13 @@ async function startServer() {
         if (rows.length < 100) break;
       }
       const mapped = all.map((p: any) => mapProduct(p, {}, swatchesData));
-      globalProductsCache = mapped;
+      // An empty answer from the store is treated as a hiccup, not as "we sell nothing".
+      if (!mapped.length && globalProductsCache?.length) throw new Error("The store returned no products");
+      setProducts(mapped);
       lastProductsFetch = Date.now();
-      productsBody = { all: JSON.stringify(mapped), visible: JSON.stringify(mapped.filter((p: any) => p.id.toString() !== '1672')) };
+      if (mapped.length) {
+        fs.promises.writeFile(PRODUCTS_SNAPSHOT, productsBody!.all).catch(e => console.warn("[CHILS & CO.] Could not save the product snapshot:", e?.message));
+      }
       console.log(`[CHILS & CO.] Products refreshed: ${mapped.length}`);
       return mapped;
     })().finally(() => { productsRefresh = null; });
@@ -1414,8 +1438,15 @@ async function startServer() {
     try {
       if (!getWooCommerce()) return res.json(mockProducts);
       if (fresh || !productsBody) {
-        await refreshProducts();
-        res.setHeader('X-Cache', 'MISS');
+        try {
+          await refreshProducts();
+          res.setHeader('X-Cache', 'MISS');
+        } catch (err: any) {
+          // The store did not answer: serve what we have (memory, then the saved list) rather than an error.
+          if (!productsBody && !loadProductsSnapshot()) throw err;
+          console.warn("[CHILS & CO.] Store unavailable, serving the saved product list:", err?.message);
+          res.setHeader('X-Cache', 'STALE');
+        }
       } else {
         res.setHeader('X-Cache', 'HIT');
         // Older than 5 minutes: answer now with what we have, refresh for the next visitor.
@@ -5297,6 +5328,8 @@ ${xmlItems}
       console.log(`[CHILS & CO.] Mode: ${IS_PROD ? 'Production' : 'Development'}`);
       // have the product list ready before the first visitor asks
       if (getWooCommerce()) {
+        // Start from the saved list so the very first visitors see products, then refresh from the store.
+        if (!productsBody) loadProductsSnapshot();
         // Have every product page ready too, so nobody waits on the store for their first look.
         const warmProductPages = async () => {
           try {
