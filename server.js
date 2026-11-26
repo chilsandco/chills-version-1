@@ -7326,7 +7326,7 @@ ${xmlItems}
           description: "Terms of service for shopping with CHILS & CO."
         }
       };
-      const PRIVATE_ROUTE_PREFIXES = ["/checkout", "/onboarding", "/console", "/admin", "/auth", "/wishlist"];
+      const PRIVATE_ROUTE_PREFIXES = ["/checkout", "/onboarding", "/console", "/admin", "/auth", "/wishlist", "/order-success"];
       app.get("*", async (req, res) => {
         const indexPath = path3.resolve(distPath, "index.html");
         let cleanPath = req.path || "/";
@@ -7347,6 +7347,7 @@ ${xmlItems}
             `<link rel="canonical" href="${escAttr(canonicalUrl)}" />`
           );
           res.set("Content-Type", "text/html");
+          res.set("X-Robots-Tag", "noindex, nofollow");
           return res.send(html);
         }
         const productMatch = cleanPath.match(/^\/product\/(\d+)/);

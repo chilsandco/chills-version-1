@@ -141,14 +141,15 @@ const OrderSuccess: React.FC = () => {
 
   const state = noAccess ? 'confirmed' : isSuccessful ? 'paid' : isPending ? 'pending' : isFailed ? 'failed' : 'pending';
   const copy = {
-    confirmed: { eyebrow: 'Order confirmed', title: 'Thank you for your order.', intro: 'Your order is confirmed. Check your email for details, or contact us on WhatsApp.' },
+    // An old or damaged link: the page can't check the order, so it doesn't claim a payment went through.
+    confirmed: { eyebrow: 'Your order', title: 'Thanks for shopping with us.', intro: 'This link can’t show your order’s status. Your confirmation email has the details, or message us on WhatsApp and we’ll check it for you.' },
     paid: { eyebrow: 'Order confirmed', title: 'Thank you. It’s yours.', intro: 'Your payment went through and your order is confirmed. We’ve emailed you the details.' },
     pending: { eyebrow: 'Payment pending', title: 'Almost there.', intro: 'We’re waiting for PhonePe to confirm your payment. This page updates on its own, so you can keep it open.' },
     failed: { eyebrow: 'Payment didn’t go through', title: error ? 'We couldn’t find this order.' : 'Your payment didn’t go through.', intro: error ? 'The link may be incomplete. Your orders are always in My orders.' : 'Your order is saved. If money left your account anyway, message us and we’ll sort it out.' },
   }[state];
 
-  const Icon = state === 'paid' || state === 'confirmed' ? Check : state === 'pending' ? Clock : X;
-  const iconTone = state === 'paid' || state === 'confirmed' ? 'bg-ink text-[#fff]' : state === 'pending' ? 'bg-amber-100 text-amber-900' : 'bg-[#e6e4df] text-ink';
+  const Icon = state === 'confirmed' ? Package : state === 'paid' ? Check : state === 'pending' ? Clock : X;
+  const iconTone = state === 'confirmed' ? 'bg-[#e6e4df] text-ink' : state === 'paid' ? 'bg-ink text-[#fff]' : state === 'pending' ? 'bg-amber-100 text-amber-900' : 'bg-[#e6e4df] text-ink';
 
   return (
     <div className="bg-paper text-ink pt-24 md:pt-32 pb-20 min-h-screen">
@@ -164,18 +165,16 @@ const OrderSuccess: React.FC = () => {
         </motion.header>
 
         <div className="space-y-2">
-          {(signalId || orderInfo) && (
-            <div className={`grid gap-2 ${state === 'confirmed' ? 'grid-cols-1' : 'grid-cols-2'}`}>
+          {(signalId || orderInfo) && state !== 'confirmed' && (
+            <div className="grid grid-cols-2 gap-2">
               <div className="bg-[#fff] rounded-2xl p-5">
                 <p className="text-sm text-neutral-500">Order number</p>
                 <p className="text-[20px] md:text-[24px] font-semibold tracking-[-0.02em] mt-1 font-mono">{signalId || `#${orderId}`}</p>
               </div>
-              {state !== 'confirmed' && (
-                <div className="bg-[#fff] rounded-2xl p-5">
-                  <p className="text-sm text-neutral-500">{state === 'paid' ? 'Paid' : 'Amount'}</p>
-                  <p className="text-[20px] md:text-[24px] font-semibold tracking-[-0.02em] mt-1">{orderInfo ? inr(orderInfo.total) : '—'}</p>
-                </div>
-              )}
+              <div className="bg-[#fff] rounded-2xl p-5">
+                <p className="text-sm text-neutral-500">{state === 'paid' ? 'Paid' : 'Amount'}</p>
+                <p className="text-[20px] md:text-[24px] font-semibold tracking-[-0.02em] mt-1">{orderInfo ? inr(orderInfo.total) : '—'}</p>
+              </div>
             </div>
           )}
 
