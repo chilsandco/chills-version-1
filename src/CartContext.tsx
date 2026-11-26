@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
-import { cartItems, itemOf, metaAddToCart, track } from './lib/track';
+import { cartItems, itemOf, metaAddToCart, trackItems, variantOf } from './lib/track';
 import { CartItem, Product, ComboSubItem } from './types';
 import { useAuth } from './AuthContext';
 
@@ -122,9 +122,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addToCart = (product: Product, size?: string, color?: string) => {
-    track('add_to_cart', { currency: 'INR', value: product.price, items: [itemOf(product, size)] });
-    metaAddToCart(product.price, [String(product.id)], product.name);
     const resolvedColor = color || (product.availableColors && product.availableColors.length > 0 ? product.availableColors[0] : undefined);
+    trackItems('add_to_cart', [itemOf(product, size, resolvedColor)]);
+    metaAddToCart(product.price, [String(product.id)], product.name);
     
     const existingIndex = cart.findIndex(item => 
       item.id === product.id && 
@@ -162,11 +162,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     });
 
+    trackItems('add_to_cart', itemsToAdd.map(({ product, size, color }) =>
+      itemOf(product, size, color || product.availableColors?.[0])));
     updateCartAndSync(currentCart);
   };
 
   const addComboToCart = (comboProduct: Product, items: ComboSubItem[]) => {
-    track('add_to_cart', { currency: 'INR', value: comboProduct.price, items: [{ item_id: String(comboProduct.id), item_name: comboProduct.name, price: comboProduct.price, quantity: 1, item_variant: items[0]?.selectedSize, item_category: 'Trilogy' }] });
+    trackItems('add_to_cart', [{ ...itemOf(comboProduct), item_category: 'Trilogy', item_variant: variantOf(items.map(i => i.selectedSize).filter(Boolean).join(', ')) }]);
     metaAddToCart(comboProduct.price, items.map(i => String(i.id)), comboProduct.name);
     const comboKey = `${comboProduct.id}-${items.map(i => `${i.id}_${i.selectedSize}`).join('-')}`;
     const existingIndex = cart.findIndex(item => item.id === comboKey);
@@ -197,8 +199,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const removeFromCart = (productId: string, size?: string, color?: string) => {
-    const gone = cart.find(item => item.id === productId && item.selectedSize === size);
-    if (gone) track('remove_from_cart', { currency: 'INR', value: gone.price * gone.quantity, items: cartItems([gone]) });
+    const gone = cart.find(item => item.id === productId && item.selectedSize === size && (item.selectedColor || undefined) === (color || undefined));
+    if (gone) trackItems('remove_from_cart', cartItems([gone]));
     const newCart = cart.filter(item => !(
       item.id === productId && 
       item.selectedSize === size && 
@@ -211,6 +213,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (quantity <= 0) {
       removeFromCart(productId, size, color);
       return;
+    }
+    // A quantity change is an add or a remove of the difference.
+    const line = cart.find(item => item.id === productId && item.selectedSize === size && (item.selectedColor || undefined) === (color || undefined));
+    if (line && quantity !== line.quantity) {
+      const [item] = cartItems([{ ...line, quantity: Math.abs(quantity - line.quantity) }]);
+      trackItems(quantity > line.quantity ? 'add_to_cart' : 'remove_from_cart', [item]);
     }
     const newCart = cart.map(item => (
       item.id === productId && 

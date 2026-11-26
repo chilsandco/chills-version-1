@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { trackPurchase } from '../lib/track';
+import { trackPurchase, PurchaseDetails } from '../lib/track';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Check, Clock, X, ArrowRight, Package, Truck, Home, Share2 } from 'lucide-react';
@@ -26,6 +26,7 @@ interface OrderStatus {
   status: string;
   total: string;
   currency: string;
+  analytics?: PurchaseDetails;
 }
 
 const PAID = ['processing', 'completed', 'dispatched', 'dispatched-order', 'Dispatched', 'shipping', 'delivered'];
@@ -85,7 +86,9 @@ const OrderSuccess: React.FC = () => {
           if (!response.ok) throw new Error('Order check failed');
           const data = await response.json();
           setOrderInfo(data);
-          if (['processing', 'completed'].includes(data.status)) trackPurchase(String(data.id), Number(data.total) || 0, data.currency || 'INR');
+          if (['processing', 'completed'].includes(data.status)) {
+            trackPurchase({ transaction_id: String(data.id), value: Number(data.total) || 0, currency: data.currency || 'INR', ...(data.analytics || {}) });
+          }
           return ['processing', 'completed', 'failed', 'cancelled', 'refunded'].includes(data.status);
         } catch (err) {
           console.error('Verification error:', err);

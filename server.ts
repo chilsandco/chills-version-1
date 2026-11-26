@@ -10,9 +10,9 @@ import WooCommerceRestApi from "@woocommerce/woocommerce-rest-api";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import { couponProblem, findVariation, mapWooVariation, trustedPrice } from "./orderVariations";
+import { couponProblem, findVariation, mapWooVariation, purchaseAnalytics, trustedPrice } from "./orderVariations";
 import { registerJournal, ARTICLES, EXTRA_LLM_LINKS, imgUrl } from "./journal";
-import { registerLandings, LANDINGS, homeBody, collectionBody, productBody, policyBody, productSchema, productTypeLabel } from "./seo";
+import { registerLandings, LANDINGS, homeBody, collectionBody, productBody, policyBody, productSchema, productTypeLabel, merchantFeedXml, feedEligible } from "./seo";
 import { notifyNewOrder, notifyShipping, notifyRefund, startSlackBot } from "./slackBot";
 import { browserContext, orderMetaFrom, sendAddToCart, sendPurchase } from "./metaCapi";
 import { mediaHandler, uploadsPathOf } from "./mediaCache";
@@ -1566,13 +1566,46 @@ async function startServer() {
       return JSON.stringify(mapProduct(productData, resolvedMediaUrls, swatchesData || {}));
   };
 
+  // The last good copy of each product, kept on disk (~/chils-data/product-snapshots/<id>.json) so a
+  // product page still opens while the store is down, even straight after a restart.
+  const productSnapshotFile = (id: string): string | null => /^\d{1,10}$/.test(id) ? dataFile(`product-snapshots/${id}.json`) : null;
+  const savedSnapshots = new Map<string, string>(); // what is on disk, to skip rewriting the same JSON
+  const saveProductSnapshot = (id: string, json: string) => {
+    const file = productSnapshotFile(id);
+    if (!file || savedSnapshots.get(id) === json) return;
+    try { if (!JSON.parse(json)?.id) return; } catch { return; }
+    savedSnapshots.set(id, json);
+    fs.promises.mkdir(path.dirname(file), { recursive: true })
+      .then(() => fs.promises.writeFile(file, json))
+      .catch(e => { savedSnapshots.delete(id); console.warn(`[CHILS & CO.] Could not save the snapshot of product ${id}:`, e?.message); });
+  };
+  const loadProductSnapshot = (id: string): string | null => {
+    const file = productSnapshotFile(id);
+    if (!file) return null;
+    try {
+      const json = fs.readFileSync(file, "utf8");
+      if (String(JSON.parse(json)?.id) !== id) return null;
+      savedSnapshots.set(id, json);
+      return json;
+    } catch { return null; }
+  };
+
   const productJson = (id: string): Promise<string> => {
     const entry = productCache.get(id) ?? { body: null, at: 0, refresh: null };
     productCache.set(id, entry);
     const stale = Date.now() - entry.at > PRODUCT_TTL;
     if (stale && !entry.refresh) {
       entry.refresh = buildProductJson(id)
-        .then(json => { entry.body = json; entry.at = Date.now(); return json; })
+        .then(json => { entry.body = json; entry.at = Date.now(); saveProductSnapshot(id, json); return json; })
+        .catch(err => {
+          // The store failed and there is nothing in memory: fall back to the saved copy. It stays stale
+          // (at = 0), so the next visitor retries the store.
+          const saved = entry.body ? null : loadProductSnapshot(id);
+          if (!saved) throw err;
+          console.warn(`[CHILS & CO.] Store unavailable, serving the saved copy of product ${id}:`, err?.message);
+          entry.body = saved;
+          return saved;
+        })
         .finally(() => { entry.refresh = null; });
       entry.refresh.catch(e => { console.error(`[CHILS & CO.] Product ${id} refresh failed:`, e?.message); if (!entry.body) productCache.delete(id); });
     }
@@ -3778,7 +3811,9 @@ async function startServer() {
         total: order.total,
         currency: order.currency,
         date_created: order.date_created,
-        orderKey: order.order_key
+        orderKey: order.order_key,
+        // For the Google Analytics "purchase" event: items, shipping and coupon, no personal details.
+        analytics: purchaseAnalytics(order, pid => globalProductsCache?.find((p: any) => String(p.id) === pid))
       });
     } catch (error) {
       res.status(404).json({ message: "Signal not found in system archives." });
@@ -4922,6 +4957,45 @@ Format your response strictly as a single JSON object. Ensure the keys and value
   registerJournal(app, () => globalProductsCache);
   EXTRA_LLM_LINKS.push(...LANDINGS.map(l => ({ href: l.path, label: l.h1 })));
   registerLandings(app, () => globalProductsCache);
+
+  // Google Merchant Center product feed: one item per colour and size, built from the live catalogue
+  // and each product's variations, kept for 15 minutes. Settings are in MERCHANT_FEED (seo.ts).
+  const FEED_TTL = 15 * 60 * 1000;
+  let feedCache: { xml: string; at: number } | null = null;
+  let feedBuild: Promise<string> | null = null;
+  const buildFeed = (): Promise<string> => {
+    if (feedBuild) return feedBuild;
+    feedBuild = (async () => {
+      if (!globalProductsCache?.length) {
+        try { await refreshProducts(); } catch (e: any) { if (!loadProductsSnapshot()) throw e; }
+      }
+      const list = (globalProductsCache || []).filter(feedEligible);
+      const details = new Map<string, any>();
+      for (let i = 0; i < list.length; i += 6) {
+        await Promise.all(list.slice(i, i + 6).map(async (p: any) => {
+          try { details.set(String(p.id), JSON.parse(await productJson(String(p.id)))); }
+          catch (e: any) { console.warn(`[CHILS & CO.] Feed: product ${p.id} has no variations available:`, e?.message); }
+        }));
+      }
+      const xml = merchantFeedXml(globalProductsCache || [], details);
+      feedCache = { xml, at: Date.now() };
+      return xml;
+    })().finally(() => { feedBuild = null; });
+    return feedBuild;
+  };
+
+  app.get("/feeds/google-products.xml", async (req, res) => {
+    try {
+      let xml = feedCache?.xml;
+      if (!xml) xml = await buildFeed();
+      else if (Date.now() - feedCache!.at > FEED_TTL) buildFeed().catch(e => console.error("[CHILS & CO.] Feed refresh failed:", e?.message));
+      res.setHeader('Cache-Control', 'public, max-age=900');
+      res.type('application/xml').send(xml);
+    } catch (e: any) {
+      console.error("[CHILS & CO.] Feed build failed:", e?.message);
+      res.status(503).type('text/plain').send("The product feed is not available right now. Please try again shortly.");
+    }
+  });
 
   app.get("/sitemap.xml", async (req, res) => {
     res.header("Content-Type", "application/xml");

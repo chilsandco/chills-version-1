@@ -43,8 +43,12 @@ the promise, or soften the promise. Search engines and AI assistants compare the
 1. Google Business Profile (highest value local signal). The shop has a real Miyapur address and offers free store
    pickup. Create the profile with the address from settings.json, phone +91 78420 70404, hours Mon to Sat 10 to 6,
    category "Clothing store", website https://chilsandco.com. Google verifies by video or postcard.
-2. Google Merchant Center, for free product listings on Google Shopping. Needs account terms and a product feed with
-   gender, age group, colour and size for each product, which are owner decisions. Ask to build the feed once decided.
+2. Google Merchant Center, for free product listings on Google Shopping. The product feed is ready at
+   **https://chilsandco.com/feeds/google-products.xml** (RSS 2.0, one item per colour and size, grouped by product,
+   rebuilt from the live catalogue at most every 15 minutes; the hidden test product and the combo sets are left out).
+   In Merchant Center: Products > Feeds > add a scheduled fetch of that URL, daily, country India, language English.
+   Gender (male) and age group (adult) are set in `MERCHANT_FEED` at the top of `seo.ts`; change them there if
+   needed. The feed uses the store's product photos (via chilsandco.com/media).
 3. Pin the website link in every social bio (Instagram chils_and_co, Facebook, YouTube, Pinterest, X, Threads). The
    site's structured data already lists these profiles.
 4. LinkedIn company page for CHILS & CO. linking to the site.

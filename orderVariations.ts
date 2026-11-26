@@ -71,3 +71,63 @@ export function couponProblem(c: StoreCoupon | undefined, subtotal: number, hasS
   if (min > 0 && subtotal < min) return `This code needs an order of ₹${min.toLocaleString('en-IN')} or more.`;
   return null;
 }
+
+/** One line of a GA4 ecommerce event. */
+export interface AnalyticsItem {
+  item_id: string;
+  item_name: string;
+  item_category?: string;
+  item_variant?: string;
+  price: number;
+  quantity: number;
+  discount?: number;
+}
+
+/** "Carbon Grey / M": the colour and size of a line, in the form GA4's item_variant expects. */
+export const variantLabel = (size?: string | null, color?: string | null) =>
+  [color, size].map(v => String(v || "").trim()).filter(Boolean).join(" / ") || undefined;
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * The parts of a store order that Google Analytics needs for "purchase": no names, addresses or
+ * contact details. `productOf` looks up the product in the catalogue, so names and categories match the
+ * other shop events (the store's line name also carries the colour and size).
+ */
+export function purchaseAnalytics(order: any, productOf: (productId: string) => { name?: string; category?: string } | undefined) {
+  const lines = Array.isArray(order?.line_items) ? order.line_items : [];
+  const metaValue = (meta: any[], test: RegExp) => {
+    const m = (meta || []).find((x: any) => !String(x?.key || "").startsWith("_") && (test.test(String(x?.key || "")) || test.test(String(x?.display_key || ""))));
+    const v = m ? (m.display_value ?? m.value) : undefined;
+    return typeof v === "string" ? v.replace(/<[^>]*>/g, "").trim() : undefined;
+  };
+  const items: AnalyticsItem[] = lines.map((l: any) => {
+    const quantity = Math.max(1, Number(l.quantity) || 1);
+    const subtotal = Number(l.subtotal ?? l.total) || 0;
+    const total = Number(l.total ?? l.subtotal) || 0;
+    const id = String(l.product_id ?? "");
+    const discount = round2((subtotal - total) / quantity);
+    const product = productOf(id);
+    const item: AnalyticsItem = {
+      item_id: id,
+      item_name: String(product?.name || l.name || ""),
+      item_category: product?.category,
+      item_variant: variantLabel(metaValue(l.meta_data, /size/i), metaValue(l.meta_data, /colou?r/i)),
+      price: round2(subtotal / quantity),
+      quantity,
+    };
+    if (discount > 0) item.discount = discount;
+    return item;
+  });
+  const coupons = (Array.isArray(order?.coupon_lines) ? order.coupon_lines : [])
+    .map((c: any) => String(c?.code || "").trim().toUpperCase()).filter(Boolean);
+  return {
+    transaction_id: String(order?.id ?? ""),
+    currency: String(order?.currency || "INR"),
+    value: round2(Number(order?.total) || 0),
+    shipping: round2(Number(order?.shipping_total) || 0),
+    tax: round2(Number(order?.total_tax) || 0),
+    ...(coupons.length ? { coupon: coupons.join(",") } : {}),
+    items,
+  };
+}

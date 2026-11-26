@@ -12,6 +12,14 @@
 // shipping and returns from the site's own policy pages. Do not add a claim you cannot point to.
 import { SITE, BRAND, esc, inr, imgUrl, page, orgLd, ARTICLES } from "./journal";
 
+// Google Merchant Center feed settings (see merchantFeedXml below). Owner decisions: change them here.
+export const MERCHANT_FEED = {
+  gender: "male" as "male" | "female" | "unisex",
+  ageGroup: "adult" as "adult" | "teen" | "kids",
+  googleProductCategory: "Apparel & Accessories > Clothing > Shirts & Tops",
+  sizeSystem: "IN",
+};
+
 type P = any;
 const visible = (ps: P[]) => ps.filter(p => String(p.id) !== "1672" && p.status !== "outofstock");
 const isOversized = (p: P) => /drop shoulder|oversized/i.test(String(p.category));
@@ -556,3 +564,88 @@ export function registerLandings(app: any, getProducts: () => P[] | null) {
 }
 
 export { ARTICLES };
+
+// ── Google Merchant Center product feed ─────────────────────────────────────
+// RSS 2.0 with the g: namespace, one item per variation (colour and size), grouped by product id.
+// Everything comes from the live catalogue: names, descriptions, prices, colours, sizes and stock.
+
+const xmlText = (s: unknown) => esc(String(s ?? "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, ""));
+const plain = (s: unknown) => String(s ?? "")
+  .replace(/<[^>]*>/g, " ")
+  .replace(/^\s*-\s+/gm, "")
+  .replace(/\s+/g, " ")
+  .trim();
+const price = (n: unknown) => `${(Number(n) || 0).toFixed(2)} INR`;
+
+/** Products that belong in the feed: not the hidden test product, not grouped combos. */
+export const feedEligible = (p: P) => String(p?.id) !== "1672" && p?.type !== "grouped" && !isCombo(p);
+
+/**
+ * @param products the catalogue list (/api/products)
+ * @param details  the full product (with variations) by id, as /api/products/:id returns it
+ */
+export function merchantFeedXml(products: P[], details: Map<string, P>, now = new Date()) {
+  const items: string[] = [];
+  const label = (p: P) => {
+    const t = productTypeLabel(p);
+    return MERCHANT_FEED.gender === "male" ? t : t.replace(/ for Men$/, "");
+  };
+  for (const listed of products.filter(feedEligible)) {
+    const p = details.get(String(listed.id)) || listed;
+    if (!feedEligible(p)) continue;
+    const id = String(p.id);
+    const description = plain([p.shortDescription, p.description].filter(Boolean).join("\n\n")).replace(/^Story Behind The Design\s*/i, "").slice(0, 5000) || `${p.name} ${label(p)} by ${BRAND}.`;
+    const parentImages: string[] = (p.images || []).map((src: string) => imgUrl(src)).filter(Boolean);
+    const variations: P[] = Array.isArray(p.variations) && p.variations.length ? p.variations : [];
+    // Products that only vary by size keep their one colour on the product itself.
+    const onlyColour = (p.availableColors || []).length === 1 ? p.availableColors[0] : "";
+    const rows = variations.length
+      ? variations.map((v: P) => ({
+          id: `${id}-${v.id}`,
+          color: v.attributes?.color || onlyColour,
+          size: v.attributes?.size || "",
+          price: Number(v.price) || Number(p.price),
+          inStock: v.stockStatus === "instock" && p.status !== "Coming Soon",
+          images: (v.images || []).map((src: string) => imgUrl(src)).filter(Boolean) as string[],
+        }))
+      : [{ id, color: onlyColour, size: "", price: Number(p.price), inStock: p.status === "Available", images: [] as string[] }];
+    for (const r of rows) {
+      const images = [...new Set([...r.images, ...parentImages])];
+      if (!images.length || !(r.price > 0)) continue; // Google rejects items without an image or a price
+      const title = [`${p.name} ${label(p)}`, r.color, r.size && `Size ${r.size}`].filter(Boolean).join(" - ").slice(0, 150);
+      const tags = [
+        ["g:id", r.id],
+        ["title", title],
+        ["description", description],
+        ["link", `${SITE}/product/${id}`],
+        ["g:image_link", images[0]],
+        ...images.slice(1, 11).map(src => ["g:additional_image_link", src]),
+        ["g:price", price(r.price)],
+        ["g:availability", r.inStock ? "in_stock" : "out_of_stock"],
+        ["g:brand", BRAND],
+        ["g:condition", "new"],
+        ["g:identifier_exists", "no"],
+        ["g:google_product_category", MERCHANT_FEED.googleProductCategory],
+        ["g:product_type", p.category || ""],
+        ["g:item_group_id", id],
+        ["g:gender", MERCHANT_FEED.gender],
+        ["g:age_group", MERCHANT_FEED.ageGroup],
+        ["g:color", r.color],
+        ["g:size", r.size],
+        ["g:size_system", r.size ? MERCHANT_FEED.sizeSystem : ""],
+      ].filter(([, v]) => String(v || "").trim());
+      items.push(`<item>\n${tags.map(([k, v]) => `  <${k}>${xmlText(v)}</${k}>`).join("\n")}\n</item>`);
+    }
+  }
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+<channel>
+<title>${xmlText(BRAND)}</title>
+<link>${SITE}</link>
+<description>${xmlText(`${BRAND} products`)}</description>
+<lastBuildDate>${now.toUTCString()}</lastBuildDate>
+${items.join("\n")}
+</channel>
+</rss>
+`;
+}

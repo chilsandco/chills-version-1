@@ -47,6 +47,44 @@ function couponProblem(c, subtotal, hasSet, now = /* @__PURE__ */ new Date()) {
   if (min > 0 && subtotal < min) return `This code needs an order of \u20B9${min.toLocaleString("en-IN")} or more.`;
   return null;
 }
+var variantLabel = (size, color) => [color, size].map((v) => String(v || "").trim()).filter(Boolean).join(" / ") || void 0;
+var round2 = (n) => Math.round(n * 100) / 100;
+function purchaseAnalytics(order, productOf) {
+  const lines = Array.isArray(order?.line_items) ? order.line_items : [];
+  const metaValue = (meta, test) => {
+    const m = (meta || []).find((x) => !String(x?.key || "").startsWith("_") && (test.test(String(x?.key || "")) || test.test(String(x?.display_key || ""))));
+    const v = m ? m.display_value ?? m.value : void 0;
+    return typeof v === "string" ? v.replace(/<[^>]*>/g, "").trim() : void 0;
+  };
+  const items = lines.map((l) => {
+    const quantity = Math.max(1, Number(l.quantity) || 1);
+    const subtotal = Number(l.subtotal ?? l.total) || 0;
+    const total = Number(l.total ?? l.subtotal) || 0;
+    const id = String(l.product_id ?? "");
+    const discount = round2((subtotal - total) / quantity);
+    const product = productOf(id);
+    const item = {
+      item_id: id,
+      item_name: String(product?.name || l.name || ""),
+      item_category: product?.category,
+      item_variant: variantLabel(metaValue(l.meta_data, /size/i), metaValue(l.meta_data, /colou?r/i)),
+      price: round2(subtotal / quantity),
+      quantity
+    };
+    if (discount > 0) item.discount = discount;
+    return item;
+  });
+  const coupons = (Array.isArray(order?.coupon_lines) ? order.coupon_lines : []).map((c) => String(c?.code || "").trim().toUpperCase()).filter(Boolean);
+  return {
+    transaction_id: String(order?.id ?? ""),
+    currency: String(order?.currency || "INR"),
+    value: round2(Number(order?.total) || 0),
+    shipping: round2(Number(order?.shipping_total) || 0),
+    tax: round2(Number(order?.total_tax) || 0),
+    ...coupons.length ? { coupon: coupons.join(",") } : {},
+    items
+  };
+}
 
 // journal.ts
 var SITE = "https://chilsandco.com";
@@ -950,6 +988,12 @@ function registerJournal(app, getProducts) {
 }
 
 // seo.ts
+var MERCHANT_FEED = {
+  gender: "male",
+  ageGroup: "adult",
+  googleProductCategory: "Apparel & Accessories > Clothing > Shirts & Tops",
+  sizeSystem: "IN"
+};
 var visible = (ps) => ps.filter((p) => String(p.id) !== "1672" && p.status !== "outofstock");
 var isOversized = (p) => /drop shoulder|oversized/i.test(String(p.category));
 var isPolo = (p) => /polo/i.test(String(p.name)) && p.type !== "grouped";
@@ -1437,6 +1481,74 @@ function registerLandings(app, getProducts) {
       res.send(landingHtml(l, getProducts() || []));
     });
   }
+}
+var xmlText = (s) => esc(String(s ?? "").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, ""));
+var plain = (s) => String(s ?? "").replace(/<[^>]*>/g, " ").replace(/^\s*-\s+/gm, "").replace(/\s+/g, " ").trim();
+var price = (n) => `${(Number(n) || 0).toFixed(2)} INR`;
+var feedEligible = (p) => String(p?.id) !== "1672" && p?.type !== "grouped" && !isCombo(p);
+function merchantFeedXml(products, details, now = /* @__PURE__ */ new Date()) {
+  const items = [];
+  const label = (p) => {
+    const t = productTypeLabel(p);
+    return MERCHANT_FEED.gender === "male" ? t : t.replace(/ for Men$/, "");
+  };
+  for (const listed of products.filter(feedEligible)) {
+    const p = details.get(String(listed.id)) || listed;
+    if (!feedEligible(p)) continue;
+    const id = String(p.id);
+    const description = plain([p.shortDescription, p.description].filter(Boolean).join("\n\n")).replace(/^Story Behind The Design\s*/i, "").slice(0, 5e3) || `${p.name} ${label(p)} by ${BRAND}.`;
+    const parentImages = (p.images || []).map((src) => imgUrl(src)).filter(Boolean);
+    const variations = Array.isArray(p.variations) && p.variations.length ? p.variations : [];
+    const onlyColour = (p.availableColors || []).length === 1 ? p.availableColors[0] : "";
+    const rows = variations.length ? variations.map((v) => ({
+      id: `${id}-${v.id}`,
+      color: v.attributes?.color || onlyColour,
+      size: v.attributes?.size || "",
+      price: Number(v.price) || Number(p.price),
+      inStock: v.stockStatus === "instock" && p.status !== "Coming Soon",
+      images: (v.images || []).map((src) => imgUrl(src)).filter(Boolean)
+    })) : [{ id, color: onlyColour, size: "", price: Number(p.price), inStock: p.status === "Available", images: [] }];
+    for (const r of rows) {
+      const images = [.../* @__PURE__ */ new Set([...r.images, ...parentImages])];
+      if (!images.length || !(r.price > 0)) continue;
+      const title = [`${p.name} ${label(p)}`, r.color, r.size && `Size ${r.size}`].filter(Boolean).join(" - ").slice(0, 150);
+      const tags = [
+        ["g:id", r.id],
+        ["title", title],
+        ["description", description],
+        ["link", `${SITE}/product/${id}`],
+        ["g:image_link", images[0]],
+        ...images.slice(1, 11).map((src) => ["g:additional_image_link", src]),
+        ["g:price", price(r.price)],
+        ["g:availability", r.inStock ? "in_stock" : "out_of_stock"],
+        ["g:brand", BRAND],
+        ["g:condition", "new"],
+        ["g:identifier_exists", "no"],
+        ["g:google_product_category", MERCHANT_FEED.googleProductCategory],
+        ["g:product_type", p.category || ""],
+        ["g:item_group_id", id],
+        ["g:gender", MERCHANT_FEED.gender],
+        ["g:age_group", MERCHANT_FEED.ageGroup],
+        ["g:color", r.color],
+        ["g:size", r.size],
+        ["g:size_system", r.size ? MERCHANT_FEED.sizeSystem : ""]
+      ].filter(([, v]) => String(v || "").trim());
+      items.push(`<item>
+${tags.map(([k, v]) => `  <${k}>${xmlText(v)}</${k}>`).join("\n")}
+</item>`);
+    }
+  }
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:g="http://base.google.com/ns/1.0">
+<channel>
+<title>${xmlText(BRAND)}</title>
+<link>${SITE}</link>
+<description>${xmlText(`${BRAND} products`)}</description>
+<lastBuildDate>${now.toUTCString()}</lastBuildDate>
+${items.join("\n")}
+</channel>
+</rss>
+`;
 }
 
 // slackBot.ts
@@ -4024,6 +4136,34 @@ async function startServer() {
     const swatchesData = await fetchSwatches();
     return JSON.stringify(mapProduct(productData, resolvedMediaUrls, swatchesData || {}));
   };
+  const productSnapshotFile = (id) => /^\d{1,10}$/.test(id) ? dataFile(`product-snapshots/${id}.json`) : null;
+  const savedSnapshots = /* @__PURE__ */ new Map();
+  const saveProductSnapshot = (id, json) => {
+    const file = productSnapshotFile(id);
+    if (!file || savedSnapshots.get(id) === json) return;
+    try {
+      if (!JSON.parse(json)?.id) return;
+    } catch {
+      return;
+    }
+    savedSnapshots.set(id, json);
+    fs4.promises.mkdir(path3.dirname(file), { recursive: true }).then(() => fs4.promises.writeFile(file, json)).catch((e) => {
+      savedSnapshots.delete(id);
+      console.warn(`[CHILS & CO.] Could not save the snapshot of product ${id}:`, e?.message);
+    });
+  };
+  const loadProductSnapshot = (id) => {
+    const file = productSnapshotFile(id);
+    if (!file) return null;
+    try {
+      const json = fs4.readFileSync(file, "utf8");
+      if (String(JSON.parse(json)?.id) !== id) return null;
+      savedSnapshots.set(id, json);
+      return json;
+    } catch {
+      return null;
+    }
+  };
   const productJson = (id) => {
     const entry = productCache.get(id) ?? { body: null, at: 0, refresh: null };
     productCache.set(id, entry);
@@ -4032,7 +4172,14 @@ async function startServer() {
       entry.refresh = buildProductJson(id).then((json) => {
         entry.body = json;
         entry.at = Date.now();
+        saveProductSnapshot(id, json);
         return json;
+      }).catch((err) => {
+        const saved = entry.body ? null : loadProductSnapshot(id);
+        if (!saved) throw err;
+        console.warn(`[CHILS & CO.] Store unavailable, serving the saved copy of product ${id}:`, err?.message);
+        entry.body = saved;
+        return saved;
       }).finally(() => {
         entry.refresh = null;
       });
@@ -4304,11 +4451,11 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         }));
         for (const item of flattenedLineItems) {
           const match = Array.isArray(item.variations) && item.variations.length ? findVariation(item.variations, item.selectedSize, item.selectedColor) : void 0;
-          const price = trustedPrice(match, productPrices.get(String(item.id)));
-          if (price === null) {
+          const price2 = trustedPrice(match, productPrices.get(String(item.id)));
+          if (price2 === null) {
             return res.status(409).json({ message: `${item.name || "An item"} is unavailable right now. Please remove it and try again.` });
           }
-          item.price = price;
+          item.price = price2;
         }
         let couponLines = [];
         if (couponCode) {
@@ -5887,7 +6034,9 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         total: order.total,
         currency: order.currency,
         date_created: order.date_created,
-        orderKey: order.order_key
+        orderKey: order.order_key,
+        // For the Google Analytics "purchase" event: items, shipping and coupon, no personal details.
+        analytics: purchaseAnalytics(order, (pid) => globalProductsCache?.find((p) => String(p.id) === pid))
       });
     } catch (error) {
       res.status(404).json({ message: "Signal not found in system archives." });
@@ -6944,6 +7093,50 @@ Format your response strictly as a single JSON object. Ensure the keys and value
   registerJournal(app, () => globalProductsCache);
   EXTRA_LLM_LINKS.push(...LANDINGS.map((l) => ({ href: l.path, label: l.h1 })));
   registerLandings(app, () => globalProductsCache);
+  const FEED_TTL = 15 * 60 * 1e3;
+  let feedCache = null;
+  let feedBuild = null;
+  const buildFeed = () => {
+    if (feedBuild) return feedBuild;
+    feedBuild = (async () => {
+      if (!globalProductsCache?.length) {
+        try {
+          await refreshProducts();
+        } catch (e) {
+          if (!loadProductsSnapshot()) throw e;
+        }
+      }
+      const list = (globalProductsCache || []).filter(feedEligible);
+      const details = /* @__PURE__ */ new Map();
+      for (let i = 0; i < list.length; i += 6) {
+        await Promise.all(list.slice(i, i + 6).map(async (p) => {
+          try {
+            details.set(String(p.id), JSON.parse(await productJson(String(p.id))));
+          } catch (e) {
+            console.warn(`[CHILS & CO.] Feed: product ${p.id} has no variations available:`, e?.message);
+          }
+        }));
+      }
+      const xml = merchantFeedXml(globalProductsCache || [], details);
+      feedCache = { xml, at: Date.now() };
+      return xml;
+    })().finally(() => {
+      feedBuild = null;
+    });
+    return feedBuild;
+  };
+  app.get("/feeds/google-products.xml", async (req, res) => {
+    try {
+      let xml = feedCache?.xml;
+      if (!xml) xml = await buildFeed();
+      else if (Date.now() - feedCache.at > FEED_TTL) buildFeed().catch((e) => console.error("[CHILS & CO.] Feed refresh failed:", e?.message));
+      res.setHeader("Cache-Control", "public, max-age=900");
+      res.type("application/xml").send(xml);
+    } catch (e) {
+      console.error("[CHILS & CO.] Feed build failed:", e?.message);
+      res.status(503).type("text/plain").send("The product feed is not available right now. Please try again shortly.");
+    }
+  });
   app.get("/sitemap.xml", async (req, res) => {
     res.header("Content-Type", "application/xml");
     res.header("Cache-Control", "public, max-age=3600");

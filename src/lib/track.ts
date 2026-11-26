@@ -3,7 +3,9 @@
 
 import { CartItem, Product } from '../types';
 
-type Item = { item_id: string; item_name: string; price: number; quantity: number; item_variant?: string; item_category?: string };
+// Every ecommerce event follows the GA4 schema: currency "INR", value, and items with item_id, item_name,
+// item_category, item_variant ("Colour / Size"), price and quantity.
+export type Item = { item_id: string; item_name: string; item_category?: string; item_variant?: string; price: number; quantity: number; discount?: number };
 
 declare global {
   interface Window { gtag?: (...args: unknown[]) => void; fbq?: any; _fbq?: any }
@@ -59,23 +61,61 @@ export function metaAddToCart(value: number, contentIds: string[], contentName?:
   }).catch(() => { /* the Pixel event still counts */ });
 }
 
-export const itemOf = (p: Product, size?: string, quantity = 1): Item => ({
-  item_id: String(p.id), item_name: p.name, price: p.price, quantity, item_variant: size, item_category: p.category,
+/** "Carbon Grey / M", or just one of them, or nothing when neither is chosen yet. */
+export const variantOf = (size?: string | null, color?: string | null) =>
+  [color, size].map(v => String(v || '').trim()).filter(Boolean).join(' / ') || undefined;
+
+const money = (n: unknown) => Math.round((Number(n) || 0) * 100) / 100;
+const itemsValue = (items: Item[]) => money(items.reduce((n, i) => n + i.price * i.quantity, 0));
+
+export const itemOf = (p: Product, size?: string | null, color?: string | null, quantity = 1): Item => ({
+  item_id: String(p.id), item_name: p.name, item_category: p.category, item_variant: variantOf(size, color),
+  price: money(p.price), quantity,
 });
 
 /** Bag lines as analytics items; a Trilogy counts as one item at its set price. */
 export const cartItems = (cart: CartItem[]): Item[] => cart.map(i => ({
-  item_id: String(i.comboId ?? i.id), item_name: i.name, price: i.price, quantity: i.quantity,
-  item_variant: i.selectedSize, item_category: i.isCombo ? 'Trilogy' : i.category,
+  item_id: String(i.comboId ?? i.id), item_name: i.name, item_category: i.isCombo ? 'Trilogy' : i.category,
+  item_variant: i.isCombo
+    ? variantOf((i.comboItems || []).map(c => c.selectedSize).filter(Boolean).join(', '))
+    : variantOf(i.selectedSize, i.selectedColor),
+  price: money(i.price), quantity: i.quantity,
 }));
 
-export const cartValue = (cart: CartItem[]) => cart.reduce((n, i) => n + i.price * i.quantity, 0);
+export const cartValue = (cart: CartItem[]) => itemsValue(cartItems(cart));
 
-/** A purchase is reported once per order, even if the confirmation page reloads. */
-export function trackPurchase(orderId: string, value: number, currency = 'INR') {
+/** view_item, add_to_cart, remove_from_cart and begin_checkout: value is always the items' total. */
+export function trackItems(event: 'view_item' | 'add_to_cart' | 'remove_from_cart' | 'begin_checkout', items: Item[]) {
+  if (items.length) track(event, { currency: 'INR', value: itemsValue(items), items });
+}
+
+export interface PurchaseDetails {
+  transaction_id: string;
+  value: number;
+  currency?: string;
+  shipping?: number;
+  tax?: number;
+  coupon?: string;
+  items?: Item[];
+}
+
+const reportedPurchases = new Set<string>();
+
+/** A purchase is reported once per order, even if the confirmation page reloads or keeps polling. */
+export function trackPurchase(p: PurchaseDetails) {
+  const orderId = String(p.transaction_id || '');
+  if (!orderId || reportedPurchases.has(orderId)) return;
+  reportedPurchases.add(orderId);
   const key = `chils-purchase-${orderId}`;
-  try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch { /* storage blocked */ }
-  track('purchase', { transaction_id: orderId, value, currency });
+  try { if (localStorage.getItem(key)) return; localStorage.setItem(key, '1'); } catch { /* storage blocked: the in-memory guard still holds */ }
+  const currency = p.currency || 'INR';
+  const value = money(p.value);
+  track('purchase', {
+    transaction_id: orderId, currency, value,
+    shipping: money(p.shipping), tax: money(p.tax),
+    ...(p.coupon ? { coupon: p.coupon } : {}),
+    items: p.items || [],
+  });
   // The server sends the same event (event id purchase-<order>) once the payment is confirmed.
   if (pixelOn()) window.fbq?.('track', 'Purchase', { currency, value, order_id: orderId }, { eventID: `purchase-${orderId}` });
 }

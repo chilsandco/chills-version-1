@@ -18,7 +18,7 @@ import { loadProducts, fetchFullProduct } from '../hooks/useProducts';
 import { productTone } from '../data/groups';
 import { STORIES, keySpecs } from '../data/stories';
 import TrilogyHint from '../components/TrilogyHint';
-import { itemOf, track } from '../lib/track';
+import { itemOf, trackItems } from '../lib/track';
 import cutouts from '../data/cutouts.json';
 
 
@@ -166,6 +166,7 @@ const ProductDetail: React.FC = () => {
     return false;
   }, [product, selectedSize, selectedColor]);
 
+  const viewReported = useRef<string | null>(null);
   useEffect(() => {
     setLoading(true);
     // one brief API hiccup shouldn't throw a shopper back to the collection; shared with the
@@ -180,7 +181,8 @@ const ProductDetail: React.FC = () => {
     loadProduct(2)
       .then(data => {
         setProduct(data);
-        track('view_item', { currency: 'INR', value: data.price, items: [itemOf(data)] });
+        // The load can run twice for one page (the effect re-runs); report each product view once.
+        if (viewReported.current !== String(data.id)) { viewReported.current = String(data.id); trackItems('view_item', [itemOf(data)]); }
         setLoading(false);
       })
       .catch(() => navigate('/collection'));

@@ -1,86 +1,63 @@
-# Deploying chilsandco.com from GitHub
+# Deploying chilsandco.com
 
-Goal: push to the `main` branch on GitHub and Hostinger builds and deploys it. No more zip uploads.
+How a change reaches the live site today (26 Nov 2026): **zip upload in Hostinger**. Pushing to GitHub does not
+deploy anything.
 
-Repo: https://github.com/chilsandco/chills-version-1 (private). `main` is the live code.
+Repo: https://github.com/chilsandco/chills-version-1 (private). `main` is the code that should be live.
 
-## Why a new Hostinger app is needed
+## The release flow
 
-The current app (chilsandco.com) was created with "Upload files", and Hostinger only offers GitHub deploys for apps
-created with "Import Git repository". So the Git-deployed app is a new Web App on the same hosting plan, tested on a
-temporary address and then given the chilsandco.com domain.
+1. Work on a branch, check it, then fast-forward `main`:
+   `git push origin <branch> && git push origin <branch>:main`
+2. Check the build locally: `npx tsc --noEmit` and `npm run build` must both be clean, because Hostinger runs
+   `npm run build` again during the deploy and a failing build means no deploy.
+3. Refresh the upload zip (from the `chills-version-1` folder):
 
-**The account owner must do the GitHub connection from their own Hostinger login.** Hostinger disables
-"Connect with GitHub" in collaborator ("managing client") mode. Everything else can be checked from any login.
+   ```
+   zip -q -d ../chils-website-latest.zip "dist/*"
+   zip -q -r ../chils-website-latest.zip dist index.html server.js server.ts journal.ts seo.ts slackBot.ts storage.ts orderVariations.ts metaCapi.ts mediaCache.ts src public/robots.txt docs
+   ```
 
-## One-time setup
+   If a new top-level `.ts` file is added that `server.ts` imports, add it to that list, or Hostinger's build fails.
+4. The account owner uploads `chils-website-latest.zip` to the chilsandco.com app in hPanel and deploys. Hostinger unpacks it, runs `npm run build` and restarts the app (entry file
+   `server.js`, Node 22.x).
+5. Check the live site: home page with real products, a product page, add to bag, /journal, /sitemap.xml,
+   /feeds/google-products.xml. Do not complete a real payment unless you intend to.
 
-1. Log in to hPanel as the account owner (chsrikanthisme@gmail.com), not in collaborator mode.
-2. Websites > Create site > Web App. Choose "Use temporary domain".
-3. "Import your Git repository" > Connect with GitHub. Approve Hostinger's access to the `chilsandco` organisation and
-   select the repository `chills-version-1` only.
-4. Branch: `main`. Turn auto-deploy on ("auto-deploy on every push").
-5. Build settings (these match the current app):
-   - Framework preset: Express
-   - Node version: 22.x
-   - Root directory: `./`
-   - Package manager: npm
-   - Build: the default (`npm run build`, which builds the shop with Vite and bundles `server.ts` into `server.js`)
-   - Entry file: `server.js`
-6. Environment variables: use "Import .env" with `.env.hostinger-test` from the project folder (it is git-ignored and
-   deliberately has the Slack tokens removed and `PAYMENT_RECON=off`, so the test copy cannot double-post to Slack or
-   double-process payments while the live site is still running). Then set:
-   - `WOOCOMMERCE_KEY` and `WOOCOMMERCE_SECRET` to the NEW keys (copy them from the current app's environment page,
-     "Show all values"). The import file holds the old keys, which fail with 401 and show demo products.
-7. Deploy. Test on the temporary address (checklist below).
+## Data that survives a deploy
 
-## Test checklist (temporary address)
+A deploy replaces the app folder. Everything the site writes at runtime lives outside it, in the hosting account's
+home folder, so it carries over:
 
-- Home page loads with real products (not demo ones), prices and photos.
-- A product page, the collection, /journal, /llms.txt and /sitemap.xml load.
-- Add to bag works. Do not complete a real payment unless you intend to.
-- https://<temp-address>/api/products returns about 72 products.
-- Server logs show "Products refreshed" and "Product pages warmed", and no errors.
+- `~/chils-data`: customer uploads and return photos (`uploads/`), settings, quotes and pending exchanges, the Slack
+  bot's memory (`.slack-state.json`), the last good product list (`products-snapshot.json`) and the last good copy of
+  each product page (`product-snapshots/<id>.json`). The snapshots let the shop and product pages keep working while
+  the store (api.chilsandco.com) is down.
+- `~/chils-media-cache`: the image cache behind `/media/...`.
 
-## Switching the real domain (cutover)
+Never delete these folders when cleaning up the app.
 
-Do this at a quiet time. There is a short gap, so have the rollback below in mind.
+## Environment variables
 
-1. In the new app, add the Slack tokens (`SLACK_BOT_TOKEN`, `SLACK_APP_TOKEN`) and `SLACK_REFUND_USERS`
-   (`U0CFPSE9M4K,U0CGXS9DFSA`), and remove `PAYMENT_RECON`. Do not leave the tokens on both apps.
-2. Remove the Slack tokens from the OLD app and redeploy it, so only one app talks to Slack.
-3. In the old app, disconnect the domain chilsandco.com. In the new app, connect chilsandco.com (and www).
-4. Check https://chilsandco.com, then place a small test order (a Rs 1 order has worked before) and confirm the order
-   appears in Slack and the confirmation email arrives.
-5. Keep the old app for a week as the rollback, then delete it.
-
-Things that carry over by themselves because they live outside the app folder: customer uploads and return photos
-(`~/chils-data`), the image cache (`~/chils-media-cache`) and, since this change, the Slack bot's memory
-(`~/chils-data/.slack-state.json`).
-
-## Day to day
-
-1. Work on a branch, then merge it into `main` (pull request or fast-forward).
-2. Hostinger builds and deploys `main` automatically. Watch Deployments in hPanel for "Success".
-3. Check the site. If a deploy fails, the previous version keeps running.
+They live only in Hostinger (the app's environment page). Never commit `.env*` or `secrets/` (both are git-ignored),
+and never put keys or passwords in code.
 
 ## Rollback
 
-- Bad deploy: in hPanel > Deployments, redeploy an earlier successful deployment, or `git revert` the commit on `main`
-  and push.
-- Bad cutover: reconnect chilsandco.com to the old app (still there for a week).
+Upload the previous zip (keep a copy of the last good one before overwriting it) or, in hPanel > Deployments,
+redeploy an earlier successful deployment.
 
-## Secrets
+## Not set up: deploy from GitHub
 
-Never commit `.env*` or `secrets/` (both are git-ignored). Environment variables live only in Hostinger.
+GitHub-based auto-deploy is **not** set up. Hostinger only offers Git deploys for apps created with "Import Git
+repository", and the live app was created with "Upload files".
 
-## How a change reaches the live site (current state, 26 Nov 2026)
+A temporary Git-deployed Hostinger app exists at https://overjoyed-whitesmoke-gnat-12.hostingersite.com. It deploys
+from the GitLab project `chils-and-co-group/chills-version-1` (branch `main`). That GitLab project is a one-time copy:
+it does **not** sync from GitHub, so it does not receive new commits and the temporary app is out of date. Do not
+point chilsandco.com at it.
 
-GitHub (`chilsandco/chills-version-1`) is where the code is pushed. The new Hostinger app deploys from the GitLab
-project `chils-and-co-group/chills-version-1`, branch `main`. A change only goes live automatically if GitLab receives
-it. As of this note GitLab has no mirror set up, so confirm below that a GitHub push shows up on GitLab before
-relying on it.
-
-Sync test: commit `a4f7f5e` style marker lines like the one below are only used to prove a push reaches GitLab.
-
-- sync test marker: 2026-11-26
+To make GitHub pushes reach it, a mirror is needed: a GitLab access token saved by the owner as the GitHub Actions
+secret `GITLAB_TOKEN`, plus a workflow that pushes `main` to GitLab on every push. The workflow has not been added,
+because the secret does not exist yet. Moving the live domain to a Git-deployed app would also need its environment
+variables copied over and the Slack tokens moved (only one app may talk to Slack at a time).

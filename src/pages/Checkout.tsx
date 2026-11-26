@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { small } from '../data/studio';
-import { cartItems, cartValue, track } from '../lib/track';
+import { cartItems, trackItems } from '../lib/track';
 import { useCart } from '../CartContext';
 import { useCheckout } from '../hooks/useCheckout';
 import { useAuth } from '../AuthContext';
@@ -56,7 +56,7 @@ const Checkout: React.FC = () => {
   React.useEffect(() => {
     if (reported.current || !cart.length) return;
     reported.current = true;
-    track('begin_checkout', { currency: 'INR', value: cartValue(cart), items: cartItems(cart) });
+    trackItems('begin_checkout', cartItems(cart));
   }, [cart]);
 
   // Total items in cart for packaging intelligence
