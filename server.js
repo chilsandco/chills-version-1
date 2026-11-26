@@ -12,6 +12,7 @@ import jwt from "jsonwebtoken";
 import crypto3 from "crypto";
 
 // orderVariations.ts
+import { createHmac, timingSafeEqual } from "crypto";
 var same = (a, b) => a.trim().toLowerCase() === b.trim().toLowerCase();
 var COLOR_ATTRS = ["color", "pa_color", "colors", "pa_colors", "colour", "pa_colour", "colours", "pa_colours"];
 var SIZE_ATTRS = ["size", "pa_size", "sizes", "pa_sizes"];
@@ -83,6 +84,41 @@ function purchaseAnalytics(order, productOf) {
     tax: round2(Number(order?.total_tax) || 0),
     ...coupons.length ? { coupon: coupons.join(",") } : {},
     items
+  };
+}
+var orderNumber = (orderId) => String(orderId ?? "").split("_")[0].replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+function orderLinkToken(orderId, secret) {
+  const n = orderNumber(orderId);
+  if (!secret || !n) throw new Error("orderLinkToken needs an order number and a secret");
+  return createHmac("sha256", secret).update(`order-link:${n}`).digest("hex").slice(0, 32);
+}
+function validOrderLinkToken(orderId, token2, secret) {
+  if (!secret || typeof token2 !== "string" || !/^[0-9a-f]{32}$/.test(token2) || !orderNumber(orderId)) return false;
+  const expected = Buffer.from(orderLinkToken(orderId, secret), "utf8");
+  const given = Buffer.from(token2, "utf8");
+  return given.length === expected.length && timingSafeEqual(given, expected);
+}
+function ownsOrder(user, order) {
+  if (!user || !order) return false;
+  const ids = [user.id, user.data?.user?.id, user.user?.id, user.sub, user.data?.id].map((v) => String(v ?? "")).filter((v) => /^\d+$/.test(v) && v !== "0");
+  const emails = [user.email, user.data?.user?.email, user.user_email].map((v) => String(v ?? "").trim().toLowerCase()).filter(Boolean);
+  const orderCustomer = String(order.customer_id ?? "");
+  const orderEmail = String(order.billing?.email ?? "").trim().toLowerCase();
+  return orderCustomer !== "0" && ids.includes(orderCustomer) || !!orderEmail && emails.includes(orderEmail);
+}
+function rateLimiter(limit, windowMs) {
+  const hits = /* @__PURE__ */ new Map();
+  return (key, now = Date.now()) => {
+    if (hits.size > 1e4) {
+      for (const [k, v] of hits) if (v.until <= now) hits.delete(k);
+    }
+    const h = hits.get(key);
+    if (!h || h.until <= now) {
+      hits.set(key, { n: 1, until: now + windowMs });
+      return true;
+    }
+    h.n++;
+    return h.n <= limit;
   };
 }
 
@@ -2997,6 +3033,9 @@ async function getShiprocketLabelUrl(shipmentId) {
     return "";
   }
 }
+var ORDER_LINK_SECRET = (process.env.ORDER_LINK_SECRET || "").trim() || JWT_SECRET;
+if (!ORDER_LINK_SECRET) console.error("[CHILS & CO.] Neither ORDER_LINK_SECRET nor JWT_SECRET is set: order status links are switched off (the success page shows a generic confirmation).");
+var orderLinkParams = (orderId) => `signal=${toSignalId(orderId)}${ORDER_LINK_SECRET ? `&t=${orderLinkToken(orderId, ORDER_LINK_SECRET)}` : ""}`;
 function toSignalId(orderId) {
   const cleanId = String(orderId).replace(/\D/g, "");
   const numId = parseInt(cleanId, 10) || 123456;
@@ -3296,6 +3335,7 @@ async function startServer() {
     next();
   }, express.static(UPLOADS_DIR, { maxAge: "30d", index: false, fallthrough: false }));
   app.use(express.urlencoded({ limit: "10mb", extended: true }));
+  const orderLinkLimit = rateLimiter(20, 60 * 1e3);
   const authenticateToken = (req, res, next) => {
     const authHeader = req.headers["authorization"];
     const token2 = authHeader && authHeader.split(" ")[1];
@@ -4632,7 +4672,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       const siteUrl = "https://www.chilsandco.com";
       const currentOrigin = isStrictProd && host.includes("chilsandco.com") ? `${protocol}://${host}` : isStrictProd ? siteUrl : `${protocol}://${host}`;
       const orderId = merchantTransactionId.split("_")[0];
-      const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?signal=${toSignalId(orderId)}`;
+      const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?${orderLinkParams(orderId)}`;
       const callbackUrl = process.env.PHONEPE_CALLBACK_URL || `${currentOrigin}/api/checkout/phonepe/callback`;
       const wc2 = getWooCommerce();
       if (!wc2) {
@@ -4675,13 +4715,14 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
   });
   app.post("/api/checkout/phonepe/retry", async (req, res) => {
     try {
-      const { orderId, signal } = req.body;
-      if (!orderId || !signal) {
-        return res.status(400).json({ success: false, message: "Order ID and Signal are required." });
+      if (!orderLinkLimit(`retry:${req.ip}`)) return res.status(429).json({ success: false, message: "Too many requests. Please wait a minute and try again." });
+      const { orderId, t } = req.body || {};
+      if (!orderId || !/^\d+$/.test(String(orderId))) {
+        return res.status(400).json({ success: false, message: "Order ID is required." });
       }
-      const expectedSignal = toSignalId(orderId);
-      if (signal !== expectedSignal) {
-        return res.status(403).json({ success: false, message: "Signal validation failed." });
+      if (!ORDER_LINK_SECRET) return res.status(503).json({ success: false, message: "Payment retry is not available right now." });
+      if (!validOrderLinkToken(String(orderId), t, ORDER_LINK_SECRET)) {
+        return res.status(403).json({ success: false, message: "This link can't be used to retry the payment." });
       }
       const wc2 = getWooCommerce();
       if (!wc2) {
@@ -4720,7 +4761,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       const isStrictProd = process.env.PHONEPE_ENV?.toUpperCase() === "PRODUCTION";
       const siteUrl = "https://www.chilsandco.com";
       const currentOrigin = isStrictProd && host.includes("chilsandco.com") ? `${protocol}://${host}` : isStrictProd ? siteUrl : `${protocol}://${host}`;
-      const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?signal=${toSignalId(orderId)}`;
+      const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?${orderLinkParams(orderId)}`;
       const callbackUrl = process.env.PHONEPE_CALLBACK_URL || `${currentOrigin}/api/checkout/phonepe/callback`;
       const amountRupees = parseFloat(order.total);
       const amountPaise = Math.max(100, Math.round(amountRupees * 100));
@@ -5999,6 +6040,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         }));
       }
       const response = await wcSafeCall(wc2, "get", `orders/${req.params.id}`);
+      if (!ownsOrder(req.user, response.data)) return res.status(404).json({ message: "Order not found" });
       res.json(mapOrderToSignal(response.data));
     } catch (error) {
       console.error("WooCommerce Order Detail Error:", error);
@@ -6007,16 +6049,15 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
   });
   app.get("/api/orders/status/:id", async (req, res) => {
     try {
+      res.setHeader("Cache-Control", "no-store");
+      if (!orderLinkLimit(`status:${req.ip}`)) return res.status(429).json({ message: "Too many requests. Please wait a minute and try again." });
       const { id } = req.params;
-      const signal = req.query.signal;
-      const merchantTransactionId = req.query.transaction;
-      if (!signal) {
-        return res.status(400).json({ message: "Signal hash required for verification." });
+      if (!/^\d+$/.test(id)) return res.status(400).json({ message: "Invalid order." });
+      if (!ORDER_LINK_SECRET) return res.status(503).json({ message: "Order status is not available right now." });
+      if (!validOrderLinkToken(id, req.query.t, ORDER_LINK_SECRET)) {
+        return res.status(403).json({ message: "This link can't show the order." });
       }
-      const expectedSignal = toSignalId(id);
-      if (signal !== expectedSignal) {
-        return res.status(403).json({ message: "Signal mismatch. Verification failed." });
-      }
+      const merchantTransactionId = typeof req.query.transaction === "string" && req.query.transaction.split("_")[0] === id ? req.query.transaction : void 0;
       const wc2 = getWooCommerce();
       if (!wc2) {
         return res.json({
@@ -6034,7 +6075,8 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         total: order.total,
         currency: order.currency,
         date_created: order.date_created,
-        orderKey: order.order_key,
+        // No order_key here: it opens the store's printable invoice (name, address, phone, email), and the
+        // success page does not need it. Signed-in customers get it with their own orders (/api/orders/:id).
         // For the Google Analytics "purchase" event: items, shipping and coupon, no personal details.
         analytics: purchaseAnalytics(order, (pid) => globalProductsCache?.find((p) => String(p.id) === pid))
       });
@@ -6354,6 +6396,7 @@ Photos: ${photoUrls.join(" ")}` : ""}`;
       if (!wc2) throw new Error("WooCommerce not configured.");
       const orderResponse = await wcSafeCall(wc2, "get", `orders/${id}`);
       const order = orderResponse.data;
+      if (!ownsOrder(req.user, order)) return res.status(404).json({ message: "Order not found." });
       const parentExchangeOrderId = order.meta_data?.find((m) => m.key === "parent_exchange_order_id" || m.key === "_parent_exchange_order_id")?.value;
       if (parentExchangeOrderId) {
         return res.status(400).json({ message: "Style exchange is limited to 1 cycle. This order was generated via a swap and is not eligible for another reversal." });

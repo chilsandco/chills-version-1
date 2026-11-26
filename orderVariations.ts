@@ -1,3 +1,4 @@
+import { createHmac, timingSafeEqual } from "crypto";
 // Matches an order line to its WooCommerce variation, so the order records the
 // exact size and reduces that size's stock.
 
@@ -129,5 +130,51 @@ export function purchaseAnalytics(order: any, productOf: (productId: string) => 
     tax: round2(Number(order?.total_tax) || 0),
     ...(coupons.length ? { coupon: coupons.join(",") } : {}),
     items,
+  };
+}
+
+// ── Order links ──────────────────────────────────────────────────────────────
+// The "CHLS-xxxxxx" reference is only a display name (anyone can work it out from the order number).
+// Access to an order's status from the success page needs this token instead: an HMAC of the order
+// number with a server secret, which cannot be guessed.
+
+const orderNumber = (orderId: unknown) => String(orderId ?? "").split("_")[0].replace(/\D/g, "").replace(/^0+(?=\d)/, "");
+
+/** The link token for an order: the first 32 hex characters of HMAC-SHA256(order number, secret). */
+export function orderLinkToken(orderId: string | number, secret: string): string {
+  const n = orderNumber(orderId);
+  if (!secret || !n) throw new Error("orderLinkToken needs an order number and a secret");
+  return createHmac("sha256", secret).update(`order-link:${n}`).digest("hex").slice(0, 32);
+}
+
+/** True only for the exact token of this order, compared in constant time. */
+export function validOrderLinkToken(orderId: string | number, token: unknown, secret: string): boolean {
+  if (!secret || typeof token !== "string" || !/^[0-9a-f]{32}$/.test(token) || !orderNumber(orderId)) return false;
+  const expected = Buffer.from(orderLinkToken(orderId, secret), "utf8");
+  const given = Buffer.from(token, "utf8");
+  return given.length === expected.length && timingSafeEqual(given, expected);
+}
+
+/** Does this signed-in user own the order? Matches the store customer id, or the billing email. */
+export function ownsOrder(user: any, order: any): boolean {
+  if (!user || !order) return false;
+  const ids = [user.id, user.data?.user?.id, user.user?.id, user.sub, user.data?.id]
+    .map(v => String(v ?? "")).filter(v => /^\d+$/.test(v) && v !== "0");
+  const emails = [user.email, user.data?.user?.email, user.user_email]
+    .map(v => String(v ?? "").trim().toLowerCase()).filter(Boolean);
+  const orderCustomer = String(order.customer_id ?? "");
+  const orderEmail = String(order.billing?.email ?? "").trim().toLowerCase();
+  return (orderCustomer !== "0" && ids.includes(orderCustomer)) || (!!orderEmail && emails.includes(orderEmail));
+}
+
+/** A small fixed-window limiter: at most `limit` calls per key per `windowMs`. */
+export function rateLimiter(limit: number, windowMs: number) {
+  const hits = new Map<string, { n: number; until: number }>();
+  return (key: string, now = Date.now()): boolean => {
+    if (hits.size > 10000) for (const [k, v] of hits) if (v.until <= now) hits.delete(k);
+    const h = hits.get(key);
+    if (!h || h.until <= now) { hits.set(key, { n: 1, until: now + windowMs }); return true; }
+    h.n++;
+    return h.n <= limit;
   };
 }

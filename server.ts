@@ -10,7 +10,7 @@ import WooCommerceRestApi from "@woocommerce/woocommerce-rest-api";
 import dotenv from "dotenv";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
-import { couponProblem, findVariation, mapWooVariation, purchaseAnalytics, trustedPrice } from "./orderVariations";
+import { couponProblem, findVariation, mapWooVariation, purchaseAnalytics, trustedPrice, orderLinkToken, validOrderLinkToken, ownsOrder, rateLimiter } from "./orderVariations";
 import { registerJournal, ARTICLES, EXTRA_LLM_LINKS, imgUrl } from "./journal";
 import { registerLandings, LANDINGS, homeBody, collectionBody, productBody, policyBody, productSchema, productTypeLabel, merchantFeedXml, feedEligible } from "./seo";
 import { notifyNewOrder, notifyShipping, notifyRefund, startSlackBot } from "./slackBot";
@@ -240,6 +240,14 @@ async function getShiprocketLabelUrl(shipmentId: string | number): Promise<strin
 }
 
 // Helper to create a unique signal ID from order ID
+// Order links: the success page needs ?t=<token> (see orderLinkToken) to read an order's status or retry its
+// payment. ORDER_LINK_SECRET is used if set, else JWT_SECRET. With neither, order links are switched off.
+const ORDER_LINK_SECRET = (process.env.ORDER_LINK_SECRET || "").trim() || JWT_SECRET;
+if (!ORDER_LINK_SECRET) console.error('[CHILS & CO.] Neither ORDER_LINK_SECRET nor JWT_SECRET is set: order status links are switched off (the success page shows a generic confirmation).');
+const orderLinkParams = (orderId: string | number) =>
+  `signal=${toSignalId(orderId)}${ORDER_LINK_SECRET ? `&t=${orderLinkToken(orderId, ORDER_LINK_SECRET)}` : ""}`;
+
+/** The "CHLS-xxxxxx" reference shown to customers. Display only: it is not a secret and grants no access. */
 function toSignalId(orderId: string | number) {
   const cleanId = String(orderId).replace(/\D/g, '');
   const numId = parseInt(cleanId, 10) || 123456;
@@ -587,6 +595,9 @@ async function startServer() {
     next();
   }, express.static(UPLOADS_DIR, { maxAge: "30d", index: false, fallthrough: false }));
   app.use(express.urlencoded({ limit: '10mb', extended: true }));
+
+  // Order status and payment retry: 20 requests a minute per visitor, then 429.
+  const orderLinkLimit = rateLimiter(20, 60 * 1000);
 
   // JWT Middleware
   const authenticateToken = (req: any, res: any, next: any) => {
@@ -2118,7 +2129,7 @@ async function startServer() {
         : (isStrictProd ? siteUrl : `${protocol}://${host}`);
       
       const orderId = merchantTransactionId.split('_')[0];
-      const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?signal=${toSignalId(orderId)}`;
+      const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?${orderLinkParams(orderId)}`;
       const callbackUrl = process.env.PHONEPE_CALLBACK_URL || `${currentOrigin}/api/checkout/phonepe/callback`;
 
       // Always charge the order's total from WooCommerce, never the browser's amount.
@@ -2174,15 +2185,15 @@ async function startServer() {
 
   app.post("/api/checkout/phonepe/retry", async (req, res) => {
     try {
-      const { orderId, signal } = req.body;
-      if (!orderId || !signal) {
-        return res.status(400).json({ success: false, message: "Order ID and Signal are required." });
+      if (!orderLinkLimit(`retry:${req.ip}`)) return res.status(429).json({ success: false, message: "Too many requests. Please wait a minute and try again." });
+      const { orderId, t } = req.body || {};
+      if (!orderId || !/^\d+$/.test(String(orderId))) {
+        return res.status(400).json({ success: false, message: "Order ID is required." });
       }
-
-      // Verify signal matches orderId to prevent unauthorized requests
-      const expectedSignal = toSignalId(orderId);
-      if (signal !== expectedSignal) {
-        return res.status(403).json({ success: false, message: "Signal validation failed." });
+      if (!ORDER_LINK_SECRET) return res.status(503).json({ success: false, message: "Payment retry is not available right now." });
+      // Only the link from the order's own payment page (with its token) may retry the payment.
+      if (!validOrderLinkToken(String(orderId), t, ORDER_LINK_SECRET)) {
+        return res.status(403).json({ success: false, message: "This link can't be used to retry the payment." });
       }
 
       const wc = getWooCommerce();
@@ -2239,7 +2250,7 @@ async function startServer() {
         ? `${protocol}://${host}` 
         : (isStrictProd ? siteUrl : `${protocol}://${host}`);
 
-      const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?signal=${toSignalId(orderId)}`;
+      const redirectUrl = `${currentOrigin}/order-success/${merchantTransactionId}?${orderLinkParams(orderId)}`;
       const callbackUrl = process.env.PHONEPE_CALLBACK_URL || `${currentOrigin}/api/checkout/phonepe/callback`;
       
       // Order total to paise
@@ -3767,6 +3778,8 @@ async function startServer() {
       }
 
       const response = await wcSafeCall(wc, "get", `orders/${req.params.id}`);
+      // Only the customer who placed the order may see it.
+      if (!ownsOrder(req.user, response.data)) return res.status(404).json({ message: "Order not found" });
       res.json(mapOrderToSignal(response.data));
     } catch (error: any) {
       console.error("WooCommerce Order Detail Error:", error);
@@ -3776,20 +3789,18 @@ async function startServer() {
 
   app.get("/api/orders/status/:id", async (req, res) => {
     try {
+      res.setHeader("Cache-Control", "no-store");
+      if (!orderLinkLimit(`status:${req.ip}`)) return res.status(429).json({ message: "Too many requests. Please wait a minute and try again." });
       const { id } = req.params;
-      const signal = req.query.signal as string;
-      const merchantTransactionId = req.query.transaction as string | undefined;
-
-      if (!signal) {
-        return res.status(400).json({ message: "Signal hash required for verification." });
+      if (!/^\d+$/.test(id)) return res.status(400).json({ message: "Invalid order." });
+      if (!ORDER_LINK_SECRET) return res.status(503).json({ message: "Order status is not available right now." });
+      // The token proves the visitor came from this order's own payment link. Without it, nothing is
+      // read from the store and no payment check runs.
+      if (!validOrderLinkToken(id, req.query.t, ORDER_LINK_SECRET)) {
+        return res.status(403).json({ message: "This link can't show the order." });
       }
-
-      // Verify the signal matches the ID to prevent scraping
-      // Note: This is a weak verification but sufficient for the success page
-      const expectedSignal = toSignalId(id);
-      if (signal !== expectedSignal) {
-        return res.status(403).json({ message: "Signal mismatch. Verification failed." });
-      }
+      const merchantTransactionId = typeof req.query.transaction === "string" && req.query.transaction.split("_")[0] === id
+        ? req.query.transaction : undefined;
 
       const wc = getWooCommerce();
       if (!wc) {
@@ -3811,7 +3822,8 @@ async function startServer() {
         total: order.total,
         currency: order.currency,
         date_created: order.date_created,
-        orderKey: order.order_key,
+        // No order_key here: it opens the store's printable invoice (name, address, phone, email), and the
+        // success page does not need it. Signed-in customers get it with their own orders (/api/orders/:id).
         // For the Google Analytics "purchase" event: items, shipping and coupon, no personal details.
         analytics: purchaseAnalytics(order, pid => globalProductsCache?.find((p: any) => String(p.id) === pid))
       });
@@ -4187,6 +4199,7 @@ async function startServer() {
 
       const orderResponse = await wcSafeCall(wc, "get", `orders/${id}`);
       const order = orderResponse.data;
+      if (!ownsOrder(req.user, order)) return res.status(404).json({ message: "Order not found." });
 
       // Restrict return requests to 1 cycle by checking if this is already an exchange order
       const parentExchangeOrderId = order.meta_data?.find((m: any) => m.key === "parent_exchange_order_id" || m.key === "_parent_exchange_order_id")?.value;

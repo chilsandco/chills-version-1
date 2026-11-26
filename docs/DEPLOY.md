@@ -42,6 +42,27 @@ Never delete these folders when cleaning up the app.
 They live only in Hostinger (the app's environment page). Never commit `.env*` or `secrets/` (both are git-ignored),
 and never put keys or passwords in code.
 
+- `ORDER_LINK_SECRET` (optional, recommended): signs the private `t=` token in order-success links, which the success
+  page needs to read an order's status or retry a payment. If it is not set, `JWT_SECRET` is used. If neither is set,
+  order links are switched off and the success page shows a general "order confirmed" message. Use a long random
+  value. Changing it (or adding it later) makes earlier success links fall back to that general message; orders are
+  not affected. The `CHLS-xxxxxx` reference is only a display name and grants no access.
+
+## Testing locally
+
+`server.ts` calls `dotenv.config()`, which reads `.env` from the **current folder**. Starting the server from the
+project folder therefore loads the real keys in `.env` (Slack, payments), even under `env -i`, and the local copy
+connects to the live Slack bot. Start it from an empty folder instead, with fake store values:
+
+```
+mkdir -p /tmp/chils-run && cd /tmp/chils-run
+env -i PATH="$PATH" HOME=/tmp/chils-run NODE_ENV=production WOOCOMMERCE_URL=http://127.0.0.1:9 \
+  WOOCOMMERCE_KEY=ck_test WOOCOMMERCE_SECRET=cs_test PAYMENT_RECON=off CHILS_DATA_DIR=/tmp/chils-run/data \
+  PORT=4010 node /path/to/chills-version-1/server.js
+```
+
+The log should say `[SLACK] Order bot off`.
+
 ## Rollback
 
 Upload the previous zip (keep a copy of the last good one before overwriting it) or, in hPanel > Deployments,
