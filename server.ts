@@ -17,6 +17,7 @@ import { notifyNewOrder, notifyShipping, notifyRefund, startSlackBot } from "./s
 import { browserContext, orderMetaFrom, sendAddToCart, sendPurchase } from "./metaCapi";
 import { mediaHandler, uploadsPathOf } from "./mediaCache";
 import { UPLOADS_DIR, saveUpload, dataFile, adoptLegacyUploads } from "./storage";
+import { startAiVisits } from "./aiVisits";
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest, CallbackType, RefundRequest } from 'pg-sdk-node';
 import { NextFunction } from 'express';
 import { GoogleGenAI } from "@google/genai";
@@ -438,6 +439,10 @@ async function reconcilePendingPhonePeOrder(wc: any, order: any, fallbackTransac
 
 async function startServer() {
   const app = express();
+
+  // Count visits from AI crawlers (ChatGPT search, Claude, Perplexity...) for /admin/ai-visits.
+  // First, so visits turned away later (holding mode, errors) are counted with their status.
+  const addAiVisitsRoute = startAiVisits(app);
   
   // Debug logger - must be first
   app.use((req, res, next) => {
@@ -612,6 +617,15 @@ async function startServer() {
       next();
     });
   };
+
+  // Admin only: the AI-visits tally behind /admin/ai-visits
+  addAiVisitsRoute(authenticateToken, (req: any, res: any, next: any) => {
+    const adminEmails = ['chilsandco@gmail.com', 'chilsandco.com@gmail.com'];
+    if (!adminEmails.some(email => email.toLowerCase() === String(req.user?.email || "").toLowerCase())) {
+      return res.status(403).json({ message: "Admins only." });
+    }
+    next();
+  });
 
   // Request logger for production debugging
   app.use((req, res, next) => {

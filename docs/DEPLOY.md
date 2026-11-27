@@ -15,7 +15,7 @@ Repo: https://github.com/chilsandco/chills-version-1 (private). `main` is the co
 
    ```
    zip -q -d ../chils-website-latest.zip "dist/*"
-   zip -q -r ../chils-website-latest.zip dist index.html server.js server.ts journal.ts seo.ts slackBot.ts storage.ts orderVariations.ts metaCapi.ts mediaCache.ts src public/robots.txt docs
+   zip -q -r ../chils-website-latest.zip dist index.html server.js server.ts journal.ts seo.ts slackBot.ts storage.ts orderVariations.ts metaCapi.ts mediaCache.ts aiVisits.ts src public/robots.txt docs
    ```
 
    If a new top-level `.ts` file is added that `server.ts` imports, add it to that list, or Hostinger's build fails.

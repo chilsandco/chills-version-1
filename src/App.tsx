@@ -43,6 +43,7 @@ const Auth = page(() => import('./pages/Auth'));
 const Bespoke = page(() => import('./pages/Bespoke'));
 const BespokeSignals = page(() => import('./pages/BespokeSignals'));
 const AdminConfig = page(() => import('./pages/AdminConfig'));
+const AiVisits = page(() => import('./pages/AiVisits'));
 const AmazonConsole = page(() => import('./pages/AmazonConsole'));
 const CoCreator = page(() => import('./pages/CoCreator'));
 const SocialVault = page(() => import('./pages/SignalNetwork'));
@@ -102,6 +103,7 @@ export default function App() {
                   <Route path="/console/bespoke" element={<BespokeSignals />} />
                   <Route path="/console/amazon" element={<AmazonConsole />} />
                   <Route path="/admin/config" element={<AdminConfig />} />
+                  <Route path="/admin/ai-visits" element={<AiVisits />} />
                 </Routes>
                 </React.Suspense>
               </main>

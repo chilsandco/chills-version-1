@@ -2,7 +2,7 @@
 import express from "express";
 import path3 from "path";
 import https from "https";
-import fs4 from "fs";
+import fs5 from "fs";
 import { fileURLToPath } from "url";
 import cors from "cors";
 import axios3 from "axios";
@@ -2808,6 +2808,101 @@ function uploadsPathOf(url) {
   }
 }
 
+// aiVisits.ts
+import fs4 from "fs";
+var AI_BOTS = [
+  { name: "OAI-SearchBot", company: "OpenAI", purpose: "search", note: "Builds ChatGPT search results. The one that gets you shown in ChatGPT.", match: /OAI-SearchBot/i },
+  { name: "ChatGPT-User", company: "OpenAI", purpose: "assistant", note: "A ChatGPT user asked about a page and ChatGPT opened it.", match: /ChatGPT-User/i },
+  { name: "GPTBot", company: "OpenAI", purpose: "training", note: "Collects pages for training OpenAI models.", match: /GPTBot/i },
+  { name: "Claude-SearchBot", company: "Anthropic", purpose: "search", note: "Indexes pages for Claude's web search answers.", match: /Claude-SearchBot/i },
+  { name: "Claude-User", company: "Anthropic", purpose: "assistant", note: "A Claude user asked about a page and Claude opened it.", match: /Claude-User/i },
+  { name: "ClaudeBot", company: "Anthropic", purpose: "training", note: "Collects pages for training Anthropic models.", match: /ClaudeBot/i },
+  { name: "Perplexity-User", company: "Perplexity", purpose: "assistant", note: "A Perplexity user's question opened the page.", match: /Perplexity-User/i },
+  { name: "PerplexityBot", company: "Perplexity", purpose: "search", note: "Indexes pages for Perplexity answers.", match: /PerplexityBot/i },
+  { name: "Google-CloudVertexBot", company: "Google", purpose: "assistant", note: "Fetches pages for Google Vertex AI agents.", match: /Google-CloudVertexBot/i },
+  { name: "Meta-ExternalFetcher", company: "Meta", purpose: "assistant", note: "Meta AI opened a page a user linked or asked about.", match: /meta-externalfetcher/i },
+  { name: "Meta-ExternalAgent", company: "Meta", purpose: "training", note: "Collects pages for Meta AI.", match: /meta-externalagent/i },
+  { name: "Applebot", company: "Apple", purpose: "search", note: "Siri and Spotlight suggestions, and Apple Intelligence.", match: /Applebot/i },
+  { name: "Amazonbot", company: "Amazon", purpose: "search", note: "Alexa answers and Amazon services.", match: /Amazonbot/i },
+  { name: "DuckAssistBot", company: "DuckDuckGo", purpose: "assistant", note: "DuckDuckGo's AI answers.", match: /DuckAssistBot/i },
+  { name: "MistralAI-User", company: "Mistral", purpose: "assistant", note: "Le Chat opened a page for a user.", match: /MistralAI-User/i },
+  { name: "Bytespider", company: "ByteDance", purpose: "training", note: "Collects pages for ByteDance (TikTok, Doubao) models.", match: /Bytespider/i },
+  { name: "CCBot", company: "Common Crawl", purpose: "training", note: "Open web archive that many AI models train on.", match: /CCBot/i }
+];
+function aiBotOf(userAgent) {
+  if (!userAgent) return null;
+  return AI_BOTS.find((b) => b.match.test(userAgent)) || null;
+}
+var MAX_RECENT = 300;
+var MAX_DAYS = 120;
+var MAX_PATHS_PER_BOT = 200;
+var SAVE_EVERY_MS = 3e4;
+var empty = () => ({ since: (/* @__PURE__ */ new Date()).toISOString(), total: 0, bots: {}, days: {}, paths: {}, recent: [] });
+function startAiVisits(app) {
+  const file = dataFile("ai-visits.json");
+  let tally = empty();
+  try {
+    if (fs4.existsSync(file)) tally = { ...empty(), ...JSON.parse(fs4.readFileSync(file, "utf-8")) };
+  } catch (e) {
+    console.error("[AI VISITS] Could not read the log, starting a new one:", e.message);
+  }
+  let dirty = false;
+  const save = () => {
+    if (!dirty) return;
+    dirty = false;
+    try {
+      fs4.writeFileSync(file + ".tmp", JSON.stringify(tally));
+      fs4.renameSync(file + ".tmp", file);
+    } catch (e) {
+      console.error("[AI VISITS] Could not save the log:", e.message);
+    }
+  };
+  setInterval(save, SAVE_EVERY_MS).unref();
+  process.once("beforeExit", save);
+  process.once("SIGTERM", () => {
+    save();
+    process.exit(0);
+  });
+  const record = (bot, path4, status) => {
+    const now = /* @__PURE__ */ new Date();
+    const t = now.toISOString();
+    const day = t.slice(0, 10);
+    tally.total++;
+    const b = tally.bots[bot] ||= { count: 0, first: t, last: t, blocked: 0 };
+    b.count++;
+    b.last = t;
+    if (status === 401 || status === 403 || status === 429 || status === 503) b.blocked++;
+    const d = tally.days[day] ||= {};
+    d[bot] = (d[bot] || 0) + 1;
+    const dayKeys = Object.keys(tally.days);
+    if (dayKeys.length > MAX_DAYS) for (const k of dayKeys.sort().slice(0, dayKeys.length - MAX_DAYS)) delete tally.days[k];
+    const p = tally.paths[bot] ||= {};
+    const key = p[path4] !== void 0 || Object.keys(p).length < MAX_PATHS_PER_BOT ? path4 : "(other pages)";
+    p[key] = (p[key] || 0) + 1;
+    tally.recent.unshift({ t, bot, path: path4, status });
+    if (tally.recent.length > MAX_RECENT) tally.recent.length = MAX_RECENT;
+    dirty = true;
+  };
+  app.use((req, res, next) => {
+    const bot = aiBotOf(req.get("user-agent"));
+    if (bot) {
+      const path4 = (req.path || "/").slice(0, 200);
+      res.on("finish", () => record(bot.name, path4, res.statusCode));
+    }
+    next();
+  });
+  return (...guards) => {
+    app.get("/api/admin/ai-visits", ...guards, (req, res) => {
+      res.setHeader("Cache-Control", "no-store");
+      res.json({
+        ...tally,
+        catalog: AI_BOTS.map(({ match, ...rest }) => rest),
+        now: (/* @__PURE__ */ new Date()).toISOString()
+      });
+    });
+  };
+}
+
 // server.ts
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest, CallbackType, RefundRequest } from "pg-sdk-node";
 dotenv.config();
@@ -3179,6 +3274,7 @@ async function reconcilePendingPhonePeOrder(wc2, order, fallbackTransactionId) {
 }
 async function startServer() {
   const app = express();
+  const addAiVisitsRoute = startAiVisits(app);
   app.use((req, res, next) => {
     if (req.url.startsWith("/api")) {
       console.log(`[CHILS DEBUG] API Requested: ${req.method} ${req.url}`);
@@ -3210,11 +3306,11 @@ async function startServer() {
   };
   app.get("/api/settings", (req, res) => {
     try {
-      if (!fs4.existsSync(SETTINGS_FILE)) {
-        fs4.writeFileSync(SETTINGS_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2));
+      if (!fs5.existsSync(SETTINGS_FILE)) {
+        fs5.writeFileSync(SETTINGS_FILE, JSON.stringify(DEFAULT_SETTINGS, null, 2));
         return res.json(DEFAULT_SETTINGS);
       }
-      const nodeContent = fs4.readFileSync(SETTINGS_FILE, "utf-8");
+      const nodeContent = fs5.readFileSync(SETTINGS_FILE, "utf-8");
       const settings = JSON.parse(nodeContent);
       res.json({ ...DEFAULT_SETTINGS, ...settings });
     } catch (error) {
@@ -3274,7 +3370,7 @@ async function startServer() {
     if (holdingHtml) return holdingHtml;
     for (const p of [path3.resolve(__dirname, "dist", "coming-soon.html"), path3.resolve(__dirname, "public", "coming-soon.html")]) {
       try {
-        return holdingHtml = fs4.readFileSync(p, "utf-8");
+        return holdingHtml = fs5.readFileSync(p, "utf-8");
       } catch {
       }
     }
@@ -3296,7 +3392,7 @@ async function startServer() {
   const launchHits = /* @__PURE__ */ new Map();
   const readLaunch = () => {
     try {
-      return JSON.parse(fs4.readFileSync(LAUNCH_FILE, "utf-8"));
+      return JSON.parse(fs5.readFileSync(LAUNCH_FILE, "utf-8"));
     } catch {
       return [];
     }
@@ -3313,7 +3409,7 @@ async function startServer() {
     if (!list.some((x) => x.email === email)) {
       const best = Number(req.body?.best);
       list.push({ email, at: (/* @__PURE__ */ new Date()).toISOString(), ...Number.isFinite(best) && best > 0 ? { best: Math.min(Math.floor(best), 9999) } : {} });
-      fs4.writeFileSync(LAUNCH_FILE, JSON.stringify(list));
+      fs5.writeFileSync(LAUNCH_FILE, JSON.stringify(list));
       console.log(`[CHILS & CO.] Launch list: ${list.length} signed up`);
     }
     res.json({ ok: true });
@@ -3346,6 +3442,13 @@ async function startServer() {
       next();
     });
   };
+  addAiVisitsRoute(authenticateToken, (req, res, next) => {
+    const adminEmails = ["chilsandco@gmail.com", "chilsandco.com@gmail.com"];
+    if (!adminEmails.some((email) => email.toLowerCase() === String(req.user?.email || "").toLowerCase())) {
+      return res.status(403).json({ message: "Admins only." });
+    }
+    next();
+  });
   app.use((req, res, next) => {
     console.log(`[${(/* @__PURE__ */ new Date()).toISOString()}] ${req.method} ${req.url}`);
     next();
@@ -3412,7 +3515,7 @@ async function startServer() {
   };
   const loadProductsSnapshot = () => {
     try {
-      const saved = JSON.parse(fs4.readFileSync(PRODUCTS_SNAPSHOT, "utf8"));
+      const saved = JSON.parse(fs5.readFileSync(PRODUCTS_SNAPSHOT, "utf8"));
       if (Array.isArray(saved) && saved.length) {
         setProducts(saved);
         lastProductsFetch = 0;
@@ -3441,7 +3544,7 @@ async function startServer() {
       setProducts(mapped);
       lastProductsFetch = Date.now();
       if (mapped.length) {
-        fs4.promises.writeFile(PRODUCTS_SNAPSHOT, productsBody.all).catch((e) => console.warn("[CHILS & CO.] Could not save the product snapshot:", e?.message));
+        fs5.promises.writeFile(PRODUCTS_SNAPSHOT, productsBody.all).catch((e) => console.warn("[CHILS & CO.] Could not save the product snapshot:", e?.message));
       }
       console.log(`[CHILS & CO.] Products refreshed: ${mapped.length}`);
       return mapped;
@@ -4187,7 +4290,7 @@ async function startServer() {
       return;
     }
     savedSnapshots.set(id, json);
-    fs4.promises.mkdir(path3.dirname(file), { recursive: true }).then(() => fs4.promises.writeFile(file, json)).catch((e) => {
+    fs5.promises.mkdir(path3.dirname(file), { recursive: true }).then(() => fs5.promises.writeFile(file, json)).catch((e) => {
       savedSnapshots.delete(id);
       console.warn(`[CHILS & CO.] Could not save the snapshot of product ${id}:`, e?.message);
     });
@@ -4196,7 +4299,7 @@ async function startServer() {
     const file = productSnapshotFile(id);
     if (!file) return null;
     try {
-      const json = fs4.readFileSync(file, "utf8");
+      const json = fs5.readFileSync(file, "utf8");
       if (String(JSON.parse(json)?.id) !== id) return null;
       savedSnapshots.set(id, json);
       return json;
@@ -4281,7 +4384,7 @@ async function startServer() {
         const imgMatch = reviewText.match(/__IMAGES__(\[.*?\])/);
         if (imgMatch) {
           try {
-            images = JSON.parse(imgMatch[1]).filter((u) => typeof u === "string" && (!u.startsWith("/uploads/") || fs4.existsSync(path3.join(UPLOADS_DIR, path3.normalize(u.slice("/uploads/".length)).replace(/^(\.\.[\/\\])+/, "")))));
+            images = JSON.parse(imgMatch[1]).filter((u) => typeof u === "string" && (!u.startsWith("/uploads/") || fs5.existsSync(path3.join(UPLOADS_DIR, path3.normalize(u.slice("/uploads/".length)).replace(/^(\.\.[\/\\])+/, "")))));
             reviewText = reviewText.replace(/__IMAGES__\[.*?\]/, "").trim();
           } catch (e) {
           }
@@ -5679,9 +5782,9 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
       }
       const QUOTES_FILE = dataFile("quotes.json");
       let quotes = [];
-      if (fs4.existsSync(QUOTES_FILE)) {
+      if (fs5.existsSync(QUOTES_FILE)) {
         try {
-          quotes = JSON.parse(fs4.readFileSync(QUOTES_FILE, "utf-8"));
+          quotes = JSON.parse(fs5.readFileSync(QUOTES_FILE, "utf-8"));
         } catch (e) {
           quotes = [];
         }
@@ -5698,7 +5801,7 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
         timestamp: (/* @__PURE__ */ new Date()).toISOString()
       };
       quotes.push(newQuote);
-      fs4.writeFileSync(QUOTES_FILE, JSON.stringify(quotes, null, 2));
+      fs5.writeFileSync(QUOTES_FILE, JSON.stringify(quotes, null, 2));
       console.log(`[CHILS & CO.] Custom quote request logged for ${email}`);
       res.json({ success: true, message: "Quote request successfully processed", quote: newQuote });
     } catch (error) {
@@ -6088,31 +6191,31 @@ __IMAGES__${JSON.stringify(savedUrls)}` : review;
   const activeRmaSubmissions = /* @__PURE__ */ new Set();
   const savePendingSwap = (txId, payload) => {
     let pending = {};
-    if (fs4.existsSync(PENDING_SWAPS_FILE)) {
+    if (fs5.existsSync(PENDING_SWAPS_FILE)) {
       try {
-        pending = JSON.parse(fs4.readFileSync(PENDING_SWAPS_FILE, "utf8"));
+        pending = JSON.parse(fs5.readFileSync(PENDING_SWAPS_FILE, "utf8"));
       } catch (e) {
         pending = {};
       }
     }
     pending[txId] = payload;
-    fs4.writeFileSync(PENDING_SWAPS_FILE, JSON.stringify(pending, null, 2), "utf8");
+    fs5.writeFileSync(PENDING_SWAPS_FILE, JSON.stringify(pending, null, 2), "utf8");
   };
   const getPendingSwap = (txId) => {
-    if (!fs4.existsSync(PENDING_SWAPS_FILE)) return null;
+    if (!fs5.existsSync(PENDING_SWAPS_FILE)) return null;
     try {
-      const pending = JSON.parse(fs4.readFileSync(PENDING_SWAPS_FILE, "utf8"));
+      const pending = JSON.parse(fs5.readFileSync(PENDING_SWAPS_FILE, "utf8"));
       return pending[txId] || null;
     } catch (e) {
       return null;
     }
   };
   const removePendingSwap = (txId) => {
-    if (!fs4.existsSync(PENDING_SWAPS_FILE)) return;
+    if (!fs5.existsSync(PENDING_SWAPS_FILE)) return;
     try {
-      const pending = JSON.parse(fs4.readFileSync(PENDING_SWAPS_FILE, "utf8"));
+      const pending = JSON.parse(fs5.readFileSync(PENDING_SWAPS_FILE, "utf8"));
       delete pending[txId];
-      fs4.writeFileSync(PENDING_SWAPS_FILE, JSON.stringify(pending, null, 2), "utf8");
+      fs5.writeFileSync(PENDING_SWAPS_FILE, JSON.stringify(pending, null, 2), "utf8");
     } catch (e) {
     }
   };
@@ -6500,9 +6603,9 @@ Photos: ${photoUrls.join(" ")}` : ""}`;
       if (!isAdmin) {
         return res.status(403).json({ message: "Higher clearance required for core reconfiguration." });
       }
-      const currentSettings = fs4.existsSync(SETTINGS_FILE) ? JSON.parse(fs4.readFileSync(SETTINGS_FILE, "utf-8")) : DEFAULT_SETTINGS;
+      const currentSettings = fs5.existsSync(SETTINGS_FILE) ? JSON.parse(fs5.readFileSync(SETTINGS_FILE, "utf-8")) : DEFAULT_SETTINGS;
       const newSettings = { ...currentSettings, ...req.body };
-      fs4.writeFileSync(SETTINGS_FILE, JSON.stringify(newSettings, null, 2));
+      fs5.writeFileSync(SETTINGS_FILE, JSON.stringify(newSettings, null, 2));
       console.log("[CHILS & CO.] Global settings recalibrated successfully.");
       res.json({ success: true, settings: newSettings });
     } catch (error) {
@@ -6522,7 +6625,7 @@ Photos: ${photoUrls.join(" ")}` : ""}`;
       if (!productId) {
         return res.status(400).json({ message: "Product ID is required." });
       }
-      const settings = fs4.existsSync(SETTINGS_FILE) ? JSON.parse(fs4.readFileSync(SETTINGS_FILE, "utf-8")) : DEFAULT_SETTINGS;
+      const settings = fs5.existsSync(SETTINGS_FILE) ? JSON.parse(fs5.readFileSync(SETTINGS_FILE, "utf-8")) : DEFAULT_SETTINGS;
       groqKey = settings.groqApiKey || process.env.GROQ_API_KEY;
       if (!groqKey) {
         return res.status(400).json({ message: "GROQ_API_KEY is not configured. Please save your Groq API Key in your Admin panel settings." });
@@ -6620,11 +6723,11 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       if (!products || !enrichedData) {
         return res.status(400).json({ message: "Products and enrichedData are required." });
       }
-      const settings = JSON.parse(await fs4.promises.readFile("settings.json", "utf-8").catch(() => "{}"));
+      const settings = JSON.parse(await fs5.promises.readFile("settings.json", "utf-8").catch(() => "{}"));
       const tempId = Date.now() + "_" + Math.floor(Math.random() * 1e3);
       const xlsmTempPath = path3.join(process.cwd(), `temp_${tempId}.xlsm`);
       const templatePath = path3.join(process.cwd(), "amazon_blank_template.xlsm");
-      if (!fs4.existsSync(templatePath)) {
+      if (!fs5.existsSync(templatePath)) {
         return res.status(500).json({ message: "Amazon blank template file is missing on the server." });
       }
       const XLSXModule = await import("xlsx");
@@ -6877,8 +6980,8 @@ Format your response strictly as a single JSON object. Ensure the keys and value
       }
       console.log(`[AMAZON EXPORT] Saving macro-enabled workbook natively...`);
       XLSX.writeFile(wb, xlsmTempPath, { bookVBA: true });
-      const buffer = await fs4.promises.readFile(xlsmTempPath);
-      await fs4.promises.unlink(xlsmTempPath).catch(() => {
+      const buffer = await fs5.promises.readFile(xlsmTempPath);
+      await fs5.promises.unlink(xlsmTempPath).catch(() => {
       });
       res.setHeader("Content-Type", "application/vnd.ms-excel.sheet.macroEnabled.12");
       res.setHeader("Content-Disposition", `attachment; filename=Amazon_Bulk_Listing_Feed_${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}.xlsm`);
@@ -7258,7 +7361,7 @@ ${xmlItems}
     console.log(`[CHILS & CO.] Development mode: Vite middleware active`);
   } else {
     const distPath = path3.resolve(__dirname, "dist");
-    if (fs4.existsSync(distPath)) {
+    if (fs5.existsSync(distPath)) {
       console.log(`[CHILS & CO.] Production mode: Serving static files from ${distPath}`);
       app.use(express.static(distPath, {
         index: false,
@@ -7333,7 +7436,7 @@ ${xmlItems}
         if (cleanPath.length > 1 && cleanPath.endsWith("/")) {
           cleanPath = cleanPath.slice(0, -1);
         }
-        let html = fs4.readFileSync(indexPath, "utf-8");
+        let html = fs5.readFileSync(indexPath, "utf-8");
         const escAttr = (s) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
         const canonicalUrl = `https://chilsandco.com${cleanPath === "/" ? "" : cleanPath}`;
         const isPrivate = PRIVATE_ROUTE_PREFIXES.some((prefix) => cleanPath.startsWith(prefix));
