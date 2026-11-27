@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { useProducts } from '../hooks/useProducts';
@@ -36,6 +36,10 @@ const PhoneHome: React.FC = () => {
 
   const heroes = useMemo(() => OPENING.map(id => products.find(p => p.id === id)).filter(p => p?.images?.[0]) as Product[], [products]);
   const hero = heroes[slide % Math.max(heroes.length, 1)];
+  // The opening photo appears at once (it is the page's main content and the server preloads it);
+  // only the photos after it fade in.
+  const opened = useRef(false);
+  useEffect(() => { if (hero) opened.current = true; }, [hero]);
 
   useEffect(() => {
     if (stopped || still || heroes.length < 2) return;
@@ -72,8 +76,9 @@ const PhoneHome: React.FC = () => {
               src={hero.images[0]}
               alt={hero.name}
               referrerPolicy="no-referrer"
+              fetchPriority="high"
               onClick={shop}
-              initial={{ opacity: 0, scale: 1.04 }}
+              initial={opened.current ? { opacity: 0, scale: 1.04 } : false}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 1.3, ease: [0.22, 1, 0.36, 1] }}
@@ -85,7 +90,8 @@ const PhoneHome: React.FC = () => {
         <div className="absolute inset-x-0 bottom-0 px-5 pb-6 text-[#fff] text-center pointer-events-none">
           <h1 className="keep text-[26px] leading-[1.15] font-semibold tracking-[-0.02em]">Designed by techies.<br />For those who build.</h1>
           <Link to="/collection" className="pointer-events-auto inline-block mt-3 text-sm border-b border-[#fff] pb-0.5">Shop now</Link>
-          {hero && <p className="mt-3 text-xs opacity-70">{hero.name}</p>}
+          {/* always takes its line, so the headline does not jump up and down while the products load */}
+          <p className="mt-3 text-xs opacity-70">{hero ? hero.name : '\u00a0'}</p>
         </div>
       </section>
 

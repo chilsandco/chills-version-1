@@ -139,8 +139,17 @@ const Auth: React.FC = () => {
       const el = document.getElementById('google-btn-container');
       if (el) g.renderButton(el, { theme: 'outline', size: 'large', shape: 'pill', width: Math.min(el.clientWidth || 384, 400), text: isRegister ? 'signup_with' : 'signin_with' });
     };
-    if ((window as any).google?.accounts?.id) initializeGoogle();
-    else document.querySelector('script[src*="gsi/client"]')?.addEventListener('load', initializeGoogle);
+    if ((window as any).google?.accounts?.id) { initializeGoogle(); return; }
+    // Google's sign-in script (about 100 KB) is only needed here, so it loads with this page, not every page.
+    let script = document.querySelector<HTMLScriptElement>('script[src*="gsi/client"]');
+    if (!script) {
+      script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      document.head.appendChild(script);
+    }
+    script.addEventListener('load', initializeGoogle);
+    return () => script?.removeEventListener('load', initializeGoogle);
   }, [isRegister, isAuthenticated]);
 
   // --- Store contact settings (team only) ---

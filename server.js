@@ -2903,6 +2903,380 @@ function startAiVisits(app) {
   };
 }
 
+// src/data/lookbook.ts
+var OPENING = ["1115", "1320", "1134", "1281", "1276", "1105"];
+var lookPhoto = (id) => `/looks/${id}_3.webp`;
+
+// src/data/studioImages.json
+var studioImages_default = {
+  "2026/06/32EE08A0-EABA-4188-BBC4-80FB2236D6DA-1.png": "/studio/41dc6774caba.webp",
+  "2026/06/32EE08A0-EABA-4188-BBC4-80FB2236D6DA.png": "/studio/6df9dda6ef36.webp",
+  "2026/06/ChatGPT-Image-Jun-23-2026-09_09_57-PM-1.png": "/studio/09421a3e29ad.webp",
+  "2026/06/ChatGPT-Image-Jun-23-2026-09_09_57-PM-3.png": "/studio/53537cf53745.webp",
+  "2026/06/ChatGPT-Image-Jun-23-2026-09_09_57-PM.png": "/studio/26b80ad00cd7.webp",
+  "2026/06/ChatGPT-Image-Jun-23-2026-09_10_08-PM.png": "/studio/ccc23e18e4d6.webp",
+  "2026/06/ChatGPT-Image-Jun-23-2026-09_14_45-PM-1.png": "/studio/bec21e2ebadf.webp",
+  "2026/06/ChatGPT-Image-Jun-23-2026-09_14_45-PM.png": "/studio/de23f98877fb.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-08_17_10-PM-1.png": "/studio/196d63e85ddf.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-08_20_51-PM.png": "/studio/e9f57037685f.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-08_22_07-PM.png": "/studio/f91ccacbae0d.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-08_40_17-PM.png": "/studio/f2b9b70f613b.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-08_40_20-PM-3.png": "/studio/18bb3a178241.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-08_40_23-PM-5.png": "/studio/fa45ff14075e.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-08_41_03-PM-1.png": "/studio/449e4d44dd6d.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-08_41_06-PM.png": "/studio/3b7003242704.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-08_41_22-PM.png": "/studio/8bea85c07d1c.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-08_42_51-PM-3.png": "/studio/26e97bb3f61e.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-08_42_53-PM.png": "/studio/5a2d064bdedc.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-08_43_13-PM.png": "/studio/dbb61abf1bb3.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-09_17_22-PM.png": "/studio/30fdc7e69043.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-09_17_26-PM-1.png": "/studio/6e950c58ff48.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-09_17_34-PM.png": "/studio/bcc7d5d350aa.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-09_21_30-PM-1.png": "/studio/2c6dff85b0ac.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-09_21_38-PM-1.png": "/studio/b97aef44d88f.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-09_21_44-PM.png": "/studio/f510b1aeec3a.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-09_34_45-PM-1.png": "/studio/338c4c34857c.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-09_34_48-PM-1.png": "/studio/92521524358d.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-09_34_55-PM-1.png": "/studio/82c02e69e0a7.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-10_10_30-PM.png": "/studio/b104c542c371.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-10_10_33-PM.png": "/studio/69e5bf33b19c.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-10_10_40-PM-1.png": "/studio/6376ade95af7.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-10_14_13-PM.png": "/studio/3e683c29da11.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-10_14_16-PM-1.png": "/studio/f6fdf8fa0f17.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-10_15_17-PM-1.png": "/studio/309e3d896e2f.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-11_10_39-PM.png": "/studio/a7b0c179fa8c.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-11_10_53-PM-1.png": "/studio/2ffafe3f286f.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-11_11_02-PM-1.png": "/studio/1138dc8bfcfd.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-11_16_50-PM-1.png": "/studio/68a0d3996f12.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-11_16_54-PM.png": "/studio/ea5110876f66.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-11_16_58-PM-1.png": "/studio/ed88b23c5013.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-11_20_38-PM.png": "/studio/cdad9094c2a2.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-11_20_42-PM-1.png": "/studio/686a7dbe221d.webp",
+  "2026/06/ChatGPT-Image-Jun-26-2026-11_20_44-PM.png": "/studio/520bfbabf5be.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-01_32_34-AM.png": "/studio/49c31f931e27.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-01_32_45-AM.png": "/studio/e27d51e7754a.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-01_36_20-AM-1.png": "/studio/46a1ed14bbb0.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-01_36_28-AM.png": "/studio/642b6e479f4d.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-02_58_12-PM.png": "/studio/f4f7b99c191d.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-02_58_15-PM-1.png": "/studio/a98cc28a57bd.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-02_58_19-PM.png": "/studio/8f8899a7b720.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-02_59_07-PM.png": "/studio/1bc06135b383.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-02_59_11-PM.png": "/studio/f997341787ab.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-02_59_21-PM.png": "/studio/116598ceb8a4.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-03_02_43-PM.png": "/studio/16a47a028e09.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-03_02_47-PM-1.png": "/studio/06127e925ae6.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-03_02_50-PM-1.png": "/studio/adb2fc05426e.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-03_28_54-PM.png": "/studio/3ffc2a4f90ce.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-03_28_59-PM-1.png": "/studio/cacd7946bd55.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-03_29_03-PM-1.png": "/studio/90d9913314e8.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-04_03_58-PM-1.png": "/studio/48776e1b322f.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-04_04_01-PM.png": "/studio/d798363c43b0.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-04_04_05-PM.png": "/studio/77a0bf594b8f.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-04_04_08-PM.png": "/studio/b83205e67dec.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-04_10_09-PM-2.png": "/studio/baccd217ba5c.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-04_10_12-PM-1.png": "/studio/6fbedc2dfff5.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-04_10_14-PM-1.png": "/studio/0a7760e7c1d3.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-04_26_24-PM.png": "/studio/03c56200a2d6.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-04_26_28-PM-1.png": "/studio/a4fd5129885b.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-04_26_35-PM.png": "/studio/e5e1824be0c8.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-04_45_26-PM.png": "/studio/0482d3df781a.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-04_45_34-PM.png": "/studio/881b2a8d80c3.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-05_01_57-PM.png": "/studio/9877e5eecf8a.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-05_02_19-PM.png": "/studio/82316dd421ba.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-05_02_29-PM-2.png": "/studio/54a6400db3aa.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-09_23_58-PM.png": "/studio/2268bbf3f4d2.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-09_24_01-PM.png": "/studio/c23d017c1386.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-09_24_05-PM-1.png": "/studio/50c64a02f0b6.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-11_42_50-AM.png": "/studio/f33a8059659d.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-11_42_53-AM-1.png": "/studio/4979e7e6d11c.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-11_42_57-AM.png": "/studio/e3193d988097.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-11_43_09-AM-1.png": "/studio/59240975ceda.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-11_43_13-AM.png": "/studio/0b47f55f495e.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-11_43_21-AM-1.png": "/studio/21c4ba10f4be.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-11_45_59-AM.png": "/studio/895a7258dbf1.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-11_46_02-AM-1.png": "/studio/4bc43d2e4343.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-11_46_08-AM.png": "/studio/b62ca05644b2.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-12_03_42-PM-1.png": "/studio/e9a46be65466.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-12_03_45-PM.png": "/studio/805b296f8548.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-12_03_49-PM-1.png": "/studio/1d407f22cf6f.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-at-03_54_17-PM.png": "/studio/f3542897c840.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-at-03_54_27-PM.png": "/studio/d401ec3e2de8.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-at-03_54_30-PM-1.png": "/studio/253dcf1b2c72.webp",
+  "2026/06/ChatGPT-Image-Jun-28-2026-05_58_23-PM.png": "/studio/f246f8bf3b68.webp",
+  "2026/06/ChatGPT-Image-Jun-28-2026-06_08_30-PM-1.png": "/studio/33053c2faa1a.webp",
+  "2026/06/ChatGPT-Image-Jun-28-2026-06_08_30-PM-2.png": "/studio/5cc6868ed94a.webp",
+  "2026/06/ChatGPT-Image-Jun-28-2026-06_08_33-PM.png": "/studio/d2bb4565fd16.webp",
+  "2026/06/ChatGPT-Image-Jun-28-2026-06_08_37-PM-2.png": "/studio/bb5dfdade7b6.webp",
+  "2026/06/ChatGPT-Image-Jun-28-2026-06_19_14-PM-2.png": "/studio/65902ac9d5c4.webp",
+  "2026/06/ChatGPT-Image-Jun-28-2026-06_19_14-PM-3.png": "/studio/aabf9b00e4ae.webp",
+  "2026/06/ChatGPT-Image-Jun-28-2026-06_20_42-PM-2.png": "/studio/afc132c68793.webp",
+  "2026/06/ChatGPT-Image-Jun-28-2026-at-08_43_11-PM.png": "/studio/782d19df918c.webp",
+  "2026/06/ChatGPT-Image-Jun-28-2026-at-08_43_13-PM.png": "/studio/10e23d7ce1ff.webp",
+  "2026/06/ChatGPT-Image-Jun-28-2026-at-08_43_16-PM-1.png": "/studio/019f1291e7c3.webp",
+  "2026/06/ChatGPT-Image-Jun-29-2026-09_18_05-PM.png": "/studio/4acf4bceb8dd.webp",
+  "2026/06/ChatGPT-Image-Jun-29-2026-09_33_22-PM-1.png": "/studio/d9faba0d001f.webp",
+  "2026/06/ChatGPT-Image-Jun-29-2026-09_33_31-PM.png": "/studio/f11daed9e20d.webp",
+  "2026/06/ChatGPT-Image-Jun-29-2026-10_32_04-PM.png": "/studio/8d970754542f.webp",
+  "2026/06/ChatGPT-Image-Jun-29-2026-10_32_09-PM-1.png": "/studio/8505cbe12b0b.webp",
+  "2026/06/ChatGPT-Image-Jun-29-2026-10_32_09-PM.png": "/studio/f99553313a7a.webp",
+  "2026/06/ChatGPT-Image-Jun-29-2026-11_13_54-PM-1-1.png": "/studio/6f6652a8a4ce.webp",
+  "2026/06/ChatGPT-Image-Jun-29-2026-11_13_54-PM-1.png": "/studio/cedb7ec4e107.webp",
+  "2026/06/ChatGPT-Image-Jun-29-2026-11_36_36-PM-1.png": "/studio/5162a81ae27f.webp",
+  "2026/06/ChatGPT-Image-Jun-29-2026-11_36_36-PM.png": "/studio/6943149d6e99.webp",
+  "2026/06/ChatGPT-Image-Jun-29-2026-11_37_49-PM-1.png": "/studio/3be181d80b54.webp",
+  "2026/06/ChatGPT-Image-Jun-29-2026-11_37_49-PM.png": "/studio/24a46c82dd00.webp",
+  "2026/06/ChatGPT-Image-Jun-7-2026-08_03_58-AM-1.png": "/studio/49af1edb0241.webp",
+  "2026/06/ChatGPT-Image-Jun-7-2026-08_04_02-AM-2.png": "/studio/ab263007336b.webp",
+  "2026/06/ChatGPT-Image-Jun-7-2026-08_04_13-AM-1.png": "/studio/f4046536378c.webp",
+  "2026/06/ChatGPT-Image-Jun-7-2026-08_45_29-AM.png": "/studio/afbaaf6c5c2a.webp",
+  "2026/06/ChatGPT-Image-Jun-7-2026-08_45_45-AM.png": "/studio/922330a5cbb8.webp",
+  "2026/06/ChatGPT-Image-Jun-7-2026-09_18_09-AM-1.png": "/studio/995499eca7f9.webp",
+  "2026/06/ChatGPT-Image-Jun-7-2026-09_18_12-AM-1.png": "/studio/8d1181cbcd7d.webp",
+  "2026/06/ChatGPT-Image-Jun-7-2026-09_18_19-AM.png": "/studio/ce16271f100f.webp",
+  "2026/06/ChatGPT-Image-Jun-7-2026-09_27_07-AM.png": "/studio/d98fec7a8006.webp",
+  "2026/06/ChatGPT-Image-Jun-7-2026-09_27_13-AM.png": "/studio/efbf649e3678.webp",
+  "2026/06/ChatGPT-Image-Jun-7-2026-09_27_21-AM-1.png": "/studio/6617e3ff4b2a.webp",
+  "2026/06/ChatGPT-Image-Jun-7-2026-09_31_05-AM.png": "/studio/8dc0d8939ed6.webp",
+  "2026/06/ChatGPT-Image-Jun-7-2026-09_31_08-AM.png": "/studio/1651d4828986.webp",
+  "2026/06/ChatGPT-Image-Jun-7-2026-09_31_11-AM.png": "/studio/ee9a8c382105.webp",
+  "2026/06/ChatGPT-Image-Jun-8-2026-09_08_32-AM-1.png": "/studio/3efd790de4cc.webp",
+  "2026/06/ChatGPT-Image-Jun-8-2026-09_08_35-AM-1.png": "/studio/66f48e6bb450.webp",
+  "2026/06/ChatGPT-Image-Jun-8-2026-09_08_39-AM.png": "/studio/6f6a21b694b2.webp",
+  "2026/06/ChatGPT-Image-Jun-8-2026-09_24_43-AM-1.png": "/studio/e228b8ed2e9e.webp",
+  "2026/06/ChatGPT-Image-Jun-8-2026-09_31_20-AM.png": "/studio/178d56137d7b.webp",
+  "2026/06/ChatGPT-Image-Jun-8-2026-09_31_23-AM.png": "/studio/d0d0156722c0.webp",
+  "2026/06/ChatGPT-Image-Jun-8-2026-09_31_26-AM.png": "/studio/3e9490aa581e.webp",
+  "2026/06/ChatGPT-Image-Jun-9-2026-09_35_54-AM-1.png": "/studio/ea5c4a7a43ca.webp",
+  "2026/06/ChatGPT-Image-Jun-9-2026-09_36_13-AM.png": "/studio/38faad2d0d6a.webp",
+  "2026/06/ChatGPT-Image-Jun-9-2026-09_36_25-AM.png": "/studio/ec221addc748.webp",
+  "2026/06/F70537E0-5CF3-4AA6-9468-8A7FFA1A98F9.png": "/studio/992e535888cd.webp",
+  "2026/06/FT_plain_brown_nope2.png": "/studio/fae172cc25a6.webp",
+  "2026/06/FT_plain_brown_nope3.png": "/studio/64df07bd2a69.webp",
+  "2026/06/FT_plain_brown_nope4.png": "/studio/b80ede7afdb9.webp",
+  "2026/06/PC_180_gsm_evergreen.png": "/studio/b41840079aeb.webp",
+  "2026/06/PC_180gsm_grey-melange.png": "/studio/9751470ff2bb.webp",
+  "2026/06/PC_blue_friendchip2.png": "/studio/3af8914a0805.webp",
+  "2026/06/PC_blue_friendchip3.png": "/studio/c6b16afdef3b.webp",
+  "2026/06/PC_blue_friendchip4.png": "/studio/763019516615.webp",
+  "2026/06/PC_charcoal_grey2-1.png": "/studio/568bd14f4ed9.webp",
+  "2026/06/PC_red_hey_chil2.png": "/studio/2b2cecc2e887.webp",
+  "2026/06/PC_red_hey_chil3-1.png": "/studio/864830ccc982.webp",
+  "2026/06/PC_red_hey_chil4.png": "/studio/5516246cbab8.webp",
+  "2026/06/pc_black-1.png": "/studio/3d8deb6db190.webp",
+  "2026/06/pc_black.png": "/studio/1c6f4cd12b44.webp",
+  "2026/06/pc_greymelange-1.png": "/studio/18ab33616d81.webp",
+  "2026/06/sunfaded_black_cheatgpt2.png": "/studio/ee9fa7c4ed02.webp",
+  "2026/06/sunfaded_black_cheatgpt3.png": "/studio/0b50f589c438.webp",
+  "2026/06/sunfaded_black_cheatgpt4.png": "/studio/80b1ce1e7815.webp",
+  "2026/06/sunfaded_green_theoriginal2-1.png": "/studio/119e34b6ceed.webp",
+  "2026/06/sunfaded_green_theoriginal3-1.png": "/studio/2a343df23370.webp",
+  "2026/06/sunfaded_green_theoriginal4.png": "/studio/bf46b51d22c2.webp",
+  "2026/06/update2.png": "/studio/e3b88013d0b4.webp",
+  "2026/07/ChatGPT-Image-Jul-17-2026-12_03_45-PM.png": "/studio/025c039c3a5b.webp",
+  "2026/07/ChatGPT-Image-Jul-17-2026-12_03_48-PM.png": "/studio/7ec3b9121dcd.webp",
+  "2026/07/ChatGPT-Image-Jul-17-2026-12_03_52-PM.png": "/studio/5f13c5ef1960.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-01_11_45-PM.png": "/studio/d5c9496ac054.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-01_14_14-PM.png": "/studio/011ca91281b3.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-01_26_24-PM-1.png": "/studio/f7bfd10c66e1.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-01_26_24-PM.png": "/studio/cc47ecaaf1bb.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-01_26_27-PM-1.png": "/studio/2079b156eb73.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-10_51_26-PM-1.png": "/studio/7b5220c39783.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-10_51_26-PM.png": "/studio/496e85f2ef15.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-10_51_35-PM-1.png": "/studio/a6e1cde1481e.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-10_51_38-PM.png": "/studio/a1ee69ac370d.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-10_52_55-PM.png": "/studio/eb7bfad92604.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-10_53_01-PM.png": "/studio/27baa9e9a569.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-11_03_35-PM-1.png": "/studio/47f6526b18bc.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-11_03_35-PM.png": "/studio/904950105079.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-11_06_08-PM-1.png": "/studio/65a5d1c667da.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-11_09_05-PM-1.png": "/studio/9c771570e15a.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-11_15_29-PM.png": "/studio/254b8e0acae5.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-11_30_20-PM-1.png": "/studio/21b7dff6a5a9.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-11_44_17-PM-1.png": "/studio/42944ec17c30.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-11_44_53-AM-2.png": "/studio/61c6b8e95beb.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-12_38_48-PM-1.png": "/studio/5358e60e3b4d.webp",
+  "2026/08/ChatGPT-Image-Aug-1-2026-12_38_52-PM-1.png": "/studio/8456eaca4458.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-08_50_07-AM.png": "/studio/e1b0a0dfa445.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-08_51_34-AM.png": "/studio/ff6ab0300860.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-08_52_00-AM.png": "/studio/aff9a0c91f44.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-09_36_59-AM.png": "/studio/96ca4e5a4b88.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-09_37_15-AM-1.png": "/studio/e54b3ce82445.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-10_04_09-AM.png": "/studio/b28d14a61c3b.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-10_04_12-AM.png": "/studio/4d5836760e08.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-10_04_16-AM-1.png": "/studio/e7ac937e17eb.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-10_12_39-AM.png": "/studio/68a33b9d09da.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-10_16_00-PM.png": "/studio/e591ccbc2737.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-10_17_49-AM.png": "/studio/0fdfab8e243a.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-10_17_53-AM.png": "/studio/175e3b67f37c.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-10_30_39-AM.png": "/studio/a71aa8256bb9.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-10_30_56-PM.png": "/studio/ae76b8e22515.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-10_53_44-PM-1.png": "/studio/03278c70f665.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-11_02_05-PM.png": "/studio/d5eb3a6d3749.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-11_08_52-PM.png": "/studio/d2a1ae519d73.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-11_41_32-PM-1.png": "/studio/6ac9be7ae889.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-11_47_29-PM.png": "/studio/d7b51110d25d.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-11_50_36-PM.png": "/studio/eb9726975bbe.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-11_51_54-PM.png": "/studio/588c94d972d1.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-11_58_48-PM-1.png": "/studio/9934066aebc5.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-12_31_41-PM-1.png": "/studio/54e6681348c7.webp",
+  "2026/08/ChatGPT-Image-Aug-2-2026-12_36_14-PM.png": "/studio/e23efe94d808.webp",
+  "2026/08/ChatGPT-Image-Aug-3-2026-01_02_15-AM.png": "/studio/7469cb3d017d.webp",
+  "2026/08/ChatGPT-Image-Aug-3-2026-12_26_56-AM.png": "/studio/dc40647a8d28.webp",
+  "2026/08/ChatGPT-Image-Aug-3-2026-12_32_26-AM.png": "/studio/953d9572e4fd.webp",
+  "2026/08/ChatGPT-Image-Aug-3-2026-12_40_15-AM.png": "/studio/80d82f6ad445.webp",
+  "2026/08/ChatGPT-Image-Aug-3-2026-12_50_07-AM.png": "/studio/e7e7830d17d5.webp",
+  "2026/08/ChatGPT-Image-Jul-27-2026-10_15_59-PM-1.png": "/studio/c12c69583d7c.webp",
+  "2026/08/ChatGPT-Image-Jul-27-2026-10_22_48-PM-1.png": "/studio/235800355c75.webp",
+  "2026/08/ChatGPT-Image-Jul-27-2026-10_34_39-AM-1-1.png": "/studio/834f0bef3a80.webp",
+  "2026/08/ChatGPT-Image-Jul-27-2026-10_38_12-AM-1-1.png": "/studio/0e506fe29c4c.webp",
+  "2026/08/ChatGPT-Image-Jul-27-2026-10_38_12-AM-1.png": "/studio/4cc68af73319.webp",
+  "2026/08/ChatGPT-Image-Jul-27-2026-10_53_03-AM-1-1.png": "/studio/8c29dd1d785f.webp",
+  "2026/08/ChatGPT-Image-Jul-31-2026-08_40_12-PM-2-1.png": "/studio/4f64746ff856.webp",
+  "2026/08/ChatGPT-Image-Jul-31-2026-08_44_23-PM-1.png": "/studio/46b546648792.webp",
+  "2026/08/Microchip-Engineer-Portrait-2.png": "/studio/9e45652b3499.webp",
+  "2026/08/Olive-Developer-Graphic-T-Shirt-Portrait-2.png": "/studio/b094acdabffe.webp",
+  "2026/08/Olive-Developer-Graphic-T-Shirt-Portrait-3.png": "/studio/ec9d83529940.webp",
+  "2026/08/Streetwear-Graphic-Tee-Catalog-Shot-3.png": "/studio/e36ec144cc2f.webp",
+  "2026/08/child.png": "/studio/a1a789e29b11.webp"
+};
+
+// src/data/sizedImages.json
+var sizedImages_default = {
+  "2026/06/ChatGPT-Image-Jun-26-2026-08_23_51-PM.png": "d9b3a4bb0b35",
+  "2026/06/ChatGPT-Image-Jun-26-2026-08_40_15-PM.png": "e55f3f1e91ad",
+  "2026/06/ChatGPT-Image-Jun-26-2026-08_41_24-PM.png": "40c4521bdd51",
+  "2026/06/ChatGPT-Image-Jun-26-2026-08_46_28-PM.png": "3fbc264268c0",
+  "2026/06/ChatGPT-Image-Jun-26-2026-09_17_11-PM.png": "7ec779154267",
+  "2026/06/ChatGPT-Image-Jun-26-2026-09_21_25-PM.png": "1bb266767e48",
+  "2026/06/ChatGPT-Image-Jun-26-2026-09_34_41-PM.png": "d87346f09431",
+  "2026/06/ChatGPT-Image-Jun-26-2026-10_10_22-PM.png": "8c6884d1f2f6",
+  "2026/06/ChatGPT-Image-Jun-26-2026-10_14_10-PM.png": "5d1404ee3d68",
+  "2026/06/ChatGPT-Image-Jun-26-2026-11_11_14-PM.png": "ffca69c2f227",
+  "2026/06/ChatGPT-Image-Jun-26-2026-11_16_46-PM.png": "e37c75fb1370",
+  "2026/06/ChatGPT-Image-Jun-26-2026-11_20_35-PM.png": "8d9af8ec7f5f",
+  "2026/06/ChatGPT-Image-Jun-27-2026-01_32_20-AM.png": "6436b3b37589",
+  "2026/06/ChatGPT-Image-Jun-27-2026-01_32_30-AM.png": "6d6b72f3cc72",
+  "2026/06/ChatGPT-Image-Jun-27-2026-01_35_29-AM-1.png": "cb26183ca58f",
+  "2026/06/ChatGPT-Image-Jun-27-2026-01_35_48-AM.png": "da35606ed567",
+  "2026/06/ChatGPT-Image-Jun-27-2026-02_58_27-PM.png": "06bec2898459",
+  "2026/06/ChatGPT-Image-Jun-27-2026-02_59_04-PM.png": "80440f1aea94",
+  "2026/06/ChatGPT-Image-Jun-27-2026-03_08_17-PM.png": "27188658c92d",
+  "2026/06/ChatGPT-Image-Jun-27-2026-03_28_49-PM.png": "60c0390d9653",
+  "2026/06/ChatGPT-Image-Jun-27-2026-03_54_02-PM.png": "c90b47f500b1",
+  "2026/06/ChatGPT-Image-Jun-27-2026-04_10_17-PM.png": "98f53b64f80d",
+  "2026/06/ChatGPT-Image-Jun-27-2026-04_34_38-PM.png": "f967df464489",
+  "2026/06/ChatGPT-Image-Jun-27-2026-04_45_17-PM.png": "8859aeb51045",
+  "2026/06/ChatGPT-Image-Jun-27-2026-04_45_23-PM-1.png": "362df5ccacc3",
+  "2026/06/ChatGPT-Image-Jun-27-2026-05_02_14-PM.png": "1398ff3af33f",
+  "2026/06/ChatGPT-Image-Jun-27-2026-09_24_23-PM.png": "27a28efe0f23",
+  "2026/06/ChatGPT-Image-Jun-27-2026-11_42_47-AM.png": "1dd15f4c8668",
+  "2026/06/ChatGPT-Image-Jun-27-2026-11_43_05-AM-2.png": "dafcd6621a2d",
+  "2026/06/ChatGPT-Image-Jun-27-2026-11_46_05-AM.png": "d3c443a1e330",
+  "2026/06/ChatGPT-Image-Jun-27-2026-12_03_38-PM.png": "9fd46227f348",
+  "2026/06/ChatGPT-Image-Jun-28-2026-at-08_43_05-PM.png": "70c6bfcb1b1f",
+  "2026/06/ChatGPT-Image-Jun-7-2026-08_39_25-AM.png": "8651cc0058f4",
+  "2026/06/ChatGPT-Image-Jun-7-2026-08_45_25-AM.png": "c665cd5d6638",
+  "2026/06/ChatGPT-Image-Jun-7-2026-09_18_02-AM.png": "80b5d57ed5ae",
+  "2026/06/ChatGPT-Image-Jun-7-2026-09_27_01-AM.png": "51fd64550eb7",
+  "2026/06/ChatGPT-Image-Jun-7-2026-09_31_02-AM.png": "225a4032dc01",
+  "2026/06/ChatGPT-Image-Jun-8-2026-09_08_27-AM.png": "c75569c09512",
+  "2026/06/ChatGPT-Image-Jun-8-2026-09_24_40-AM.png": "af0cfc73a441",
+  "2026/06/ChatGPT-Image-Jun-8-2026-09_25_18-AM.png": "85d3e868fdfe",
+  "2026/06/ChatGPT-Image-Jun-8-2026-09_31_16-AM.png": "2543661e4fe7",
+  "2026/06/ChatGPT-Image-Jun-9-2026-09_36_19-AM.png": "0c24826b17dd",
+  "2026/06/FT_plain_brown_nope1.png": "6d2f1b997c3b",
+  "2026/06/PC_blue_friendchip1.png": "f4566c282f2e",
+  "2026/06/PC_red_hey_chil1.png": "ac2f8145d462",
+  "2026/06/main_design10.png": "829e4cf17ff7",
+  "2026/06/sunfaded_black_cheatgpt1.png": "3cca16227f3d",
+  "2026/06/sunfaded_green_theoriginal1.png": "bd7d59fb130a",
+  "2026/07/ChatGPT-Image-Jul-17-2026-12_03_55-PM.png": "d9b6e7397fa2",
+  "2026/08/Black-Techwear-Brand-Poster.png": "10bd6cf877c2",
+  "2026/08/ChatGPT-Image-Aug-1-2026-01_14_03-PM.png": "fc77da2b420b",
+  "2026/08/ChatGPT-Image-Aug-1-2026-10_20_06-PM.png": "b0fdfaf694fd",
+  "2026/08/ChatGPT-Image-Aug-1-2026-10_24_38-PM-1.png": "25f75febbafb",
+  "2026/08/ChatGPT-Image-Aug-1-2026-10_53_57-PM.png": "24668525b86f",
+  "2026/08/ChatGPT-Image-Aug-1-2026-11_11_29-PM.png": "d10ab9714caf",
+  "2026/08/ChatGPT-Image-Aug-1-2026-11_43_47-PM.png": "0b41fe68f407",
+  "2026/08/ChatGPT-Image-Aug-1-2026-11_43_57-PM.png": "81f61ab77f80",
+  "2026/08/ChatGPT-Image-Aug-1-2026-12_38_04-PM.png": "b27da1fca5f9",
+  "2026/08/ChatGPT-Image-Aug-1-2026-12_47_24-PM.png": "49a4433e0272",
+  "2026/08/ChatGPT-Image-Aug-1-2026-12_47_39-PM-2-1.png": "7ea27f551334",
+  "2026/08/ChatGPT-Image-Aug-2-2026-09_37_35-AM.png": "8c5bcd2015be",
+  "2026/08/ChatGPT-Image-Aug-3-2026-01_02_32-AM.png": "05976e3fb7e7",
+  "2026/08/ChatGPT-Image-Aug-3-2026-12_42_25-AM.png": "c2d462d71495",
+  "2026/08/ChatGPT-Image-Aug-3-2026-12_42_56-AM.png": "659c1a1704d1",
+  "2026/08/ChatGPT-Image-Aug-3-2026-12_52_48-AM.png": "3ad87b031b81",
+  "2026/08/ChatGPT-Image-Jul-27-2026-10_55_59-AM.png": "cf719ba4426e",
+  "2026/08/ChatGPT-Image-Jul-31-2026-08_59_51-PM-2.png": "ff58bd3a4452"
+};
+
+// src/data/posterImages.json
+var posterImages_default = [
+  "/studio/46b546648792.webp",
+  "/studio/7b5220c39783.webp",
+  "/studio/8c29dd1d785f.webp",
+  "/studio/96ca4e5a4b88.webp",
+  "/studio/9877e5eecf8a.webp",
+  "/studio/b28d14a61c3b.webp",
+  "/studio/d5c9496ac054.webp",
+  "/studio/e591ccbc2737.webp",
+  "/studio/ff6ab0300860.webp",
+  "2026/06/ChatGPT-Image-Jun-27-2026-01_32_20-AM.png",
+  "2026/06/ChatGPT-Image-Jun-27-2026-01_35_29-AM-1.png",
+  "2026/06/ChatGPT-Image-Jun-27-2026-04_34_38-PM.png",
+  "2026/06/ChatGPT-Image-Jun-27-2026-04_45_17-PM.png",
+  "2026/06/ChatGPT-Image-Jun-27-2026-05_01_57-PM.png",
+  "2026/07/ChatGPT-Image-Jul-19-2026-10_55_48-PM.png",
+  "2026/08/Black-Techwear-Brand-Poster.png",
+  "2026/08/ChatGPT-Image-Aug-1-2026-01_11_45-PM.png",
+  "2026/08/ChatGPT-Image-Aug-1-2026-10_24_38-PM-1.png",
+  "2026/08/ChatGPT-Image-Aug-1-2026-10_51_26-PM-1.png",
+  "2026/08/ChatGPT-Image-Aug-1-2026-11_43_47-PM.png",
+  "2026/08/ChatGPT-Image-Aug-1-2026-12_38_04-PM.png",
+  "2026/08/ChatGPT-Image-Aug-2-2026-08_51_34-AM.png",
+  "2026/08/ChatGPT-Image-Aug-2-2026-09_36_59-AM.png",
+  "2026/08/ChatGPT-Image-Aug-2-2026-10_04_09-AM.png",
+  "2026/08/ChatGPT-Image-Aug-2-2026-10_16_00-PM.png",
+  "2026/08/ChatGPT-Image-Aug-3-2026-01_02_32-AM.png",
+  "2026/08/ChatGPT-Image-Aug-3-2026-12_42_25-AM.png",
+  "2026/08/ChatGPT-Image-Jul-27-2026-10_53_03-AM-1-1.png",
+  "2026/08/ChatGPT-Image-Jul-31-2026-08_44_23-PM-1.png",
+  "2026/08/ChatGPT-Image-Jul-31-2026-08_59_51-PM-2.png"
+];
+
+// src/data/studio.ts
+var table = studioImages_default;
+var sized = sizedImages_default;
+var sizedRel = new Map(Object.entries(sized).map(([rel, id]) => [`/p/${id}.webp`, rel]));
+function uploadsPath(url) {
+  try {
+    return decodeURIComponent(url).split("/uploads/")[1]?.split(/[?&#]/)[0] || null;
+  } catch {
+    return null;
+  }
+}
+function studio(url) {
+  if (!url || /^\/(studio|p|media)\//.test(url)) return url;
+  const rel = uploadsPath(url);
+  if (!rel) return url;
+  if (table[rel]) return table[rel];
+  if (sized[rel]) return `/p/${sized[rel]}.webp`;
+  return `/media/${rel.split("/").map(encodeURIComponent).join("/")}`;
+}
+var POSTERS = new Set(posterImages_default);
+
+// src/data/promo.ts
+var PROMO = {
+  code: "GIFT10",
+  /** The coupon expires at 00:00 on 6 Jan 2027 India time, so 5 Jan is the last full day. */
+  ends: /* @__PURE__ */ new Date("2027-01-06T00:00:00+05:30"),
+  /** Height of the strip in pixels (also the offset applied to the header and the page). */
+  height: 32,
+  href: "/christmas-gifts-for-men"
+};
+var promoActive = (now = /* @__PURE__ */ new Date()) => now < PROMO.ends;
+
 // server.ts
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest, CallbackType, RefundRequest } from "pg-sdk-node";
 dotenv.config();
@@ -7366,7 +7740,7 @@ ${xmlItems}
       app.use(express.static(distPath, {
         index: false,
         setHeaders: (res, filePath) => {
-          if (/[\\/](assets|studio|p)[\\/]/.test(filePath)) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          if (/[\\/](assets|studio|p|fonts)[\\/]/.test(filePath)) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
           else if (/\.(webp|png|jpe?g|svg|woff2?)$/i.test(filePath)) res.setHeader("Cache-Control", "public, max-age=604800, stale-while-revalidate=86400");
         }
       }));
@@ -7518,6 +7892,19 @@ ${xmlItems}
           console.error("[CHILS SEO] Could not build page content:", e?.message);
         }
         if (seoBody) html = html.replace('<div id="root"></div>', `<div id="root">${seoBody}</div>`);
+        if (cleanPath === "/") html = html.replace("</head>", `  <link rel="preload" as="image" href="${escAttr(lookPhoto(OPENING[0]))}" media="(min-width: 768px)" fetchpriority="high" />
+  </head>`);
+        if (cleanPath === "/" && globalProductsCache) {
+          const first = OPENING.map((id) => globalProductsCache.find((p) => String(p.id) === id)).find((p) => p?.images?.[0]);
+          if (first) {
+            const src = escAttr(studio(first.images[0]));
+            html = html.replace("</head>", `  <link rel="preload" as="image" href="${src}" media="(max-width: 767px)" fetchpriority="high" />
+  </head>`);
+            const promo = promoActive() ? PROMO.height : 0;
+            const shell = `<style>.ssr-hero,.ssr-promo{display:none}@media (max-width:767.98px){html:has(.ssr-hero),html:has(.ssr-hero) body{background:#fff}.ssr-promo{display:block;height:${promo}px;background:#141311}.ssr-hero{display:block;position:relative;margin-top:64px;height:calc(84svh - 63px);min-height:521px;overflow:hidden;background:#e4e3df;font-family:Geist,'Geist Fallback',system-ui,sans-serif}.ssr-hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top}.ssr-hero i{position:absolute;left:0;right:0;bottom:0;height:46%;background:linear-gradient(to top,rgba(14,14,12,.75),rgba(14,14,12,.25),rgba(14,14,12,0))}.ssr-hero div{position:absolute;left:0;right:0;bottom:0;padding:0 20px 24px;color:#fff;text-align:center}.ssr-hero b{display:block;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-.02em}.ssr-hero u{display:inline-block;margin-top:12px;font-size:14px;line-height:20px;text-decoration:none;border-bottom:1px solid #fff;padding-bottom:2px}.ssr-hero s{display:block;margin-top:12px;font-size:12px;line-height:16px;opacity:.7;text-decoration:none}}</style><div class="ssr-promo" aria-hidden="true"></div><div class="ssr-hero" aria-hidden="true"><img src="${src}" alt="" fetchpriority="high"><i></i><div><b>Designed by techies.<br>For those who build.</b><u>Shop now</u><s>${escAttr(String(first.name || ""))}</s></div></div>`;
+            html = html.replace('<div id="root">', `<div id="root">${shell}`);
+          }
+        }
         res.set("Content-Type", "text/html");
         return res.send(html);
       });

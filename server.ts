@@ -18,6 +18,9 @@ import { browserContext, orderMetaFrom, sendAddToCart, sendPurchase } from "./me
 import { mediaHandler, uploadsPathOf } from "./mediaCache";
 import { UPLOADS_DIR, saveUpload, dataFile, adoptLegacyUploads } from "./storage";
 import { startAiVisits } from "./aiVisits";
+import { OPENING, lookPhoto } from "./src/data/lookbook";
+import { studio } from "./src/data/studio";
+import { PROMO, promoActive } from "./src/data/promo";
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest, CallbackType, RefundRequest } from 'pg-sdk-node';
 import { NextFunction } from 'express';
 import { GoogleGenAI } from "@google/genai";
@@ -5127,7 +5130,7 @@ ${xmlItems}
         index: false,
         setHeaders: (res, filePath) => {
           // Built assets and sized product photos carry an id in their name: cache for a year.
-          if (/[\\/](assets|studio|p)[\\/]/.test(filePath)) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+          if (/[\\/](assets|studio|p|fonts)[\\/]/.test(filePath)) res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
           else if (/\.(webp|png|jpe?g|svg|woff2?)$/i.test(filePath)) res.setHeader("Cache-Control", "public, max-age=604800, stale-while-revalidate=86400");
         },
       }));
@@ -5310,6 +5313,38 @@ ${xmlItems}
           console.error("[CHILS SEO] Could not build page content:", e?.message);
         }
         if (seoBody) html = html.replace('<div id="root"></div>', `<div id="root">${seoBody}</div>`);
+
+        // Wider screens open on the first opening tee's model cut-out (LineUp): a fixed address, so name it too.
+        if (cleanPath === "/") html = html.replace("</head>", `  <link rel="preload" as="image" href="${escAttr(lookPhoto(OPENING[0]))}" media="(min-width: 768px)" fetchpriority="high" />\n  </head>`);
+
+        // The phone home page opens on a full-screen photo (PhoneHome). Without this, a phone only learns
+        // which photo after the app and the product list have loaded. Same choice and same URL as the page.
+        if (cleanPath === "/" && globalProductsCache) {
+          const first = OPENING.map(id => globalProductsCache!.find((p: any) => String(p.id) === id)).find((p: any) => p?.images?.[0]);
+          if (first) {
+            const src = escAttr(studio(first.images[0]));
+            html = html.replace("</head>", `  <link rel="preload" as="image" href="${src}" media="(max-width: 767px)" fetchpriority="high" />\n  </head>`);
+            // Even fetched early, the photo only shows once the app has run, which takes seconds on a slow
+            // phone. So the HTML also carries a copy of the opening screen: same size, place, photo and words
+            // as PhoneHome, phones only. The app replaces it when it starts, over the same picture.
+            // It is 1px taller than PhoneHome's photo on purpose: browsers count the largest image painted, and
+            // the slideshow's next photo (same box, height rounded up) would otherwise count as a new, later one.
+            const promo = promoActive() ? PROMO.height : 0; // the dark promo strip, then the 64px white header
+            const shell = `<style>.ssr-hero,.ssr-promo{display:none}@media (max-width:767.98px){html:has(.ssr-hero),html:has(.ssr-hero) body{background:#fff}`
+              + `.ssr-promo{display:block;height:${promo}px;background:#141311}`
+              + `.ssr-hero{display:block;position:relative;margin-top:64px;height:calc(84svh - 63px);min-height:521px;overflow:hidden;background:#e4e3df;font-family:Geist,'Geist Fallback',system-ui,sans-serif}`
+              + `.ssr-hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:top}`
+              + `.ssr-hero i{position:absolute;left:0;right:0;bottom:0;height:46%;background:linear-gradient(to top,rgba(14,14,12,.75),rgba(14,14,12,.25),rgba(14,14,12,0))}`
+              + `.ssr-hero div{position:absolute;left:0;right:0;bottom:0;padding:0 20px 24px;color:#fff;text-align:center}`
+              + `.ssr-hero b{display:block;font-size:26px;line-height:1.15;font-weight:600;letter-spacing:-.02em}`
+              + `.ssr-hero u{display:inline-block;margin-top:12px;font-size:14px;line-height:20px;text-decoration:none;border-bottom:1px solid #fff;padding-bottom:2px}`
+              + `.ssr-hero s{display:block;margin-top:12px;font-size:12px;line-height:16px;opacity:.7;text-decoration:none}}</style>`
+              + `<div class="ssr-promo" aria-hidden="true"></div><div class="ssr-hero" aria-hidden="true"><img src="${src}" alt="" fetchpriority="high"><i></i>`
+              + `<div><b>Designed by techies.<br>For those who build.</b><u>Shop now</u><s>${escAttr(String(first.name || ""))}</s></div></div>`;
+            html = html.replace('<div id="root">', `<div id="root">${shell}`);
+          }
+        }
+
 
         res.set("Content-Type", "text/html");
         return res.send(html);

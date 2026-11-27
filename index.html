@@ -39,9 +39,10 @@
 
     <link rel="icon" type="image/svg+xml" href="/snowflake.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <!-- the product list is needed on almost every page: start it with the HTML, not after the app loads -->
     <link rel="preload" href="/api/products" as="fetch" crossorigin="anonymous" />
+    <!-- the body font, so text appears in Geist from the start (served from our own site, see index.css) -->
+    <link rel="preload" href="/fonts/geist-v1-latin.woff2" as="font" type="font/woff2" crossorigin="anonymous" />
   </head>
   <body>
     <div id="root"></div>
